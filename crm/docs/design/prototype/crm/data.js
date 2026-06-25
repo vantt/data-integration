@@ -384,9 +384,158 @@
   // ── Spark / trend helpers (worklist + dashboard) ────────
   const adSpendTrend = [3.1, 3.6, 4.2, 3.9, 4.8, 5.2, 5.0, 6.1, 5.8, 7.1];
 
+  // ── AI approach scripts (cache.wh_approach_script) ──────
+  // Keyed by customer_id. R2: CRM only reads + shows refreshed_at —
+  // never recomputes. R14: recommended=false → S14 STOP state.
+  // Pilot source: plans/.../pilot-run-1/scripts/*.json (31 files).
+  const approachScripts = {
+    p_001: {
+      customer_id: "p_001", recommended: true, confidence: "medium",
+      region: "Miền Bắc", investment: "TB",
+      profile_read: "Khách lẻ 8 đơn trong 11 tháng, đều đặn ~30 ngày/đơn. Da nhạy cảm, gắn dòng gentle. Đã 28 ngày kể từ đơn gần nhất — sắp tới cửa sổ mua lại.",
+      value_assessment: "GOLD · LTV 18,4tr · biên thực 34% · ít nhạy giảm giá.",
+      opportunity: "Nhắc mua lại sữa rửa mặt gentle trước khi hết — đúng chu kỳ, dễ chốt.",
+      risk: "Nếu chậm 1 tuần nữa rơi vào nhóm waning; đừng để khách tự mua chỗ khác.",
+      approach: {
+        primary_channel: "phone", fallback_channel: "zalo",
+        opening_message: "Dạ em chào anh A, em gọi từ cửa hàng mình ạ. Em thấy đợt này cũng gần tới lúc anh dùng hết chai sữa rửa mặt gentle bên mình, nên em gọi nhắc anh trước — và đang có ưu đãi nhỏ cho khách quen ạ.",
+        fallback_message: "Dạ em chào anh A, em nhắn từ cửa hàng mình ạ. Em thấy sắp tới chu kỳ anh dùng hết sữa rửa mặt gentle, bên em đang có ưu đãi khách quen — anh có cần em giữ một phần không ạ?",
+        talking_points: [
+          "Nhắc chu kỳ dùng — khoảng 30 ngày, nay đã 28 ngày",
+          "Ưu đãi khách quen (không phải giảm sâu)",
+          "Gợi combo 2 hộp để đỡ phải đặt lại sớm",
+        ],
+        cross_sell: ["Toner cấp ẩm cùng dòng gentle", "Kem chống nắng cho da nhạy cảm"],
+        objection_handling: [
+          { q: "Chưa cần mua / còn dùng", a: "Dạ em hiểu ạ. Em gọi sớm để anh khỏi bị gián đoạn — nếu anh còn dùng được 1-2 tuần thì em note lại, gần ngày em nhắn anh một câu cho tiện ạ." },
+          { q: "Giá sao? / có giảm không", a: "Bên em giữ giá tốt cho khách quen như anh, kèm quà nhỏ chứ không giảm sâu vì hàng chính hãng. Nếu anh lấy combo 2 hộp thì tính ra mỗi hộp đỡ hơn ạ." },
+          { q: "Để hỏi lại vợ/người nhà", a: "Dạ được ạ, anh cứ trao đổi. Em giữ ưu đãi tới cuối tuần, khi nào anh quyết em chốt nhanh trong 2 phút ạ." },
+        ],
+        do_not: [
+          "Không giảm sâu — biên hàng mỏng",
+          "Không gọi như khách mới — khách đã mua 8 đơn",
+          "Không gợi retinol — da nhạy cảm",
+        ],
+      },
+      timing: "Gọi trong 1-2 ngày, giờ hành chính.",
+      data_gaps: ["Chưa có email để gửi catalogue"],
+      refreshed_at: "2026-06-14T00:15:00Z",
+    },
+    p_002: {
+      customer_id: "p_002", recommended: true, confidence: "medium",
+      region: "Miền Nam", investment: "Cao",
+      profile_read: "Khách VIP cũ, 12 đơn, LTV 31tr — nhưng đã 92 ngày không mua. Từng mua quà tặng. Có dấu hiệu nguội.",
+      value_assessment: "VIP · LTV 31,2tr · biên thực 30% · nhạy giảm giá trung bình.",
+      opportunity: "Win-back: khách giá trị cao, gợi lại đúng dòng serum dưỡng ẩm từng mua.",
+      risk: "Đã waning 92 ngày — gọi như chưa có gì xảy ra sẽ phản tác dụng; cần chạm cá nhân hoá.",
+      approach: {
+        primary_channel: "phone", fallback_channel: "zalo",
+        opening_message: "Dạ em chào chị B, em gọi từ cửa hàng mình ạ. Lâu rồi chưa thấy chị ghé nên em gọi hỏi thăm chị một chút — và bên em vừa có lô serum dưỡng ẩm dòng chị hay dùng, em muốn để dành cho chị trước ạ.",
+        fallback_message: "Dạ em chào chị B ạ, lâu rồi cửa hàng chưa được phục vụ chị. Bên em vừa về serum dưỡng ẩm dòng chị hay dùng — em giữ phần ưu đãi khách thân thiết cho chị, chị xem giúp em nhé.",
+        talking_points: [
+          "Hỏi thăm trước, đừng vào bán ngay",
+          "Nhắc đúng dòng serum dưỡng ẩm từng mua",
+          "Ưu đãi khách thân thiết để kéo quay lại",
+        ],
+        cross_sell: ["Set quà tặng mùa lễ (khách từng mua quà)"],
+        objection_handling: [
+          { q: "Dạo này không dùng nữa", a: "Dạ không sao ạ, em chỉ muốn hỏi thăm chị thôi. Nếu sau này chị cần em vẫn ở đây hỗ trợ chị như trước ạ." },
+          { q: "Mua chỗ khác rồi", a: "Dạ em hiểu ạ. Chị dùng thấy ổn là tốt rồi. Bên em có ưu đãi khách cũ, khi nào tiện chị quay lại em chăm sóc chu đáo cho chị ạ." },
+        ],
+        do_not: [
+          "Không gọi như khách mới — đây là VIP cũ",
+          "Không ép — khách đang nguội, dễ mất hẳn",
+        ],
+      },
+      timing: "Gọi trong hôm nay, đầu giờ chiều.",
+      data_gaps: [],
+      refreshed_at: "2026-06-14T00:15:00Z",
+    },
+    p_005: {
+      customer_id: "p_005", recommended: true, confidence: "high",
+      region: "Miền Trung", investment: "Cao",
+      profile_read: "Khách sỉ cho spa, 21 đơn, LTV 54,8tr, mua đều mỗi 2-3 tuần. Đơn gần nhất 4 ngày trước — đang nóng.",
+      value_assessment: "GOLD/sỉ · LTV 54,8tr · biên thực 39% · không nhạy giảm giá.",
+      opportunity: "Cross-sell dòng máy hỗ trợ cho spa — giá trị đơn lớn, khách tin tưởng.",
+      risk: "Hầu như không có rủi ro churn; rủi ro là bỏ lỡ cơ hội nâng giá trị đơn.",
+      approach: {
+        primary_channel: "phone", fallback_channel: "zalo",
+        opening_message: "Dạ em chào anh E, em gọi từ cửa hàng mình ạ. Em cảm ơn anh vẫn lấy hàng đều cho spa. Bên em vừa có dòng máy hỗ trợ rất hợp với dịch vụ spa của anh, em muốn giới thiệu để anh cân nhắc thêm ạ.",
+        fallback_message: "Dạ em chào anh E ạ. Cảm ơn anh vẫn tin tưởng lấy hàng đều. Bên em có dòng máy hỗ trợ hợp với spa, em gửi anh thông tin tham khảo nhé.",
+        talking_points: [
+          "Cảm ơn khách sỉ trung thành trước",
+          "Giới thiệu dòng máy hỗ trợ cho spa",
+          "Đề xuất ưu đãi thân thiết cho đơn lớn",
+        ],
+        cross_sell: ["Máy hỗ trợ spa", "Combo spa chuyên nghiệp số lượng lớn"],
+        objection_handling: [
+          { q: "Để xem đã / chưa cần máy", a: "Dạ được ạ, anh cứ tham khảo. Em gửi anh thông số và vài spa khác đang dùng để anh hình dung, khi nào cần em hỗ trợ lắp đặt luôn ạ." },
+          { q: "Giá máy cao quá", a: "Dạ máy là đầu tư một lần cho dịch vụ, em có thể tách đơn hoặc ưu đãi cho khách sỉ thân thiết như anh để nhẹ hơn ạ." },
+        ],
+        do_not: [
+          "Không chào giá lẻ — đây là khách sỉ",
+          "Không quên xác nhận địa chỉ giao spa",
+        ],
+      },
+      timing: "Gọi trong 1-2 ngày, giờ hành chính.",
+      data_gaps: [],
+      refreshed_at: "2026-06-14T00:15:00Z",
+    },
+    p_009: {
+      customer_id: "p_009", recommended: true, confidence: "low",
+      region: "Miền Bắc", investment: "Thấp",
+      profile_read: "Dữ liệu mỏng: 4 đơn, đã 74 ngày không mua, chưa có consent. Tín hiệu yếu, độ tin thấp.",
+      value_assessment: "SILVER · LTV 5,1tr · biên thực 21% · nhạy giảm giá cao.",
+      opportunity: "Có thể nhắc mua lại sữa tắm — nhưng dữ liệu chưa đủ chắc, cần kiểm chứng khi nói chuyện.",
+      risk: "Chưa có consent_contact — chỉ liên hệ thăm dò, không outreach mạnh (R1).",
+      approach: {
+        primary_channel: "phone", fallback_channel: "zalo",
+        opening_message: "Dạ em chào anh I, em gọi từ cửa hàng mình ạ. Em gọi hỏi thăm xem sản phẩm anh dùng đợt trước có ổn không, và xem em hỗ trợ thêm được gì cho anh ạ.",
+        fallback_message: "Dạ em chào anh I ạ, em nhắn từ cửa hàng mình hỏi thăm sản phẩm anh dùng đợt trước có ổn không ạ.",
+        talking_points: [
+          "Hỏi thăm trải nghiệm, kiểm chứng nhu cầu",
+          "Xin phép liên hệ lại (chưa có consent)",
+          "Chỉ gợi ý nhẹ nếu khách cởi mở",
+        ],
+        cross_sell: [],
+        objection_handling: [
+          { q: "Sao có số của tôi?", a: "Dạ anh từng mua bên em nên em có thông tin để chăm sóc ạ. Nếu anh không muốn nhận cuộc gọi, em xin phép ghi nhận và không làm phiền anh nữa ạ." },
+        ],
+        do_not: [
+          "Không outreach mạnh — chưa có consent (R1)",
+          "Không cam kết khi dữ liệu độ tin thấp",
+        ],
+      },
+      timing: "Cân nhắc — độ tin thấp, ưu tiên khách khác trước.",
+      data_gaps: ["Chưa có consent_contact", "Lịch sử mua mỏng (4 đơn)"],
+      refreshed_at: "2026-06-12T22:40:00Z",
+    },
+    p_006: {
+      customer_id: "p_006", recommended: false, confidence: "low",
+      region: "—", investment: "—",
+      profile_read: "Tên hiển thị nghi là tổ chức/sàn (\"Leflair\") bị gán nhãn RETAIL. Chết sâu 1073 ngày kèm mâu thuẫn dữ liệu margin.",
+      value_assessment: "Dữ liệu mâu thuẫn — không đánh giá được giá trị một cách tin cậy.",
+      opportunity: "—",
+      risk: "—",
+      approach: {
+        primary_channel: "phone", fallback_channel: "zalo",
+        opening_message: "", fallback_message: "",
+        talking_points: [], cross_sell: [], objection_handling: [], do_not: [],
+      },
+      reason_if_not_recommended: "Tên \"Leflair\" nghi tổ chức/sàn bị gán nhầm nhóm RETAIL; margin mâu thuẫn (is_margin_negative=false nhưng avg order contribution margin âm); tài khoản chết 1073 ngày. Gọi theo kịch bản bán lẻ là sai đối tượng.",
+      timing: "",
+      data_gaps: ["Loại tài khoản chưa xác minh", "Margin mâu thuẫn"],
+      refreshed_at: "2026-06-14T00:15:00Z",
+    },
+  };
+  // Call queue order (drives #n/total + "khách kế")
+  const callQueue = ["p_001", "p_002", "p_005", "p_009", "p_006"];
+
   window.DB = {
     users, ME, tags, parties, orders, activities, notes, tasks, conversations,
     dedup, segments, campaigns, targets, ads, fieldDefs, adSpendTrend,
+    approachScripts, callQueue,
+    scriptByParty: (id) => approachScripts[id] || null,
     // lookups
     userById: (id) => users.find((u) => u.id === id) || null,
     partyById: (id) => parties.find((p) => p.id === id) || null,

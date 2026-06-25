@@ -178,19 +178,28 @@ function TagChips({ tagIds, editable, onAdd, onRemove, maxVisible = 6 }) {
 }
 
 /* ── C03 Action Queue Card ──────────────────────────────── */
-function ActionQueueCard({ action, party, compact, onTask, onOpen }) {
+function ActionQueueCard({ action, party, compact, onTask, onCall, onOpen }) {
   const m = ACTION_META[action.type] || { label: action.type, tone: "default" };
   return (
     <div className={"aq-card" + (compact ? " aq-card--compact" : "")} onClick={() => onOpen && onOpen(party)}>
       <div className="aq-card__top">
         <Chip tone={m.tone}>{m.label}</Chip>
-        {action.value > 0 && <span className="aq-card__val"><Icon name="money" size={13} /> {fmtVND(action.value)}</span>}
+        {action.value > 0 && (
+          <span className="aq-card__val">
+            <span className="aq-card__val-label">GT dự kiến</span>
+            <Icon name="money" size={13} />
+            {fmtVND(action.value)}
+          </span>
+        )}
       </div>
       <div className="aq-card__rationale">{action.rationale}</div>
       {!compact && (
         <div className="aq-card__foot">
-          <button className="btn btn--secondary aq-card__cta" onClick={(e) => { e.stopPropagation(); onTask && onTask(action, party); }}>
-            <Icon name="plus" size={13} /> Tạo task
+          <button className="btn btn--secondary aq-card__cta" onClick={(e) => { e.stopPropagation(); onCall && onCall(action, party); }}>
+            <Icon name="phone" size={13} /> Gọi ngay
+          </button>
+          <button className="btn btn--ghost aq-card__cta" onClick={(e) => { e.stopPropagation(); onTask && onTask(action, party); }}>
+            <Icon name="clock" size={13} /> Đặt lịch
           </button>
         </div>
       )}

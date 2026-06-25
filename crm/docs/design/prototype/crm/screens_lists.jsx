@@ -75,7 +75,9 @@ function S01_Worklist({ nav, openModal, toast, openPreview }) {
                   </div>
                 </div>
                 <div className="wl-row__aside">
-                  {p && p.phone && <button className="btn btn--secondary" style={{ padding: "8px 12px" }} onClick={() => toast("Đang gọi " + p.phone, "info")}><Icon name="phone" size={13} /></button>}
+                  {p && p.phone && (window.DB.scriptByParty(p.id)
+                    ? <button className="btn btn--secondary" style={{ padding: "8px 12px" }} title="Vào chế độ gọi" onClick={() => nav({ screen: "S14", party: p.id })}><Icon name="phone" size={13} /></button>
+                    : <button className="btn btn--secondary" style={{ padding: "8px 12px" }} onClick={() => toast("Đang gọi " + p.phone, "info")}><Icon name="phone" size={13} /></button>)}
                   <button className="btn btn--ghost" onClick={() => p && nav({ screen: "S03", party: p.id })} style={{ padding: "8px 10px" }}>Mở hồ sơ <Icon name="chevron" size={12} /></button>
                 </div>
               </div>

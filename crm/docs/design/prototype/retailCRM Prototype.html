@@ -7,6 +7,7 @@
 
 <!-- Precision Design System — tokens + CRM ui-kit (binding visual contract).
      styles.css @imports colors_and_type.css + app.css + crm.css. -->
+<!-- Handoff copy: the Precision DS lives one level up at ../design_system/ -->
 <link rel="stylesheet" href="../design_system/styles.css" />
 
 <!-- Extra font families for the Tweaks "Bộ chữ" picker (Precision default loads via the DS css) -->
@@ -38,10 +39,13 @@
 <!-- app (JSX, order matters: helpers → modals → screens → app) -->
 <script type="text/babel" src="crm/helpers.jsx"></script>
 <script type="text/babel" src="crm/modals.jsx"></script>
+<!-- M08 redesign — unified contact logging (overrides MODALS.M08) -->
+<script type="text/babel" src="crm/modal_m08.jsx"></script>
 <script type="text/babel" src="crm/screens_lists.jsx"></script>
 <script type="text/babel" src="crm/screens_360.jsx"></script>
 <script type="text/babel" src="crm/screens_inbox.jsx"></script>
 <script type="text/babel" src="crm/screens_growth.jsx"></script>
+<script type="text/babel" src="crm/screens_call.jsx"></script>
 <script type="text/babel" src="crm/app.jsx"></script>
 </body>
 </html>

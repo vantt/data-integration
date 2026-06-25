@@ -37,6 +37,41 @@
     }
   }
 
+  /* ── custom icon-select for HÌNH THỨC ────────────────────── */
+  function M8HinhThucSelect({ value, onChange }) {
+    const [open, setOpen] = useState(false);
+    const ref = React.useRef(null);
+    React.useEffect(() => {
+      if (!open) return;
+      const h = (e) => { if (ref.current && !ref.current.contains(e.target)) setOpen(false); };
+      document.addEventListener('mousedown', h);
+      return () => document.removeEventListener('mousedown', h);
+    }, [open]);
+    const sel = HINH_THUC.find((h) => h.v === value) || HINH_THUC[0];
+    return (
+      <div className="m8-htsel" ref={ref}>
+        <button type="button" className="m8-htsel__btn" onClick={() => setOpen((o) => !o)} aria-haspopup="listbox">
+          <ChIcon name={sel.icon} size={14} />
+          <span>{sel.l}</span>
+          <span className="inp-sel__chev" style={{ marginLeft: 'auto' }}>▾</span>
+        </button>
+        {open && (
+          <div className="m8-htsel__drop" role="listbox">
+            {HINH_THUC.map((h) => (
+              <button type="button" key={h.v} role="option" aria-selected={value === h.v}
+                className={'m8-htsel__opt' + (value === h.v ? ' m8-htsel__opt--on' : '')}
+                onClick={() => { onChange(h.v); setOpen(false); }}>
+                <ChIcon name={h.icon} size={14} />
+                <span>{h.l}</span>
+                {value === h.v && <Icon name="check" size={12} style={{ marginLeft: 'auto' }} />}
+              </button>
+            ))}
+          </div>
+        )}
+      </div>
+    );
+  }
+
   /* ── config ─────────────────────────────────────────────── */
   const HINH_THUC = [
     { v: "call", l: "Cuộc gọi", icon: "phone" },
@@ -144,7 +179,7 @@
           <div className={"m8-chan m8-chan--solo" + (sel === only.identity_id ? " m8-chan--on" : "")} onClick={() => setSel(only.identity_id)}>
             <span className="radio-pill__dot" />
             <span className="m8-chan__val mono">{fmtIdentity(only.identity_value, only.identity_type)}</span>
-            <span className="m8-chan__auto">tự chọn · 1 {CH_LABEL[ht]}</span>
+
           </div>
           <button className="ghost-link" type="button" onClick={() => { setShowCustom(true); setSel("__custom"); }} style={{ marginTop: 2 }}>Dùng {CH_LABEL[ht]} khác</button>
         </label>
@@ -271,16 +306,10 @@
         )}
 
         {/* Step 1 — Hình thức */}
-        <label className="field">
+        <div className="field">
           <SectionLabel req>HÌNH THỨC</SectionLabel>
-          <div className="radioset">
-            {HINH_THUC.map((h) => (
-              <label key={h.v} className={"radio-pill" + (ht === h.v ? " radio-pill--on" : "")} onClick={() => setHt(h.v)}>
-                <ChIcon name={h.icon} /> {h.l}
-              </label>
-            ))}
-          </div>
-        </label>
+          <M8HinhThucSelect value={ht} onChange={setHt} />
+        </div>
 
         {/* Step 2 — Kênh cụ thể */}
         {hasChannel && (

@@ -24,6 +24,7 @@
     S11: { type: "screen", name: "Campaign Detail / Targets", vi: "Chi tiết chiến dịch", icon: "bolt", rules: ["R1", "R3", "R6", "R11"] },
     S12: { type: "screen", name: "Ads Tracking", vi: "Ads", icon: "ads", rules: ["R2", "R6"] },
     S13: { type: "screen", name: "Settings", vi: "Cài đặt", icon: "settings", rules: [] },
+    S14: { type: "screen", name: "Call Mode / Strategy Cockpit", vi: "Chế độ gọi", icon: "phone", rules: ["R1", "R2", "R6", "R14"] },
     // panels (hosted in S03)
     P01: { type: "panel", name: "Insight Panel", vi: "Insight", hosts: ["S03"] },
     P02: { type: "panel", name: "Order History Panel", vi: "Đơn hàng", hosts: ["S03"] },
@@ -62,7 +63,7 @@
   // Each group draws its members straight from the registry ids.
   const GROUPS = [
     { key: "onboarding", label: "Onboarding", items: [] },
-    { key: "workspace", label: "Workspace", items: ["S01", "S02", "S03", "S05", "S06", "S07"] },
+    { key: "workspace", label: "Workspace", items: ["S01", "S02", "S03", "S14", "S05", "S06", "S07"] },
     { key: "secondary", label: "Secondary views", subs: [
       { label: "Màn hình", items: ["S04", "S08", "S09", "S10", "S11", "S12"] },
       { label: "Panels · Customer 360", items: ["P01", "P02", "P03", "P04", "P05", "P06"] },
@@ -92,6 +93,7 @@
     S11: { kind: "screen", route: { screen: "S11", campaign: "cmp_1" } },
     S12: { kind: "screen", route: { screen: "S12" } },
     S13: { kind: "screen", route: { screen: "S13" } },
+    S14: { kind: "screen", route: { screen: "S14", party: "p_001" } },
     // panels → S03, open that tab
     P01: { kind: "panel", route: { screen: "S03", party: "p_001", tab: "P01" } },
     P02: { kind: "panel", route: { screen: "S03", party: "p_001", tab: "P02" } },
