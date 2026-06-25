@@ -66,6 +66,12 @@
       {% endif %}
     </div>
     <div class="wl-row__why">{{ a.rationale_vi }}</div>
+    {% if a.top_affinity_product or a.last_purchased_product %}
+    <div class="wl-row__products">
+      {% if a.top_affinity_product %}<span class="wl-product-tag">🛍 {{ a.top_affinity_product }}</span>{% endif %}
+      {% if a.last_purchased_product and a.last_purchased_product != a.top_affinity_product %}<span class="wl-product-tag wl-product-tag--last">↩ {{ a.last_purchased_product }}</span>{% endif %}
+    </div>
+    {% endif %}
     {% for cpn in cp_notes %}
     <div class="wl-row__pref">💬 {{ cpn.body }}</div>
     {% endfor %}

@@ -83,13 +83,15 @@ def apply_filters(actions: list, tasks: list, filters: dict) -> tuple[list, list
         allowed = set(filters["types"])
         actions = [a for a in actions if getattr(a, "action_type", "") in allowed]
 
-    # Text search: customer_name or rationale (actions) / title or desc (tasks).
+    # Text search: customer_name, rationale, or product affinity (actions) / title or desc (tasks).
     q = filters["q"].lower()
     if q:
         actions = [
             a for a in actions
             if q in (getattr(a, "customer_name", "") or "").lower()
             or q in (getattr(a, "rationale_vi", "") or "").lower()
+            or q in (getattr(a, "top_affinity_product", "") or "").lower()
+            or q in (getattr(a, "last_purchased_product", "") or "").lower()
         ]
         tasks = [
             t for t in tasks

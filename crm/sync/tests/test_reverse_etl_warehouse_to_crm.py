@@ -124,15 +124,19 @@ def _make_warehouse(path: str) -> duckdb.DuckDBPyConnection:
             action_rationale TEXT,
             value_at_stake BIGINT,
             priority_rank INTEGER,
-            queue_generated_at DATE
+            queue_generated_at DATE,
+            top_affinity_product TEXT,
+            last_purchased_product TEXT
         )
     """)
     conn.execute("""
         INSERT INTO main_marts.mart_customer_action_queue VALUES
           ('key-cust-001', 'REORDER_NUDGE',
-           'Khách sắp đến chu kỳ mua', 850000, 1, '2026-06-14'),
+           'Khách sắp đến chu kỳ mua', 850000, 1, '2026-06-14',
+           'Kem Duong Am A', 'Serum Trang Da B'),
           ('key-cust-002', 'WIN_BACK',
-           'Khách chưa mua 45 ngày', 2000000, 2, '2026-06-14')
+           'Khách chưa mua 45 ngày', 2000000, 2, '2026-06-14',
+           NULL, 'Kem Duong Am A')
     """)
 
     # mart_customer_tier — strategic tier output (7 tier first-match)
@@ -506,7 +510,8 @@ def _create_minimal_dim_tables(conn: duckdb.DuckDBPyConnection) -> None:
     conn.execute("""
         CREATE TABLE IF NOT EXISTS main_marts.mart_customer_action_queue (
             customer_key TEXT, action_type TEXT, action_rationale TEXT,
-            value_at_stake BIGINT, priority_rank INTEGER, queue_generated_at DATE
+            value_at_stake BIGINT, priority_rank INTEGER, queue_generated_at DATE,
+            top_affinity_product TEXT, last_purchased_product TEXT
         )
     """)
     conn.execute("""

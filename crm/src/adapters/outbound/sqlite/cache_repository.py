@@ -133,7 +133,9 @@ class SQLiteCacheRepository:
                    COALESCE(bc.display_name, '') AS customer_name,
                    pi.party_id AS party_id,
                    COALESCE(s.status, 'open') AS status,
-                   s.snoozed_until
+                   s.snoozed_until,
+                   COALESCE(a.top_affinity_product, '') AS top_affinity_product,
+                   COALESCE(a.last_purchased_product, '') AS last_purchased_product
             FROM cache.wh_action_queue a
             LEFT JOIN cache.wh_party_seed ps ON ps.customer_key = a.customer_key
             LEFT JOIN cache.wh_customer_base bc ON bc.customer_id = ps.customer_id
@@ -172,6 +174,8 @@ class SQLiteCacheRepository:
                 party_id=row["party_id"],
                 status=row["status"] or "open",
                 snoozed_until=row["snoozed_until"],
+                top_affinity_product=row["top_affinity_product"] or "",
+                last_purchased_product=row["last_purchased_product"] or "",
             )
             for row in rows
         ]

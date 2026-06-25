@@ -68,6 +68,8 @@ def apply_schema(conn: sqlite3.Connection) -> None:
         "ALTER TABLE wh_party_seed ADD COLUMN contact_quality TEXT NOT NULL DEFAULT 'real'",
         "ALTER TABLE wh_customer_base ADD COLUMN source_contact_quality TEXT NOT NULL DEFAULT 'real'",
         "ALTER TABLE wh_customer_base ADD COLUMN contact_quality TEXT NOT NULL DEFAULT 'real'",
+        "ALTER TABLE wh_action_queue ADD COLUMN top_affinity_product TEXT",
+        "ALTER TABLE wh_action_queue ADD COLUMN last_purchased_product TEXT",
     ]
     for stmt in _group_a:
         try:
@@ -165,14 +167,16 @@ def upsert_action_queue(conn: sqlite3.Connection, rows: list[dict]) -> int:
     upsert_sql = (
         "INSERT INTO wh_action_queue "
         "  (action_id, customer_key, action_type, rationale_vi, value_at_stake_vnd, "
-        "   priority, pending_since, generated_date) "
-        "VALUES (?, ?, ?, ?, ?, ?, ?, ?) "
+        "   priority, pending_since, generated_date, top_affinity_product, last_purchased_product) "
+        "VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?) "
         "ON CONFLICT(customer_key, action_type) DO UPDATE SET "
-        "  generated_date     = excluded.generated_date, "
-        "  rationale_vi       = excluded.rationale_vi, "
-        "  value_at_stake_vnd = excluded.value_at_stake_vnd, "
-        "  priority           = excluded.priority, "
-        "  refreshed_at       = strftime('%Y-%m-%dT%H:%M:%fZ','now')"
+        "  generated_date          = excluded.generated_date, "
+        "  rationale_vi            = excluded.rationale_vi, "
+        "  value_at_stake_vnd      = excluded.value_at_stake_vnd, "
+        "  priority                = excluded.priority, "
+        "  top_affinity_product    = excluded.top_affinity_product, "
+        "  last_purchased_product  = excluded.last_purchased_product, "
+        "  refreshed_at            = strftime('%Y-%m-%dT%H:%M:%fZ','now')"
         # action_id and pending_since intentionally preserved on conflict
     )
 
@@ -189,6 +193,8 @@ def upsert_action_queue(conn: sqlite3.Connection, rows: list[dict]) -> int:
             r.get("priority"),
             r["generated_date"],   # pending_since = generated_date on first insert
             r["generated_date"],
+            r.get("top_affinity_product"),
+            r.get("last_purchased_product"),
         )
         for r in rows
     ]

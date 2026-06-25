@@ -118,6 +118,8 @@ _MART_ACTION_QUEUE_COLS = [
     "value_at_stake_vnd",
     "priority",
     "generated_date",
+    "top_affinity_product",
+    "last_purchased_product",
 ]
 
 # dim_products output columns for product catalog (cache-facing names).
@@ -285,7 +287,9 @@ def fetch_action_queue(conn: "duckdb.DuckDBPyConnection") -> list[dict]:
         "  action_rationale AS rationale_vi, "
         "  CAST(value_at_stake AS BIGINT) AS value_at_stake_vnd, "
         "  priority_rank AS priority, "
-        "  strftime(queue_generated_at, '%Y-%m-%d') AS generated_date "
+        "  strftime(queue_generated_at, '%Y-%m-%d') AS generated_date, "
+        "  top_affinity_product, "
+        "  last_purchased_product "
         "FROM main_marts.mart_customer_action_queue"
     )
     rows = _fetch(conn, sql)

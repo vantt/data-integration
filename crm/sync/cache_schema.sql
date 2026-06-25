@@ -45,8 +45,10 @@ CREATE TABLE IF NOT EXISTS wh_action_queue (
   rationale_vi      TEXT,                 -- human-readable Vietnamese rationale
   value_at_stake_vnd INTEGER,             -- VND
   priority          INTEGER,
-  pending_since     TEXT,                 -- YYYY-MM-DD; first day this episode appeared (never updated)
-  generated_date    TEXT,                 -- YYYY-MM-DD; last warehouse refresh (updated daily)
+  pending_since          TEXT,            -- YYYY-MM-DD; first day this episode appeared (never updated)
+  generated_date         TEXT,            -- YYYY-MM-DD; last warehouse refresh (updated daily)
+  top_affinity_product   TEXT,            -- product customer buys most (display + search)
+  last_purchased_product TEXT,            -- product from customer's last order (display + search)
   refreshed_at      TEXT NOT NULL DEFAULT (strftime('%Y-%m-%dT%H:%M:%fZ','now'))
   -- status/snoozed_until live in crm.db:crm_action_state (keyed on action_id)
 );
