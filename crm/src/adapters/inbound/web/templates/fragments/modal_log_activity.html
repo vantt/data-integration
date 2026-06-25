@@ -56,10 +56,7 @@
 {% endmacro %}
 
 <div class="modal-scrim"
-     hx-get=""
-     hx-target="#modal-root"
-     hx-swap="innerHTML"
-     hx-trigger="click[!event.target.closest('.modal')]">
+     onclick="if(!event.target.closest('.modal')) document.getElementById('modal-root').innerHTML=''">
   <div class="modal" role="dialog" aria-modal="true" aria-label="{{ modal_title }}">
 
     <div class="modal__head">
@@ -67,7 +64,7 @@
         <div class="modal__title">{{ modal_title }}</div>
         {% if party_name %}<div class="modal__sub">{{ party_name }}</div>{% endif %}
       </div>
-      <button class="icon-btn" hx-get="" hx-target="#modal-root" hx-swap="innerHTML" aria-label="Đóng">
+      <button class="icon-btn" type="button" onclick="document.getElementById('modal-root').innerHTML=''" aria-label="Đóng">
         <svg class="ico" width="14" height="14" viewBox="0 0 14 14" fill="none"
              stroke="currentColor" stroke-width="1.6" stroke-linecap="round" aria-hidden="true">
           <path d="M2 2l10 10M12 2L2 12"/>
