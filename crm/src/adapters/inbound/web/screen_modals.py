@@ -16,7 +16,7 @@ from fastapi.templating import Jinja2Templates
 
 from crm.src.domain.entities.app_user import AppUser
 from crm.src.domain.entities.party import Party
-from crm.src.domain.entities.profile import CustomerProfile, Party360
+from crm.src.domain.entities.profile import Party360
 
 log = logging.getLogger(__name__)
 router = APIRouter()
@@ -31,7 +31,7 @@ class ProfileQuerier(Protocol):
     def get_party_360(self, party_id: str) -> Optional[Party360]: ...
 
 class OwnerAssigner(Protocol):
-    def upsert_profile(self, profile: CustomerProfile) -> None: ...
+    def upsert_profile(self, party_id: str, **kwargs) -> object: ...
 
 class AppUserLister(Protocol):
     def list_active(self) -> list[AppUser]: ...
@@ -158,16 +158,8 @@ async def post_assign_owner(
     if not owner_user_id:
         raise HTTPException(status_code=400, detail="owner_user_id required")
 
-    now = datetime.now(timezone.utc).strftime("%Y-%m-%dT%H:%M:%S.000Z")
-    profile = CustomerProfile(
-        party_id=party_id,
-        owner_user_id=owner_user_id,
-        custom="{}",
-        created_at=now,
-        updated_at=now,
-    )
     try:
-        _get_deps().owner_assigner.upsert_profile(profile)
+        _get_deps().owner_assigner.upsert_profile(party_id, owner_user_id=owner_user_id)
     except Exception as exc:
         log.error("assign owner %s: %s", party_id, exc)
         raise HTTPException(status_code=500, detail=str(exc)) from exc
