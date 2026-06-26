@@ -1,6 +1,6 @@
 # Phase 06 — Customer benchmark mining (percentile, chuyên sâu) — dbt
 
-> Trạng thái: ⬜ chưa làm. Chốt 2026-06-26: materialize ở dbt (đường chuẩn), thiết kế CHẤT LƯỢNG — định nghĩa dân số sạch + chuẩn hóa tenure + encode an toàn cho LLM. KHÔNG chỉ `percent_rank` thô.
+> Trạng thái: ✅ DONE 2026-06-26 (commit 62245a3, verify trên Dagster build thật). Materialize ở dbt (đường chuẩn): `int_customer_benchmarks` (table) + 16 cột vào `dim_customers` + inject vào `build_approach_prompts.py`. Dân số rankable 939, status flag, chuẩn hóa tenure, cụm-từ an toàn LLM. Kèm guardrail `unique(fact_orders.order_code)` (commit 52617d0).
 
 ## Vấn đề & vì sao phải làm kỹ
 Script gán tier thô (`value_group`, CASE ngưỡng cứng `dim_customers.sql:124`) — không có vị thế tương đối → under/over-value (khách "SILVER" thực ra top ~5–6% chi tiêu). Nhưng **percentile thô trên toàn base là RÁC** vì dân số bẩn (đo trên parquet 25/06, n=7576):

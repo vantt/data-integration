@@ -49,7 +49,7 @@ Chốt 2026-06-26: nâng kịch bản từ **tài liệu tĩnh** → **engine d�
 
 | WS | Việc | Trạng thái | Trình tự |
 |---|---|---|---|
-| D | [Benchmark percentile dbt](phase-06-benchmark-percentile-dbt.md) (vị thế top X% CLV — đường chuẩn) | ⬜ ready | 1 |
+| D | [Benchmark percentile dbt](phase-06-benchmark-percentile-dbt.md) (vị thế top X% CLV — đường chuẩn) | ✅ done (commit 62245a3, verify Dagster build 03:54) | 1 |
 | A1 | Read-back notes/conversations thật từ `crm_activity` (đóng vòng lặp) | ⬜ | 1 |
 | A2 | `data_completeness` IN + `info_to_collect` OUT (progressive profiling, tái dùng capture) | ⬜ | 2 |
 | B | Script TĨNH có nhánh + backend interpreter (điều hướng theo outcome; state light trước) | ⬜ vision | 3 |
