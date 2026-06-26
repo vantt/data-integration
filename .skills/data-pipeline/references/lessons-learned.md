@@ -4477,3 +4477,20 @@ elif filter_priority == "high":
 4. Prefer a deterministic low-level assertion (direct SQLite write) over guessing a high-level API shape — fewer false "skips", and it fails loudly when wrong.
 
 **Reference:** `crm/ops/restore_verify_crm.py` `_assert_writable` (was `_write_delete_roundtrip`). Found by `code-reviewer` (report `plans/260624-2010-crm-backup-checkpoint-restore-verify/reports/from-code-reviewer-backup-restore-260624-2243-report.md`). Fixed 2026-06-24 commit 41ad75a.
+
+### L149 — Revenue and margin in one model must share the same VAT base; mixing VAT-inclusive revenue with VAT-excluded margin distorts margin %
+
+**Symptom:** `mart_hug_attribution` emitted `redemption_revenue_vnd = fact_orders.total_collected` (VAT-INCLUDED cash) next to `redemption_margin_vnd = fact_order_economics.channel_net_profit` (VAT-EXCLUDED: net_revenue − COGS − fees). Revenue was inflated ~8–10% vs the margin base, so the effective margin % (margin/revenue) read artificially low. Surfaced while repointing phantom columns: a fact_orders refactor had dropped the old `total_price_vnd` / `contribution_margin_vnd` columns, blocking the build.
+
+**Group:** MODEL
+
+**Root cause:** Under build-fix pressure the forced repoint of the dropped financial columns picked `total_collected` for revenue without matching the margin column's VAT treatment. Sapo prices are VAT-inclusive (`total_collected = net_revenue + VAT`); VAT is a pass-through liability, not earnings.
+
+**Fix:** Revenue → `fact_orders.net_revenue` (after discount, VAT removed) — same VAT-excluded base as `channel_net_profit`. Documented both columns in the `mart_hug_attribution` semantic contract in `marts/schema.yml`.
+
+**Rules:**
+1. Any revenue + margin (or any ratio) emitted by one model MUST share a single VAT base. Never pair VAT-inclusive (`total_collected`, `gross_revenue`) with VAT-excluded (`net_revenue`, `channel_net_profit`).
+2. VAT is pass-through, not revenue — default to VAT-excluded (`net_revenue`) for profitability / ROI / attribution marts; reserve `total_collected` for cashflow / AR questions.
+3. When a refactor drops columns and you must repoint, the replacement is a SEMANTIC choice, not just "a column that compiles": verify the definition against the paired columns and warehouse canon (e.g. `dim_customers.lifetime_contribution_margin = SUM(channel_net_profit)`).
+
+**Reference:** `transformation/models/marts/core/mart_hug_attribution.sql` + `marts/schema.yml` (mart_hug_attribution contract). Fixed 2026-06-26 commit 3e983c2.
