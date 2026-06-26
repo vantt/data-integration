@@ -4,6 +4,7 @@ Mirrors Go adapter (activity_repo.go) — exact same SQL.
 """
 from __future__ import annotations
 
+import json
 import sqlite3
 from typing import Optional
 
@@ -18,15 +19,15 @@ _INSERT = """
 INSERT INTO crm_activity_log (
   activity_id, party_id, activity_type, direction, channel,
   subject, body, outcome, related_order_code,
-  staff_user_id, occurred_at, created_at
-) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+  staff_user_id, occurred_at, created_at, custom_fields
+) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
 """
 
 _LIST_BY_PARTY = """
 SELECT
   activity_id, party_id, activity_type, direction, channel,
   subject, body, outcome, related_order_code,
-  staff_user_id, occurred_at, created_at
+  staff_user_id, occurred_at, created_at, custom_fields
 FROM crm_activity_log
 WHERE party_id = ?
 ORDER BY occurred_at DESC
@@ -39,6 +40,8 @@ LIMIT ?
 # ---------------------------------------------------------------------------
 
 def _activity_from_row(row: sqlite3.Row) -> Activity:
+    raw_cf = row["custom_fields"]
+    custom_fields = json.loads(raw_cf) if raw_cf else None
     return Activity(
         activity_id=row["activity_id"],
         party_id=row["party_id"],
@@ -52,6 +55,7 @@ def _activity_from_row(row: sqlite3.Row) -> Activity:
         outcome=row["outcome"],
         related_order_code=row["related_order_code"],
         staff_user_id=row["staff_user_id"],
+        custom_fields=custom_fields,
     )
 
 
@@ -83,6 +87,7 @@ class SQLiteActivityRepository:
             activity.staff_user_id,
             activity.occurred_at,
             activity.created_at,
+            json.dumps(activity.custom_fields) if activity.custom_fields else None,
         ))
         self._conn.commit()
         return activity

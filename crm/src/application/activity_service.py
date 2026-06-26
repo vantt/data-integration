@@ -52,6 +52,7 @@ class ActivityService:
             outcome=activity_data.get("outcome"),
             related_order_code=activity_data.get("related_order_code"),
             staff_user_id=activity_data.get("staff_user_id"),
+            custom_fields=activity_data.get("custom_fields"),
         )
         self._repo.insert(activity)
         # Keep last_contact snapshot in sync whenever outcome is recorded.
