@@ -15,6 +15,8 @@
 
 ## WS-A — Đóng vòng lặp + thu thập lũy tiến (Stage 1, ưu tiên cao, rủi ro thấp)
 
+> ⏸ **A1 HOÃN (2026-06-26):** CRM mới build → `recent_notes`/`recent_conversations` gần như ZERO. Wiring chưa cho giá trị; làm khi CRM tích lũy đủ ghi chú/hội thoại thật. A2 (progressive profiling) cũng phụ thuộc data này.
+
 **A1 — Read-back notes/conversations thật**
 - `build_approach_prompts.py` đọc `crm_activity` cho mỗi khách → fill `recent_notes` (body + outcome + occurred_at, tối đa 5) thay `[]`.
 - Map `customer_id ↔ party_id`: reuse pattern `insight_handler` (`list_identities` → `sapo_customer`).
@@ -97,7 +99,9 @@ Câu hỏi: generate full upfront 1 kịch bản, HAY regen động sau mỗi t�
 
 ---
 
-## WS-D — Benchmark percentile (data layer) → [phase-06](phase-06-benchmark-percentile-dbt.md)
+## WS-D — Benchmark percentile (data layer) → [phase-06](phase-06-benchmark-percentile-dbt.md) ✅ DONE
+
+Bao gồm cả phần prompt/template (2026-06-26): `build_approach_prompts.py` inject đủ benchmark (all_rankable + in_value_group, lv + clv); template thêm INPUT CONTRACT benchmark + quy tắc "percentile cao + tier thấp → nâng invest_level, verbalize qua *_phrase, không lộ *_pct thô" + ràng buộc làm tròn số.
 
 Vị thế tương đối (top X% CLV, ×median tier). Đường chuẩn dbt (đã chốt). Cấp chiều sâu cho mọi stage. Sẵn-sàng-execute nhất.
 

@@ -34,6 +34,7 @@ COLS = ["customer_id","full_name","phone","is_contactable","contact_quality","cu
     "lv_all_rankable_pct","lv_all_rankable_bucket","lv_all_rankable_phrase",
     "lv_in_value_group_pct","lv_in_value_group_bucket","lv_in_value_group_phrase",
     "clv_all_rankable_pct","clv_all_rankable_bucket","clv_all_rankable_phrase",
+    "clv_in_value_group_pct","clv_in_value_group_bucket","clv_in_value_group_phrase",
     "clv_vs_rankable_median"]
 
 # Gating cohort — KHỚP retail-ai-outreach-cohort.sql (khách retail đáng chạy)

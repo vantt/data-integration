@@ -38,6 +38,9 @@ RÀNG BUỘC CỨNG (vi phạm = output sai):
 6. KHÔNG bịa cảm nhận, đánh giá, mức độ hài lòng hay lời nói của khách khi
    recent_notes/recent_conversations trống. Cấm viết kiểu "lần trước anh/chị
    khen sản phẩm tốt" nếu không có dữ liệu chứng minh.
+7. LÀM TRÒN mọi số khi nhắc trong profile_read/diễn giải (phần trăm: số nguyên
+   hoặc 1 chữ số thập phân; tiền: VND gọn, vd "11,9 triệu"). TUYỆT ĐỐI không in
+   số thập phân dài thô (vd "0.7526163537659895").
 
 QUY TẮC NGHIỆP VỤ (áp dụng theo thứ tự ưu tiên):
 - consent_contact = "denied"  → approach.recommended = false; chỉ ghi chú
@@ -78,6 +81,17 @@ QUY TẮC NGHIỆP VỤ (áp dụng theo thứ tự ưu tiên):
   ngủ đông, dùng kịch bản win-back, TUYỆT ĐỐI không dùng giọng chào mừng
   người mới. Tương tự, "OVERDUE" trên khách recency rất lớn = đã mất, không
   phải "sắp tới kỳ mua".
+- VỊ THẾ TƯƠNG ĐỐI (benchmark — CHỈ khi benchmark_status="ranked"):
+  • *_all_rankable_pct = phân vị so với TOÀN khách bán lẻ mua lặp lại;
+    *_in_value_group_pct = trong cùng value_group. lv_* theo tổng chi tiêu;
+    clv_* theo chi tiêu/tháng-hoạt-động (hiệu suất, công bằng với khách mới).
+  • Nếu *_all_rankable_pct cao (top ~10-25%) NHƯNG value_group thấp
+    (SILVER/BRONZE) → coi như khách CẬN nhóm trên: NÂNG invest_level và phản
+    ánh vào profile_read (S14 chỉ hiển thị profile_read + invest_level + tier).
+  • Verbalize bằng *_phrase có sẵn (vd "thuộc nhóm 25% chi tiêu cao nhất trong
+    khách mua lặp lại"); TUYỆT ĐỐI không đọc *_pct thô ra khách.
+  • benchmark_status="single_purchase" → khách mới mua 1 lần, CHƯA đủ lịch sử
+    xếp hạng — đừng suy ra vị thế. Khác "ranked" (non_retail/inactive) → bỏ qua.
 
 [DATA]
 data_as_of: {{data_as_of}}
@@ -165,6 +179,11 @@ tags: {{tags}}
 | `avg_order_contribution_margin_pct` | number\|null | sức khỏe margin |
 | `loyalty_points` | int | điểm tích lũy (được phép nhắc với khách) |
 | `birth_date`, `gender` | — | cá nhân hóa nhẹ |
+| `benchmark_status` | enum | ranked / single_purchase / inactive_zero_value / non_retail — chỉ `ranked` mới có percentile |
+| `lv_*_pct`, `clv_*_pct` | number\|null | phân vị 0–100 (lv=tổng chi tiêu, clv=chi tiêu/tháng-hoạt-động); `_all_rankable`=toàn khách lặp lại, `_in_value_group`=trong tier |
+| `*_bucket` | enum\|null | top_5pct / top_decile / top_quartile / above_median / below_median |
+| `*_phrase` | string\|null | cụm-từ Việt sẵn dùng để verbalize — KHÔNG đọc `*_pct` thô ra khách |
+| `clv_vs_rankable_median` | number\|null | bội số chi tiêu so với median khách mua lặp lại |
 
 ### Ví dụ payload (rút gọn)
 
