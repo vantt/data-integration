@@ -575,6 +575,9 @@ models:
       - name: order_id
         description: "Source system order identifier."
         tests: [unique, not_null]
+      - name: order_code
+        description: "Business order code. Canonical 1:1 join key for cross-source enrichment (Shopee fee/adjustment ingestion, economics, voucher attribution). Must stay one row per code — the sapo v2→v3 union must dedupe so this invariant holds; downstream order_code joins fan out if it breaks."
+        tests: [unique, not_null]
       - name: customer_key
         description: "Foreign key to `dim_customers`."
         tests:
