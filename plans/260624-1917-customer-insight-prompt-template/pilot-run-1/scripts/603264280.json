@@ -1,0 +1,137 @@
+{
+"profile_read": "Mã tham chiếu: KH-2406-TT. Khách Thanh Tuyền là khách bán lẻ, thuộc nhóm SILVER, đã có 4 đơn với tổng giá trị 11.943.350 VND. Lần mua gần nhất cách 118 ngày, trong khi trung bình giữa các đơn là 143 ngày, nên đang gần chu kỳ mua lại. Khách có xu hướng mua sản phẩm Thực phẩm bảo vệ sức khỏe Shark Cartilage Extract - Lọ, SKU VCST21004L001, và có tín hiệu mua lại DUE_SOON. Khách thiên về mua trực tiếp, thanh toán COD, nhạy với ưu đãi, nhưng biên đóng góp đơn hàng đang khỏe ở mức 0,7526163537659895.",
+"value_assessment": {
+"tier": "SILVER",
+"lifetime_value_vnd": 11943350,
+"margin_health": "healthy",
+"invest_level": "medium"
+},
+"opportunity": {
+"headline": "Cơ hội lớn nhất là nhắc mua lại đúng sản phẩm khách đã quen dùng trước khi quá chu kỳ.",
+"rationale": "Khách có sản phẩm yêu thích rõ ràng, từng mua nhiều đơn, đang ở trạng thái có tín hiệu sắp tới kỳ mua lại và biên lợi nhuận đủ khỏe để có thể dùng ưu đãi vừa phải làm đòn bẩy.",
+"evidence": [
+"order_count = 4",
+"recency_days = 118",
+"avg_days_between_orders = 143",
+"next_purchase_signal = DUE_SOON",
+"top_affinity_sku = VCST21004L001",
+"avg_order_contribution_margin_pct = 0.7526163537659895"
+]
+},
+"risk": {
+"headline": "Rủi ro lớn nhất là khách đã được ghi nhận Churned và có thể rơi khỏi chu kỳ mua lại nếu không chăm sóc kịp.",
+"type": "churn",
+"rationale": "Dù tín hiệu mua lại là DUE_SOON, khách đã 118 ngày chưa mua và customer_status đang là Churned, nên cần tiếp cận theo hướng nhắc lại nhẹ nhàng, không nói như khách mới."
+},
+"approach": {
+"recommended": true,
+"reason_if_not_recommended": null,
+"primary_channel": "phone",
+"fallback_channel": "sms",
+"timing": "Nên gọi trong khung giờ hành chính hoặc đầu buổi tối, ưu tiên trước khi khách vượt quá chu kỳ mua trung bình 143 ngày; hiện khách đã 118 ngày chưa mua nên phù hợp để nhắc mua lại.",
+"opening_message": "Dạ em chào Anh/Chị Thanh Tuyền ạ, em gọi từ cửa hàng mình từng đặt Thực phẩm bảo vệ sức khỏe Shark Cartilage Extract. Dạ bên em thấy cũng đã một thời gian mình chưa đặt lại, nên em gọi hỏi xem Anh/Chị còn nhu cầu dùng tiếp sản phẩm này không để em hỗ trợ lên đơn giao COD cho tiện ạ.",
+"fallback_message": "Dạ em chào Anh/Chị Thanh Tuyền, em từ cửa hàng mình từng đặt Shark Cartilage Extract. Nếu Anh/Chị cần dùng tiếp, em hỗ trợ kiểm tra hàng và giao COD cho mình ạ.",
+"talking_points": [
+"Nhắc đúng sản phẩm khách từng mua: Thực phẩm bảo vệ sức khỏe Shark Cartilage Extract - Lọ, SKU VCST21004L001.",
+"Tập trung vào sự tiện lợi: hỗ trợ đặt lại nhanh, giao hàng COD theo thói quen thanh toán của khách.",
+"Có thể dùng ưu đãi vừa phải hoặc quà nhỏ để kích hoạt lại, nhưng không cần giảm giá sâu vì biên đơn hàng đang khỏe."
+],
+"cross_sell": [
+"Bột uống Bone's Calcium for Kids - Bịch"
+],
+"objection_handling": [
+{
+"objection": "Để tôi suy nghĩ thêm.",
+"response": "Dạ được ạ, em không ép mình đâu. Em gửi lại thông tin sản phẩm và hỗ trợ giữ đơn COD, khi nào Anh/Chị cần dùng tiếp thì nhắn em lên đơn nhanh cho mình ạ."
+},
+{
+"objection": "Có ưu đãi gì không?",
+"response": "Dạ em kiểm tra ưu đãi phù hợp cho đơn đặt lại của mình nhé. Mình từng dùng dòng Shark Cartilage Extract rồi nên em ưu tiên hỗ trợ theo đúng sản phẩm Anh/Chị quen dùng, giao COD cho tiện ạ."
+}
+],
+"do_not": [
+"Không nói khách vừa mua gần đây vì lần mua gần nhất đã 118 ngày.",
+"Không nói khách từng khen hoặc hài lòng về sản phẩm vì không có ghi chú hay hội thoại gần nhất.",
+"Không lộ các số liệu nội bộ như biên lợi nhuận, nhóm giá trị, trạng thái Churned hoặc mức nhạy ưu đãi trong lời thoại với khách.",
+"Không giảm giá sâu ngay từ đầu; chỉ dùng ưu đãi vừa phải hoặc quà nhỏ nếu cần."
+]
+},
+"nodes": {
+"root": {
+"id": "root",
+"kind": "opening",
+"say": "Dạ em chào Anh/Chị Thanh Tuyền ạ, em gọi từ cửa hàng mình từng đặt Thực phẩm bảo vệ sức khỏe Shark Cartilage Extract. Dạ bên em thấy cũng đã một thời gian mình chưa đặt lại, nên em gọi hỏi xem Anh/Chị còn nhu cầu dùng tiếp sản phẩm này không để em hỗ trợ lên đơn giao COD cho tiện ạ.",
+"hint": "Đây là lời mở gốc. Đợi phản hồi đầu tiên của khách trước khi tiếp.",
+"options": [
+{ "label": "Gọi được — khách nghe",  "outcome": "reached",   "next": "reached_interest_check" },
+{ "label": "Không nghe máy",          "outcome": "no_answer", "next": null },
+{ "label": "Hẹn gọi lại",             "outcome": "callback",  "next": null },
+{ "label": "Cúp máy / từ chối nghe",  "outcome": "refused",   "next": null }
+]
+},
+"reached_interest_check": {
+"id": "reached_interest_check",
+"kind": "probe",
+"say": "Dạ không biết Anh/Chị còn nhu cầu dùng tiếp Shark Cartilage Extract không ạ?",
+"hint": "Lắng nghe ngay — không cắt ngang. Khách đang Churned nên không ép.",
+"options": [
+{ "label": "Có, quan tâm",          "outcome": "interested",       "next": "pitch_reorder" },
+{ "label": "Để suy nghĩ",           "outcome": "objection_timing", "next": "handle_objection_timing" },
+{ "label": "Giá sao / đắt không?",  "outcome": "objection_price",  "next": "handle_objection_price" },
+{ "label": "Không cần nữa",         "outcome": "objection_need",   "next": "handle_objection_need" },
+{ "label": "Đã mua / đã có hàng",   "outcome": "purchased",        "next": null }
+]
+},
+"pitch_reorder": {
+"id": "pitch_reorder",
+"kind": "pitch",
+"say": "Dạ vậy em hỗ trợ lên đơn COD cho mình nhé, sản phẩm Shark Cartilage Extract giao tận nhà, Anh/Chị chỉ nhận hàng là xong ạ. Ngoài ra nếu Anh/Chị quan tâm, bên em còn có Bột uống Bone's Calcium for Kids dùng kết hợp rất tốt ạ.",
+"hint": "COD theo thói quen. Gợi cross-sell nhẹ; không giảm giá sâu (biên khỏe).",
+"options": [
+{ "label": "Đồng ý mua",          "outcome": "purchased",        "next": null },
+{ "label": "Hỏi giá / ưu đãi",    "outcome": "objection_price",  "next": "handle_objection_price" },
+{ "label": "Cần thêm thời gian",   "outcome": "objection_timing", "next": "handle_objection_timing" }
+]
+},
+"handle_objection_price": {
+"id": "handle_objection_price",
+"kind": "objection",
+"say": "Dạ em kiểm tra ưu đãi phù hợp cho đơn đặt lại của mình nhé. Mình từng dùng dòng Shark Cartilage Extract rồi nên em ưu tiên hỗ trợ theo đúng sản phẩm Anh/Chị quen dùng, giao COD cho tiện ạ.",
+"hint": "KHÔNG giảm giá sâu ngay từ đầu — chỉ ưu đãi vừa phải nếu cần (do_not[3]).",
+"options": [
+{ "label": "Đồng ý",       "outcome": "purchased", "next": null },
+{ "label": "Vẫn từ chối",  "outcome": "refused",   "next": null }
+]
+},
+"handle_objection_timing": {
+"id": "handle_objection_timing",
+"kind": "objection",
+"say": "Dạ được ạ, em không ép mình đâu. Em gửi lại thông tin sản phẩm và hỗ trợ giữ đơn COD, khi nào Anh/Chị cần dùng tiếp thì nhắn em lên đơn nhanh cho mình ạ.",
+"hint": "Kết thúc mở — để lại điểm liên lạc, không đóng cơ hội.",
+"options": [
+{ "label": "Hẹn gọi lại sau",  "outcome": "callback", "next": null },
+{ "label": "Từ chối hẳn",      "outcome": "refused",  "next": null }
+]
+},
+"handle_objection_need": {
+"id": "handle_objection_need",
+"kind": "objection",
+"say": "Dạ vâng, em cảm ơn Anh/Chị đã cho em biết. Nếu sau này Anh/Chị cần, em sẵn sàng hỗ trợ ạ.",
+"hint": "Kết thúc lịch sự. Không tạo callback task khi khách từ chối hẳn.",
+"options": [
+{ "label": "Kết thúc lịch sự", "outcome": "refused", "next": null }
+]
+}
+},
+"entry_node": "root",
+"confidence": "medium",
+"data_gaps": [
+"contact_quality = unverified nên chưa chắc số điện thoại còn chính xác.",
+"loyalty_points = null nên không thể dùng điểm tích lũy trong kịch bản.",
+"birth_date = null nên không thể cá nhân hóa theo sinh nhật.",
+"gender = null nên lời thoại cần dùng Anh/Chị thay vì xưng hô theo giới tính.",
+"recent_notes trống nên không có cơ sở về nhu cầu, phản hồi hay lý do khách ngừng mua.",
+"recent_conversations trống nên không có dữ liệu về câu nói, cảm nhận hoặc mức độ hài lòng của khách.",
+"tags trống nên không có phân nhóm hành vi bổ sung ngoài các trường hồ sơ hiện có."
+]
+}
