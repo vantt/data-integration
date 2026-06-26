@@ -4511,3 +4511,20 @@ elif filter_priority == "high":
 3. A passing internal Docker HEALTHCHECK in the sibling's logs does NOT mean the orchestrator can reach it — they resolve `localhost` in different namespaces. Verify reachability from the actual caller.
 
 **Reference:** `crm/ops/restore_verify_crm.py` (`gate_b_functional`, SIDECAR branch) + `Dockerfile.drillrunner` + `crm_drill_runner` service. Found + fixed during Phase 6 live verification 2026-06-26.
+
+### L151 — A Protocol interface wired to the wrong layer (repo vs service) silently passes Python's structural typing but fails at runtime with a type error the UI swallows as 500
+
+**Symptom:** The "Gán phụ trách" (M04) modal submitted but never saved. The form closed visually on some browsers; on others the modal just stayed open. No UI error message. Server log showed an SQLite `InterfaceError` on the `owner_user_id` field.
+
+**Group:** SERVE / CRM-WEB
+
+**Root cause:** `screen_modals.py` declared an `OwnerAssigner` Protocol with `upsert_profile(self, profile: CustomerProfile)` — matching the **repository** layer signature (`SQLiteProfileRepository.upsert_profile`). The composition root wired `owner_assigner = profile_svc` (a `ProfileService`), whose actual signature is `upsert_profile(self, party_id: str, **kwargs)`. Python's structural (duck-type) Protocol checking raises no error at wire-time. At request time, `post_assign_owner` passed a `CustomerProfile` object as the first positional arg; the service received it as `party_id`, passed it straight to SQLite as a bind parameter, and SQLite threw `InterfaceError: unsupported type`. The exception was caught and re-raised as HTTP 500. HTMX on a 500 does not swap the target, so the modal stayed open and the save silently failed.
+
+**Fix:** Update the `OwnerAssigner` Protocol signature to `upsert_profile(self, party_id: str, **kwargs) -> object` (matching the service layer) and call it as `upsert_profile(party_id, owner_user_id=owner_user_id)`. Remove the intermediate `CustomerProfile` construction and the now-unused import.
+
+**Rules:**
+1. When writing a Protocol for a service dependency, copy the signature from the **service** layer, NOT the repository layer — they differ and Python won't catch the mismatch.
+2. Inspect server logs on "silent" UI failures before assuming the frontend is broken — a 4xx/5xx from the backend is often invisible to the user when HTMX's `hx-swap` is skipped on error.
+3. After adding a new route that POSTs and is expected to redirect, smoke-test it once in a real browser and confirm the redirect actually fires (not just that the form submits without JS errors).
+
+**Reference:** `crm/src/adapters/inbound/web/screen_modals.py` (`post_assign_owner`, `OwnerAssigner`). Fixed 2026-06-26.

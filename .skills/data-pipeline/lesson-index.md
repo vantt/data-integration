@@ -232,6 +232,7 @@ Lessons that cut across multiple groups — canonical home is `playbooks/cross-c
 | L74 | Dagster jobs stuck when VACUUM holds SQLite exclusive lock | `playbooks/cross-cutting.md#sqlite-wal-safety` | OPS |
 | L83 | KPI/recon window phải dùng ICT midnight, không phải UTC midnight | `playbooks/cross-cutting.md#timezone-window-alignment` | TRUST, OPS |
 | L84 | UTC storage + ICT display — architecture chuẩn cho pipeline VN | `playbooks/cross-cutting.md#timezone-window-alignment` | TRUST, MODEL |
+| L151 | Protocol wired to wrong layer (repo vs service) silently passes structural typing, fails at runtime as SQLite type error swallowed by HTMX as silent 500 | `references/lessons-learned.md#L151` | SERVE |
 
 ---
 
@@ -241,11 +242,11 @@ Lessons that cut across multiple groups — canonical home is `playbooks/cross-c
 |-------|--------------------|---------------------|-----------------|-------|
 | INGEST | 20 | 0 | 0 | 20 |
 | MODEL | 9 | 0 | 14 | 23 |
-| SERVE | 1 + serving-layer.md | 0 | 1 (shared) | 2 + full doc |
+| SERVE | 2 + serving-layer.md | 0 | 1 (shared) | 3 + full doc |
 | TRUST | 11 | 0 | 0 | 11 |
 | OPS | 39 | 14 | 0 | 53 |
 | Cross-cutting | 15 (overlap from above) | 0 | 0 | 15 |
-| **Total unique** | **78** | **14** | **14** | **105** |
+| **Total unique** | **79** | **14** | **14** | **106** |
 
 *Gaps: L34 (skipped), L77-L80 (reserved) — append-only numbering, audit trail preserved*
 *Lessons appearing in multiple groups are listed in primary group; cross-cutting table notes secondary references.*
