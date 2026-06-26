@@ -2,8 +2,12 @@
 
 **Goal:** Re-ingest toàn bộ orders từ Sapo API qua `batch_sync` để nạp lại các orders bị thiếu (đặc biệt Shopee). So sánh before/after.
 
-**Status:** Ready to execute
-(updated 2026-06-24: untouched by 260623 audit work; pre-flight Dagster asset fix still required before running)
+**Status:** ✅ DONE — nghiệm thu 2026-06-26 (code + data scan xác nhận đã thực thi)
+
+> **Nghiệm thu 2026-06-26 (scan code + raw lake):**
+> - Step 1 fix ĐÃ áp từ 2026-06-12 (commit `94495dd`): asset dùng `--reset-cursor`; guardrail block `--full-refresh` ở `pipeline_runner.py:57`. File rename `sapo_assets.py → sapo_v2_assets.py` (commit `ab2b006`, 2026-06-24, no content change).
+> - Re-ingest ĐÃ chạy: tổng distinct orders 3,456 → **15,547**; Shopee 559 → **5,167**; batch_sync Shopee 254 → **5,161**, MIN date lùi từ 2023-04-25 về **2021-05-31** (Sapo API CÒN giữ data 2021–2022). Parquet mới ghi từ 12/06.
+> - ⚠️ Theo dõi tiếp (ngoài scope): channel đổi format `"Shopee"` → `"Sàn TMĐT - Shopee"` (+ Lazada/Tiki) → verify dbt models không còn filter chuỗi cũ.
 
 ---
 
