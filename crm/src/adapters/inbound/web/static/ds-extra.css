@@ -475,7 +475,7 @@
 /* cockpit tab-panel wrapper (replaces .s14-main in full-screen layout) */
 .s14-cockpit-wrap {
   display: flex; flex-direction: column; gap: var(--sp-4);
-  padding-bottom: var(--sp-8);
+  padding-bottom: 200px;
   container-type: inline-size;
 }
 
@@ -579,16 +579,26 @@
 .s14-conf--bad { color: var(--coral-500); }
 .s14-trust__caveat { display: inline-flex; align-items: center; gap: 5px; color: var(--fg-muted); }
 
-/* outcome bar — sticky inside tab-panel scroll container */
+/* outcome bar — fixed to viewport bottom; left/width set by JS to match .detail-main */
 .s14-outcome {
-  position: sticky; bottom: 0; z-index: 6;
+  position: fixed; bottom: 0; z-index: 100;
   display: block;
-  padding: var(--sp-3) 0;
-  background: color-mix(in srgb, var(--bg-page) 90%, transparent);
+  padding: var(--sp-2) var(--sp-4) var(--sp-3);
+  background: color-mix(in srgb, var(--bg-page) 95%, transparent);
   backdrop-filter: blur(12px); border-top: 1px solid var(--border-strong);
 }
-.s14-outcome__row { display: flex; align-items: center; justify-content: center; gap: var(--sp-5); flex-wrap: wrap; }
+.s14-outcome__row { display: flex; flex-direction: column; align-items: stretch; gap: var(--sp-2); }
 .s14-outcome__btns { display: flex; align-items: center; gap: var(--sp-2); flex-wrap: wrap; justify-content: center; }
+.s14-quick-note {
+  width: 100%; box-sizing: border-box;
+  background: var(--bg-surface); border: 1px solid var(--border-strong);
+  border-radius: var(--radii-control); color: var(--fg-1);
+  font-family: var(--font-body); font-size: 13px; line-height: 1.5;
+  padding: 7px 10px; resize: vertical; outline: none;
+  transition: border-color var(--dur-fast) var(--ease-fast);
+}
+.s14-quick-note:focus { border-color: var(--accent); }
+.s14-quick-note::placeholder { color: var(--fg-muted); }
 .s14-oc { display: inline-flex; align-items: center; gap: 7px; cursor: pointer; background: var(--bg-surface); border: 1px solid var(--border-strong); border-radius: var(--radii-control); padding: 9px 14px; font-family: var(--font-body); font-size: 13px; color: var(--fg-1); white-space: nowrap; transition: all var(--dur-fast) var(--ease-fast); }
 .s14-oc:hover { border-color: var(--fg-muted); }
 .s14-oc--good:hover { border-color: var(--moss-500); color: var(--moss-500); }
