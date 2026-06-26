@@ -9,6 +9,10 @@ node_modules
 poc
 data_lake
 app_data
+
+# Manual approach-script workflow outputs — embed customer PII, never commit
+approach_prompts/
+approach_out/
 .tmp_dagster_home_*
 .dagster_home/.nux
 .dagster_home/.telemetry
