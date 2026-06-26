@@ -27,6 +27,33 @@ models:
       - name: ingested_at
         description: "Timestamp when the event was ingested from the D1 queue (UTC TIMESTAMPTZ)."
 
+  - name: mart_hug_attribution
+    description: >
+      HUG voucher redemption attribution. Grain: one row per HUG voucher
+      (from stg_crm__hug_voucher). Redemption financials are enriched onto the
+      voucher's order via order_code (1:1), and are VAT-EXCLUDED so the
+      revenue/margin pair shares one base.
+    columns:
+      - name: order_code
+        description: "Voucher's bound order code; join key to fact_orders / fact_order_economics. NULL until redeemed."
+      - name: is_redeemed
+        description: "TRUE when the voucher is bound to an order (order_code IS NOT NULL)."
+      - name: redemption_revenue_vnd
+        description: >
+          Revenue of the redeemed order = fact_orders.net_revenue (after discount,
+          VAT REMOVED). Deliberately NOT total_collected: VAT is a pass-through, not
+          earnings, and including it would inflate revenue ~8-10% and distort the
+          revenue/margin ratio (margin below is already VAT-net). NULL when not redeemed.
+      - name: redemption_margin_vnd
+        description: >
+          Contribution margin of the redeemed order = fact_order_economics.channel_net_profit
+          (net_revenue − COGS − channel fees; EXCLUDES overhead). Warehouse-canonical margin
+          definition, same VAT-excluded base as redemption_revenue_vnd. NULL when not redeemed.
+      - name: issued_date
+        description: "Voucher issue date (ICT calendar date)."
+      - name: redeemed_date
+        description: "Voucher redemption date (ICT calendar date); NULL when not redeemed."
+
   # Order Transitions (history_log)
   - name: fact_order_transitions
     description: >

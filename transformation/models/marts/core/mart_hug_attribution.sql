@@ -20,10 +20,14 @@ SELECT
     v.redeemed_at,
     v.order_code,
     v.is_redeemed,
-    -- Order-level financials (NULL when not redeemed).
-    -- total_collected = amount paid by customer (after discount, incl. VAT).
-    -- channel_net_profit from fact_order_economics = contribution margin (no overhead).
-    o.total_collected                AS redemption_revenue_vnd,
+    -- Order-level financials (NULL when not redeemed). Both on a VAT-EXCLUDED base
+    -- so the revenue/margin ratio stays meaningful (margin already nets VAT out):
+    --   net_revenue        = revenue after discount, VAT removed. NOT total_collected,
+    --                        which includes VAT (pass-through, not earnings) and would
+    --                        inflate revenue ~8-10% and distort margin %.
+    --   channel_net_profit = contribution margin = net_revenue - COGS - channel fees
+    --                        (no overhead); warehouse-canonical margin definition.
+    o.net_revenue                    AS redemption_revenue_vnd,
     oe.channel_net_profit            AS redemption_margin_vnd,
     DATE_TRUNC('day', v.issued_at AT TIME ZONE 'Asia/Ho_Chi_Minh')::DATE   AS issued_date,
     DATE_TRUNC('day', v.redeemed_at AT TIME ZONE 'Asia/Ho_Chi_Minh')::DATE AS redeemed_date
