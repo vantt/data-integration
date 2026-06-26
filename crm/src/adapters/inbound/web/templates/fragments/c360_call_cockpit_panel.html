@@ -43,6 +43,11 @@
 {% set risk = script.risk %}
 {% set va   = script.value_assessment %}
 
+{# ── Branching detection ──────────────────────────────────────────────────── #}
+{% set is_branching = (script.nodes is defined and script.entry_node is defined) %}
+{% set entry_node_id = script.entry_node | default('root') %}
+{% set initial_node = script.nodes[entry_node_id] if is_branching else none %}
+
 <div class="s14-cockpit-wrap" data-party-id="{{ party_id }}" id="s14-panel-root">
 
   {# ── STRATEGY SUMMARY ───────────────────────────────────────── #}
@@ -112,6 +117,45 @@
   </div>
 
   {% else %}
+  {# ── recommended=true: branching OR legacy flat ──────────── #}
+
+  {% if is_branching %}
+  {# ── BRANCHING: node renderer (S14 dynamic path) ────────────────────────── #}
+
+  {% if confidence == 'low' %}
+  <div class="s14-lowconf">
+    <svg class="ico" width="13" height="13" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.3" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M8 3 2 13h12L8 3z"/><line x1="8" y1="7" x2="8" y2="10"/><circle cx="8" cy="12" r="0.4" fill="currentColor" stroke="none"/></svg>
+    Độ tin thấp — kiểm chứng khi nói chuyện, đừng cam kết chắc.
+  </div>
+  {% endif %}
+
+  {# Node area — swapped by HTMX on each outcome tap #}
+  <div class="s14-block s14-node-wrap" id="s14-node-area"
+       data-entry-node="{{ entry_node_id }}"
+       data-party-id="{{ party_id }}">
+    {# Initial node rendered server-side; subsequent nodes swapped by HTMX #}
+    {% set node = initial_node %}
+    {% set terminal = false %}
+    {% include "fragments/_s14_node_fragment.html" %}
+  </div>{# /#s14-node-area #}
+
+  {# Guardrail strip — kept in branching mode (schema Q3: global do_not visible) #}
+  {% if ap.do_not and ap.do_not | length > 0 %}
+  <div class="s14-guard" role="note" aria-label="Guardrails">
+    <span class="s14-guard__sign" aria-hidden="true">
+      <svg class="ico" width="14" height="14" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.3" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M8 3 2 13h12L8 3z"/><line x1="8" y1="7" x2="8" y2="10"/><circle cx="8" cy="12" r="0.4" fill="currentColor" stroke="none"/></svg>
+    </span>
+    <div class="s14-guard__list">
+      {% for d in ap.do_not %}
+      <span class="s14-guard__item">{{ d }}</span>
+      {% endfor %}
+    </div>
+  </div>
+  {% endif %}
+
+  {% else %}
+  {# ── LEGACY FLAT RENDER (existing blocks — unchanged) ────────────────────── #}
+
   {# ── TALK TRACK ────────────────────────────────────────────── #}
   <div class="s14-block" id="s14-talktrack-block">
     {# Channel toggle — A-S14-002: swaps opening_message ↔ fallback_message via JS #}
@@ -255,6 +299,8 @@
     </div>
   </div>
   {% endif %}
+
+  {% endif %}{# /is_branching #}
 
   {% endif %}{# /is_stop #}
 
@@ -430,6 +476,18 @@
     if (ro) { ro.observe(anchor); ro.observe(document.documentElement); }
     else { window.addEventListener('resize', apply); }
   }());
+
+  // ── Branching: track current node id in JS var (state-light; resets on refresh) ─
+  {% if is_branching %}
+  var _currentNodeId = {{ (initial_node.id | tojson) if initial_node else '"root"' }};
+  // Update _currentNodeId after each HTMX swap so it reflects the rendered node.
+  document.addEventListener('htmx:afterSwap', function (e) {
+    if (e.target && e.target.id === 's14-node-area') {
+      var newNode = e.target.querySelector('[data-node-id]');
+      if (newNode) { _currentNodeId = newNode.getAttribute('data-node-id'); }
+    }
+  });
+  {% endif %}
 
   // ── A-S14-009: Open outcome modal, then inject quick-note into #m08-body ─
   window.s14OpenOutcome = function (outcome) {

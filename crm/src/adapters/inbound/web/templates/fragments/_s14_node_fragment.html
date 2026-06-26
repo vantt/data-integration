@@ -1,0 +1,56 @@
+{# _s14_node_fragment.html — single branching-node render for S14 call cockpit.
+   Swapped into #s14-node-area by HTMX on each nav step, and also included
+   server-side on initial page load.
+
+   Context vars:
+     node     : dict | None  — {id, kind, say, hint, options[{label,outcome,next}]}
+     terminal : bool         — true when no further navigation is available
+     party_id : str
+#}
+{% if terminal %}
+<div class="s14-node s14-node--terminal" role="status">
+  <div class="s14-node__say s14-node__say--terminal">
+    Cuộc gọi hoàn thành. Ghi kết quả cuộc gọi bên dưới.
+  </div>
+</div>
+
+{% elif node %}
+<div class="s14-node s14-node--{{ node.kind }}" data-node-id="{{ node.id }}">
+  <div class="s14-node__kind-tag s14-node__kind-tag--{{ node.kind }}">{{ node.kind }}</div>
+
+  <div class="s14-node__say">"{{ node.say }}"</div>
+
+  {% if node.hint %}
+  <div class="s14-node__hint">
+    <svg class="ico" width="12" height="12" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.3" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M8 3 2 13h12L8 3z"/><line x1="8" y1="7" x2="8" y2="10"/><circle cx="8" cy="12" r="0.4" fill="currentColor" stroke="none"/></svg>
+    {{ node.hint }}
+  </div>
+  {% endif %}
+
+  {% if node.options and node.options | length > 0 %}
+  <div class="s14-node__options" role="group" aria-label="Phản hồi của khách">
+    {% for opt in node.options %}
+    <button class="s14-node__opt s14-node__opt--{{ opt.outcome }}"
+            type="button"
+            hx-post="/api/parties/{{ party_id }}/script-nav"
+            hx-vals='{"current_node_id": "{{ node.id }}", "outcome": "{{ opt.outcome }}"}'
+            hx-target="#s14-node-area"
+            hx-swap="innerHTML">
+      {{ opt.label }}
+    </button>
+    {% endfor %}
+  </div>
+  {% endif %}
+</div>
+
+{% else %}
+{# Fallback: node is None but not terminal — should not happen in practice #}
+<div class="s14-node s14-node--error" role="alert">
+  Không tìm thấy bước tiếp theo. <button type="button"
+    hx-post="/api/parties/{{ party_id }}/script-nav"
+    hx-vals='{"current_node_id": "root", "outcome": "reached"}'
+    hx-target="#s14-node-area"
+    hx-swap="innerHTML"
+    class="s14-node__opt">Về đầu kịch bản</button>
+</div>
+{% endif %}
