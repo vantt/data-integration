@@ -147,7 +147,7 @@ def _make_snapshot_asset(tbl: CrmWritebackTable):
         group_name="crm_writeback",
         description=f"Export {tbl.name} from crm.db to data lake (snapshot).",
     )
-    def _asset(context: AssetExecutionContext) -> Output:
+    def _asset(context) -> Output:
         out = os.path.join(CRM_EXPORT, f"{tbl.name}.parquet")
         n = _snapshot_export(CRM_DB_PATH, tbl.export_query, out)
         context.log.info(f"{tbl.name}: {n} rows → {out}")
@@ -162,7 +162,7 @@ def _make_incremental_asset(tbl: CrmWritebackTable):
         group_name="crm_writeback",
         description=f"Export {tbl.name} from crm.db to data lake (incremental_append).",
     )
-    def _asset(context: AssetExecutionContext) -> Output:
+    def _asset(context) -> Output:
         from datetime import datetime, timezone
 
         run_ts = datetime.now(timezone.utc).strftime("%Y-%m-%dT%H:%M:%S")

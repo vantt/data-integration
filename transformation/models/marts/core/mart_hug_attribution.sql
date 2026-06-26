@@ -20,13 +20,17 @@ SELECT
     v.redeemed_at,
     v.order_code,
     v.is_redeemed,
-    -- Order-level financials (NULL when not redeemed)
-    o.total_price_vnd                AS redemption_revenue_vnd,
-    o.contribution_margin_vnd        AS redemption_margin_vnd,
+    -- Order-level financials (NULL when not redeemed).
+    -- total_collected = amount paid by customer (after discount, incl. VAT).
+    -- channel_net_profit from fact_order_economics = contribution margin (no overhead).
+    o.total_collected                AS redemption_revenue_vnd,
+    oe.channel_net_profit            AS redemption_margin_vnd,
     DATE_TRUNC('day', v.issued_at AT TIME ZONE 'Asia/Ho_Chi_Minh')::DATE   AS issued_date,
     DATE_TRUNC('day', v.redeemed_at AT TIME ZONE 'Asia/Ho_Chi_Minh')::DATE AS redeemed_date
 
 FROM {{ ref('stg_crm__hug_voucher') }} v
 LEFT JOIN {{ ref('dim_customers') }} c ON c.customer_id = v.customer_id
 LEFT JOIN {{ ref('fact_orders') }} o
-       ON o.order_code = v.order_code AND o.source_system = 'sapo_v2'
+       ON o.order_code = v.order_code
+LEFT JOIN {{ ref('fact_order_economics') }} oe
+       ON oe.order_code = v.order_code
