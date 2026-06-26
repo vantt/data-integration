@@ -53,7 +53,7 @@
         {% if current_owner_id %}
         <label class="field">
           <span class="field__label">Phụ trách hiện tại</span>
-          <span>{{ current_owner_id }}</span>
+          <span>{{ current_owner_name or current_owner_id }}</span>
         </label>
         {% endif %}
         <label class="field">

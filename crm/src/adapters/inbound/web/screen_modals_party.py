@@ -142,10 +142,14 @@ def make_party_modals_router(
             users = app_users.list_active()
         except Exception as exc:
             log.warning("m04: list_active: %s", exc)
+        current_owner_name = next(
+            (u.full_name for u in users if u.user_id == current_owner_id), current_owner_id
+        )
         return templates.TemplateResponse(
             "modals.html",
             {"request": request, "macro": "modal_assign_owner",
-             "party_id": party_id, "current_owner_id": current_owner_id, "users": users},
+             "party_id": party_id, "current_owner_id": current_owner_id,
+             "current_owner_name": current_owner_name, "users": users},
         )
 
     # ── GET /modals/m05 — Create / Edit Task ─────────────────────────────────

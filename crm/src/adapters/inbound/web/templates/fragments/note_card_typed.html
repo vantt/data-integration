@@ -19,7 +19,7 @@
       {% if type_info %}
       <span class="bdg {{ type_info[1] }}"{% if type_info[2] %} style="{{ type_info[2] }}"{% endif %}>{{ type_info[0] }}</span>
       {% endif %}
-      {% if note.author_user_id %}<span>{{ note.author_user_id }}</span>{% endif %}
+      {% if note.author_user_id %}<span>{{ user_map.get(note.author_user_id, note.author_user_id) }}</span>{% endif %}
       <span class="note-card__when">· {{ note.created_at | format_ict }} ICT</span>
     </div>
     <div class="note-card__acts">

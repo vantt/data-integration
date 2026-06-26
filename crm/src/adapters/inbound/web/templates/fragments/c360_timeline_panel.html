@@ -43,7 +43,7 @@
         <div class="timeline-item__text">{{ act.body }}</div>
         {% endif %}
         <div class="timeline-item__meta muted caption">
-          {% if act.staff_user_id %}{{ act.staff_user_id }}{% endif %}
+          {% if act.staff_user_id %}{{ user_map.get(act.staff_user_id, act.staff_user_id) }}{% endif %}
           {% if act.related_order_code %}
           · <a href="/orders/{{ act.related_order_code }}" class="link mono">{{ act.related_order_code }}</a>
           {% endif %}

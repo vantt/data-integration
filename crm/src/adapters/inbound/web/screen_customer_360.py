@@ -246,6 +246,13 @@ def make_customer_360_router(
             except Exception as exc:
                 log.warning("c360: load custom_field_defs: %s", exc)
 
+        user_map: dict = {}
+        if app_users is not None:
+            try:
+                user_map = {u.user_id: u.full_name for u in app_users.list_active()}
+            except Exception as exc:
+                log.warning("c360: list_active: %s", exc)
+
         return templates.TemplateResponse(
             "customer_360.html",
             {
@@ -258,6 +265,7 @@ def make_customer_360_router(
                 "contact_pref_notes": contact_pref_notes,
                 "custom_field_defs": cfd_list,
                 "geo_region": _geo_region(party360.province),
+                "user_map": user_map,
             },
         )
 
@@ -326,8 +334,15 @@ def make_customer_360_router(
             )
         if panel == "timeline":
             acts = activities.list_activities(party_id)
+            tl_user_map: dict = {}
+            if app_users is not None:
+                try:
+                    tl_user_map = {u.user_id: u.full_name for u in app_users.list_active()}
+                except Exception as exc:
+                    log.warning("c360 timeline: list_active: %s", exc)
             return templates.TemplateResponse(
-                "fragments/c360_timeline_panel.html", {**ctx, "activities": acts}
+                "fragments/c360_timeline_panel.html",
+                {**ctx, "activities": acts, "user_map": tl_user_map},
             )
         if panel == "tasks":
             status_filter = request.query_params.get("filter", "open")
@@ -346,9 +361,15 @@ def make_customer_360_router(
         if panel == "notes":
             note_list = notes.list_notes(party_id)
             type_filter = request.query_params.get("type_filter", "all")
+            notes_user_map: dict = {}
+            if app_users is not None:
+                try:
+                    notes_user_map = {u.user_id: u.full_name for u in app_users.list_active()}
+                except Exception as exc:
+                    log.warning("c360 notes: list_active: %s", exc)
             return templates.TemplateResponse(
                 "fragments/c360_notes_panel.html",
-                {**ctx, "notes": note_list, "type_filter": type_filter},
+                {**ctx, "notes": note_list, "type_filter": type_filter, "user_map": notes_user_map},
             )
         if panel == "call_cockpit":
             # ── Approach-script panel (S14 cockpit embedded in S03) ──────────

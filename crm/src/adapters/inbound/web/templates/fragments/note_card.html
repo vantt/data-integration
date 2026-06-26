@@ -10,7 +10,7 @@
   <div class="note-card__meta muted caption">
     <span class="mono">{{ note.created_at | format_ict }}</span>
     {% if note.author_user_id %}
-    · {{ note.author_user_id }}
+    · {{ user_map.get(note.author_user_id, note.author_user_id) }}
     {% endif %}
   </div>
 </div>

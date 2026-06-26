@@ -237,10 +237,11 @@ def make_management_router(
             s = _safe(lambda: segments_svc.get_segment(c.segment_id), None, "")
             if s:
                 seg_name = s.name
+        user_map = {u.user_id: u.full_name for u in _safe(app_users_svc.list_active, [], "user_map")}
         return templates.TemplateResponse("campaigns.html", {
             "request": request, "campaign": c, "targets": targets,
             "roi": roi, "party_names": party_names, "segment_name": seg_name,
-            "view": "detail",
+            "user_map": user_map, "view": "detail",
         })
 
     @router.get("/campaigns/{campaign_id}/modal/edit", response_class=HTMLResponse)
@@ -273,10 +274,11 @@ def make_management_router(
         _safe(lambda: campaigns_svc.generate_targets(campaign_id), 0, "gen targets")
         targets = _safe(lambda: campaigns_svc.list_targets(campaign_id, ""), [], "")
         party_names = _build_party_names(parties_svc, targets)
+        user_map = {u.user_id: u.full_name for u in _safe(app_users_svc.list_active, [], "user_map")}
         return templates.TemplateResponse("campaigns.html", {
             "request": request, "campaign_id": campaign_id,
             "targets": targets, "party_names": party_names,
-            "view": "target_list",
+            "user_map": user_map, "view": "target_list",
         })
 
     @router.post("/campaigns/{campaign_id}/scan-conversions", response_class=HTMLResponse)
@@ -330,10 +332,11 @@ def make_management_router(
             return HTMLResponse("target not found", status_code=404)
         p = _safe(lambda: parties_svc.get_by_id(party_id), None, "")
         party_names = {party_id: p.display_name} if p else {}
+        user_map = {u.user_id: u.full_name for u in _safe(app_users_svc.list_active, [], "user_map")}
         return templates.TemplateResponse("campaigns.html", {
             "request": request, "campaign_id": campaign_id,
             "target": t, "party_names": party_names,
-            "view": "target_row",
+            "user_map": user_map, "view": "target_row",
         })
 
     # ── S04 Dedup review ─────────────────────────────────────────────────────
