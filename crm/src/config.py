@@ -51,3 +51,33 @@ def refresh_token() -> str:
 def app_tz() -> str:
     """Display timezone for ICT formatting at the serving layer."""
     return os.environ.get("TZ", "Asia/Ho_Chi_Minh")
+
+
+import json as _json
+
+
+def cf_access_audience() -> str:
+    """CF Access application audience tag. Empty = bypass (dev mode)."""
+    return os.environ.get("CF_ACCESS_AUDIENCE", "")
+
+
+def cf_team_domain() -> str:
+    """Cloudflare team domain, e.g. 'myteam.cloudflareaccess.com'."""
+    return os.environ.get("CF_TEAM_DOMAIN", "")
+
+
+def cf_role_claim() -> str:
+    """Dot-separated JWT claim path for Lark role. E.g. 'custom.role' or 'role'."""
+    return os.environ.get("CF_ROLE_CLAIM", "role")
+
+
+def cf_role_map() -> dict:
+    """JSON mapping: Lark role value → CRM role string.
+
+    Example env: CF_ROLE_MAP={"Admin":"admin","Manager":"manager","Sales":"sales"}
+    """
+    raw = os.environ.get("CF_ROLE_MAP", "{}")
+    try:
+        return _json.loads(raw)
+    except Exception:
+        return {}

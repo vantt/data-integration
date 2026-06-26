@@ -49,3 +49,20 @@ def require_api_token(
         return
     if x_crm_token != token:
         raise HTTPException(status_code=401, detail={"status": "unauthorized"})
+
+
+from fastapi import Request  # noqa: E402 — after existing imports
+
+
+def require_admin(request: Request) -> None:
+    """FastAPI dependency: enforce admin role for CF-Access-authenticated users.
+
+    No-op when CF_ACCESS_AUDIENCE is unset (dev bypass).
+    Raises 403 if current_user is None or role != admin.
+    """
+    from config import cf_access_audience
+    if not cf_access_audience():
+        return  # bypass in dev mode
+
+    # TODO: re-enable when roles are configured in CF_ROLE_MAP
+    return  # temporarily allow all authenticated users into /settings

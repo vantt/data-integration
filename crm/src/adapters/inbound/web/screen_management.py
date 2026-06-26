@@ -12,9 +12,10 @@ import re
 import uuid
 from typing import Any, Optional
 
-from fastapi import APIRouter, Form, Query, Request, Response
+from fastapi import APIRouter, Depends, Form, Query, Request, Response
 from fastapi.responses import HTMLResponse
 from fastapi.templating import Jinja2Templates
+from adapters.inbound.http.auth_dependency import require_admin
 
 logger = logging.getLogger(__name__)
 
@@ -381,7 +382,7 @@ def make_management_router(
 
     # ── S13 Settings ─────────────────────────────────────────────────────────
 
-    @router.get("/settings", response_class=HTMLResponse)
+    @router.get("/settings", response_class=HTMLResponse, dependencies=[Depends(require_admin)])
     def settings(request: Request, tab: str = Query(default="custom_fields")):
         fields = _safe(lambda: settings_svc.list_custom_field_defs("party"), [], "cfd")
         tags = _safe(lambda: settings_svc.list_tags(""), [], "tags")
@@ -391,13 +392,13 @@ def make_management_router(
             "custom_fields": fields, "tags": tags, "users": users,
         })
 
-    @router.get("/settings/custom-fields/modal/create", response_class=HTMLResponse)
+    @router.get("/settings/custom-fields/modal/create", response_class=HTMLResponse, dependencies=[Depends(require_admin)])
     def modal_custom_field_create(request: Request):
         return templates.TemplateResponse("settings.html", {
             "request": request, "field": None, "is_new": True, "view": "modal_cfd",
         })
 
-    @router.post("/settings/custom-fields")
+    @router.post("/settings/custom-fields", dependencies=[Depends(require_admin)])
     async def custom_field_create(
         field_key: str = Form(""), label: str = Form(""),
         data_type: str = Form(""), is_required: str = Form("false"),
@@ -415,7 +416,7 @@ def make_management_router(
                         headers={"HX-Redirect": "/settings?tab=custom_fields"})
 
     @router.get("/settings/custom-fields/{field_id}/modal/edit",
-                response_class=HTMLResponse)
+                response_class=HTMLResponse, dependencies=[Depends(require_admin)])
     def modal_custom_field_edit(request: Request, field_id: str):
         f = settings_svc.get_custom_field_def(field_id)
         if not f:
@@ -424,7 +425,7 @@ def make_management_router(
             "request": request, "field": f, "is_new": False, "view": "modal_cfd",
         })
 
-    @router.patch("/settings/custom-fields/{field_id}")
+    @router.patch("/settings/custom-fields/{field_id}", dependencies=[Depends(require_admin)])
     async def custom_field_update(
         field_id: str,
         label: str = Form(""), data_type: str = Form(""),
@@ -438,13 +439,13 @@ def make_management_router(
         return Response(status_code=200,
                         headers={"HX-Redirect": "/settings?tab=custom_fields"})
 
-    @router.get("/settings/tags/modal/create", response_class=HTMLResponse)
+    @router.get("/settings/tags/modal/create", response_class=HTMLResponse, dependencies=[Depends(require_admin)])
     def modal_tag_create(request: Request):
         return templates.TemplateResponse("fragments/modal_m14_create_tag.html", {
             "request": request, "tag": None,
         })
 
-    @router.get("/settings/tags/{tag_id}/modal/edit", response_class=HTMLResponse)
+    @router.get("/settings/tags/{tag_id}/modal/edit", response_class=HTMLResponse, dependencies=[Depends(require_admin)])
     def modal_tag_edit(request: Request, tag_id: str):
         tag = settings_svc.get_tag(tag_id)
         if not tag:
@@ -453,7 +454,7 @@ def make_management_router(
             "request": request, "tag": tag,
         })
 
-    @router.post("/settings/tags")
+    @router.post("/settings/tags", dependencies=[Depends(require_admin)])
     async def tag_create(
         name: str = Form(""), color: str = Form(""),
         category: str = Form(""), display_label: str = Form(""),
@@ -470,7 +471,7 @@ def make_management_router(
         )
         return Response(status_code=200, headers={"HX-Redirect": "/settings?tab=tags"})
 
-    @router.patch("/settings/tags/{tag_id}")
+    @router.patch("/settings/tags/{tag_id}", dependencies=[Depends(require_admin)])
     async def tag_update(
         tag_id: str,
         name: str = Form(""), color: str = Form(""),
@@ -488,7 +489,7 @@ def make_management_router(
         )
         return Response(status_code=200, headers={"HX-Redirect": "/settings?tab=tags"})
 
-    @router.delete("/settings/tags/{tag_id}")
+    @router.delete("/settings/tags/{tag_id}", dependencies=[Depends(require_admin)])
     async def tag_delete(tag_id: str):
         settings_svc.delete_tag(tag_id)
         return Response(status_code=200)  # HTMX removes the row via outerHTML swap

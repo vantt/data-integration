@@ -195,6 +195,10 @@ services:
       # Set both vars if a REST key becomes available.
       - SAPO_API_URL=${SAPO_API_URL:-}
       - SAPO_API_KEY=${SAPO_API_KEY:-}
+      - CF_ACCESS_AUDIENCE=${CF_ACCESS_AUDIENCE:-}
+      - CF_TEAM_DOMAIN=${CF_TEAM_DOMAIN:-}
+      - CF_ROLE_CLAIM=${CF_ROLE_CLAIM:-role}
+      - CF_ROLE_MAP=${CF_ROLE_MAP:-{}}
     networks:
       - caddy_net
     volumes:
@@ -211,9 +215,7 @@ services:
       - ./crm/src/adapters/inbound/web/static:/app/crm/src/adapters/inbound/web/static
       # Migrations: mount so new *.up.sql files are picked up on restart without image rebuild.
       - ./crm/migrations:/app/crm/migrations
-    labels:
-      caddy: crm.lan.fwg.vn
-      caddy.reverse_proxy: "{{upstreams 8090}}"
+    # caddy labels removed: crm.lan.fwg.vn now routed via Cloudflare Tunnel
 
   # Single-purpose sidecar: holds the Docker socket and runs ONLY the CRM
   # restore-verify drill on request (token-gated HTTP). Dagster's crm_restore_verify
