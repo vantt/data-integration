@@ -34,4 +34,4 @@ class AppUser:
     is_active: bool
     created_at: str     # UTC ISO-8601 with 'Z'
     updated_at: str     # UTC ISO-8601 with 'Z'
-    staff_id: Optional[int] = None  # nullable — links to dim_staff.staff_id
+    lark_user_id: Optional[str] = None  # Lark open_id (ou_...) from CF Access JWT custom.sub

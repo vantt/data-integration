@@ -21,6 +21,7 @@ from config import (
     olap_path,
     refresh_token,
     server_port,
+    cf_team_domain,
 )
 
 # ── Outbound: SQLite ──────────────────────────────────────────────────────────
@@ -237,12 +238,31 @@ def create_app() -> FastAPI:
             },
         })
 
+    from pydantic import BaseModel as _BaseModel
+    from typing import Optional as _Opt
+
+    class _ProfileSyncBody(_BaseModel):
+        full_name: str
+        lark_id: _Opt[str] = None
+
+    @app.post("/profile/sync")
+    def profile_sync(body: _ProfileSyncBody, request: Request):
+        """Manual or client-side name sync (used once CF custom claims are wired)."""
+        user = request.state.current_user
+        if not user:
+            return _JSON({"ok": False}, status_code=401)
+        name = body.full_name.strip()
+        if name:
+            app_user_svc.provision_or_sync(user.email, name, user.role)
+        return _JSON({"ok": True})
+
     # Store services/repos on app.state for web screens that call them directly.
     app.state.conversation_service = conv_svc
     app.state.approach_repo = approach_repo  # used by screen_call_cockpit (S14)
 
     # 6. Templates + static.
     templates = make_templates(str(_TEMPLATES_DIR))
+    templates.env.globals["cf_team_domain"] = cf_team_domain()
     # Custom Jinja2 filters
     templates.env.filters["format_vnd"] = format_vnd
     templates.env.filters["fmt_vnd"] = fmt_vnd

@@ -9,6 +9,12 @@ JWT verification:
   - RS256 only — CF Access always signs with RS256
   - Validates aud claim against CF_ACCESS_AUDIENCE
 
+Name resolution:
+  - CF Access JWT contains no "name" claim (email-OTP IDP)
+  - Fallback: derive from email prefix (van.tran@ → "Van Tran")
+  - Real name is synced later via client-side JS calling /profile/sync
+    (browser fetches /cdn-cgi/access/identity and POSTs idp_claims.name)
+
 Role mapping:
   - Reads Lark role from JWT at path CF_ROLE_CLAIM (dot-separated: "custom.role")
   - Maps to CRM role via CF_ROLE_MAP dict
@@ -31,7 +37,7 @@ from config import cf_access_audience, cf_team_domain, cf_role_claim, cf_role_ma
 
 log = logging.getLogger(__name__)
 
-# Module-level JWKS cache: kid → public key object (populated on first verified request).
+# JWKS cache: kid → public key (process lifetime)
 _JWKS_CACHE: dict[str, object] = {}
 
 
@@ -62,10 +68,9 @@ def _get_claim(payload: dict, path: str) -> str:
 
 
 def _name_from_email(email: str) -> str:
-    """Derive a display name from email prefix when IDP doesn't forward name.
+    """Derive a display name from email prefix (fallback until JS syncs real name).
 
     van.tran@example.com  →  Van Tran
-    john_doe@example.com  →  John Doe
     """
     prefix = email.split("@")[0]
     parts = prefix.replace(".", " ").replace("_", " ").replace("-", " ").split()
@@ -93,13 +98,10 @@ class CFAccessMiddleware(BaseHTTPMiddleware):
         request.state.current_user = None
 
         if not self._audience:
-            # Bypass: dev/LAN mode
             return await call_next(request)
 
         token = request.headers.get("Cf-Access-Jwt-Assertion", "")
         if not token:
-            # No JWT — CF Access should have blocked this; pass through
-            # (healthz, static files, etc. don't need a user)
             return await call_next(request)
 
         try:
@@ -124,14 +126,14 @@ class CFAccessMiddleware(BaseHTTPMiddleware):
             return Response("Unauthorized", status_code=401)
 
         email: str = payload.get("email", "")
-        raw_name: str = payload.get("name", "")
-        # CF Access email-OTP doesn't forward name; derive from email prefix.
-        name: str = raw_name or _name_from_email(email)
+        custom: dict = payload.get("custom") or {}
+        name: str = custom.get("name") or payload.get("name") or _name_from_email(email)
+        lark_user_id: str = custom.get("sub") or ""   # Lark open_id via custom.sub claim
         lark_role: str = _get_claim(payload, self._role_claim)
         crm_role: str = self._role_map.get(lark_role, "sales")
 
         try:
-            user = self._user_svc.provision_or_sync(email, name, crm_role)
+            user = self._user_svc.provision_or_sync(email, name, crm_role, lark_user_id=lark_user_id)
             request.state.current_user = user
         except Exception:
             log.exception("user provisioning failed for %s", email)
