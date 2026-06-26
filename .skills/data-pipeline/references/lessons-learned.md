@@ -4528,3 +4528,24 @@ elif filter_priority == "high":
 3. After adding a new route that POSTs and is expected to redirect, smoke-test it once in a real browser and confirm the redirect actually fires (not just that the form submits without JS errors).
 
 **Reference:** `crm/src/adapters/inbound/web/screen_modals.py` (`post_assign_owner`, `OwnerAssigner`). Fixed 2026-06-26.
+
+### L152 — Middleware-injected user context is invisible to service calls unless handlers explicitly thread it through; every mutation handler must pull `request.state.current_user`
+
+**Symptom:** All activity-log entries (`crm_activity`) and notes (`crm_note`) created via the web UI had `staff_user_id=NULL` and `author_user_id=NULL` respectively, even after CF Access authentication was working and the correct user appeared in the navbar. Additionally, logging an activity from the Inbox screen always returned HTTP 500 silently.
+
+**Group:** SERVE / CRM-WEB
+
+**Root cause:** Three independent failures sharing the same root pattern:
+1. `CFAccessMiddleware` injects `request.state.current_user` on every request — but injection ≠ propagation. `handle_log_activity` and `handle_add_note` in `screen_customer_360.py` both had `request: Request` available but never read `request.state.current_user`, so `staff_user_id` and `author_user_id` were never passed to the service layer.
+2. `screen_inbox.py`'s `ActivityLogger` Protocol declared `log_activity(party_id, activity_type, body, channel)` but `ActivityService.log_activity` takes `(activity_data: dict)` — a Protocol-layer mismatch (same class as L151). The handler called it with 4 positional args; the service received the `party_id` string as `activity_data`, then `activity_data.get("party_id")` raised `AttributeError`, caught as HTTP 500.
+3. `post_assign_owner` had no `request: Request` parameter at all, making `current_user` unreachable. Assignment changes wrote to the profile column but left zero audit trail in `crm_activity`.
+
+**Fix:** (a) Read `current_user = getattr(request.state, "current_user", None)` at the top of each mutation handler; pass `actor_id = current_user.user_id if current_user else None` to service calls. (b) Fix inbox Protocol to `log_activity(activity_data: dict)` and rebuild the call as a dict. (c) Add `request: Request` to `post_assign_owner`; add `ActivityLogger` to `WebDeps`/`_ModalDeps`; log the assignment as an activity record.
+
+**Rules:**
+1. Every mutation handler (POST/PATCH/DELETE) that touches a domain record MUST read `request.state.current_user` and pass `user_id` to the service — even if the feature doesn't display it yet, the DB column accepts it and audit history is irreversible to recover.
+2. Middleware injecting context into `request.state` does nothing for service calls — it's the handler's job to thread it down. No amount of middleware sophistication compensates for a handler that ignores it.
+3. When adding a new operation that changes ownership, assignment, or status of any entity, always check: is there an audit log call? If not, add it. The question "who did this, when?" will be asked in production.
+4. Protocol signatures must be verified against the concrete service signature at wire-time, not assumed from memory. L151+L152 both caused silent runtime failures from this gap.
+
+**Reference:** `screen_customer_360.py` (`handle_log_activity`, `handle_add_note`), `screen_inbox.py` (`ActivityLogger`, `handle_log_activity_on_conv`), `screen_modals.py` (`post_assign_owner`, `WebDeps`), `composition.py` (`_ModalDeps`). Fixed 2026-06-26.
