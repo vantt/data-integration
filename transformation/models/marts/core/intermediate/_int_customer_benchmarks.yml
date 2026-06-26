@@ -1,0 +1,123 @@
+version: 2
+
+models:
+  - name: int_customer_benchmarks
+    description: >
+      Percentile benchmark rankings for all customers.
+      Grain: one row per customer_key.
+      Rankable population (benchmark_status = 'ranked'): lifetime_value > 0 AND order_count >= 2
+      AND customer_type = 'RETAIL' AND acquisition_source != 'Đại Lý' — approximately 939 customers.
+      Non-rankable customers receive NULL percentile columns and a descriptive benchmark_status.
+      Materialized as TABLE because PERCENT_RANK() is a whole-population window — partial recompute
+      would silently corrupt unchanged rows when population shifts.
+      v1 metrics: lifetime_value, clv_per_active_month (tenure-normalised).
+      v1 frames: all_rankable, in_value_group (min-group guard n<30 → fallback to all_rankable).
+    columns:
+      - name: customer_key
+        description: "Surrogate key for this customer record. FK to dim_customers."
+        tests:
+          - unique
+          - not_null
+
+      - name: benchmark_status
+        description: >
+          Classification of the customer's eligibility for ranking.
+          ranked: in the rankable population, has full percentile columns.
+          single_purchase: RETAIL with 1 order and CLV > 0 — insufficient history for ranking.
+          inactive_zero_value: CLV <= 0 (refunds, cancelled-only, zero-revenue).
+          non_retail: WHOLESALE / CROSSBORDER / PARTNER / STAFF / KOL, or acquisition_source='Đại Lý'.
+        tests:
+          - not_null
+          - accepted_values:
+              arguments:
+                values: ['ranked', 'single_purchase', 'inactive_zero_value', 'non_retail']
+
+      - name: lv_all_rankable_pct
+        description: >
+          Lifetime value percentile (0-100) within the full rankable population (~939).
+          NULL for non-ranked customers.
+        tests:
+          - dbt_utils.accepted_range:
+              arguments:
+                min_value: 0
+                max_value: 100
+              config:
+                where: "lv_all_rankable_pct IS NOT NULL"
+
+      - name: lv_all_rankable_bucket
+        description: >
+          Bucket label for lv_all_rankable_pct.
+          top_5pct | top_decile | top_quartile | above_median | below_median.
+        tests:
+          - accepted_values:
+              arguments:
+                values: ['top_5pct', 'top_decile', 'top_quartile', 'above_median', 'below_median']
+              config:
+                where: "lv_all_rankable_bucket IS NOT NULL"
+
+      - name: lv_in_value_group_pct
+        description: >
+          Lifetime value percentile (0-100) within the customer's own value_group.
+          Falls back to all_rankable when value_group has fewer than 30 ranked members.
+          See lv_vg_frame_used for which frame was applied.
+        tests:
+          - dbt_utils.accepted_range:
+              arguments:
+                min_value: 0
+                max_value: 100
+              config:
+                where: "lv_in_value_group_pct IS NOT NULL"
+
+      - name: lv_vg_frame_used
+        description: >
+          Which frame was used for lv_in_value_group_pct:
+          in_value_group (n >= 30) or all_rankable_fallback (n < 30).
+        tests:
+          - accepted_values:
+              arguments:
+                values: ['in_value_group', 'all_rankable_fallback']
+              config:
+                where: "lv_vg_frame_used IS NOT NULL"
+
+      - name: clv_all_rankable_pct
+        description: >
+          Tenure-normalised CLV (clv_per_active_month) percentile within the full rankable population.
+          NULL for non-ranked customers.
+        tests:
+          - dbt_utils.accepted_range:
+              arguments:
+                min_value: 0
+                max_value: 100
+              config:
+                where: "clv_all_rankable_pct IS NOT NULL"
+
+      - name: clv_in_value_group_pct
+        description: >
+          Tenure-normalised CLV percentile within the customer's own value_group.
+          Falls back to all_rankable when group < 30 members.
+        tests:
+          - dbt_utils.accepted_range:
+              arguments:
+                min_value: 0
+                max_value: 100
+              config:
+                where: "clv_in_value_group_pct IS NOT NULL"
+
+      - name: clv_vs_rankable_median
+        description: >
+          lifetime_value / median(lifetime_value in rankable population).
+          Interpretable as "X times the typical repeat-buyer spend". NULL for non-ranked.
+
+    tests:
+      # No ranked row should have lifetime_value <= 0
+      - dbt_utils.expression_is_true:
+          arguments:
+            expression: "lifetime_value > 0"
+          config:
+            where: "benchmark_status = 'ranked'"
+            error_if: ">0"
+
+      # Rankable count sanity: should be roughly 939 (±100 for snapshot drift).
+      # dbt_utils.expression_is_true with {{ model }} is unsupported in DuckDB external;
+      # this is covered by a singular test in tests/int_customer_benchmarks_rankable_count.sql
+

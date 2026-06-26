@@ -40,7 +40,24 @@ Backend cho màn S14 (Call Mode Cockpit) đọc kịch bản tiếp cận AI. **
 ## Việc còn lại (chưa làm)
 1. **Sinh script — quy trình TAY** (đã chốt làm tay, KHÔNG auto-gen): xem [manual-workflow.md](manual-workflow.md). 3 bước: `build_approach_prompts.py` (prep) → dán GPT (tay) → `load_approach_scripts.py` (nạp). *(Auto-gen Dagster+GPT là tùy chọn tương lai khi muốn hết tạo tay — swap File→SQLite repo, cùng port.)*
 2. **B2 auth** — thêm `auth_dependency` cho GET `/approach-script` khi quyết siết auth GET toàn cục (làm cùng `/insight`).
-3. **Dữ liệu `recommended=false`** — pilot toàn `recommended=true` → STOP state chỉ demo được bằng patch tay; có data thật/synthetic thì badge "không gọi" mới hiện tự nhiên.
+3. **Dữ liệu `recommended=false`** — pilot toàn `recommended=true` → STOP state chỉ demo được bằng patch tay; có data thật/synthetic thì badge "không gọi" mới hiện tự nhiên. *(WS-A2 sinh data thật → gỡ điểm này.)*
+
+## Nâng cấp v2+ — Rich Dynamic Script (định hướng, chưa lên lịch)
+Chốt 2026-06-26: nâng kịch bản từ **tài liệu tĩnh** → **engine dẫn thoại động + vòng lặp phản hồi + thu thập lũy tiến + thư viện kết hợp**. Chi tiết: [roadmap-rich-dynamic-script.md](roadmap-rich-dynamic-script.md).
+
+**Phát hiện nền:** vòng lặp đã dựng MỘT NỬA — capture (`crm_activity` outcome + S14 outcome bar + M08) ✅; read-back (`build_approach_prompts.py` hardcode `[]`) ❌ hở. Đòn bẩy lớn nhất = nối nửa hở, không phải sửa prompt.
+
+| WS | Việc | Trạng thái | Trình tự |
+|---|---|---|---|
+| D | [Benchmark percentile dbt](phase-06-benchmark-percentile-dbt.md) (vị thế top X% CLV — đường chuẩn) | ⬜ ready | 1 |
+| A1 | Read-back notes/conversations thật từ `crm_activity` (đóng vòng lặp) | ⬜ | 1 |
+| A2 | `data_completeness` IN + `info_to_collect` OUT (progressive profiling, tái dùng capture) | ⬜ | 2 |
+| B | Script TĨNH có nhánh + backend interpreter (điều hướng theo outcome; state light trước) | ⬜ vision | 3 |
+| C | Auto-gen Dagster + thư viện MODULE KẾT HỢP (không ma trận) + flywheel | ⬜ vision | 4 |
+
+**Mô hình "dynamic" (chốt):** sinh offline 1 script tĩnh có nhánh → backend interpret + điều hướng theo tương tác nhân viên (KHÔNG regen live). Dynamic-behavior TÁCH khỏi auto-gen; pilot tạo tay được nếu cây NÔNG (1–2 tầng).
+
+**Chống over-engineering:** không build engine stateful/durable-session sớm · không materialize ma trận product×type · không thêm field S14 không render · không làm graph tổng quát (cây quyết định nông thôi).
 
 ## Ngoài scope dự án này (không chặn)
 - 2 test fail pre-existing (xác nhận có trước phase 05) — không thuộc S14.

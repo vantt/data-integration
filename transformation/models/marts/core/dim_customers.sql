@@ -15,6 +15,10 @@ economics AS (
     SELECT * FROM {{ ref('int_customer_economics') }}
 ),
 
+benchmarks AS (
+    SELECT * FROM {{ ref('int_customer_benchmarks') }}
+),
+
 joined_data AS (
     SELECT
         c.customer_key,
@@ -84,12 +88,31 @@ joined_data AS (
         e.margin_cogs_coverage_pct,
         e.is_margin_negative,
 
+        -- Benchmark percentile columns (NULL for non-ranked customers; see benchmark_status)
+        b.benchmark_status,
+        b.lv_all_rankable_pct,
+        b.lv_all_rankable_bucket,
+        b.lv_all_rankable_phrase,
+        b.lv_in_value_group_pct,
+        b.lv_in_value_group_bucket,
+        b.lv_in_value_group_phrase,
+        b.lv_vg_frame_used,
+        b.clv_all_rankable_pct,
+        b.clv_all_rankable_bucket,
+        b.clv_all_rankable_phrase,
+        b.clv_in_value_group_pct,
+        b.clv_in_value_group_bucket,
+        b.clv_in_value_group_phrase,
+        b.clv_vg_frame_used,
+        b.clv_vs_rankable_median,
+
         -- Calculate a combined updated timestamp for incremental loading
         GREATEST(c.updated_at, COALESCE(m.metric_calculated_at, c.updated_at)) as last_modified_at
 
     FROM customers c
     LEFT JOIN metrics m ON c.customer_key = m.customer_key
     LEFT JOIN economics e ON c.customer_key = e.customer_key
+    LEFT JOIN benchmarks b ON c.customer_key = b.customer_key
 )
 
 SELECT
@@ -239,6 +262,26 @@ SELECT
     discount_order_rate,
     cancel_rate,
     predicted_next_purchase_date,
+
+    -- Benchmark percentile rankings (populated for benchmark_status = 'ranked' only)
+    -- benchmark_status: ranked | single_purchase | inactive_zero_value | non_retail
+    -- *_pct: 0-100 percentile within the frame; *_bucket: bucket label; *_phrase: Vietnamese phrase for LLM
+    benchmark_status,
+    lv_all_rankable_pct,
+    lv_all_rankable_bucket,
+    lv_all_rankable_phrase,
+    lv_in_value_group_pct,
+    lv_in_value_group_bucket,
+    lv_in_value_group_phrase,
+    lv_vg_frame_used,
+    clv_all_rankable_pct,
+    clv_all_rankable_bucket,
+    clv_all_rankable_phrase,
+    clv_in_value_group_pct,
+    clv_in_value_group_bucket,
+    clv_in_value_group_phrase,
+    clv_vg_frame_used,
+    clv_vs_rankable_median,
 
     created_at,
     source_updated_at as updated_at,

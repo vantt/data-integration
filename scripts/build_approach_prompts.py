@@ -27,7 +27,14 @@ COLS = ["customer_id","full_name","phone","is_contactable","contact_quality","cu
     "recency_days","avg_days_between_orders","next_purchase_signal","discount_sensitivity",
     "channel_preference","payment_behavior","product_affinity","last_purchased_product",
     "last_purchased_sku","top_affinity_product","top_affinity_sku","second_affinity_product",
-    "is_margin_negative","avg_order_contribution_margin_pct","loyalty_points","birth_date","gender"]
+    "is_margin_negative","avg_order_contribution_margin_pct","loyalty_points","birth_date","gender",
+    # Benchmark percentile columns (populated when benchmark_status='ranked', else NULL)
+    # *_phrase = ready-made Vietnamese phrase for LLM to verbalize — do NOT expose raw *_pct numbers to the customer
+    "benchmark_status",
+    "lv_all_rankable_pct","lv_all_rankable_bucket","lv_all_rankable_phrase",
+    "lv_in_value_group_pct","lv_in_value_group_bucket","lv_in_value_group_phrase",
+    "clv_all_rankable_pct","clv_all_rankable_bucket","clv_all_rankable_phrase",
+    "clv_vs_rankable_median"]
 
 # Gating cohort — KHỚP retail-ai-outreach-cohort.sql (khách retail đáng chạy)
 GATE = """
