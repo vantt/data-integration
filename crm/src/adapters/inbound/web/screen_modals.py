@@ -175,11 +175,17 @@ async def post_assign_owner(
 
     # Audit: log assignment event so history is queryable
     try:
+        owner_name = owner_user_id
+        try:
+            users = deps.app_users.list_active()
+            owner_name = next((u.full_name for u in users if u.user_id == owner_user_id), owner_user_id)
+        except Exception:
+            pass
         deps.activity_logger.log_activity({
             "party_id": party_id,
             "activity_type": "other",
             "direction": "out",
-            "subject": "Gán phụ trách",
+            "subject": f"Gán phụ trách → {owner_name}",
             "staff_user_id": actor_id,
             "custom_fields": {"owner_user_id": owner_user_id},
         })

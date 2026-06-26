@@ -37,12 +37,7 @@
           <span class="timeline-item__time mono muted">{{ act.occurred_at | format_ict }}</span>
         </div>
         {% if act.subject %}
-        <div class="timeline-item__subject">
-          {{- act.subject -}}
-          {%- if act.custom_fields and act.custom_fields.owner_user_id %}
-          → {{ user_map.get(act.custom_fields.owner_user_id, act.custom_fields.owner_user_id) }}
-          {%- endif %}
-        </div>
+        <div class="timeline-item__subject">{{ act.subject }}</div>
         {% endif %}
         {% if act.body %}
         <div class="timeline-item__text">{{ act.body }}</div>
