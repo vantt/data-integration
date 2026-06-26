@@ -46,7 +46,7 @@ class AppUserLister(Protocol):
 
 
 class ActivityLogger(Protocol):
-    def log_activity(self, party_id: str, activity_type: str, body: str, channel: str) -> None: ...
+    def log_activity(self, activity_data: dict) -> object: ...
 
 
 # ── Helpers ───────────────────────────────────────────────────────────────────
@@ -264,8 +264,16 @@ def make_inbox_router(
         body = body.strip()
         if not party_id or not body:
             return HTMLResponse("party_id and body required", status_code=400)
+        current_user = getattr(request.state, "current_user", None)
         try:
-            activity_log.log_activity(party_id, activity_type or "chat", body, "messenger")
+            activity_log.log_activity({
+                "party_id": party_id,
+                "activity_type": activity_type or "chat",
+                "body": body,
+                "channel": "messenger",
+                "direction": "out",
+                "staff_user_id": current_user.user_id if current_user else None,
+            })
         except Exception as exc:
             log.error("log activity party %s: %s", party_id, exc)
             return HTMLResponse("failed to log activity", status_code=500)

@@ -491,6 +491,8 @@ def make_customer_360_router(
         task_id: str = Form(default=""),
         complete_task: str = Form(default=""),
     ) -> Response:
+        current_user = getattr(request.state, "current_user", None)
+        actor_id: Optional[str] = current_user.user_id if current_user else None
         utc_occurred = _ict_local_to_utc(occurred_at) if occurred_at.strip() else ""
         act_data: dict = {
             "party_id": party_id,
@@ -501,6 +503,7 @@ def make_customer_360_router(
             "body": body.strip() or None,
             "occurred_at": utc_occurred,
             "related_order_code": related_order_code.strip() or None,
+            "staff_user_id": actor_id,
         }
         if outcome == "callback" and callback_at.strip():
             act_data["callback_at"] = _ict_local_to_utc(callback_at)
@@ -516,6 +519,7 @@ def make_customer_360_router(
             try:
                 notes.add_note(
                     party_id, body.strip(),
+                    author_user_id=actor_id,
                     note_type=note_type or "outcome",
                     pinned=pinned == "1",
                     visibility=visibility or "team",
@@ -557,9 +561,11 @@ def make_customer_360_router(
         body = body.strip()
         if not body:
             return HTMLResponse("Nội dung không được bỏ trống", status_code=400)
+        current_user = getattr(request.state, "current_user", None)
         try:
-            notes.add_note(party_id, body, note_type=note_type,
-                           pinned=pinned == "1", visibility=visibility)
+            notes.add_note(party_id, body,
+                           author_user_id=current_user.user_id if current_user else None,
+                           note_type=note_type, pinned=pinned == "1", visibility=visibility)
         except Exception as exc:
             log.error("c360: add note %s: %s", party_id, exc)
             return HTMLResponse("Lỗi thêm ghi chú", status_code=500)

@@ -33,6 +33,9 @@ class ProfileQuerier(Protocol):
 class OwnerAssigner(Protocol):
     def upsert_profile(self, party_id: str, **kwargs) -> object: ...
 
+class ActivityLogger(Protocol):
+    def log_activity(self, activity_data: dict) -> object: ...
+
 class AppUserLister(Protocol):
     def list_active(self) -> list[AppUser]: ...
 
@@ -43,6 +46,7 @@ class WebDeps:
     party_creator: PartyCreator
     profile_querier: ProfileQuerier
     owner_assigner: OwnerAssigner
+    activity_logger: ActivityLogger
     app_users: AppUserLister
 
 
@@ -151,6 +155,7 @@ async def get_modal_assign_owner(request: Request, party_id: str) -> HTMLRespons
 
 @router.post("/customers/{party_id}/assign-owner", response_class=HTMLResponse)
 async def post_assign_owner(
+    request: Request,
     party_id: str,
     owner_user_id: str = Form(""),
 ) -> HTMLResponse:
@@ -158,11 +163,27 @@ async def post_assign_owner(
     if not owner_user_id:
         raise HTTPException(status_code=400, detail="owner_user_id required")
 
+    deps = _get_deps()
+    current_user = getattr(request.state, "current_user", None)
+    actor_id: Optional[str] = current_user.user_id if current_user else None
+
     try:
-        _get_deps().owner_assigner.upsert_profile(party_id, owner_user_id=owner_user_id)
+        deps.owner_assigner.upsert_profile(party_id, owner_user_id=owner_user_id)
     except Exception as exc:
         log.error("assign owner %s: %s", party_id, exc)
         raise HTTPException(status_code=500, detail=str(exc)) from exc
+
+    # Audit: log assignment event so history is queryable
+    try:
+        deps.activity_logger.log_activity({
+            "party_id": party_id,
+            "activity_type": "other",
+            "direction": "out",
+            "subject": f"Gán phụ trách → {owner_user_id}",
+            "staff_user_id": actor_id,
+        })
+    except Exception as exc:
+        log.warning("assign owner audit log %s: %s", party_id, exc)
 
     return HTMLResponse(
         content="",

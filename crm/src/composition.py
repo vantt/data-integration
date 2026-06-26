@@ -11,7 +11,7 @@ import os
 from pathlib import Path
 from typing import Optional
 
-from fastapi import FastAPI
+from fastapi import FastAPI, Request
 from fastapi.staticfiles import StaticFiles
 
 from adapters.inbound.web.templating import make_templates
@@ -73,6 +73,10 @@ from adapters.inbound.http.dataquality_handler import make_dataquality_router
 from adapters.inbound.http.approach_script_handler import (
     wire_approach_script_router,
     router as approach_script_router,
+)
+from adapters.inbound.http.script_nav_handler import (
+    wire_script_nav_router,
+    router as script_nav_router,
 )
 
 # ── Outbound: File ────────────────────────────────────────────────────────────
@@ -207,6 +211,32 @@ def create_app() -> FastAPI:
     # 5. FastAPI app.
     app = FastAPI(title="CRM", docs_url="/api/docs", redoc_url=None)
 
+    from application.app_user_service import AppUserService
+    from adapters.inbound.http.cf_access_middleware import CFAccessMiddleware
+    app_user_svc = AppUserService(app_user_repo)
+    app.add_middleware(CFAccessMiddleware, user_svc=app_user_svc)
+
+    # Temporary debug endpoint — remove after JWT claim inspection is done.
+    from fastapi.responses import JSONResponse as _JSON
+    import jwt as _jwt
+
+    @app.get("/debug/me")
+    def debug_me(request: Request):
+        token = request.headers.get("Cf-Access-Jwt-Assertion", "")
+        raw = _jwt.decode(token, options={"verify_signature": False}) if token else {}
+        user = request.state.current_user
+        return _JSON({
+            "current_user": {
+                "user_id": user.user_id, "email": user.email,
+                "full_name": user.full_name, "role": user.role,
+            } if user else None,
+            "jwt_payload": raw,
+            "headers": {
+                k: v for k, v in request.headers.items()
+                if k.lower().startswith("cf-")
+            },
+        })
+
     # Store services/repos on app.state for web screens that call them directly.
     app.state.conversation_service = conv_svc
     app.state.approach_repo = approach_repo  # used by screen_call_cockpit (S14)
@@ -263,6 +293,9 @@ def create_app() -> FastAPI:
     wire_approach_script_router(party_repo, approach_repo)
     app.include_router(approach_script_router)
 
+    wire_script_nav_router(party_repo, approach_repo, templates)
+    app.include_router(script_nav_router)
+
     wire_activity_router(activity_svc)
     app.include_router(activity_router)
 
@@ -289,7 +322,7 @@ def create_app() -> FastAPI:
 
     # 8. Web UI routers (no prefix — serve at root paths).
     init_modals(
-        deps=_make_modal_deps(party_repo, profile_svc, app_user_repo),
+        deps=_make_modal_deps(party_repo, profile_svc, activity_svc, app_user_repo),
         templates=templates,
     )
     app.include_router(modals_router)
@@ -403,17 +436,19 @@ def create_app() -> FastAPI:
 
 class _ModalDeps:
     """Thin struct satisfying screen_modals.WebDeps protocol."""
-    def __init__(self, party_creator, profile_querier, owner_assigner, app_users):
+    def __init__(self, party_creator, profile_querier, owner_assigner, activity_logger, app_users):
         self.party_creator = party_creator
         self.profile_querier = profile_querier
         self.owner_assigner = owner_assigner
+        self.activity_logger = activity_logger
         self.app_users = app_users
 
 
-def _make_modal_deps(party_repo, profile_svc, app_user_repo) -> _ModalDeps:
+def _make_modal_deps(party_repo, profile_svc, activity_svc, app_user_repo) -> _ModalDeps:
     return _ModalDeps(
         party_creator=party_repo,
         profile_querier=profile_svc,
         owner_assigner=profile_svc,
+        activity_logger=activity_svc,
         app_users=app_user_repo,
     )
