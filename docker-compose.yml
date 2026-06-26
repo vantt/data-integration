@@ -215,6 +215,33 @@ services:
       caddy: crm.lan.fwg.vn
       caddy.reverse_proxy: "{{upstreams 8090}}"
 
+  # Single-purpose sidecar: holds the Docker socket and runs ONLY the CRM
+  # restore-verify drill on request (token-gated HTTP). Dagster's crm_restore_verify
+  # asset POSTs here after each backup. NO public route, NO published port — reachable
+  # only in-cluster by name. Docker-socket blast radius is intentionally confined here
+  # (NOT given to data_platform, which runs dlt/dbt/Sapo code).
+  crm_drill_runner:
+    build:
+      context: .
+      dockerfile: Dockerfile.drillrunner
+    container_name: crm_drill_runner
+    restart: unless-stopped
+    mem_limit: 512m
+    cpus: 0.5
+    environment:
+      - DRILL_TOKEN=${DRILL_TOKEN:?DRILL_TOKEN must be set in root .env}
+      - TZ=Asia/Ho_Chi_Minh
+    networks:
+      - caddy_net
+    volumes:
+      # Docker socket = root-on-host. ONLY this single-purpose, no-route sidecar gets it.
+      - /var/run/docker.sock:/var/run/docker.sock
+      # Drill code (read-only): restore_verify_crm.py + drill_runner_server.py + backup_crm.py
+      - ./crm:/app/crm:ro
+      # Backups to restore from (read-only) + scratch volume the ephemeral CRM boots from.
+      - crm_backups:/backups:ro
+      - crm_verify_data:/verify_data
+
 volumes:
   monitoring_db:
     # Stored in Docker VM — isolated from Windows filesystem scanning (no dllhost/Defender lock)
@@ -222,5 +249,9 @@ volumes:
     # CRM SQLite databases (crm.db + cache.db) — stored in Docker VM for consistent locking.
   crm_backups:
     # Verified CRM SQLite backup snapshots (crm/ops/backup_crm.py) — Docker VM, Defender-safe.
+  crm_verify_data:
+    # Scratch /data for the restore-verify drill's ephemeral CRM. A named volume (not a
+    # host bind) so it resolves on the host daemon when the socket-mounted sidecar boots
+    # the sibling container — host-bind paths would not translate. Cleared each run.
 
 # H2 File Note: The database file will be metabase.db.mv.db (Multi-Version store)

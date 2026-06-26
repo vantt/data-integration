@@ -626,12 +626,15 @@ dbt_exe = shutil.which("dbt")
 if not dbt_exe:
     dbt_exe = os.path.join(os.path.dirname(os.path.dirname(__file__)), "ingestion", "venv", "Scripts", "dbt.exe")
 
-# Daily CRM backup — independent of the warehouse (no dbt_rw lock); triggers the CRM
-# /admin/backup endpoint (verified SQLite snapshot to the crm_backups volume). The asset
-# fails loudly on a backup-gate failure so health_alert_failure_sensor alerts.
+# Daily CRM backup + restore-verify drill — independent of the warehouse (no dbt_rw lock).
+# crm_backup triggers /admin/backup (verified SQLite snapshot → crm_backups volume); then
+# crm_restore_verify (deps=[crm_backup]) POSTs the crm_drill_runner sidecar to boot an
+# ephemeral CRM from that backup and prove it's restorable. Both fail loudly so
+# health_alert_failure_sensor alerts on a failed backup OR a non-restorable one — a backup
+# isn't trusted until proven recoverable.
 crm_backup_job = define_asset_job(
     name="crm_backup_job",
-    selection=AssetSelection.assets(crm_sync.crm_backup),
+    selection=AssetSelection.assets(crm_sync.crm_backup, crm_sync.crm_restore_verify),
 )
 crm_backup_schedule = ScheduleDefinition(
     name="crm_backup_schedule",

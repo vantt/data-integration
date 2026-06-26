@@ -4494,3 +4494,20 @@ elif filter_priority == "high":
 3. When a refactor drops columns and you must repoint, the replacement is a SEMANTIC choice, not just "a column that compiles": verify the definition against the paired columns and warehouse canon (e.g. `dim_customers.lifetime_contribution_margin = SUM(channel_net_profit)`).
 
 **Reference:** `transformation/models/marts/core/mart_hug_attribution.sql` + `marts/schema.yml` (mart_hug_attribution contract). Fixed 2026-06-26 commit 3e983c2.
+
+### L150 — A drill running inside a socket-mounted sidecar can't reach a sibling's host-published port via `localhost`; join the shared network and address by name
+
+**Symptom:** The CRM restore-verify drill, moved from the host into the `crm_drill_runner` sidecar (which holds the Docker socket), booted the ephemeral CRM with `docker run -p 18090:8090` then polled `http://localhost:18090/healthz`. Gate B failed with "ephemeral CRM never became healthy" — even though the ephemeral's own container logs showed `Application startup complete` + its internal healthcheck returning 200. The app was fine; the drill just couldn't see it.
+
+**Group:** INFRA / DOCKER
+
+**Root cause:** `docker run -p` publishes the port on the **host**, not on the calling container. When the drill runs on the host, `localhost:18090` reaches the published port. When it runs inside the sidecar, `localhost` is the sidecar's own loopback — the sibling's host-published port is not there. (Same family as the named-volume rule: a socket-mounted container orchestrates containers on the HOST daemon, so host-relative addressing — published ports, bind-mount paths — does not translate to the caller's namespace.)
+
+**Fix:** In sidecar mode, attach the ephemeral to the shared user network (`--network caddy_net`, no `-p`) and address it by container name (`http://crm-restore-verify:8090`). No Caddy label → Caddy never routes to it, so isolation holds. Host/dev mode keeps the `-p` + `localhost:<port>` path. Branch on whether the drill itself is running in-container.
+
+**Rules:**
+1. Anything reached over the network from inside a socket-mounted orchestrator must be addressed by container name on a shared network, NOT `localhost:<published-port>` — published ports live on the host, not the caller.
+2. The sibling-container translation rule covers BOTH ends: bind-mount paths (use named volumes) AND port reachability (use a shared network + DNS name). Audit both when moving a host-run tool into a sidecar.
+3. A passing internal Docker HEALTHCHECK in the sibling's logs does NOT mean the orchestrator can reach it — they resolve `localhost` in different namespaces. Verify reachability from the actual caller.
+
+**Reference:** `crm/ops/restore_verify_crm.py` (`gate_b_functional`, SIDECAR branch) + `Dockerfile.drillrunner` + `crm_drill_runner` service. Found + fixed during Phase 6 live verification 2026-06-26.

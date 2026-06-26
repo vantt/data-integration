@@ -134,6 +134,49 @@ def crm_backup(context: AssetExecutionContext):
     )
 
 
+CRM_DRILL_URL = os.environ.get("CRM_DRILL_URL", "http://crm_drill_runner:9000/run-drill")
+# Same shared secret the crm_drill_runner sidecar enforces (root .env + .env.docker).
+DRILL_TOKEN = os.environ.get("DRILL_TOKEN", "")
+# The drill boots an ephemeral CRM + runs gates — up to a few minutes. Kept just above
+# the sidecar's own DRILL_TIMEOUT (300s) so the sidecar returns a clean 504 first.
+CRM_DRILL_TIMEOUT_SEC = int(os.environ.get("CRM_DRILL_TIMEOUT_SEC", "330"))
+
+
+@asset(
+    deps=[crm_backup],
+    group_name="ops_maintenance",
+    description=(
+        "Restore-verify drill (runs after each backup): POST the crm_drill_runner sidecar "
+        "(/run-drill) which boots an ephemeral CRM from the LATEST backup and asserts file "
+        "integrity vs manifest + a functional read/write + prod-untouched. FAILS LOUDLY if "
+        "the backup is not restorable — a backup isn't trusted until proven recoverable."
+    ),
+)
+def crm_restore_verify(context: AssetExecutionContext):
+    context.log.info(f"Triggering restore-verify drill → {CRM_DRILL_URL}")
+    headers = {}
+    if DRILL_TOKEN:
+        headers["X-Drill-Token"] = DRILL_TOKEN
+    request = urllib.request.Request(CRM_DRILL_URL, method="POST", headers=headers, data=b"")
+    try:
+        with urllib.request.urlopen(request, timeout=CRM_DRILL_TIMEOUT_SEC) as resp:
+            status, body_text = resp.status, resp.read().decode("utf-8", errors="replace")
+    except urllib.error.HTTPError as exc:
+        status = exc.code
+        body_text = exc.read().decode("utf-8", errors="replace") if exc.fp else ""
+    except urllib.error.URLError as exc:
+        raise Exception(f"drill-runner unreachable: {exc.reason}")  # noqa: TRY002 — surface to Dagster
+
+    if status != 200:
+        # A non-restorable backup MUST red the run so the failure sensor alerts.
+        raise Exception(f"CRM restore-verify FAILED (HTTP {status}): {_summarize_body(body_text)}")  # noqa: TRY002
+    context.log.info(f"CRM restore-verify PASS: {_summarize_body(body_text)}")
+    return Output(
+        value="CRM restore-verify PASS",
+        metadata={"response_body": MetadataValue.md(f"```json\n{body_text}\n```")},
+    )
+
+
 def _summarize_body(body_text: str) -> str:
     """Best-effort one-line summary of the CRM JSON response for logs."""
     try:

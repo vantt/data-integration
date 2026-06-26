@@ -1,0 +1,25 @@
+# crm_drill_runner — single-purpose sidecar that holds the Docker socket and runs
+# ONLY the CRM restore-verify drill (crm/ops/restore_verify_crm.py) on request.
+# Build context = repo root (.).
+FROM python:3.12-slim
+
+# Docker CLI only (static binary — no daemon). Talks to the host daemon via the
+# mounted /var/run/docker.sock; spins the ephemeral CRM as a sibling container.
+ARG DOCKER_VERSION=27.3.1
+RUN apt-get update && apt-get install -y --no-install-recommends curl ca-certificates \
+ && curl -fsSL "https://download.docker.com/linux/static/stable/x86_64/docker-${DOCKER_VERSION}.tgz" \
+    | tar -xz --strip-components=1 -C /usr/local/bin docker/docker \
+ && apt-get purge -y curl && apt-get autoremove -y && rm -rf /var/lib/apt/lists/*
+
+RUN pip install --no-cache-dir "fastapi>=0.110" "uvicorn[standard]>=0.29"
+
+WORKDIR /app
+ENV PYTHONUNBUFFERED=1 TZ=Asia/Ho_Chi_Minh
+EXPOSE 9000
+
+HEALTHCHECK --interval=30s --timeout=5s --start-period=10s --retries=3 \
+  CMD python3 -c "import urllib.request,sys; r=urllib.request.urlopen('http://127.0.0.1:9000/healthz',timeout=4); sys.exit(0 if r.status==200 else 1)" || exit 1
+
+# Drill code (restore_verify_crm.py + drill_runner_server.py) is mounted at
+# /app/crm/ops (./crm:ro), matching how the crm service mounts its ops tooling.
+CMD ["uvicorn", "drill_runner_server:app", "--app-dir", "/app/crm/ops", "--host", "0.0.0.0", "--port", "9000"]

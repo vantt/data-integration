@@ -32,6 +32,7 @@ Build a **CRM-owned backup-checkpoint** capability whose success is measured by 
 | 2 | [Restore-Verify Drill](./phase-02-restore-verify-drill.md) | Completed |
 | 3 | [DR Runbook](./phase-03-dr-runbook.md) | Completed |
 | 4 | [Warehouse Handoff](./phase-04-warehouse-handoff.md) | Completed |
+| 6 | [Automated Restore-Verify (drill-runner sidecar)](./phase-06-automated-restore-verify-sidecar.md) | Completed |
 
 ## Dependencies
 
@@ -48,6 +49,13 @@ Build a **CRM-owned backup-checkpoint** capability whose success is measured by 
 - **Dagster wiring is NOT free (corrected):** backup runs *inside* the `crm` container (`docker exec`), but `data_platform` (Dagster) has **no Docker socket**. Future scheduling needs ONE of: (a) expose backup as a CRM HTTP admin endpoint Dagster calls, (b) give the orchestrator a Docker socket (security trade-off), or (c) a host cron. Phase 1 keeps the logic callable; the wiring is a real decision, not a no-op.
 - **Reconcile existing backups:** `backup.sh`/`backup.ps1` already raw-copy `crm_data` (WAL-unsafe). Phase 1 **disables that crm_data leg** and declares this tool authoritative — avoid 3 competing crm backup formats.
 - **Honest DR scope:** backups are **local-only** = NOT real DR against host loss. Runbook states this + names a minimal offsite path. Add **failure alerting** (Lark) — silent backup failure is the zombie-run lesson repeating.
+
+## Phase 6 (2026-06-26): Automated restore-verify via drill-runner sidecar — DONE
+The backup self-gates nightly, but the full restore DRILL was on-demand. Closed that: each daily `crm_backup_job` now runs `crm_backup → crm_restore_verify` (deps-chained) — a backup isn't trusted until proven restorable. Built + verified live (zero downtime):
+- **`crm_drill_runner` sidecar** (`Dockerfile.drillrunner`, `crm/ops/drill_runner_server.py`) — single-purpose container holding the Docker socket; `POST /run-drill` token-gated (`X-Drill-Token`, 401 on bad). Socket blast-radius confined here, NOT on `data_platform`. No public route.
+- **Drill reworked** (`crm/ops/restore_verify_crm.py`) — sidecar named-volume mode (`crm_verify_data`); dropped the entrypoint-mount/CRLF hack (gate now baked into the crm image); ephemeral joins `caddy_net` + reached by name (sibling-container fix); cleans up each run.
+- **Dagster** — `crm_restore_verify` asset (`deps=[crm_backup]`, fail-loud) added to `crm_backup_job` (daily 02:00). Failure reds the run → `health_alert_failure_sensor` alerts.
+- **Verified**: real drill PASS (50251+78860 rows match manifest, prod fingerprint stable), `value`-tamper caught at Gate A (non-vacuous), 401 on bad token, prod CRM healthy across the rebuild, cleanup confirmed. Lesson L148.
 
 ## Done beyond original scope (2026-06-25) — "Phase 5": Scheduling (H2)
 Scheduling was a planning-time non-goal, but `code-reviewer` flagged that disabling the raw `crm_data` leg left CRM with **zero automated backups**. Built + verified:
