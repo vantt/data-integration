@@ -1,7 +1,7 @@
 # Plan: CF Access + CRM Auth Layer
 
 **Date:** 2026-06-26  
-**Status:** in-progress  
+**Status:** done  
 **Branch:** main
 
 ## Mục tiêu
@@ -28,7 +28,7 @@ Internet
 | # | Phase | Type | Status |
 |---|-------|------|--------|
 | 01 | [CF Tunnel on Windows](phase-01-cf-tunnel-windows.md) | Manual infra | **done** |
-| 02 | [CRM auth layer](phase-02-crm-auth-layer.md) | Code | pending |
+| 02 | [CRM auth layer](phase-02-crm-auth-layer.md) | Code | **done** |
 
 ## Env vars mới (thêm vào `.env` + docker-compose.yml crm service)
 
