@@ -61,15 +61,34 @@ cloudflared tunnel run crm
 
 ## Bước 7 — Install Windows service
 
+> **Lưu ý:** `cloudflared service install` chạy dưới `LocalSystem` không đọc được `C:\Users\Vantt\.cloudflared\`.
+> Phải copy config ra `C:\ProgramData\cloudflared\` và sửa registry path thủ công.
+
 ```powershell
 # Chạy PowerShell với quyền Administrator
-cloudflared service install
-# cloudflared sẽ đọc config từ C:\Users\Vantt\.cloudflared\config.yml
-# Service name: Cloudflared
 
-# Kiểm tra:
-Get-Service Cloudflared
+# 7a. Copy config + credentials ra chỗ SYSTEM đọc được
+New-Item -ItemType Directory -Force "C:\ProgramData\cloudflared"
+Copy-Item "C:\Users\Vantt\.cloudflared\config.yml" "C:\ProgramData\cloudflared\config.yml"
+Copy-Item "C:\Users\Vantt\.cloudflared\<TUNNEL_ID>.json" "C:\ProgramData\cloudflared\<TUNNEL_ID>.json"
+Copy-Item "C:\Users\Vantt\.cloudflared\cert.pem" "C:\ProgramData\cloudflared\cert.pem"
+
+# 7b. Sửa credentials-file trong config.yml trỏ sang ProgramData
+notepad C:\ProgramData\cloudflared\config.yml
+# credentials-file: C:\ProgramData\cloudflared\<TUNNEL_ID>.json
+
+# 7c. Install service với --config
+cloudflared --config "C:\ProgramData\cloudflared\config.yml" service install
+
+# 7d. Fix registry ImagePath — sc.exe trong PowerShell có quoting bug, dùng cmd /c
+cmd /c 'sc config Cloudflared binPath= "\"C:\Program Files (x86)\cloudflared\cloudflared.exe\" --config \"C:\ProgramData\cloudflared\config.yml\" tunnel run"'
+
+# 7e. Start + verify
 Start-Service Cloudflared
+Get-Service Cloudflared
+
+# Optional: tự restart sau 5s nếu crash
+sc.exe failure Cloudflared reset= 86400 actions= restart/5000/restart/5000/restart/5000
 ```
 
 ## Bước 8 — CF Access Application (CF Dashboard)

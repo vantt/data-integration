@@ -27,7 +27,7 @@ Internet
 
 | # | Phase | Type | Status |
 |---|-------|------|--------|
-| 01 | [CF Tunnel on Windows](phase-01-cf-tunnel-windows.md) | Manual infra | pending |
+| 01 | [CF Tunnel on Windows](phase-01-cf-tunnel-windows.md) | Manual infra | **done** |
 | 02 | [CRM auth layer](phase-02-crm-auth-layer.md) | Code | pending |
 
 ## Env vars mới (thêm vào `.env` + docker-compose.yml crm service)
