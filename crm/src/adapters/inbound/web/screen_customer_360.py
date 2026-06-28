@@ -11,9 +11,7 @@ Identifier resolution on the full-page route:
 """
 from __future__ import annotations
 
-import json
 import logging
-import os
 import re
 from datetime import datetime, timedelta, timezone
 from typing import Optional, Protocol
@@ -29,14 +27,20 @@ def _ict_local_to_utc(ict_str: str) -> str:
     except Exception:
         return ""
 
-from fastapi import APIRouter, Form, Request, Response
+
+from fastapi import APIRouter, Request, Response
 from fastapi.responses import HTMLResponse
 from fastapi.templating import Jinja2Templates
 
 from crm.src.domain.entities.activity import Activity
-from crm.src.domain.entities.cache_insight import CacheInsight, CustomerDimMetrics
+from crm.src.domain.entities.cache_insight import CacheInsight
 from crm.src.domain.entities.profile import CustomFieldDef, Note, Party360, PartyIdentity, PartyInsight
 from crm.src.domain.entities.task import Task
+
+from adapters.inbound.web.screen_customer_360_panels import register_panel_routes
+from adapters.inbound.web.screen_customer_360_activity import register_activity_routes
+from adapters.inbound.web.screen_customer_360_notes import register_note_routes
+from adapters.inbound.web.screen_customer_360_tasks import register_task_routes
 
 log = logging.getLogger(__name__)
 
@@ -44,6 +48,7 @@ _GEO_HCMC = {'Hồ Chí Minh', 'TP Hồ Chí Minh', 'TP. Hồ Chí Minh', 'HCM',
 _GEO_HANOI = {'Hà Nội', 'Ha Noi', 'Hanoi'}
 _GEO_MEKONG = {'An Giang', 'Bạc Liêu', 'Bến Tre', 'Cà Mau', 'Cần Thơ', 'Đồng Tháp', 'Hậu Giang', 'Kiên Giang', 'Long An', 'Sóc Trăng', 'Tiền Giang', 'Trà Vinh', 'Vĩnh Long'}
 _GEO_CENTRAL = {'Đà Nẵng', 'Thừa Thiên Huế', 'Quảng Nam', 'Quảng Ngãi', 'Bình Định', 'Phú Yên', 'Khánh Hòa', 'Ninh Thuận', 'Bình Thuận', 'Quảng Bình', 'Quảng Trị', 'Hà Tĩnh', 'Nghệ An', 'Thanh Hóa'}
+
 
 def _geo_region(province: Optional[str]) -> str:
     if not province:
@@ -58,12 +63,14 @@ def _geo_region(province: Optional[str]) -> str:
         return "Miền Trung"
     return "Khác"
 
+
 _UUID_RE = re.compile(
     r"^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$",
     re.IGNORECASE,
 )
 
 # ── Service protocols ─────────────────────────────────────────────────────────
+
 
 class ProfileReader(Protocol):
     def get_party_360(self, party_id: str) -> Optional[Party360]: ...
@@ -152,6 +159,7 @@ def make_customer_360_router(
     customer_dim_metrics=None,
     task_svc: Optional[TaskCreator] = None,
     app_users: Optional[AppUserReader] = None,
+    approach_repo=None,
 ) -> APIRouter:
     """Return APIRouter wired with all Customer 360 routes."""
     router = APIRouter()
@@ -269,461 +277,43 @@ def make_customer_360_router(
             },
         )
 
-    # ── HTMX panel fragments ──────────────────────────────────────────────────
+    # ── Sub-module routes ─────────────────────────────────────────────────────
 
-    @router.get("/customers/{party_id}/panels/{panel}", response_class=HTMLResponse)
-    async def handle_customer_360_panel(
-        request: Request, party_id: str, panel: str
-    ) -> Response:
-        ctx: dict = {"request": request, "party_id": party_id}
-        if panel == "insight":
-            _, ids = _load_base(party_id)
-            ins = _load_insight(ids)
-            rep_ins: list[PartyInsight] = []
-            if party_insights is not None:
-                try:
-                    rep_ins = [
-                        i for i in party_insights.list_by_party(party_id)
-                        if not i.deleted_at
-                    ]
-                except Exception as exc:
-                    log.warning("c360 insight panel: rep insights %s: %s", party_id, exc)
-            resolved_ids: set[str] = set()
-            if action_task_resolver is not None:
-                try:
-                    resolved_ids = action_task_resolver.resolved_action_ids(party_id)
-                except Exception as exc:
-                    log.warning("c360 insight panel: resolved_ids %s: %s", party_id, exc)
-            dim_metrics: Optional[CustomerDimMetrics] = None
-            if customer_dim_metrics is not None:
-                sapo_id = _sapo_customer_id(ids)
-                if sapo_id:
-                    try:
-                        dim_metrics = customer_dim_metrics.get_by_customer_id(sapo_id)
-                    except Exception as exc:
-                        log.warning("c360 insight panel: dim_metrics %s: %s", party_id, exc)
-            snapshots: list = []
-            timeline_available = customer_timeline is not None
-            if customer_timeline is not None:
-                sapo_id = _sapo_customer_id(ids)
-                if sapo_id:
-                    try:
-                        snapshots = customer_timeline.get_by_customer_id(sapo_id)
-                    except Exception as exc:
-                        log.warning("c360 insight panel: snapshots %s: %s", party_id, exc)
-            return templates.TemplateResponse(
-                "fragments/c360_insight_panel.html",
-                {**ctx, "insight": ins, "rep_insights": rep_ins, "resolved_action_ids": resolved_ids,
-                 "dim_metrics": dim_metrics, "snapshots": snapshots, "timeline_available": timeline_available},
-            )
-        if panel == "orders":
-            _, ids = _load_base(party_id)
-            ins = _load_insight(ids)
-            orders = ins.recent_orders if ins else []
-            if customer_orders is not None:
-                customer_id = _sapo_customer_id(ids)
-                if customer_id:
-                    try:
-                        live = customer_orders.get_by_customer_id(customer_id)
-                        if live:
-                            orders = live
-                    except Exception as exc:
-                        log.warning("c360 orders panel: live fetch %s: %s", party_id, exc)
-            return templates.TemplateResponse(
-                "fragments/c360_orders_panel.html", {**ctx, "orders": orders}
-            )
-        if panel == "timeline":
-            acts = activities.list_activities(party_id)
-            tl_user_map: dict = {}
-            if app_users is not None:
-                try:
-                    tl_user_map = {u.user_id: u.full_name for u in app_users.list_active()}
-                except Exception as exc:
-                    log.warning("c360 timeline: list_active: %s", exc)
-            return templates.TemplateResponse(
-                "fragments/c360_timeline_panel.html",
-                {**ctx, "activities": acts, "user_map": tl_user_map},
-            )
-        if panel == "tasks":
-            status_filter = request.query_params.get("filter", "open")
-            task_list = party_tasks.list_by_party(party_id)
-            user_map: dict = {}
-            if app_users is not None:
-                try:
-                    user_map = {u.user_id: u.full_name for u in app_users.list_active()}
-                except Exception as exc:
-                    log.warning("c360 tasks: list_active: %s", exc)
-            return templates.TemplateResponse(
-                "fragments/c360_tasks_panel.html",
-                {**ctx, "tasks": task_list, "filter": status_filter, "user_map": user_map,
-                 "now_utc": datetime.now(timezone.utc).strftime("%Y-%m-%dT%H:%M:%S.000Z")},
-            )
-        if panel == "notes":
-            note_list = notes.list_notes(party_id)
-            type_filter = request.query_params.get("type_filter", "all")
-            notes_user_map: dict = {}
-            if app_users is not None:
-                try:
-                    notes_user_map = {u.user_id: u.full_name for u in app_users.list_active()}
-                except Exception as exc:
-                    log.warning("c360 notes: list_active: %s", exc)
-            return templates.TemplateResponse(
-                "fragments/c360_notes_panel.html",
-                {**ctx, "notes": note_list, "type_filter": type_filter, "user_map": notes_user_map},
-            )
-        if panel == "call_cockpit":
-            # ── Approach-script panel (S14 cockpit embedded in S03) ──────────
-            # Reads the real approach script from the repository
-            # (FileApproachScriptRepository, exposed on app.state by composition).
-            _, ids = _load_base(party_id)
-            customer_id = _sapo_customer_id(ids)
-            script_dict = None
-            meta_dict = None
-            approach_repo = getattr(request.app.state, "approach_repo", None)
-            if customer_id and approach_repo is not None:
-                try:
-                    scr = approach_repo.get_by_customer_id(customer_id)
-                    # Only render a script that carries the approach block; an
-                    # approach-less dict would raise UndefinedError in the template.
-                    # Otherwise fall through to the no-script empty state.
-                    if scr is not None and isinstance(scr.data, dict) and "approach" in scr.data:
-                        script_dict = scr.data
-                        meta_dict = {"recommended": scr.recommended,
-                                     "confidence": scr.confidence,
-                                     "refreshed_at": scr.refreshed_at}
-                except Exception as exc:
-                    log.warning("c360 call_cockpit: load script %s: %s", party_id, exc)
-            return templates.TemplateResponse(
-                "fragments/c360_call_cockpit_panel.html",
-                {**ctx, "script": script_dict, "meta": meta_dict},
-            )
-        return HTMLResponse("panel not found", status_code=404)
-
-    # ── M08 modal — serve & tab switching ────────────────────────────────────
-
-    def _m08_ctx(request: Request, party_id: str, mode: str = "log",
-                 note_id: str = "", party_name: str = "", task_id: str = "") -> dict:
-        # normalize legacy mode names → unified 'log'
-        if mode not in ("log", "edit_note", "note_only"):
-            mode = "log"
-        contact_pref_notes: list[Note] = []
-        note_body = ""
-        note_type_val = "general"
-        note_pinned = False
-        note_visibility = "team"
-        party_identities: list[PartyIdentity] = []
-        task_title = ""
-        if mode == "log":
-            try:
-                contact_pref_notes = [
-                    n for n in notes.list_notes(party_id)
-                    if not n.deleted_at and n.note_type == "contact_pref" and n.pinned
-                ]
-            except Exception as exc:
-                log.warning("m08: contact_pref_notes %s: %s", party_id, exc)
-            try:
-                party_identities = identities.list_identities(party_id)
-            except Exception as exc:
-                log.warning("m08: identities %s: %s", party_id, exc)
-            if task_id.strip() and task_svc is not None:
-                try:
-                    t = task_svc.get_task(task_id.strip())
-                    if t is not None:
-                        task_title = getattr(t, "title", "")
-                except Exception as exc:
-                    log.warning("m08: get_task %s: %s", task_id, exc)
-        if mode == "edit_note" and note_id:
-            try:
-                existing = next(
-                    (n for n in notes.list_notes(party_id) if n.note_id == note_id), None
-                )
-                if existing:
-                    note_body = existing.body
-                    note_type_val = existing.note_type
-                    note_pinned = existing.pinned
-                    note_visibility = existing.visibility
-            except Exception as exc:
-                log.warning("m08: load edit_note %s: %s", note_id, exc)
-        return {
-            "request": request,
-            "party_id": party_id,
-            "mode": mode,
-            "note_id": note_id,
-            "party_name": party_name,
-            "task_id": task_id,
-            "task_title": task_title,
-            "identities": party_identities,
-            "contact_pref_notes": contact_pref_notes,
-            "note_body": note_body,
-            "note_type_val": note_type_val,
-            "note_pinned": note_pinned,
-            "note_visibility": note_visibility,
-        }
-
-    @router.get("/modals/m08", response_class=HTMLResponse)
-    async def handle_modal_m08(
-        request: Request,
-        party_id: str,
-        mode: str = "activity",
-        note_id: str = "",
-        party_name: str = "",
-        task_id: str = "",
-    ) -> Response:
-        return templates.TemplateResponse(
-            "fragments/modal_log_activity.html",
-            _m08_ctx(request, party_id, mode, note_id, party_name, task_id),
-        )
-
-    @router.get("/customers/{party_id}/modal/log-activity", response_class=HTMLResponse)
-    async def handle_modal_log_activity(
-        request: Request, party_id: str,
-        mode: str = "activity",
-        party_name: str = "",
-        task_id: str = "",
-    ) -> Response:
-        return templates.TemplateResponse(
-            "fragments/modal_log_activity.html",
-            _m08_ctx(request, party_id, mode, "", party_name, task_id),
-        )
-
-    # ── Activity log POST ─────────────────────────────────────────────────────
-
-    _HT_TO_ACT_TYPE = {"call": "call", "zalo": "chat", "fb": "chat",
-                       "email": "email", "visit": "visit", "other": "other"}
-
-    @router.post("/customers/{party_id}/log-activity", response_class=HTMLResponse)
-    async def handle_log_activity(
-        request: Request,
-        party_id: str,
-        hinh_thuc: str = Form(default="call"),
-        channel_identity_id: str = Form(default=""),
-        channel_value: str = Form(default=""),
-        outcome: str = Form(default=""),
-        body: str = Form(default=""),
-        occurred_at: str = Form(default=""),
-        related_order_code: str = Form(default=""),
-        callback_at: str = Form(default=""),
-        create_callback_task: str = Form(default=""),
-        save_as_note: str = Form(default=""),
-        note_type: str = Form(default="outcome"),
-        pinned: str = Form(default="0"),
-        visibility: str = Form(default="team"),
-        schedule_followup_at: str = Form(default=""),
-        task_id: str = Form(default=""),
-        complete_task: str = Form(default=""),
-    ) -> Response:
-        current_user = getattr(request.state, "current_user", None)
-        actor_id: Optional[str] = current_user.user_id if current_user else None
-        utc_occurred = _ict_local_to_utc(occurred_at) if occurred_at.strip() else ""
-        act_data: dict = {
-            "party_id": party_id,
-            "activity_type": _HT_TO_ACT_TYPE.get(hinh_thuc, "other"),
-            "direction": "out",
-            "channel": channel_value.strip() or None,
-            "outcome": outcome.strip() or None,
-            "body": body.strip() or None,
-            "occurred_at": utc_occurred,
-            "related_order_code": related_order_code.strip() or None,
-            "staff_user_id": actor_id,
-        }
-        if outcome == "callback" and callback_at.strip():
-            act_data["callback_at"] = _ict_local_to_utc(callback_at)
-            act_data["create_callback_task"] = create_callback_task == "1"
-        try:
-            activity = activity_log.log_activity(act_data)
-        except ValueError as exc:
-            return HTMLResponse(str(exc), status_code=400)
-        except Exception as exc:
-            log.error("log activity party %s: %s", party_id, exc)
-            return HTMLResponse("Lỗi ghi log hoạt động", status_code=500)
-        if save_as_note == "1" and body.strip():
-            try:
-                notes.add_note(
-                    party_id, body.strip(),
-                    author_user_id=actor_id,
-                    note_type=note_type or "outcome",
-                    pinned=pinned == "1",
-                    visibility=visibility or "team",
-                    source_activity_id=getattr(activity, "activity_id", None),
-                )
-            except Exception as exc:
-                log.warning("m08: linked note %s: %s", party_id, exc)
-        if task_svc is not None and schedule_followup_at.strip():
-            try:
-                party360 = profile.get_party_360(party_id)
-                name = party360.display_name if party360 else party_id
-                task_svc.create_task({
-                    "party_id": party_id,
-                    "title": f"Theo dõi: {name}",
-                    "due_at": schedule_followup_at.strip(),
-                    "source": "manual",
-                    "priority": 0,
-                })
-            except Exception as exc:
-                log.warning("m08: schedule followup task %s: %s", party_id, exc)
-        if complete_task == "1" and task_id.strip() and task_svc is not None:
-            try:
-                task_svc.transition_status(task_id.strip(), "done")
-            except Exception as exc:
-                log.warning("m08: complete_task %s: %s", task_id, exc)
-        return HTMLResponse(content="", headers={"HX-Redirect": f"/customers/{party_id}?tab=timeline"})
-
-    # ── Note CRUD ─────────────────────────────────────────────────────────────
-
-    @router.post("/customers/{party_id}/notes", response_class=HTMLResponse)
-    async def handle_add_note(
-        request: Request,
-        party_id: str,
-        body: str = Form(...),
-        note_type: str = Form(default="general"),
-        pinned: str = Form(default="0"),
-        visibility: str = Form(default="team"),
-    ) -> Response:
-        body = body.strip()
-        if not body:
-            return HTMLResponse("Nội dung không được bỏ trống", status_code=400)
-        current_user = getattr(request.state, "current_user", None)
-        try:
-            notes.add_note(party_id, body,
-                           author_user_id=current_user.user_id if current_user else None,
-                           note_type=note_type, pinned=pinned == "1", visibility=visibility)
-        except Exception as exc:
-            log.error("c360: add note %s: %s", party_id, exc)
-            return HTMLResponse("Lỗi thêm ghi chú", status_code=500)
-        return HTMLResponse(content="", headers={"HX-Redirect": f"/customers/{party_id}?tab=notes"})
-
-    @router.post("/customers/{party_id}/notes/{note_id}", response_class=HTMLResponse)
-    async def handle_edit_note(
-        request: Request,
-        party_id: str,
-        note_id: str,
-        body: str = Form(...),
-        note_type: str = Form(default="general"),
-        pinned: str = Form(default="0"),
-        visibility: str = Form(default="team"),
-    ) -> Response:
-        body = body.strip()
-        if not body:
-            return HTMLResponse("Nội dung không được bỏ trống", status_code=400)
-        try:
-            notes.update_note(note_id, body, note_type=note_type,
-                              pinned=pinned == "1", visibility=visibility)
-        except Exception as exc:
-            log.error("c360: edit note %s: %s", note_id, exc)
-            return HTMLResponse("Lỗi cập nhật ghi chú", status_code=500)
-        return HTMLResponse(content="", headers={"HX-Redirect": f"/customers/{party_id}?tab=notes"})
-
-    @router.post("/customers/{party_id}/notes/{note_id}/delete", response_class=HTMLResponse)
-    async def handle_delete_note(
-        request: Request, party_id: str, note_id: str
-    ) -> Response:
-        try:
-            notes.delete_note(note_id)
-        except Exception as exc:
-            log.error("c360: delete note %s: %s", note_id, exc)
-            return HTMLResponse("Lỗi xoá ghi chú", status_code=500)
-        return HTMLResponse(content="", headers={"HX-Redirect": f"/customers/{party_id}?tab=notes"})
-
-    # ── Task quick-actions (P04 in-panel mutations) ───────────────────────────
-
-    def _render_tasks_panel(request: Request, party_id: str, filter_val: str = "open") -> Response:
-        task_list = party_tasks.list_by_party(party_id)
-        user_map: dict = {}
-        if app_users is not None:
-            try:
-                user_map = {u.user_id: u.full_name for u in app_users.list_active()}
-            except Exception:
-                pass
-        return templates.TemplateResponse(
-            "fragments/c360_tasks_panel.html",
-            {
-                "request": request,
-                "party_id": party_id,
-                "tasks": task_list,
-                "filter": filter_val,
-                "user_map": user_map,
-                "now_utc": datetime.now(timezone.utc).strftime("%Y-%m-%dT%H:%M:%S.000Z"),
-            },
-        )
-
-    @router.patch("/customers/{party_id}/tasks/{task_id}/done", response_class=HTMLResponse)
-    async def handle_task_done_c360(request: Request, party_id: str, task_id: str) -> Response:
-        if task_svc is None:
-            return HTMLResponse("task service not available", status_code=503)
-        try:
-            task_svc.transition_status(task_id, "done")
-        except Exception as exc:
-            log.error("c360: task done %s: %s", task_id, exc)
-            return HTMLResponse("Lỗi cập nhật task", status_code=500)
-        filter_val = request.query_params.get("filter", "open")
-        return _render_tasks_panel(request, party_id, filter_val)
-
-    @router.patch("/customers/{party_id}/tasks/{task_id}/cancel", response_class=HTMLResponse)
-    async def handle_task_cancel_c360(request: Request, party_id: str, task_id: str) -> Response:
-        if task_svc is None:
-            return HTMLResponse("task service not available", status_code=503)
-        try:
-            task_svc.transition_status(task_id, "cancelled")
-        except Exception as exc:
-            log.error("c360: task cancel %s: %s", task_id, exc)
-            return HTMLResponse("Lỗi huỷ task", status_code=500)
-        filter_val = request.query_params.get("filter", "open")
-        return _render_tasks_panel(request, party_id, filter_val)
-
-    @router.patch("/customers/{party_id}/tasks/{task_id}/postpone", response_class=HTMLResponse)
-    async def handle_task_postpone_c360(
-        request: Request,
-        party_id: str,
-        task_id: str,
-        due_date: str = Form(default=""),
-        due_time: str = Form(default=""),
-    ) -> Response:
-        if task_svc is None:
-            return HTMLResponse("task service not available", status_code=503)
-        if not due_date.strip():
-            return HTMLResponse("Vui lòng chọn ngày", status_code=400)
-        time_part = due_time.strip() or "09:00"
-        new_due_at = _ict_local_to_utc(f"{due_date.strip()}T{time_part}")
-        if not new_due_at:
-            return HTMLResponse("Ngày không hợp lệ", status_code=400)
-        try:
-            t = task_svc.get_task(task_id)
-            if t is not None and getattr(t, "status", "") == "doing":
-                task_svc.transition_status(task_id, "open")
-            task_svc.update_task(task_id, {"due_at": new_due_at})
-        except Exception as exc:
-            log.error("c360: task postpone %s: %s", task_id, exc)
-            return HTMLResponse("Lỗi hoãn task", status_code=500)
-        filter_val = request.query_params.get("filter", "open")
-        panel_resp = _render_tasks_panel(request, party_id, filter_val)
-        return panel_resp
-
-    @router.get("/modals/o03", response_class=HTMLResponse)
-    async def handle_modal_o03(
-        request: Request,
-        task_id: str,
-        party_id: str = "",
-        due_at: str = "",
-    ) -> Response:
-        prefill_date = ""
-        prefill_time = ""
-        if due_at.strip():
-            try:
-                dt_utc = datetime.fromisoformat(due_at.strip().replace("Z", "+00:00"))
-                dt_ict = dt_utc.astimezone(_ICT)
-                prefill_date = dt_ict.strftime("%Y-%m-%d")
-                prefill_time = dt_ict.strftime("%H:%M")
-            except Exception:
-                pass
-        return templates.TemplateResponse(
-            "fragments/overlay_o03_postpone_task.html",
-            {
-                "request": request,
-                "task_id": task_id,
-                "party_id": party_id,
-                "due_at_prefill_date": prefill_date,
-                "due_at_prefill_time": prefill_time,
-            },
-        )
+    register_panel_routes(
+        router, templates,
+        activities=activities,
+        notes=notes,
+        party_tasks=party_tasks,
+        party_insights=party_insights,
+        action_task_resolver=action_task_resolver,
+        customer_timeline=customer_timeline,
+        customer_orders=customer_orders,
+        customer_dim_metrics=customer_dim_metrics,
+        app_users=app_users,
+        approach_repo=approach_repo,
+        _load_base=_load_base,
+        _load_insight=_load_insight,
+        _sapo_customer_id=_sapo_customer_id,
+    )
+    register_activity_routes(
+        router, templates,
+        profile=profile,
+        identities=identities,
+        notes=notes,
+        activity_log=activity_log,
+        task_svc=task_svc,
+        app_users=app_users,
+    )
+    register_note_routes(
+        router, templates,
+        notes=notes,
+        app_users=app_users,
+    )
+    register_task_routes(
+        router, templates,
+        party_tasks=party_tasks,
+        task_svc=task_svc,
+        app_users=app_users,
+    )
 
     return router

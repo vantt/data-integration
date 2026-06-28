@@ -66,7 +66,8 @@ from adapters.inbound.http.customer360_handler import make_customer360_router
 from adapters.inbound.http.insight_handler import wire_insight_router, router as insight_router
 from adapters.inbound.http.activity_handler import wire_activity_router, router as activity_router
 from adapters.inbound.http.task_handler import wire_task_router, router as task_router
-from adapters.inbound.http.conversation_handler import router as conv_router
+from adapters.inbound.http.conversation_handler import make_conversation_router
+from adapters.inbound.http.debug_handler import make_debug_router
 from adapters.inbound.http.segment_handler import make_segment_router
 from adapters.inbound.http.campaign_handler import make_campaign_router
 from adapters.inbound.http.json_api_mirror_handler import make_json_api_mirror_router
@@ -217,49 +218,6 @@ def create_app() -> FastAPI:
     app_user_svc = AppUserService(app_user_repo)
     app.add_middleware(CFAccessMiddleware, user_svc=app_user_svc)
 
-    # Temporary debug endpoint — remove after JWT claim inspection is done.
-    from fastapi.responses import JSONResponse as _JSON
-    import jwt as _jwt
-
-    @app.get("/debug/me")
-    def debug_me(request: Request):
-        token = request.headers.get("Cf-Access-Jwt-Assertion", "")
-        raw = _jwt.decode(token, options={"verify_signature": False}) if token else {}
-        user = request.state.current_user
-        return _JSON({
-            "current_user": {
-                "user_id": user.user_id, "email": user.email,
-                "full_name": user.full_name, "role": user.role,
-            } if user else None,
-            "jwt_payload": raw,
-            "headers": {
-                k: v for k, v in request.headers.items()
-                if k.lower().startswith("cf-")
-            },
-        })
-
-    from pydantic import BaseModel as _BaseModel
-    from typing import Optional as _Opt
-
-    class _ProfileSyncBody(_BaseModel):
-        full_name: str
-        lark_id: _Opt[str] = None
-
-    @app.post("/profile/sync")
-    def profile_sync(body: _ProfileSyncBody, request: Request):
-        """Manual or client-side name sync (used once CF custom claims are wired)."""
-        user = request.state.current_user
-        if not user:
-            return _JSON({"ok": False}, status_code=401)
-        name = body.full_name.strip()
-        if name:
-            app_user_svc.provision_or_sync(user.email, name, user.role)
-        return _JSON({"ok": True})
-
-    # Store services/repos on app.state for web screens that call them directly.
-    app.state.conversation_service = conv_svc
-    app.state.approach_repo = approach_repo  # used by screen_call_cockpit (S14)
-
     # 6. Templates + static.
     templates = make_templates(str(_TEMPLATES_DIR))
     templates.env.globals["cf_team_domain"] = cf_team_domain()
@@ -322,8 +280,8 @@ def create_app() -> FastAPI:
     wire_task_router(task_svc)
     app.include_router(task_router)
 
-    # conversation_handler uses request.app.state — just mount the router.
-    app.include_router(conv_router)
+    app.include_router(make_debug_router(app_user_svc))
+    app.include_router(make_conversation_router(conv_svc))
 
     app.include_router(make_dedup_router(dedup_repo, merge_svc))
     app.include_router(make_customer360_router(
@@ -387,6 +345,7 @@ def create_app() -> FastAPI:
         customer_dim_metrics=dim_metrics_repo,
         task_svc=task_svc,
         app_users=app_user_repo,
+        approach_repo=approach_repo,
     ))
     app.include_router(make_tasks_board_router(
         templates=templates,

@@ -3,8 +3,8 @@
    Rendered inside S03's #tab-panel — reuses S03's right sidebar (not duplicated here).
    Data contract:
      script   : dict | None  — deserialized wh_approach_script JSON (see pinned contract below);
-                               served by screen_customer_360 call_cockpit branch from
-                               app.state.approach_repo.get_by_customer_id(customer_id)
+                               served by screen_customer_360_panels call_cockpit branch via
+                               approach_repo.get_by_customer_id(customer_id) (wired in composition)
      meta     : dict | None  — { recommended: bool, confidence: str, refreshed_at: str }
      party_id : str
    Rules enforced: R1 (consent gating checked upstream), R2 (refreshed_at visible), R14 (STOP state)
