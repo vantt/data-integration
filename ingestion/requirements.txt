@@ -7,7 +7,8 @@ duckdb
 dagster
 dagster-webserver
 dagster-dbt
-dbt-duckdb
+dbt-duckdb==1.10.1
+dbt-core==1.11.8
 pandas
 pyarrow
 openpyxl

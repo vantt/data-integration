@@ -265,6 +265,144 @@ models:
       - name: is_margin_negative
         description: "TRUE if lifetime_contribution_margin < 0. FALSE if no margin data (safe default). Gate for activation: avoid high-touch outreach to margin-negative customers."
 
+  - name: mart_customer_tier
+    description: >
+      Strategic tier classification: one row per customer (full recompute each run).
+      Single source of truth for which strategic outreach track a customer belongs to.
+      Consumed by CRM reverse-ETL and the Hug touchpoint platform.
+    columns:
+      - name: customer_key
+        data_type: varchar
+        tests: [not_null, unique]
+      - name: customer_id
+        data_type: varchar
+        tests: [not_null]
+      - name: customer_code
+        data_type: varchar
+      - name: full_name
+        data_type: varchar
+      - name: customer_type
+        data_type: varchar
+      - name: value_group
+        data_type: varchar
+      - name: customer_status
+        data_type: varchar
+      - name: order_count
+        data_type: integer
+      - name: recency_days
+        data_type: integer
+      - name: last_order_date
+        data_type: date
+      - name: lifetime_value
+        data_type: bigint
+      - name: lifetime_contribution_margin
+        data_type: bigint
+      - name: channel_preference
+        data_type: varchar
+      - name: is_contactable
+        data_type: boolean
+      - name: source_contact_quality
+        data_type: varchar
+      - name: contact_quality
+        data_type: varchar
+      - name: strategic_tier
+        data_type: varchar
+        tests:
+          - not_null
+          - accepted_values:
+              arguments:
+                values: ['LIVE_CORE', 'SECOND_ORDER', 'DORMANT_VALUABLE', 'LAPSED_VALUABLE', 'MASKED_REPEAT', 'NONBUYER', 'GRAVEYARD']
+      - name: tier_reason
+        data_type: varchar
+      - name: tier_generated_at
+        data_type: timestamp with time zone
+
+  - name: mart_customer_action_queue
+    description: >
+      Actionable outreach queue: one row per RETAIL customer needing outreach.
+      action_type drives the detailView Actions tab and CS/Sales daily workflow.
+      Excludes BRONZE-tier and margin-negative customers by design.
+    columns:
+      - name: customer_key
+        data_type: varchar
+        tests: [not_null]
+      - name: customer_id
+        data_type: varchar
+      - name: customer_code
+        data_type: varchar
+      - name: full_name
+        data_type: varchar
+      - name: phone
+        data_type: varchar
+      - name: email
+        data_type: varchar
+      - name: value_group
+        data_type: varchar
+      - name: customer_status
+        data_type: varchar
+      - name: next_purchase_signal
+        data_type: varchar
+      - name: discount_sensitivity
+        data_type: varchar
+      - name: lifetime_value
+        data_type: bigint
+      - name: order_count
+        data_type: integer
+      - name: avg_order_spend
+        data_type: bigint
+      - name: avg_days_between_orders
+        data_type: double
+      - name: cancel_rate
+        data_type: double
+      - name: recency_days
+        data_type: integer
+      - name: last_order_date
+        data_type: date
+      - name: predicted_next_purchase_date
+        data_type: date
+      - name: channel_preference
+        data_type: varchar
+      - name: product_affinity
+        data_type: varchar
+      - name: last_purchased_product
+        data_type: varchar
+      - name: last_purchased_sku
+        data_type: varchar
+      - name: top_affinity_product
+        data_type: varchar
+      - name: top_affinity_sku
+        data_type: varchar
+      - name: second_affinity_product
+        data_type: varchar
+      - name: payment_behavior
+        data_type: varchar
+      - name: is_contactable
+        data_type: boolean
+      - name: lifetime_contribution_margin
+        data_type: bigint
+      - name: is_margin_negative
+        data_type: boolean
+      - name: action_type
+        data_type: varchar
+        tests: [not_null]
+      - name: priority_rank
+        data_type: integer
+        tests: [not_null]
+      - name: action_rationale
+        data_type: varchar
+      - name: value_at_stake
+        data_type: bigint
+      - name: queue_generated_at
+        data_type: timestamp with time zone
+      - name: last_contacted_at
+        data_type: timestamp with time zone
+      - name: last_contact_result
+        data_type: varchar
+      - name: last_contact_channel
+        data_type: varchar
+      - name: is_recently_contacted_positively
+        data_type: boolean
+
   - name: dim_customers_base
     description: "Base customer dimension (SCD Type 1) without circular dependencies."
     columns:
