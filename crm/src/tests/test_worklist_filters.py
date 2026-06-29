@@ -14,10 +14,12 @@ from crm.src.application.worklist_filters import (
 )
 
 
-def _action(action_type="CALL_NOW", priority=1, name="A", rationale="", value=0, customer_id=None):
+def _action(action_type="CALL_NOW", priority=1, name="A", rationale="", value=0, customer_id=None,
+            top_affinity_product="", last_purchased_product=""):
     return SimpleNamespace(
         action_type=action_type, priority=priority, customer_name=name,
         rationale_vi=rationale, value_at_stake_vnd=value, customer_id=customer_id,
+        top_affinity_product=top_affinity_product, last_purchased_product=last_purchased_product,
     )
 
 

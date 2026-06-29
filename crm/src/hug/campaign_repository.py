@@ -178,7 +178,7 @@ def list_history(
     conn.row_factory = sqlite3.Row
     cur = conn.execute(
         "SELECT * FROM crm_hug_campaign_history"
-        " WHERE campaign_id = ? ORDER BY saved_at DESC LIMIT ?",
+        " WHERE campaign_id = ? ORDER BY id DESC LIMIT ?",
         (campaign_id, limit),
     )
     return cur.fetchall()
