@@ -128,19 +128,73 @@ supply_stack (
         AND p.rn           = s.rn + 1
 )
 
+-- Most recent order context per (customer, base_sku).
+-- Computed here (not in mart) so last_order_code and last_purchase_date share the same
+-- (customer, sku) grain — eliminates the dual-CTE desync that caused mismatched dates
+-- and order codes in action card context chips.
+-- Branch 2 divides by units_per_pack so last_net_unit_price is always per-base-unit.
+last_order_ctx AS (
+    SELECT
+        customer_key,
+        sku,
+        last_order_code,
+        last_sku_discount_rate,
+        last_net_unit_price,
+        ROW_NUMBER() OVER (PARTITION BY customer_key, sku ORDER BY ordered_at DESC) AS rn
+    FROM (
+        SELECT
+            fs.customer_key,
+            cfg.sku,
+            fo.order_code                                               AS last_order_code,
+            fs.discount_rate                                            AS last_sku_discount_rate,
+            ROUND(fs.net_revenue / NULLIF(fs.quantity, 0))::BIGINT     AS last_net_unit_price,
+            fs.ordered_at
+        FROM {{ ref('fact_sales') }}   fs
+        JOIN {{ ref('dim_products') }} dp  ON fs.product_key = dp.product_key
+        JOIN config                   cfg ON dp.sku          = cfg.sku
+        JOIN {{ ref('fact_orders') }}  fo  ON fs.order_id    = fo.order_id
+        WHERE fo.is_active_order = TRUE
+
+        UNION ALL
+
+        SELECT
+            fs.customer_key,
+            cfg.sku,
+            fo.order_code                                                                   AS last_order_code,
+            fs.discount_rate                                                                AS last_sku_discount_rate,
+            ROUND(fs.net_revenue / NULLIF(fs.quantity * da.units_per_pack, 0))::BIGINT     AS last_net_unit_price,
+            fs.ordered_at
+        FROM {{ ref('fact_sales') }}    fs
+        JOIN {{ ref('dim_products') }}  dp  ON fs.product_key  = dp.product_key
+        JOIN {{ ref('dim_sku_alias') }} da  ON dp.sku          = da.sapo_pack_sku
+        JOIN config                    cfg ON da.sapo_base_sku = cfg.sku
+        JOIN {{ ref('fact_orders') }}   fo  ON fs.order_id     = fo.order_id
+        WHERE fo.is_active_order = TRUE
+          AND dp.sku NOT IN (SELECT sku FROM config)
+          AND da.sapo_pack_sku != da.sapo_base_sku
+    )
+)
+
 -- Keep only the final (most recent) purchase row per (customer, sku)
 SELECT
-    customer_key,
-    sku,
-    product_group,
-    display_name,
-    supply_days_per_unit,
-    dose_reduction_buffer,
-    remind_lead_days,
-    journey_enabled,
-    purchase_date         AS last_purchase_date,
-    total_qty             AS last_order_qty,
-    effective_supply_days,
-    depletion_date        AS estimated_depletion_date
-FROM supply_stack
-QUALIFY rn = MAX(rn) OVER (PARTITION BY customer_key, sku)
+    s.customer_key,
+    s.sku,
+    s.product_group,
+    s.display_name,
+    s.supply_days_per_unit,
+    s.dose_reduction_buffer,
+    s.remind_lead_days,
+    s.journey_enabled,
+    s.purchase_date         AS last_purchase_date,
+    s.total_qty             AS last_order_qty,
+    s.effective_supply_days,
+    s.depletion_date        AS estimated_depletion_date,
+    loctx.last_order_code,
+    loctx.last_sku_discount_rate,
+    loctx.last_net_unit_price
+FROM supply_stack s
+LEFT JOIN last_order_ctx loctx
+    ON  s.customer_key = loctx.customer_key
+    AND s.sku          = loctx.sku
+    AND loctx.rn = 1
+QUALIFY s.rn = MAX(s.rn) OVER (PARTITION BY s.customer_key, s.sku)

@@ -352,7 +352,8 @@ class SQLiteCacheRepository:
                    s.snoozed_until,
                    NULL AS last_purchase_date,
                    NULL AS last_order_code,
-                   NULL AS last_sku_discount_rate
+                   NULL AS last_sku_discount_rate,
+                   NULL AS last_net_unit_price
             FROM cache.wh_action_queue a
             LEFT JOIN crm_action_state s ON s.action_id = a.action_id
             WHERE a.customer_key = ?"""
@@ -366,7 +367,8 @@ class SQLiteCacheRepository:
                    s.snoozed_until,
                    sa.last_purchase_date,
                    sa.last_order_code,
-                   sa.last_sku_discount_rate
+                   sa.last_sku_discount_rate,
+                   sa.last_net_unit_price
             FROM cache.wh_sku_action_queue sa
             LEFT JOIN crm_action_state s ON s.action_id = sa.action_id
             WHERE sa.customer_key = ?"""
@@ -395,6 +397,7 @@ class SQLiteCacheRepository:
                 last_purchase_date=row["last_purchase_date"] or "",
                 last_order_code=row["last_order_code"] or "",
                 last_sku_discount_rate=row["last_sku_discount_rate"],
+                last_net_unit_price=row["last_net_unit_price"],
             )
             for row in rows
         ]

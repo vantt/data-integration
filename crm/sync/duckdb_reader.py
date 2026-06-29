@@ -147,6 +147,7 @@ _MART_SKU_ACTION_QUEUE_COLS = [
     "last_purchase_date",
     "last_order_code",
     "last_sku_discount_rate",
+    "last_net_unit_price",
 ]
 
 # dim_products output columns for product catalog (cache-facing names).

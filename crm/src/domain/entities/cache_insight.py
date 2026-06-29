@@ -132,8 +132,9 @@ class ActionQueueItem:
     last_purchased_product: str = ""    # product from customer's last order (for CS context + search)
     # SKU-level purchase context (populated for SKU actions only; empty for customer-level actions)
     last_purchase_date: str = ""        # YYYY-MM-DD of the most recent purchase of this SKU
-    last_order_code: str = ""           # order_code of that purchase
+    last_order_code: str = ""           # order_code aligned with last_purchase_date (same grain)
     last_sku_discount_rate: Optional[float] = None  # 0.0–1.0; None when no discount data
+    last_net_unit_price: Optional[int] = None       # VND per base unit (VAT-exclusive, after discount)
 
 
 @dataclass

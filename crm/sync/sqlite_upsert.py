@@ -83,6 +83,7 @@ def apply_schema(conn: sqlite3.Connection) -> None:
         "ALTER TABLE wh_sku_action_queue ADD COLUMN last_purchase_date TEXT",
         "ALTER TABLE wh_sku_action_queue ADD COLUMN last_order_code TEXT",
         "ALTER TABLE wh_sku_action_queue ADD COLUMN last_sku_discount_rate REAL",
+        "ALTER TABLE wh_sku_action_queue ADD COLUMN last_net_unit_price INTEGER",
     ]
     for stmt in _group_a:
         try:
@@ -244,8 +245,8 @@ def upsert_sku_action_queue(conn: sqlite3.Connection, rows: list[dict]) -> int:
         "INSERT INTO wh_sku_action_queue "
         "  (action_id, customer_key, sku, product_display_name, action_type, rationale_vi, "
         "   days_until_depletion, estimated_depletion_date, priority, pending_since, generated_date, "
-        "   last_purchase_date, last_order_code, last_sku_discount_rate) "
-        "VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?) "
+        "   last_purchase_date, last_order_code, last_sku_discount_rate, last_net_unit_price) "
+        "VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?) "
         "ON CONFLICT(customer_key, sku, action_type) DO UPDATE SET "
         "  generated_date           = excluded.generated_date, "
         "  rationale_vi             = excluded.rationale_vi, "
@@ -256,6 +257,7 @@ def upsert_sku_action_queue(conn: sqlite3.Connection, rows: list[dict]) -> int:
         "  last_purchase_date       = excluded.last_purchase_date, "
         "  last_order_code          = excluded.last_order_code, "
         "  last_sku_discount_rate   = excluded.last_sku_discount_rate, "
+        "  last_net_unit_price      = excluded.last_net_unit_price, "
         "  refreshed_at             = strftime('%Y-%m-%dT%H:%M:%fZ','now')"
         # action_id and pending_since intentionally preserved on conflict
     )
@@ -279,6 +281,7 @@ def upsert_sku_action_queue(conn: sqlite3.Connection, rows: list[dict]) -> int:
             r.get("last_purchase_date"),
             r.get("last_order_code"),
             r.get("last_sku_discount_rate"),
+            r.get("last_net_unit_price"),
         )
         for r in rows
     ]

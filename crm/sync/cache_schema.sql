@@ -205,6 +205,10 @@ CREATE TABLE IF NOT EXISTS wh_sku_action_queue (
   priority                 INTEGER,
   pending_since            TEXT,                 -- first day this episode appeared (never updated)
   generated_date           TEXT,                 -- last warehouse refresh date
+  last_purchase_date       TEXT,                 -- YYYY-MM-DD of the most recent purchase of this SKU
+  last_order_code          TEXT,                 -- order_code aligned with last_purchase_date (same CTE)
+  last_sku_discount_rate   REAL,                 -- 0.0–1.0; None when no discount
+  last_net_unit_price      INTEGER,              -- VND per base unit (VAT-exclusive, after discount)
   refreshed_at             TEXT NOT NULL DEFAULT (strftime('%Y-%m-%dT%H:%M:%fZ','now'))
   -- status/snoozed_until live in crm.db:crm_action_state (keyed on action_id, same mechanism)
 );

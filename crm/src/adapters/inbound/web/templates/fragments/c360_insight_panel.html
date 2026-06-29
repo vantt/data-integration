@@ -62,6 +62,7 @@
               <div class="aq-ctx">
                 {% if act.last_order_code %}<a href="/orders/{{ act.last_order_code }}" class="aq-ctx-chip aq-ctx-chip--link" onclick="event.stopPropagation()">{{ act.last_order_code }}</a>{% endif %}
                 <span class="aq-ctx-chip">{{ act.last_purchase_date }}</span>
+                {% if act.last_net_unit_price %}<span class="aq-ctx-chip">{{ act.last_net_unit_price | fmt_vnd }}</span>{% endif %}
                 {% if act.last_sku_discount_rate %}<span class="aq-ctx-chip aq-ctx-chip--discount">−{{ "%.0f"|format(act.last_sku_discount_rate * 100) }}%</span>{% endif %}
               </div>
               {% endif %}
