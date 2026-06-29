@@ -199,6 +199,7 @@ models:
         description: "MISA report-format version tag; bump when parser/report changes."
 
   - name: std_inventory_movements
+    tags: [hourly]
     description: >
       Standardized inventory movement ledger. Grain: 1 row per inventory_movement_id
       (= entity_id content hash). Source: src_sapo_v2_inventory_transactions (v2).

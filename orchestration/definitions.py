@@ -221,14 +221,11 @@ pipeline_batch_fullrefresh_job = define_asset_job(
 # so no serving asset is needed here. Add future hourly assets to this selection.
 pipeline_sapo_v2_hourly_job = define_asset_job(
     name="pipeline_sapo_v2_hourly_job",
+    # dbt models tagged 'hourly' in schema.yml are exposed as Dagster tag "dagster-dbt/hourly".
+    # This avoids hard-coded AssetKey strings that break silently on model rename.
     selection=(
         AssetSelection.assets(sapo_v2_assets.ingest_sapo_v2_inventory_transactions_asset)
-        | AssetSelection.keys(
-            AssetKey(["staging", "src_sapo_v2_inventory_transactions"]),
-            AssetKey(["staging", "std_inventory_movements"]),
-            AssetKey(["marts", "fact_inventory_movements"]),
-            AssetKey(["marts", "fact_inventory_balance"]),
-        )
+        | AssetSelection.tag("dagster-dbt/hourly", "")
     ),
     tags=SYNC_TAGS,
 )

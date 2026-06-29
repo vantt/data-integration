@@ -104,6 +104,7 @@ models:
         tests: [not_null]
 
   - name: src_sapo_v2_inventory_transactions
+    tags: [hourly]
     description: >
       Flattened inventory transactions from Sapo (batch_sync, content-addressed entity_id).
       Grain: 1 row per document × product line × content-state. onhand is a running stock

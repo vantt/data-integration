@@ -2,6 +2,7 @@ version: 2
 
 models:
   - name: fact_inventory_movements
+    tags: [hourly]
     description: >
       Inventory movement ledger fact. Grain: 1 row per inventory_movement_id (entity_id
       content hash). Sourced from std_inventory_movements; filters quantity_delta != 0
@@ -48,6 +49,7 @@ models:
         description: "Source API version ('v2')."
 
   - name: fact_inventory_balance
+    tags: [hourly]
     description: >
       Sparse effective-dated stock-balance ledger per (variant_id, location_id). Natural
       counterpart to fact_inventory_movements (movements change the balance).
