@@ -12,7 +12,7 @@ from __future__ import annotations
 import json
 import re
 import sqlite3
-from datetime import datetime, timezone
+from shared.timestamps import utc_now
 
 # campaign_id must be safe to use as a URL segment and as a D1 key.
 # Accept alphanumeric, hyphen, and underscore only.
@@ -21,10 +21,6 @@ _CAMPAIGN_ID_RE = re.compile(r'^[A-Za-z0-9_-]{1,128}$')
 _REQUIRED_FIELDS = ("campaign_id", "name", "destination_type", "destination_url")
 _VALID_DEST_TYPES = {"zalo_oa", "cf_pages", "url"}
 _VALID_STATUSES   = {"active", "paused", "archived"}
-
-
-def _utc_now() -> str:
-    return datetime.now(timezone.utc).strftime("%Y-%m-%dT%H:%M:%S.%fZ")
 
 
 def _validate(row: dict) -> None:
@@ -60,7 +56,7 @@ def _write_history_snapshot(conn: sqlite3.Connection, row: sqlite3.Row) -> None:
     conn.execute(
         "INSERT INTO crm_hug_campaign_history (campaign_id, snapshot, saved_at)"
         " VALUES (?, ?, ?)",
-        (row["campaign_id"], snapshot, _utc_now()),
+        (row["campaign_id"], snapshot, utc_now()),
     )
 
 
@@ -109,7 +105,7 @@ def upsert_campaign(conn: sqlite3.Connection, row: dict) -> sqlite3.Row:
     """
     _validate(row)
 
-    now = _utc_now()
+    now = utc_now()
     conn.row_factory = sqlite3.Row
 
     conn.execute(
@@ -162,7 +158,7 @@ def upsert_campaign(conn: sqlite3.Connection, row: dict) -> sqlite3.Row:
 def archive_campaign(conn: sqlite3.Connection, campaign_id: str) -> None:
     """Soft-delete a campaign by setting status='archived' and writing a snapshot."""
     conn.row_factory = sqlite3.Row
-    now = _utc_now()
+    now = utc_now()
     conn.execute(
         "UPDATE crm_hug_campaign SET status = 'archived', updated_at = ? WHERE campaign_id = ?",
         (now, campaign_id),

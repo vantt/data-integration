@@ -13,8 +13,8 @@ from fastapi import APIRouter, Request, Response
 from fastapi.responses import HTMLResponse
 from fastapi.templating import Jinja2Templates
 
-from crm.src.domain.entities.cache_insight import CustomerDimMetrics
-from crm.src.domain.entities.profile import PartyIdentity, PartyInsight
+from domain.entities.cache_insight import CustomerDimMetrics
+from domain.entities.profile import PartyIdentity, PartyInsight
 
 log = logging.getLogger(__name__)
 

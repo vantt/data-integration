@@ -13,7 +13,7 @@ from fastapi import APIRouter, Request, Response
 from fastapi.responses import HTMLResponse
 from fastapi.templating import Jinja2Templates
 
-from crm.src.domain.entities.order import OrderDetail
+from domain.entities.order import OrderDetail
 
 log = logging.getLogger(__name__)
 

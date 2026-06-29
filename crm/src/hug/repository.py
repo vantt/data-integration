@@ -7,17 +7,13 @@ from __future__ import annotations
 
 import json
 import sqlite3
-from datetime import datetime, timezone
+from shared.timestamps import utc_now
 
 from hug.tokens import generate_token
 
 # Generous safety cap on collision retries. With a 7.8e17 keyspace a collision
 # is effectively never; the cap only guards against a corrupt/looping caller.
 _MAX_COLLISION_RETRIES = 16
-
-
-def _utc_now() -> str:
-    return datetime.now(timezone.utc).strftime("%Y-%m-%dT%H:%M:%S.%fZ")
 
 
 def mint_batch(
@@ -37,7 +33,7 @@ def mint_batch(
         raise ValueError("count must be >= 1")
 
     minted: list[str] = []
-    created = _utc_now()
+    created = utc_now()
     try:
         for _ in range(count):
             for attempt in range(_MAX_COLLISION_RETRIES):
@@ -146,7 +142,7 @@ def bind_token(
             )
         # Same session (or either side None) → fall through to UPDATE (re-bind)
 
-    bound_at = _utc_now()
+    bound_at = utc_now()
     # op_type is a MINT-time (batch) property of the physical sticker — do NOT
     # overwrite it at claim. Claim only sets order_code + is_gift.
     conn.execute(
@@ -174,7 +170,7 @@ def mark_pushed(conn: sqlite3.Connection, token: str) -> None:
     """Record that a bound token has been pushed to the D1 edge cache."""
     conn.execute(
         "UPDATE hug_token SET pushed_at=? WHERE token=?",
-        (_utc_now(), token),
+        (utc_now(), token),
     )
     conn.commit()
 

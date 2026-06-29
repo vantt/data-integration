@@ -5,8 +5,8 @@ import sqlite3
 from datetime import datetime, timezone
 from typing import Optional
 
-from crm.src.domain.entities.last_contact import LastContact
-from crm.src.adapters.outbound.sqlite.connection import CRMDatabase
+from domain.entities.last_contact import LastContact
+from adapters.outbound.sqlite.connection import CRMDatabase
 
 _UPSERT = """
 INSERT INTO crm_last_contact (

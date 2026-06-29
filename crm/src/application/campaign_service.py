@@ -7,6 +7,8 @@ from __future__ import annotations
 from datetime import datetime, timezone, timedelta
 from typing import Any
 
+from shared.timestamps import utc_now
+
 from domain.entities.segment import (
     VALID_CAMPAIGN_OBJECTIVES,
     VALID_TARGET_STATUSES,
@@ -20,10 +22,6 @@ from domain.entities.segment import (
 
 # ICT = Asia/Ho_Chi_Minh (UTC+7, no DST). Matches wh_order_hdr.date_key semantics.
 _ICT = timezone(timedelta(hours=7))
-
-
-def _utc_now() -> str:
-    return datetime.now(timezone.utc).isoformat()
 
 
 def _today_ict_date_key() -> int:
@@ -79,7 +77,7 @@ class CampaignService:
                 f"invalid objective {objective!r} — must be one of: "
                 + ", ".join(VALID_CAMPAIGN_OBJECTIVES)
             )
-        now = _utc_now()
+        now = utc_now()
         c = Campaign(
             campaign_id=data.get("campaign_id") or str(uuid.uuid4()),
             name=name,
@@ -121,7 +119,7 @@ class CampaignService:
             c.segment_id = kwargs["segment_id"]
         if "scheduled_at" in kwargs:
             c.scheduled_at = kwargs["scheduled_at"]
-        c.updated_at = _utc_now()
+        c.updated_at = utc_now()
         self._campaign_repo.update(c)
 
     def get_campaign(self, campaign_id: str) -> Campaign | None:
@@ -179,7 +177,7 @@ class CampaignService:
                     f"cannot transition target from {t.status!r} to {new_status!r}"
                 )
             t.status = new_status
-            t.last_touch_at = _utc_now()
+            t.last_touch_at = utc_now()
         if "assigned_user_id" in kwargs:
             t.assigned_user_id = kwargs["assigned_user_id"]
         self._campaign_repo.update_target(t)
@@ -211,12 +209,12 @@ class CampaignService:
                 f"cannot transition target from {t.status!r} to 'converted'"
             )
         t.status = "converted"
-        t.last_touch_at = _utc_now()
+        t.last_touch_at = utc_now()
         if order_code is not None:
             t.converted_order_code = order_code
         if revenue_vnd is not None:
             t.converted_revenue_vnd = revenue_vnd
-        t.converted_at = _utc_now()
+        t.converted_at = utc_now()
         self._campaign_repo.update_target(t)
 
     def list_targets(self, campaign_id: str, status: str | None = None) -> list[CampaignTarget]:

@@ -11,8 +11,8 @@ import json
 import sqlite3
 from typing import Optional
 
-from crm.src.adapters.outbound.sqlite.connection import CRMDatabase
-from crm.src.domain.entities.conversation import Conversation, Message
+from adapters.outbound.sqlite.connection import CRMDatabase
+from domain.entities.conversation import Conversation, Message
 
 
 # ── SQL statements (ported verbatim from conversation_queries.sql) ─────────────

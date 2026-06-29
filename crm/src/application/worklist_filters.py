@@ -7,42 +7,10 @@ from __future__ import annotations
 
 from typing import Mapping
 
-from .worklist_ranking import urgency_score
-
-# Fine Japan 8 core SKUs — (url_key, display_label).
-# Matching uses keyword logic in _matches_core_product().
-CORE_PRODUCTS: list[tuple[str, str]] = [
-    ("cordyceps_vien",    "Cordyceps Viên"),
-    ("cordyceps_plus",    "Cordyceps Plus"),
-    ("fucoidan",          "Fucoidan"),
-    ("collagen_plus",     "Collagen Plus"),
-    ("collagen_swallow",  "Collagen Swallow's Nest"),
-    ("shark_cartilage",   "Shark Cartilage"),
-    ("natto",             "Natto Kinase"),
-    ("metabo",            "Metabo"),
-]
-
-
-def _matches_core_product(product_str: str, key: str) -> bool:
-    """Return True if product_str belongs to the given core product key."""
-    s = (product_str or "").lower()
-    if key == "cordyceps_vien":
-        return "cordyceps" in s and "plus" not in s
-    if key == "cordyceps_plus":
-        return "cordyceps plus" in s
-    if key == "fucoidan":
-        return "fucoidan" in s
-    if key == "collagen_plus":
-        return "collagen plus" in s
-    if key == "collagen_swallow":
-        return "swallow" in s
-    if key == "shark_cartilage":
-        return "shark" in s
-    if key == "natto":
-        return "natto" in s
-    if key == "metabo":
-        return "metabo" in s
-    return False
+from application.worklist_ranking import urgency_score
+from domain.entities.cache_insight import ActionQueueItem
+from domain.entities.task import Task
+from domain.product_catalog import CORE_PRODUCTS, CORE_PRODUCT_KEYS, matches_core_product
 
 
 def parse_filters(query_params: Mapping) -> dict:
@@ -58,7 +26,7 @@ def parse_filters(query_params: Mapping) -> dict:
     except ValueError:
         min_value = 0
     product = query_params.get("product", "").strip()
-    valid_keys = {k for k, _ in CORE_PRODUCTS}
+    valid_keys = CORE_PRODUCT_KEYS
     return {
         "assignee": query_params.get("assignee", "me"),
         "priority": query_params.get("priority", "all"),
@@ -71,13 +39,13 @@ def parse_filters(query_params: Mapping) -> dict:
     }
 
 
-def available_action_types(actions: list) -> list[str]:
+def available_action_types(actions: list[ActionQueueItem]) -> list[str]:
     """Distinct action_type values present, sorted — drives the filter chips.
 
     Derived from UNFILTERED data so new mart action types appear automatically.
     """
     return sorted(
-        {getattr(a, "action_type", "") for a in actions if getattr(a, "action_type", "")}
+        {a.action_type for a in actions if a.action_type}
     )
 
 
@@ -106,11 +74,11 @@ def active_filter_count(filters: dict) -> int:
 
 
 def apply_filters(
-    actions: list,
-    tasks: list,
+    actions: list[ActionQueueItem],
+    tasks: list[Task],
     filters: dict,
     script_cids: set[int] | None = None,
-) -> tuple[list, list]:
+) -> tuple[list[ActionQueueItem], list[Task]]:
     """Return (actions, tasks) narrowed by priority/type/search/min_value/has_script.
 
     Priority uses normalized urgency (high = urgency>=8, urgent = urgency>=9) so
@@ -125,34 +93,34 @@ def apply_filters(
     fp = filters["priority"]
     if fp == "urgent":
         actions = [a for a in actions
-                   if urgency_score("action", getattr(a, "priority", 9) or 9) >= 9]
+                   if urgency_score("action", a.priority or 9) >= 9]
         tasks = [t for t in tasks
-                 if urgency_score("task", getattr(t, "priority", 0) or 0) >= 9]
+                 if urgency_score("task", t.priority) >= 9]
     elif fp == "high":
         actions = [a for a in actions
-                   if urgency_score("action", getattr(a, "priority", 9) or 9) >= 8]
+                   if urgency_score("action", a.priority or 9) >= 8]
         tasks = [t for t in tasks
-                 if urgency_score("task", getattr(t, "priority", 0) or 0) >= 8]
+                 if urgency_score("task", t.priority) >= 8]
 
     # Type filter: restrict to selected action_types (tasks always pass through).
     if filters["types"]:
         allowed = set(filters["types"])
-        actions = [a for a in actions if getattr(a, "action_type", "") in allowed]
+        actions = [a for a in actions if a.action_type in allowed]
 
     # Text search: customer_name, rationale, or product affinity (actions) / title or desc (tasks).
     q = filters["q"].lower()
     if q:
         actions = [
             a for a in actions
-            if q in (getattr(a, "customer_name", "") or "").lower()
-            or q in (getattr(a, "rationale_vi", "") or "").lower()
-            or q in (getattr(a, "top_affinity_product", "") or "").lower()
-            or q in (getattr(a, "last_purchased_product", "") or "").lower()
+            if q in a.customer_name.lower()
+            or q in a.rationale_vi.lower()
+            or q in a.top_affinity_product.lower()
+            or q in a.last_purchased_product.lower()
         ]
         tasks = [
             t for t in tasks
-            if q in (getattr(t, "title", "") or "").lower()
-            or q in (getattr(t, "description", "") or "").lower()
+            if q in t.title.lower()
+            or q in (t.description or "").lower()
         ]
 
     # Product filter: match top_affinity_product or last_purchased_product (actions only).
@@ -160,20 +128,20 @@ def apply_filters(
     if product_key:
         actions = [
             a for a in actions
-            if _matches_core_product(getattr(a, "top_affinity_product", "") or "", product_key)
-            or _matches_core_product(getattr(a, "last_purchased_product", "") or "", product_key)
+            if matches_core_product(a.top_affinity_product, product_key)
+            or matches_core_product(a.last_purchased_product, product_key)
         ]
 
     # Minimum value filter (actions only; tasks have no monetary value).
     if filters["min_value"] > 0:
         mv = filters["min_value"]
         actions = [a for a in actions
-                   if int(getattr(a, "value_at_stake_vnd", 0) or 0) >= mv]
+                   if int(a.value_at_stake_vnd or 0) >= mv]
 
     # has_script filter: keep only actions whose customer_id is in the script set.
     # Tasks are not filtered (manual tasks lack customer_id; v1 scope).
     if filters.get("has_script") and script_cids is not None:
         actions = [a for a in actions
-                   if getattr(a, "customer_id", None) in script_cids]
+                   if a.customer_id in script_cids]
 
     return actions, tasks

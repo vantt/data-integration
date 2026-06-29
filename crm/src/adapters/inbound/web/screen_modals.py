@@ -14,9 +14,9 @@ from fastapi import APIRouter, Form, HTTPException, Request
 from fastapi.responses import HTMLResponse
 from fastapi.templating import Jinja2Templates
 
-from crm.src.domain.entities.app_user import AppUser
-from crm.src.domain.entities.party import Party
-from crm.src.domain.entities.profile import Party360
+from domain.entities.app_user import AppUser
+from domain.entities.party import Party
+from domain.entities.profile import Party360
 
 log = logging.getLogger(__name__)
 router = APIRouter()
@@ -31,7 +31,7 @@ class ProfileQuerier(Protocol):
     def get_party_360(self, party_id: str) -> Optional[Party360]: ...
 
 class OwnerAssigner(Protocol):
-    def upsert_profile(self, party_id: str, **kwargs) -> object: ...
+    def upsert_profile(self, party_id: str, *, owner_user_id: Optional[str] = None) -> object: ...
 
 class ActivityLogger(Protocol):
     def log_activity(self, activity_data: dict) -> object: ...
@@ -103,7 +103,7 @@ async def post_create_party(
         updated_at=now,
     )
 
-    from crm.src.domain.entities.profile import PartyIdentity  # local import avoids circular
+    from domain.entities.profile import PartyIdentity  # local import avoids circular
     identity = PartyIdentity(
         identity_id=str(uuid.uuid4()),
         party_id=party_id,

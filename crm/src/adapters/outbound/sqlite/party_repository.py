@@ -7,8 +7,6 @@ No f-strings for SQL values — all user data goes through ? placeholders.
 from __future__ import annotations
 
 import sqlite3
-import uuid
-from datetime import datetime, timezone
 from typing import Optional
 
 from domain.entities.party import Party, PartyIdentity
@@ -37,13 +35,6 @@ from adapters.outbound.sqlite.party_repository_queries import (
     identity_upsert_params,
     identity_insert_full_params,
 )
-
-
-def _now_utc() -> str:
-    """Return current UTC time as ISO-8601 string with milliseconds and Z suffix."""
-    now = datetime.now(timezone.utc)
-    ms = now.microsecond // 1000
-    return now.strftime("%Y-%m-%dT%H:%M:%S.") + f"{ms:03d}Z"
 
 
 def _fts_quote(s: str) -> str:
@@ -179,71 +170,4 @@ class SQLitePartyRepository:
             self.create(party)
             for identity in identities:
                 self.upsert_identity(identity)
-        return party
-
-    # ── Composite: upsert_from_sapo_identity ─────────────────────────────────
-
-    def upsert_from_sapo_identity(
-        self,
-        sapo_id: int,
-        phone: str,
-        email: str,
-        display_name: str,
-        src_quality: str,
-        quality: str,
-    ) -> Party:
-        """Find-or-create a Party from a Sapo customer identity.
-
-        1. Check if identity (sapo_customer, str(sapo_id)) exists.
-        2. If not, create party + identity atomically.
-        3. Backfill empty display_name / primary_phone / primary_email on existing party.
-        Returns the resolved Party.
-        """
-        identity_value = str(sapo_id)
-        now = _now_utc()
-
-        existing = self.find_by_identity("sapo_customer", identity_value)
-        if existing is not None:
-            dirty = False
-            if not existing.display_name and display_name:
-                existing.display_name = display_name
-                dirty = True
-            if not existing.primary_phone and phone:
-                existing.primary_phone = phone
-                dirty = True
-            if not existing.primary_email and email:
-                existing.primary_email = email
-                dirty = True
-            if dirty:
-                existing.updated_at = now
-                self.update(existing)
-            return existing
-
-        party_id = str(uuid.uuid4())
-        party = Party(
-            party_id=party_id,
-            party_type="person",
-            display_name=display_name,
-            primary_phone=phone,
-            primary_email=email,
-            status="active",
-            is_merged=False,
-            merged_into=None,
-            created_at=now,
-            updated_at=now,
-        )
-        identity = PartyIdentity(
-            identity_id=str(uuid.uuid4()),
-            party_id=party_id,
-            source_system="sapo_v2",
-            identity_type="sapo_customer",
-            identity_value=identity_value,
-            confidence=1.0,
-            is_primary=True,
-            verified_at=None,
-            source_contact_quality=src_quality,
-            contact_quality=quality,
-            created_at=now,
-        )
-        self.create_with_identities(party, [identity])
         return party

@@ -14,7 +14,7 @@ from pydantic import BaseModel
 
 from adapters.inbound.http.auth_dependency import require_api_token
 
-from crm.src.domain.entities.party import DedupCandidate
+from domain.entities.party import DedupCandidate
 
 log = logging.getLogger(__name__)
 

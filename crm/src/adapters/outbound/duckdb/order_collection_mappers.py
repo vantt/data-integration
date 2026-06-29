@@ -6,7 +6,7 @@ Header-row mappers live in order_mappers.py (which also exports _s/_i/_f/_b).
 """
 from __future__ import annotations
 
-from crm.src.domain.entities.order import (
+from domain.entities.order import (
     CogsItem,
     CostRow,
     OrderLineItem,

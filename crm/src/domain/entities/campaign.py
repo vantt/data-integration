@@ -1,5 +1,5 @@
 # Compatibility shim — Campaign and CampaignTarget live in segment.py.
-from crm.src.domain.entities.segment import (  # noqa: F401
+from domain.entities.segment import (  # noqa: F401
     Campaign,
     CampaignTarget,
     CampaignROI,

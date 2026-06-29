@@ -13,7 +13,7 @@ from fastapi import APIRouter, Form, Request, Response
 from fastapi.responses import HTMLResponse
 from fastapi.templating import Jinja2Templates
 
-from crm.src.domain.entities.task import Task, VALID_TASK_STATUSES
+from domain.entities.task import Task, VALID_TASK_STATUSES
 
 log = logging.getLogger(__name__)
 

@@ -9,7 +9,7 @@ from __future__ import annotations
 import logging
 from typing import Optional
 
-from crm.src.domain.entities.cache_insight import CustomerDimMetrics
+from domain.entities.cache_insight import CustomerDimMetrics
 from . import customer_dim_metrics_sql as sql
 from .connection import open_olap
 

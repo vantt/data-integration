@@ -7,7 +7,7 @@ from __future__ import annotations
 
 import logging
 
-from crm.src.domain.entities.cache_insight import CustomerOrderRow
+from domain.entities.cache_insight import CustomerOrderRow
 from . import customer_orders_sql as sql
 from .connection import open_olap
 

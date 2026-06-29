@@ -15,17 +15,17 @@ from __future__ import annotations
 from fastapi import APIRouter
 from fastapi.templating import Jinja2Templates
 
-from crm.src.adapters.inbound.web.screen_modal_contact import make_contact_modal_router
-from crm.src.adapters.inbound.web.screen_modal_custom_fields import make_custom_fields_modal_router
-from crm.src.adapters.inbound.web.screen_modal_owner import make_owner_modal_router
-from crm.src.adapters.inbound.web.screen_modal_shared import (
+from adapters.inbound.web.screen_modal_contact import make_contact_modal_router
+from adapters.inbound.web.screen_modal_custom_fields import make_custom_fields_modal_router
+from adapters.inbound.web.screen_modal_owner import make_owner_modal_router
+from adapters.inbound.web.screen_modal_shared import (
     AppUserRepo,
     PartyRepo,
     ProfileSvc,
     TaskSvc,
 )
-from crm.src.adapters.inbound.web.screen_modal_tags import make_tags_modal_router
-from crm.src.adapters.inbound.web.screen_modal_task import make_task_modal_router
+from adapters.inbound.web.screen_modal_tags import make_tags_modal_router
+from adapters.inbound.web.screen_modal_task import make_task_modal_router
 
 
 def make_party_modals_router(

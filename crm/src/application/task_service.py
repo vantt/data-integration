@@ -6,7 +6,7 @@ from __future__ import annotations
 
 import logging
 import uuid
-from datetime import datetime, timezone
+from shared.timestamps import utc_now
 from typing import Optional
 
 from domain.entities.task import (
@@ -24,10 +24,6 @@ from domain.ports.party_repository import PartyRepository
 from domain.ports.cache_repository import CacheRepository
 
 log = logging.getLogger(__name__)
-
-
-def _utc_now() -> str:
-    return datetime.now(timezone.utc).isoformat()
 
 
 class TaskService:
@@ -54,7 +50,7 @@ class TaskService:
         if not title:
             raise ValueError("title is required")
 
-        now = _utc_now()
+        now = utc_now()
         task = Task(
             task_id=task_data.get("task_id") or str(uuid.uuid4()),
             title=title,
@@ -127,7 +123,7 @@ class TaskService:
         task.status = new_status
         # updated_at is owned by the DB trigger — no app-side stamp needed.
         if new_status in (TASK_STATUS_DONE, TASK_STATUS_CANCELLED):
-            task.completed_at = _utc_now()
+            task.completed_at = utc_now()
         else:
             task.completed_at = None
 
@@ -215,7 +211,7 @@ class TaskService:
             label = action.customer_key
         title = f"[{action.action_type}] {label}"
 
-        now = _utc_now()
+        now = utc_now()
         source_ref = action.action_id
         task = Task(
             task_id=str(uuid.uuid4()),

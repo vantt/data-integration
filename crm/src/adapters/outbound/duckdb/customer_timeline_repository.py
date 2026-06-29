@@ -7,7 +7,7 @@ from __future__ import annotations
 
 import logging
 
-from crm.src.domain.entities.cache_insight import StatusSnapshot
+from domain.entities.cache_insight import StatusSnapshot
 from . import customer_timeline_sql as sql
 from .connection import open_olap
 

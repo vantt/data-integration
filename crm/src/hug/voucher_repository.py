@@ -16,11 +16,7 @@ Functions:
 from __future__ import annotations
 
 import sqlite3
-from datetime import datetime, timezone
-
-
-def _utc_now() -> str:
-    return datetime.now(timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ")
+from shared.timestamps import utc_now
 
 
 # ---------------------------------------------------------------------------
@@ -59,7 +55,7 @@ def record_issuance(
     if not campaign_id:
         raise ValueError("campaign_id must be a non-empty string")
 
-    ts = issued_at or _utc_now()
+    ts = issued_at or utc_now()
 
     cur = conn.execute(
         """
@@ -95,7 +91,7 @@ def mark_redeemed(
     if not order_code:
         raise ValueError("order_code must be a non-empty string")
 
-    ts = redeemed_at or _utc_now()
+    ts = redeemed_at or utc_now()
 
     cur = conn.execute(
         """

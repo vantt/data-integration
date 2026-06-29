@@ -8,8 +8,8 @@ import json
 import sqlite3
 from typing import Optional
 
-from crm.src.domain.entities.activity import Activity
-from crm.src.adapters.outbound.sqlite.connection import CRMDatabase
+from domain.entities.activity import Activity
+from adapters.outbound.sqlite.connection import CRMDatabase
 
 # ---------------------------------------------------------------------------
 # SQL (ported verbatim from activity_queries.sql)

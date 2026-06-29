@@ -10,8 +10,8 @@
 {% set tone = f | verdict_tone %}
 
 {# Shared 4-col waterfall row macro — defined once, used in both is_us and domestic branches #}
-{% macro wf_row(op, label, caption="", amt="", pct="", neg=false, total=false, result=false) %}
-<div class="wf-row--pl{% if total %} wf-row--total{% endif %}{% if result %} wf-row--result{% endif %}">
+{% macro wf_row(op, label, caption="", amt="", pct="", neg=false, total=false, result=false, highlight=false) %}
+<div class="wf-row--pl{% if total %} wf-row--total{% endif %}{% if result %} wf-row--result{% endif %}"{% if highlight %} style="background:rgba(234,179,8,.10);border-radius:4px"{% endif %}>
   <span class="wf-op{% if op == '+' %} wf-op--add{% elif op in ('-','−') %} wf-op--sub{% elif op == '=' %} wf-op--eq{% endif %}">{{ op }}</span>
   <span class="wf-label">{{ label }}{% if caption %} <span class="caption" style="margin-left:6px">{{ caption }}</span>{% endif %}</span>
   <span class="wf-pct">{{ pct }}</span>
@@ -167,7 +167,8 @@
         {{ wf_row("=", "US revenue (incl. VAT)", "", f.us_revenue_incl_vat | int | fmt_vnd, result=true) }}
       {% else %}
         {{ wf_row(" ", "Gross revenue", "gồm VAT", f.gross_revenue | int | fmt_vnd) }}
-        {{ wf_row("−", "Discount", order.channel.primary_discount_type or "", f.discount_amount | int | fmt_vnd, neg=true) }}
+        {% set discount_pct = (f.discount_amount / f.gross_revenue) | fmt_pct if f.gross_revenue and f.gross_revenue > 0 and f.discount_amount else "" %}
+        {{ wf_row("−", "Discount", order.channel.primary_discount_type or "", f.discount_amount | int | fmt_vnd, pct=discount_pct, neg=true, highlight=f.discount_amount > 0) }}
         {{ wf_row("=", "Total collected", "gồm VAT", f.total_collected | int | fmt_vnd, total=true) }}
         {{ wf_row("−", "VAT output", "nhúng trong giá", f.vat_amount | int | fmt_vnd, neg=true) }}
         {{ wf_row("=", "Net revenue", "trừ VAT", f.net_revenue | int | fmt_vnd, total=true) }}

@@ -1,7 +1,7 @@
 """CRM domain entities package — pure dataclasses, no adapter imports."""
 from __future__ import annotations
 
-from crm.src.domain.entities.party import (
+from domain.entities.party import (
     Party,
     PartyIdentity,
     DedupCandidate,
@@ -29,7 +29,7 @@ from crm.src.domain.entities.party import (
     DEDUP_STATUS_MERGED,
     DEDUP_STATUS_REJECTED,
 )
-from crm.src.domain.entities.profile import (
+from domain.entities.profile import (
     CustomerProfile,
     CustomFieldDef,
     Tag,
@@ -44,7 +44,7 @@ from crm.src.domain.entities.profile import (
     VALID_LIFECYCLE_STAGES,
     VALID_CUSTOM_DATA_TYPES,
 )
-from crm.src.domain.entities.activity import (
+from domain.entities.activity import (
     Activity,
     ACTIVITY_TYPE_CALL,
     ACTIVITY_TYPE_NOTE,
@@ -56,7 +56,7 @@ from crm.src.domain.entities.activity import (
     DIRECTION_IN,
     DIRECTION_OUT,
 )
-from crm.src.domain.entities.task import (
+from domain.entities.task import (
     Task,
     TASK_STATUS_OPEN,
     TASK_STATUS_DOING,
@@ -69,7 +69,7 @@ from crm.src.domain.entities.task import (
     VALID_TASK_SOURCES,
     TASK_ALLOWED_TRANSITIONS,
 )
-from crm.src.domain.entities.conversation import (
+from domain.entities.conversation import (
     Conversation,
     Message,
     ParsedMessage,
@@ -83,7 +83,7 @@ from crm.src.domain.entities.conversation import (
     VALID_CONVERSATION_STATUSES,
     CONV_ALLOWED_TRANSITIONS,
 )
-from crm.src.domain.entities.segment import (
+from domain.entities.segment import (
     Segment,
     SegmentMember,
     Campaign,
@@ -106,7 +106,7 @@ from crm.src.domain.entities.segment import (
     TARGET_TERMINAL_STATUSES,
     TARGET_ALLOWED_TRANSITIONS,
 )
-from crm.src.domain.entities.order import (
+from domain.entities.order import (
     OrderHeader,
     OrderFinancial,
     OrderLineItem,
@@ -121,7 +121,7 @@ from crm.src.domain.entities.order import (
     CustomerRef,
     OrderDetail,
 )
-from crm.src.domain.entities.app_user import (
+from domain.entities.app_user import (
     AppUser,
     ROLE_SALES,
     ROLE_CARE,
@@ -129,7 +129,7 @@ from crm.src.domain.entities.app_user import (
     ROLE_ADMIN,
     VALID_ROLES,
 )
-from crm.src.domain.entities.cache_insight import (
+from domain.entities.cache_insight import (
     CustomerInsight,
     ActionQueueItem,
     RecentOrder,

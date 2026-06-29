@@ -7,22 +7,11 @@ from __future__ import annotations
 
 import re
 import uuid
-from datetime import datetime, timezone
 from typing import Optional
 
+from shared.timestamps import utc_now
 from domain.entities.party import Party, PartyIdentity
 from domain.ports.party_repository import PartyRepository
-
-
-# ---------------------------------------------------------------------------
-# Timestamp helper
-# ---------------------------------------------------------------------------
-
-def _utc_now() -> str:
-    """Return current UTC time as ISO-8601 with milliseconds and Z suffix."""
-    now = datetime.now(timezone.utc)
-    ms = now.microsecond // 1000
-    return now.strftime("%Y-%m-%dT%H:%M:%S.") + f"{ms:03d}Z"
 
 
 # ---------------------------------------------------------------------------
@@ -123,7 +112,7 @@ class PartyService:
 
         if party is None:
             # Step 2: create party + sapo_customer identity atomically
-            now = _utc_now()
+            now = utc_now()
             party = Party(
                 party_id=str(uuid.uuid4()),
                 party_type="person",
@@ -171,7 +160,7 @@ class PartyService:
             party.primary_email = norm_email
             dirty = True
         if dirty:
-            party.updated_at = _utc_now()
+            party.updated_at = utc_now()
             self._repo.update(party)
 
         return party
@@ -200,7 +189,7 @@ class PartyService:
             party.primary_email = norm_email
             dirty = True
         if dirty:
-            party.updated_at = _utc_now()
+            party.updated_at = utc_now()
             self._repo.update(party)
 
     # ── Private helpers ───────────────────────────────────────────────────────
@@ -226,7 +215,7 @@ class PartyService:
             is_primary=is_primary,
             source_contact_quality=src_quality,
             contact_quality=quality,
-            created_at=_utc_now(),
+            created_at=utc_now(),
             verified_at=None,
         )
         self._repo.upsert_identity(identity)

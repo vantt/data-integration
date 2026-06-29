@@ -11,10 +11,10 @@ from typing import Optional, Protocol
 
 from fastapi.responses import HTMLResponse
 
-from crm.src.domain.entities.app_user import AppUser
-from crm.src.domain.entities.party import PartyIdentity
-from crm.src.domain.entities.profile import CustomFieldDef, Party360, Tag
-from crm.src.domain.entities.task import Task
+from domain.entities.app_user import AppUser
+from domain.entities.party import PartyIdentity
+from domain.entities.profile import CustomFieldDef, Party360, Tag
+from domain.entities.task import Task
 
 
 def utc_now() -> str:
@@ -57,7 +57,20 @@ class ProfileSvc(Protocol):
     def attach_tag(self, party_id: str, tag_id: str) -> None: ...
     def detach_tag(self, party_id: str, tag_id: str) -> None: ...
     def list_custom_field_defs(self, entity_type: Optional[str] = None) -> list[CustomFieldDef]: ...
-    def upsert_profile(self, party_id: str, **kwargs) -> object: ...
+    def upsert_profile(
+        self,
+        party_id: str,
+        *,
+        owner_user_id: Optional[str] = None,
+        lifecycle_stage: Optional[str] = None,
+        acquisition_source: Optional[str] = None,
+        birthday: Optional[str] = None,
+        gender: Optional[str] = None,
+        address: Optional[dict] = None,
+        preferences: Optional[dict] = None,
+        consent_contact: Optional[str] = None,
+        custom: Optional[dict] = None,
+    ) -> object: ...
 
 
 class PartyRepo(Protocol):

@@ -16,7 +16,7 @@ import logging
 
 import duckdb
 
-from crm.src.domain.entities.order import OrderDetail
+from domain.entities.order import OrderDetail
 from . import order_collection_mappers as cm
 from . import order_mappers as om
 from . import order_sql as sql

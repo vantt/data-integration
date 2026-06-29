@@ -11,7 +11,7 @@ import os
 from pathlib import Path
 from typing import Optional
 
-from fastapi import FastAPI, Request
+from fastapi import FastAPI
 from fastapi.staticfiles import StaticFiles
 
 from adapters.inbound.web.templating import make_templates
@@ -60,6 +60,7 @@ from application.task_service import TaskService
 from application.conversation_service import ConversationService
 from application.segment_service import SegmentService
 from application.campaign_service import CampaignService
+from application.app_user_service import AppUserService
 
 # ── Inbound: HTTP API handlers ────────────────────────────────────────────────
 from adapters.inbound.http.health_handler import create_health_router
@@ -83,6 +84,7 @@ from adapters.inbound.http.script_nav_handler import (
     wire_script_nav_router,
     router as script_nav_router,
 )
+from adapters.inbound.http.cf_access_middleware import CFAccessMiddleware
 
 # ── Outbound: File ────────────────────────────────────────────────────────────
 from adapters.outbound.file.approach_script_file_repository import FileApproachScriptRepository
@@ -132,96 +134,152 @@ def _resolve_static_dir() -> Optional[Path]:
     return None
 
 
+# ── Public entry point ────────────────────────────────────────────────────────
+
 def create_app() -> FastAPI:
     """Wire all dependencies and return a ready-to-serve FastAPI application."""
+    db = _setup_database()
+    sqlite_repos = _build_sqlite_repos(db)
+    duckdb_repos = _build_duckdb_repos(olap_path())
+    services = _build_services(sqlite_repos)
+    app = FastAPI(title="CRM", docs_url="/api/docs", redoc_url=None)
+    _configure_middleware(app, services["app_user"])
+    templates = _configure_templates(app)
+    _register_api_routes(app, sqlite_repos, duckdb_repos, services, templates)
+    _register_web_routes(app, sqlite_repos, duckdb_repos, services, templates)
+    _mount_hug_stations(app, sqlite_repos["conn"])
+    return app
 
-    # 1. Open CRMDatabase (crm.db with cache.db ATTACHed).
+
+# ── Private sub-functions ─────────────────────────────────────────────────────
+
+def _setup_database() -> CRMDatabase:
+    """Open CRMDatabase (crm.db with cache.db ATTACHed) and apply migrations."""
     data_dir = os.path.dirname(crm_db_path())
     db = CRMDatabase(data_dir)
     db.apply_migrations()
     log.info("migrations applied")
+    return db
 
-    # 2. Repositories (SQLite).
+
+def _build_sqlite_repos(db: CRMDatabase) -> dict:
+    """Instantiate all SQLite repositories and return as a named dict.
+
+    Includes ``conn`` (raw SQLite connection) and ``db`` (CRMDatabase) so
+    callers needing either handle can access them without re-opening.
+    ``approach`` (FileApproachScriptRepository) is bundled here for colocation
+    with the other repo objects even though it is file-backed.
+    """
     conn = db.conn
-    party_repo = SQLitePartyRepository(conn)
-    dedup_repo = SQLiteDedupRepository(conn)
-    cache_repo = SQLiteCacheRepository(conn)
-    action_state_repo = SQLiteActionStateRepository(conn)
-    profile_repo = SQLiteProfileRepository(db)
-    cf_repo = SQLiteCustomFieldRepository(db)
-    tag_repo = SQLiteTagRepository(db)
-    note_repo = SQLiteNoteRepository(db)
-    activity_repo = SQLiteActivityRepository(db)
-    last_contact_repo = SQLiteLastContactRepository(db)
-    task_repo = SQLiteTaskRepository(db)
-    conv_repo = SQLiteConversationRepository(db)
-    segment_repo = SQLiteSegmentRepository(conn)
-    campaign_repo = SQLiteCampaignRepository(conn)
-    app_user_repo = SQLiteAppUserRepository(conn)
-
-    # 2b. File-based repos.
+    data_dir = os.path.dirname(crm_db_path())
     scripts_dir = os.getenv(
         "CRM_APPROACH_SCRIPT_DIR",
         os.path.join(data_dir, "approach_scripts"),
     )
-    approach_repo = FileApproachScriptRepository(scripts_dir)
+    return {
+        "db": db,
+        "conn": conn,
+        "party": SQLitePartyRepository(conn),
+        "dedup": SQLiteDedupRepository(conn),
+        "cache": SQLiteCacheRepository(conn),
+        "action_state": SQLiteActionStateRepository(conn),
+        "profile": SQLiteProfileRepository(db),
+        "cf": SQLiteCustomFieldRepository(db),
+        "tag": SQLiteTagRepository(db),
+        "note": SQLiteNoteRepository(db),
+        "activity": SQLiteActivityRepository(db),
+        "last_contact": SQLiteLastContactRepository(db),
+        "task": SQLiteTaskRepository(db),
+        "conv": SQLiteConversationRepository(db),
+        "segment": SQLiteSegmentRepository(conn),
+        "campaign": SQLiteCampaignRepository(conn),
+        "app_user": SQLiteAppUserRepository(conn),
+        "approach": FileApproachScriptRepository(scripts_dir),
+    }
 
-    # 3. Application services.
-    merge_svc = MergeService(party_repo, dedup_repo)
-    profile_svc = ProfileService(profile_repo, cf_repo, tag_repo, note_repo)
-    activity_svc = ActivityService(activity_repo, last_contact_repo)
-    task_svc = TaskService(task_repo, party_repo, cache_repo)
-    conv_svc = ConversationService(conv_repo, party_repo)
-    segment_svc = SegmentService(segment_repo)
-    campaign_svc = CampaignService(campaign_repo, segment_repo, party_repo)
 
-    # 4. DuckDB repos — non-fatal if olap.duckdb is unavailable.
+def _build_duckdb_repos(olap: str) -> dict:
+    """Instantiate DuckDB repositories — non-fatal if olap.duckdb is unavailable.
+
+    All values are Optional; callers must handle None (handlers return 503).
+    """
     order_repo: Optional[DuckDBOrderRepository] = None
     try:
-        order_repo = DuckDBOrderRepository(olap_path())
-        log.info("order repo: olap.duckdb mounted at %s", olap_path())
+        order_repo = DuckDBOrderRepository(olap)
+        log.info("order repo: olap.duckdb mounted at %s", olap)
     except Exception as exc:
         log.warning("order repo unavailable (%s) — /orders/* will return 503", exc)
 
     timeline_repo: Optional[CustomerTimelineRepository] = None
     try:
-        timeline_repo = CustomerTimelineRepository(olap_path())
+        timeline_repo = CustomerTimelineRepository(olap)
     except Exception as exc:
         log.warning("timeline repo unavailable (%s) — status_history panel will return 503", exc)
 
     customer_orders_repo: Optional[CustomerOrdersRepository] = None
     try:
-        customer_orders_repo = CustomerOrdersRepository(olap_path())
+        customer_orders_repo = CustomerOrdersRepository(olap)
     except Exception as exc:
         log.warning("customer_orders repo unavailable (%s) — orders panel falls back to cache", exc)
 
     dim_metrics_repo: Optional[CustomerDimMetricsRepository] = None
     try:
-        dim_metrics_repo = CustomerDimMetricsRepository(olap_path())
+        dim_metrics_repo = CustomerDimMetricsRepository(olap)
     except Exception as exc:
         log.warning("dim_metrics repo unavailable (%s) — insight panel segments/profitability hidden", exc)
 
     list_rfm_repo: Optional[CustomerListRFMRepository] = None
     try:
-        list_rfm_repo = CustomerListRFMRepository(olap_path())
+        list_rfm_repo = CustomerListRFMRepository(olap)
     except Exception as exc:
         log.warning("list_rfm repo unavailable (%s) — Recency/Frequency/customer_type hidden in S02", exc)
 
     dq_repo: Optional[DataQualityRepository] = None
     try:
-        dq_repo = DataQualityRepository(olap_path())
+        dq_repo = DataQualityRepository(olap)
     except Exception as exc:
         log.warning("dq repo unavailable (%s) — /_dq_strip will return empty", exc)
 
-    # 5. FastAPI app.
-    app = FastAPI(title="CRM", docs_url="/api/docs", redoc_url=None)
+    return {
+        "orders": order_repo,
+        "timeline": timeline_repo,
+        "customer_orders": customer_orders_repo,
+        "dim_metrics": dim_metrics_repo,
+        "list_rfm": list_rfm_repo,
+        "dq": dq_repo,
+    }
 
-    from application.app_user_service import AppUserService
-    from adapters.inbound.http.cf_access_middleware import CFAccessMiddleware
-    app_user_svc = AppUserService(app_user_repo)
+
+def _build_services(sqlite_repos: dict) -> dict:
+    """Instantiate all application services from SQLite repository objects."""
+    return {
+        "merge": MergeService(sqlite_repos["party"], sqlite_repos["dedup"]),
+        "profile": ProfileService(
+            sqlite_repos["profile"],
+            sqlite_repos["cf"],
+            sqlite_repos["tag"],
+            sqlite_repos["note"],
+        ),
+        "activity": ActivityService(sqlite_repos["activity"], sqlite_repos["last_contact"]),
+        "task": TaskService(sqlite_repos["task"], sqlite_repos["party"], sqlite_repos["cache"]),
+        "conv": ConversationService(sqlite_repos["conv"], sqlite_repos["party"]),
+        "segment": SegmentService(sqlite_repos["segment"]),
+        "campaign": CampaignService(
+            sqlite_repos["campaign"],
+            sqlite_repos["segment"],
+            sqlite_repos["party"],
+        ),
+        "app_user": AppUserService(sqlite_repos["app_user"]),
+    }
+
+
+def _configure_middleware(app: FastAPI, app_user_svc: AppUserService) -> None:
+    """Add CFAccessMiddleware to the FastAPI application."""
     app.add_middleware(CFAccessMiddleware, user_svc=app_user_svc)
 
-    # 6. Templates + static.
+
+def _configure_templates(app: FastAPI):  # returns Jinja2Templates
+    """Build Jinja2Templates, register all filters/globals, and mount /static."""
     templates = make_templates(str(_TEMPLATES_DIR))
     templates.env.globals["cf_team_domain"] = cf_team_domain()
     # Custom Jinja2 filters
@@ -263,135 +321,163 @@ def create_app() -> FastAPI:
         app.mount("/static", StaticFiles(directory=str(static_dir)), name="static")
     else:
         log.warning("no static dir found — /static will not be served")
+    return templates
 
-    # 7. HTTP API routers (prefix=/api already set per handler).
-    app.include_router(create_health_router(db))
+
+def _register_api_routes(
+    app: FastAPI,
+    sqlite_repos: dict,
+    duckdb_repos: dict,
+    services: dict,
+    templates,
+) -> None:
+    """Register all HTTP API routers (prefix=/api already set per handler)."""
+    app.include_router(create_health_router(sqlite_repos["db"]))
     app.include_router(create_admin_router())
 
-    wire_insight_router(party_repo, cache_repo)
+    wire_insight_router(sqlite_repos["party"], sqlite_repos["cache"])
     app.include_router(insight_router)
 
-    wire_approach_script_router(party_repo, approach_repo)
+    wire_approach_script_router(sqlite_repos["party"], sqlite_repos["approach"])
     app.include_router(approach_script_router)
 
-    wire_script_nav_router(party_repo, approach_repo, templates)
+    wire_script_nav_router(sqlite_repos["party"], sqlite_repos["approach"], templates)
     app.include_router(script_nav_router)
 
-    wire_activity_router(activity_svc)
+    wire_activity_router(services["activity"])
     app.include_router(activity_router)
 
-    wire_task_router(task_svc)
+    wire_task_router(services["task"])
     app.include_router(task_router)
 
-    app.include_router(make_debug_router(app_user_svc))
-    app.include_router(make_conversation_router(conv_svc))
-
-    app.include_router(make_dedup_router(dedup_repo, merge_svc))
+    app.include_router(make_debug_router(services["app_user"]))
+    app.include_router(make_conversation_router(services["conv"]))
+    app.include_router(make_dedup_router(sqlite_repos["dedup"], services["merge"]))
     app.include_router(make_customer360_router(
-        profile_q=profile_svc,
-        profile_w=profile_svc,
-        tags=profile_svc,
-        notes=profile_svc,
-        cf_admin=profile_svc,
-        party_lookup=party_repo,
-        insight_q=cache_repo,
+        profile_q=services["profile"],
+        profile_w=services["profile"],
+        tags=services["profile"],
+        notes=services["profile"],
+        cf_admin=services["profile"],
+        party_lookup=sqlite_repos["party"],
+        insight_q=sqlite_repos["cache"],
     ))
-    app.include_router(make_segment_router(segment_svc))
-    app.include_router(make_campaign_router(campaign_svc))
-    app.include_router(make_json_api_mirror_router(orders=order_repo, parties=party_repo))
-    app.include_router(make_dataquality_router(dq=dq_repo, templates=templates))
+    app.include_router(make_segment_router(services["segment"]))
+    app.include_router(make_campaign_router(services["campaign"]))
+    app.include_router(make_json_api_mirror_router(
+        orders=duckdb_repos["orders"],
+        parties=sqlite_repos["party"],
+    ))
+    app.include_router(make_dataquality_router(dq=duckdb_repos["dq"], templates=templates))
 
-    # 8. Web UI routers (no prefix — serve at root paths).
+
+def _register_web_routes(
+    app: FastAPI,
+    sqlite_repos: dict,
+    duckdb_repos: dict,
+    services: dict,
+    templates,
+) -> None:
+    """Register all Web UI screen routers (served at root paths, no /api prefix)."""
     init_modals(
-        deps=_make_modal_deps(party_repo, profile_svc, activity_svc, app_user_repo),
+        deps=_make_modal_deps(
+            sqlite_repos["party"],
+            services["profile"],
+            services["activity"],
+            sqlite_repos["app_user"],
+        ),
         templates=templates,
     )
     app.include_router(modals_router)
 
     app.include_router(make_party_modals_router(
         templates=templates,
-        profile=profile_svc,
-        party_repo=party_repo,
-        task_svc=task_svc,
-        app_users=app_user_repo,
+        profile=services["profile"],
+        party_repo=sqlite_repos["party"],
+        task_svc=services["task"],
+        app_users=sqlite_repos["app_user"],
     ))
-
     app.include_router(make_worklist_router(
         templates=templates,
-        action_queue=cache_repo,
-        tasks=task_svc,
-        task_writer=task_svc,
-        action_state=action_state_repo,
-        last_contact=last_contact_repo,
+        action_queue=sqlite_repos["cache"],
+        tasks=services["task"],
+        task_writer=services["task"],
+        action_state=sqlite_repos["action_state"],
+        last_contact=sqlite_repos["last_contact"],
     ))
     app.include_router(make_customer_list_router(
         templates=templates,
-        parties=party_repo,
-        customer_code_resolver=order_repo,
-        sapo_id_resolver=party_repo,
-        rfm_loader=list_rfm_repo,
-        tier_loader=cache_repo,
+        parties=sqlite_repos["party"],
+        customer_code_resolver=duckdb_repos["orders"],
+        sapo_id_resolver=sqlite_repos["party"],
+        rfm_loader=duckdb_repos["list_rfm"],
+        tier_loader=sqlite_repos["cache"],
     ))
     app.include_router(make_customer_360_router(
         templates=templates,
-        profile=profile_svc,
-        identities=party_repo,
-        insight=cache_repo,
-        activities=activity_svc,
-        activity_log=activity_svc,
-        notes=profile_svc,
-        party_tasks=task_repo,
-        party_finder=party_repo,
-        customer_code_resolver=order_repo,
-        customer_timeline=timeline_repo,
-        customer_orders=customer_orders_repo,
-        customer_dim_metrics=dim_metrics_repo,
-        task_svc=task_svc,
-        app_users=app_user_repo,
-        approach_repo=approach_repo,
+        profile=services["profile"],
+        identities=sqlite_repos["party"],
+        insight=sqlite_repos["cache"],
+        activities=services["activity"],
+        activity_log=services["activity"],
+        notes=services["profile"],
+        party_tasks=sqlite_repos["task"],
+        party_finder=sqlite_repos["party"],
+        customer_code_resolver=duckdb_repos["orders"],
+        customer_timeline=duckdb_repos["timeline"],
+        customer_orders=duckdb_repos["customer_orders"],
+        customer_dim_metrics=duckdb_repos["dim_metrics"],
+        task_svc=services["task"],
+        app_users=sqlite_repos["app_user"],
+        approach_repo=sqlite_repos["approach"],
     ))
     app.include_router(make_tasks_board_router(
         templates=templates,
-        task_querier=task_svc,
-        task_writer=task_svc,
-        task_creator=task_svc,
-        task_generator=task_svc,
+        task_querier=services["task"],
+        task_writer=services["task"],
+        task_creator=services["task"],
+        task_generator=services["task"],
     ))
     app.include_router(make_inbox_router(
         templates=templates,
-        conversations=conv_svc,
-        conv_reader=conv_repo,
-        conv_writer=conv_svc,
-        parties=party_repo,
-        app_users=app_user_repo,
-        activity_log=activity_svc,
+        conversations=services["conv"],
+        conv_reader=sqlite_repos["conv"],
+        conv_writer=services["conv"],
+        parties=sqlite_repos["party"],
+        app_users=sqlite_repos["app_user"],
+        activity_log=services["activity"],
     ))
     app.include_router(make_order_detail_router(
         templates=templates,
-        orders=order_repo,
+        orders=duckdb_repos["orders"],
     ))
     app.include_router(make_search_router(
         templates=templates,
-        parties=party_repo,
-        orders=order_repo,
+        parties=sqlite_repos["party"],
+        orders=duckdb_repos["orders"],
     ))
     app.include_router(make_resolver_router(
-        parties=party_repo,
-        orders=order_repo,
+        parties=sqlite_repos["party"],
+        orders=duckdb_repos["orders"],
     ))
     app.include_router(make_management_router(
         templates=templates,
-        segments_svc=segment_svc,
-        campaigns_svc=campaign_svc,
-        dedup_svc=dedup_repo,
-        merger_svc=merge_svc,
-        parties_svc=party_repo,
-        settings_svc=profile_svc,
-        app_users_svc=app_user_repo,
+        segments_svc=services["segment"],
+        campaigns_svc=services["campaign"],
+        dedup_svc=sqlite_repos["dedup"],
+        merger_svc=services["merge"],
+        parties_svc=sqlite_repos["party"],
+        settings_svc=services["profile"],
+        app_users_svc=sqlite_repos["app_user"],
     ))
 
-    # 9. Hug stations — claim + mint — share one hug.db connection (single writer).
-    #    Non-fatal: if hug.db can't open the rest of the CRM still serves.
+
+def _mount_hug_stations(app: FastAPI, conn) -> None:
+    """Mount hug station routers — non-fatal if hug.db cannot be opened.
+
+    ``conn`` is the crm.db SQLite connection used by review/campaign/attribution
+    screens that read crm_hug_* tables (not hug.db).
+    """
     try:
         hug_conn = hug_db.connect()
         app.state.hug_conn = hug_conn  # keep alive for the app's lifetime
@@ -402,17 +488,17 @@ def create_app() -> FastAPI:
         app.include_router(make_hug_review_router(conn))
         # Campaign admin also uses crm.db (crm_hug_campaign lives there, not hug.db).
         campaign_router = make_hug_campaign_router(HugCampaignRepositoryAdapter(conn))
-        assert campaign_router is not None, "make_hug_campaign_router returned None"
+        if campaign_router is None:
+            raise RuntimeError("make_hug_campaign_router returned None")
         app.include_router(campaign_router)
         # Attribution readout — crm.db only; read-only screen.
         attribution_router = make_hug_voucher_attribution_router(HugVoucherRepositoryAdapter(conn))
-        assert attribution_router is not None, "make_hug_voucher_attribution_router returned None"
+        if attribution_router is None:
+            raise RuntimeError("make_hug_voucher_attribution_router returned None")
         app.include_router(attribution_router)
         log.info("hug stations mounted at /hug/claim, /hug/mint, /hug/review, /hug/campaigns, /hug/vouchers")
     except Exception as exc:  # noqa: BLE001
         log.warning("hug stations unavailable (%s) — /hug/claim and /hug/mint disabled", exc)
-
-    return app
 
 
 # ── Helpers ───────────────────────────────────────────────────────────────────

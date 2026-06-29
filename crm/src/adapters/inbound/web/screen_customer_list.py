@@ -14,7 +14,7 @@ from fastapi import APIRouter, Request, Response
 from fastapi.responses import HTMLResponse, RedirectResponse
 from fastapi.templating import Jinja2Templates
 
-from crm.src.domain.entities.party import Party
+from domain.entities.party import Party
 
 log = logging.getLogger(__name__)
 

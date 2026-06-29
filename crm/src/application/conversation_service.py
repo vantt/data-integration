@@ -6,7 +6,7 @@ from __future__ import annotations
 
 import logging
 import uuid
-from datetime import datetime, timezone
+from shared.timestamps import utc_now
 from typing import Optional
 
 from domain.entities.conversation import (
@@ -22,10 +22,6 @@ from domain.ports.conversation_repository import ConversationRepository
 from domain.ports.party_repository import PartyRepository
 
 log = logging.getLogger(__name__)
-
-
-def _utc_now() -> str:
-    return datetime.now(timezone.utc).strftime("%Y-%m-%dT%H:%M:%S.%f")[:-3] + "Z"
 
 
 class ConversationService:
@@ -58,7 +54,7 @@ class ConversationService:
         if not msg.sent_at:
             raise ValueError("sent_at is required")
 
-        now = _utc_now()
+        now = utc_now()
 
         # Step 1: upsert conversation.
         conv = Conversation(

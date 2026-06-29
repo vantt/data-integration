@@ -12,7 +12,7 @@ from fastapi import APIRouter, Request, Response
 from fastapi.responses import HTMLResponse
 from fastapi.templating import Jinja2Templates
 
-from crm.src.adapters.inbound.web.screen_modal_shared import (
+from adapters.inbound.web.screen_modal_shared import (
     ProfileSvc,
     parse_custom,
     redirect_to_customer,

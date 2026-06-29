@@ -13,9 +13,9 @@ from fastapi import APIRouter, Form, Request, Response
 from fastapi.responses import HTMLResponse
 from fastapi.templating import Jinja2Templates
 
-from crm.src.domain.entities.conversation import Conversation, Message
-from crm.src.domain.entities.app_user import AppUser
-from crm.src.domain.entities.party import Party
+from domain.entities.conversation import Conversation, Message
+from domain.entities.app_user import AppUser
+from domain.entities.party import Party
 
 log = logging.getLogger(__name__)
 

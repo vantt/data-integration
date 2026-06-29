@@ -12,7 +12,7 @@ from fastapi import APIRouter, Request, Response
 from fastapi.responses import HTMLResponse
 from fastapi.templating import Jinja2Templates
 
-from crm.src.adapters.inbound.web.screen_modal_shared import AppUserRepo, ProfileSvc
+from adapters.inbound.web.screen_modal_shared import AppUserRepo, ProfileSvc
 
 log = logging.getLogger(__name__)
 

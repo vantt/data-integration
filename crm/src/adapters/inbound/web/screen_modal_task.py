@@ -14,7 +14,7 @@ from fastapi import APIRouter, Form, Request, Response
 from fastapi.responses import HTMLResponse
 from fastapi.templating import Jinja2Templates
 
-from crm.src.adapters.inbound.web.screen_modal_shared import (
+from adapters.inbound.web.screen_modal_shared import (
     PRIO_INT_TO_STR,
     AppUserRepo,
     ProfileSvc,
@@ -22,7 +22,7 @@ from crm.src.adapters.inbound.web.screen_modal_shared import (
     parse_priority,
     redirect_to_customer,
 )
-from crm.src.domain.entities.task import Task
+from domain.entities.task import Task
 
 log = logging.getLogger(__name__)
 

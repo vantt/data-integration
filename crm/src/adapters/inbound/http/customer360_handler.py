@@ -14,9 +14,9 @@ from fastapi import APIRouter, Depends, HTTPException
 from adapters.inbound.http.auth_dependency import require_api_token
 from pydantic import BaseModel
 
-from crm.src.domain.entities.cache_insight import CacheInsight
-from crm.src.domain.entities.party import Party
-from crm.src.domain.entities.profile import (
+from domain.entities.cache_insight import CacheInsight
+from domain.entities.party import Party
+from domain.entities.profile import (
     CustomerProfile,
     CustomFieldDef,
     Note,

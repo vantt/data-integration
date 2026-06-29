@@ -6,17 +6,13 @@ from __future__ import annotations
 
 import logging
 import uuid
-from datetime import datetime, timezone
+from shared.timestamps import utc_now
 from typing import Optional
 
 from domain.entities.activity import Activity, VALID_ACTIVITY_TYPES
 from domain.ports.activity_repository import ActivityRepository
 
 log = logging.getLogger(__name__)
-
-
-def _utc_now() -> str:
-    return datetime.now(timezone.utc).isoformat()
 
 
 class ActivityService:
@@ -38,7 +34,7 @@ class ActivityService:
         if activity_type not in VALID_ACTIVITY_TYPES:
             raise ValueError(f"unknown activity_type {activity_type!r}")
 
-        now = _utc_now()
+        now = utc_now()
         activity = Activity(
             activity_id=activity_data.get("activity_id") or str(uuid.uuid4()),
             party_id=party_id,

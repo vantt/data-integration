@@ -13,29 +13,19 @@ from __future__ import annotations
 
 import logging
 import re
-from datetime import datetime, timedelta, timezone
 from typing import Optional, Protocol
 
-_ICT = timezone(timedelta(hours=7))
-
-
-def _ict_local_to_utc(ict_str: str) -> str:
-    """Parse datetime-local input (assumed ICT/UTC+7) → UTC ISO-8601 string."""
-    try:
-        dt = datetime.strptime(ict_str.strip(), "%Y-%m-%dT%H:%M").replace(tzinfo=_ICT)
-        return dt.astimezone(timezone.utc).strftime("%Y-%m-%dT%H:%M:%S.000Z")
-    except Exception:
-        return ""
-
+from application.geography import geo_region
+from application.ict_utils import ict_local_to_utc  # noqa: F401 — re-exported for sub-modules
 
 from fastapi import APIRouter, Request, Response
 from fastapi.responses import HTMLResponse
 from fastapi.templating import Jinja2Templates
 
-from crm.src.domain.entities.activity import Activity
-from crm.src.domain.entities.cache_insight import CacheInsight
-from crm.src.domain.entities.profile import CustomFieldDef, Note, Party360, PartyIdentity, PartyInsight
-from crm.src.domain.entities.task import Task
+from domain.entities.activity import Activity
+from domain.entities.cache_insight import CacheInsight
+from domain.entities.profile import CustomFieldDef, Note, Party360, PartyIdentity, PartyInsight
+from domain.entities.task import Task
 
 from adapters.inbound.web.screen_customer_360_panels import register_panel_routes
 from adapters.inbound.web.screen_customer_360_activity import register_activity_routes
@@ -43,26 +33,6 @@ from adapters.inbound.web.screen_customer_360_notes import register_note_routes
 from adapters.inbound.web.screen_customer_360_tasks import register_task_routes
 
 log = logging.getLogger(__name__)
-
-_GEO_HCMC = {'Hồ Chí Minh', 'TP Hồ Chí Minh', 'TP. Hồ Chí Minh', 'HCM', 'Ho Chi Minh'}
-_GEO_HANOI = {'Hà Nội', 'Ha Noi', 'Hanoi'}
-_GEO_MEKONG = {'An Giang', 'Bạc Liêu', 'Bến Tre', 'Cà Mau', 'Cần Thơ', 'Đồng Tháp', 'Hậu Giang', 'Kiên Giang', 'Long An', 'Sóc Trăng', 'Tiền Giang', 'Trà Vinh', 'Vĩnh Long'}
-_GEO_CENTRAL = {'Đà Nẵng', 'Thừa Thiên Huế', 'Quảng Nam', 'Quảng Ngãi', 'Bình Định', 'Phú Yên', 'Khánh Hòa', 'Ninh Thuận', 'Bình Thuận', 'Quảng Bình', 'Quảng Trị', 'Hà Tĩnh', 'Nghệ An', 'Thanh Hóa'}
-
-
-def _geo_region(province: Optional[str]) -> str:
-    if not province:
-        return ""
-    if province in _GEO_HCMC:
-        return "HCMC"
-    if province in _GEO_HANOI:
-        return "Hà Nội"
-    if province in _GEO_MEKONG:
-        return "Mekong"
-    if province in _GEO_CENTRAL:
-        return "Miền Trung"
-    return "Khác"
-
 
 _UUID_RE = re.compile(
     r"^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$",
@@ -272,7 +242,7 @@ def make_customer_360_router(
                 "warning_notes": warning_notes,
                 "contact_pref_notes": contact_pref_notes,
                 "custom_field_defs": cfd_list,
-                "geo_region": _geo_region(party360.province),
+                "geo_region": geo_region(party360.province),
                 "user_map": user_map,
             },
         )

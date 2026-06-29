@@ -7,7 +7,7 @@ from __future__ import annotations
 from dataclasses import dataclass, field
 from typing import Optional
 
-from crm.src.domain.entities.party import Party, PartyIdentity
+from domain.entities.party import Party, PartyIdentity
 
 # ---------------------------------------------------------------------------
 # Lifecycle stage constants

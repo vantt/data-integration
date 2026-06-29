@@ -93,7 +93,7 @@ class CRMDatabase:
 
     def apply_migrations(self) -> None:
         """Locate and run all *.up.sql migrations from crm/migrations/."""
-        from crm.src.adapters.outbound.sqlite.migrations import run_migrations  # noqa: PLC0415
+        from adapters.outbound.sqlite.migrations import run_migrations  # noqa: PLC0415
         run_migrations(self._conn)
 
     def close(self) -> None:

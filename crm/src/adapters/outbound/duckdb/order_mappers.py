@@ -7,7 +7,7 @@ None-safe: missing keys default to '' / 0 / False / None per field type.
 """
 from __future__ import annotations
 
-from crm.src.domain.entities.order import (
+from domain.entities.order import (
     ChannelInfo,
     CustomerRef,
     OrderFinancial,

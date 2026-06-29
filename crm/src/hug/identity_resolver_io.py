@@ -18,7 +18,7 @@ import uuid
 from pathlib import Path
 from typing import Optional
 
-from application.party_service import _utc_now
+from shared.timestamps import utc_now as _utc_now
 
 log = logging.getLogger(__name__)
 

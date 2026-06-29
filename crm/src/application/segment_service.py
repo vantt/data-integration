@@ -11,7 +11,7 @@ from __future__ import annotations
 
 import json
 import uuid
-from datetime import datetime, timezone
+from shared.timestamps import utc_now
 from typing import Any
 
 from domain.entities.segment import (
@@ -21,10 +21,6 @@ from domain.entities.segment import (
     Segment,
     SegmentMember,
 )
-
-
-def _utc_now() -> str:
-    return datetime.now(timezone.utc).isoformat()
 
 
 def _is_missing_table_error(exc: Exception) -> bool:
@@ -50,7 +46,7 @@ class SegmentService:
         definition = data.get("definition")
         if is_dynamic and definition:
             _validate_rule_keys(definition)
-        now = _utc_now()
+        now = utc_now()
         seg = Segment(
             segment_id=data.get("segment_id") or str(uuid.uuid4()),
             name=name,
@@ -88,7 +84,7 @@ class SegmentService:
             seg.owner_user_id = kwargs["owner_user_id"]
         if seg.is_dynamic and seg.definition:
             _validate_rule_keys(seg.definition)
-        seg.updated_at = _utc_now()
+        seg.updated_at = utc_now()
         self._repo.update(seg)
 
     def list_segments(self) -> list[Segment]:
@@ -104,7 +100,7 @@ class SegmentService:
                 segment_id=segment_id,
                 party_id=party_id,
                 source=MEMBER_SOURCE_MANUAL,
-                added_at=_utc_now(),
+                added_at=utc_now(),
             )
         )
 
@@ -144,7 +140,7 @@ class SegmentService:
 
         # Replace all rule-sourced members atomically (delete + insert in one transaction).
         # Manual members are preserved by the repository's DELETE filter on source='rule'.
-        now = _utc_now()
+        now = utc_now()
         members = [
             SegmentMember(
                 segment_id=segment_id,

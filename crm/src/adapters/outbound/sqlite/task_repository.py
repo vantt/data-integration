@@ -8,8 +8,8 @@ from __future__ import annotations
 import sqlite3
 from typing import Optional
 
-from crm.src.domain.entities.task import Task
-from crm.src.adapters.outbound.sqlite.connection import CRMDatabase
+from domain.entities.task import Task
+from adapters.outbound.sqlite.connection import CRMDatabase
 
 # ---------------------------------------------------------------------------
 # SQL (ported verbatim from task_queries.sql)

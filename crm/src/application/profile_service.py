@@ -6,10 +6,11 @@ from __future__ import annotations
 
 import json
 import uuid
-from datetime import datetime, timezone
+from datetime import datetime
 from typing import Optional
 
-from crm.src.domain.entities.profile import (
+from shared.timestamps import utc_now
+from domain.entities.profile import (
     CustomerProfile,
     CustomFieldDef,
     PartyTag,
@@ -17,7 +18,7 @@ from crm.src.domain.entities.profile import (
     Party360,
     Tag,
 )
-from crm.src.domain.ports.profile_repository import (
+from domain.ports.profile_repository import (
     ProfileRepository,
     CustomFieldRepository,
     TagRepository,
@@ -99,14 +100,6 @@ def _validate_custom_map(
 
 
 # ---------------------------------------------------------------------------
-# Helpers
-# ---------------------------------------------------------------------------
-
-def _utc_now() -> str:
-    return datetime.now(timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ")
-
-
-# ---------------------------------------------------------------------------
 # ProfileService
 # ---------------------------------------------------------------------------
 
@@ -133,25 +126,65 @@ class ProfileService:
     def get_profile(self, party_id: str) -> Optional[CustomerProfile]:
         return self._profiles.get_profile(party_id)
 
-    def upsert_profile(self, party_id: str, **kwargs) -> CustomerProfile:
-        """Create or replace the profile for party_id. kwargs map to CustomerProfile fields."""
+    def upsert_profile(
+        self,
+        party_id: str,
+        *,
+        owner_user_id: Optional[str] = None,
+        lifecycle_stage: Optional[str] = None,
+        acquisition_source: Optional[str] = None,
+        birthday: Optional[str] = None,
+        gender: Optional[str] = None,
+        address: Optional[dict] = None,
+        preferences: Optional[dict] = None,
+        consent_contact: Optional[str] = None,
+        custom: Optional[dict] = None,
+    ) -> CustomerProfile:
+        """Create or update the profile for party_id.
+
+        Only fields passed with a non-None value are written; omitted fields leave
+        an existing profile unchanged. On creation, None fields become the
+        CustomerProfile dataclass defaults.
+        """
         if not party_id:
             raise ValueError("profile service: upsert: party_id required")
-        now = _utc_now()
+        now = utc_now()
         existing = self._profiles.get_profile(party_id)
         if existing is not None:
-            for k, v in kwargs.items():
-                if hasattr(existing, k):
-                    setattr(existing, k, v)
+            if owner_user_id is not None:
+                existing.owner_user_id = owner_user_id
+            if lifecycle_stage is not None:
+                existing.lifecycle_stage = lifecycle_stage
+            if acquisition_source is not None:
+                existing.acquisition_source = acquisition_source
+            if birthday is not None:
+                existing.birthday = birthday
+            if gender is not None:
+                existing.gender = gender
+            if address is not None:
+                existing.address = address
+            if preferences is not None:
+                existing.preferences = preferences
+            if consent_contact is not None:
+                existing.consent_contact = consent_contact
+            if custom is not None:
+                existing.custom = custom
             existing.updated_at = now
             profile = existing
         else:
             profile = CustomerProfile(
                 party_id=party_id,
-                consent_contact=kwargs.pop("consent_contact", None),
+                owner_user_id=owner_user_id,
+                lifecycle_stage=lifecycle_stage,
+                acquisition_source=acquisition_source,
+                birthday=birthday,
+                gender=gender,
+                address=address,
+                preferences=preferences,
+                consent_contact=consent_contact,
+                custom=custom if custom is not None else {},
                 created_at=now,
                 updated_at=now,
-                **{k: v for k, v in kwargs.items() if k not in ("created_at", "updated_at")},
             )
         self._profiles.upsert_profile(profile)
         return profile
@@ -186,7 +219,7 @@ class ProfileService:
         # 5. Persist
         merged_json = json.dumps(existing)
         if profile is None:
-            now = _utc_now()
+            now = utc_now()
             self._profiles.upsert_profile(CustomerProfile(
                 party_id=party_id,
                 custom=existing,
@@ -228,7 +261,7 @@ class ProfileService:
             party_id=party_id,
             tag_id=tag_id,
             name=tag.name,
-            tagged_at=_utc_now(),
+            tagged_at=utc_now(),
             category=tag.category,
             color=tag.color,
             tagged_by=user_id,
@@ -283,7 +316,7 @@ class ProfileService:
             party_id=party_id,
             body=body,
             author_user_id=author_user_id,
-            created_at=_utc_now(),
+            created_at=utc_now(),
             note_type=note_type,
             pinned=pinned,
             visibility=visibility,

@@ -8,8 +8,8 @@ from __future__ import annotations
 import sqlite3
 from typing import Optional
 
-from crm.src.adapters.outbound.sqlite.connection import CRMDatabase
-from crm.src.domain.entities.profile import Note, PartyTag, Tag
+from adapters.outbound.sqlite.connection import CRMDatabase
+from domain.entities.profile import Note, PartyTag, Tag
 
 
 # ---------------------------------------------------------------------------

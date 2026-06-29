@@ -13,7 +13,7 @@ from fastapi import APIRouter, Form, Request, Response
 from fastapi.responses import HTMLResponse
 from fastapi.templating import Jinja2Templates
 
-from crm.src.domain.entities.profile import Note, PartyIdentity
+from domain.entities.profile import Note, PartyIdentity
 
 log = logging.getLogger(__name__)
 

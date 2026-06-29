@@ -12,18 +12,18 @@ import logging
 from datetime import datetime, timedelta, timezone
 from typing import Optional, Protocol
 
-from crm.src.domain.entities.last_contact import LastContact, POSITIVE_OUTCOMES
+from domain.entities.last_contact import LastContact, POSITIVE_OUTCOMES
 
 from fastapi import APIRouter, Request, Response
 from fastapi.responses import HTMLResponse
 from fastapi.templating import Jinja2Templates
 
-from crm.src.domain.entities.cache_insight import ActionQueueItem
-from crm.src.domain.entities.profile import Note
-from crm.src.domain.entities.party import PartyIdentity
-from crm.src.domain.entities.task import Task
-from crm.src.application.worklist_ranking import rank_worklist, today_ict
-from crm.src.application.worklist_filters import (
+from domain.entities.cache_insight import ActionQueueItem
+from domain.entities.profile import Note
+from domain.entities.party import PartyIdentity
+from domain.entities.task import Task
+from application.worklist_ranking import rank_worklist, today_ict
+from application.worklist_filters import (
     CORE_PRODUCTS,
     active_filter_count,
     apply_filters,

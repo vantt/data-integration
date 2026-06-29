@@ -61,16 +61,3 @@ class PartyRepository(Protocol):
         """Update the mutable contact_quality field on an identity row.
         Valid values: masked | unverified | verified."""
         ...
-
-    def upsert_from_sapo_identity(
-        self,
-        sapo_id: int,
-        phone: str,
-        email: str,
-        display_name: str,
-        src_quality: str,
-        quality: str,
-    ) -> Party:
-        """Resolve or create a Party from a Sapo customer identity.
-        Handles find-or-create + identity attachment in one operation."""
-        ...

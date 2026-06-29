@@ -14,7 +14,7 @@ from __future__ import annotations
 
 import sqlite3
 import uuid
-from datetime import datetime, timezone
+from shared.timestamps import utc_now
 
 
 def load_queue(conn: sqlite3.Connection) -> list[dict]:
@@ -64,7 +64,7 @@ def set_status(
     conn: sqlite3.Connection, token: str, phone: str | None, status: str
 ) -> None:
     """Update status (and ts) for a single row keyed by (token, scanner_phone)."""
-    now = _utc_now()
+    now = utc_now()
     if phone is None:
         conn.execute(
             "UPDATE crm_identity_link SET status = ?, ts = ?"
@@ -95,7 +95,7 @@ def confirm_link(
     OTP-confirmed.  The contactability ladder is respected: only 'masked' and
     'zalo_follower' are promoted; 'unverified' and 'verified' are left alone.
     """
-    now = _utc_now()
+    now = utc_now()
 
     # 1. Promote the link row to 'linked', and update resolved_customer_id in
     #    case the CS agent chose a different party via override.
@@ -144,8 +144,3 @@ def confirm_link(
 
     conn.commit()
 
-
-def _utc_now() -> str:
-    now = datetime.now(timezone.utc)
-    ms = now.microsecond // 1000
-    return now.strftime("%Y-%m-%dT%H:%M:%S.") + f"{ms:03d}Z"
