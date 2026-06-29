@@ -239,7 +239,7 @@
     const [sel, setSel] = useState(null);
     const [customVal, setCustomVal] = useState("");
     const [outcome, setOutcome] = useState(null);
-    const [body, setBody] = useState(editNote ? (ctx.note_body || "") : "");
+    const [body, setBody] = useState(editNote ? (ctx.note_body || "") : (ctx.body_prefill || ""));
     const [callbackAt, setCallbackAt] = useState(ictNowStr(120));
     const [makeTask, setMakeTask] = useState(true);
     const [occurredAt, setOccurredAt] = useState(ictNowStr(0));

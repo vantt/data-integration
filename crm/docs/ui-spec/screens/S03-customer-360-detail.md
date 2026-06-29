@@ -4,7 +4,7 @@ type: screen
 name: "Customer 360 Detail"
 platforms: [desktop]
 hosts: [P01, P02, P03, P04, P05, P06]
-tab_labels: ["Value & Behavior", "Đơn hàng", "Timeline", "Tasks", "Ghi chú", "Chat"]
+tab_labels: ["Value & Behavior", "Ghi chú", "Đơn hàng", "Timeline", "Tasks", "Chat", "Gọi"]
 status: active
 design_ref: ""
 rules: [R2, R3, R6, R7, R13]
@@ -19,9 +19,18 @@ Hồ sơ đầy đủ 360° của một party. Sales Rep mở màn hình này tr
 cảnh báo về khách, kênh liên lạc ưu tiên, insight warehouse (RFM, affinity, action_queue),
 insight do rep đúc kết, lịch sử đơn hàng, tags, ghi chú, task đang mở, và activity timeline.
 
-Layout 2 cột: cột trái (70%) = main + tab bar chứa các panel động (Insight P01, Đơn hàng P02,
-Timeline P03, Tasks P04, Ghi chú P05, Hội thoại P06); cột phải (30%) = sidebar tĩnh với các
-block: Cảnh báo, Thông Tin Cơ Bản, Head Line, Liên Lạc, Dates, Tags.
+Layout 2 cột: cột trái (70%) = main + tab bar chứa 7 tab (Insight P01, Ghi chú P05, Đơn hàng P02,
+Timeline P03, Tasks P04, Chat P06, **Gọi** — call cockpit embedded từ S14); cột phải (30%) = sidebar tĩnh
+với các block: Cảnh báo, Thông Tin Cơ Bản, Head Line, Liên Lạc, Dates, Tags.
+
+Tab "Gọi" tải `c360_call_cockpit_panel.html` — kịch bản tiếp cận AI từ `cache.wh_approach_script`.
+Khi R14 gate `recommended=false` → panel vào STOP state. Button "Gọi ngay" trong action cards thử click
+tab "Gọi" trước, fallback sang mở M08 nếu không tìm thấy tab.
+
+Action queue trong P01 đọc từ `cache.wh_action_queue` UNION `cache.wh_sku_action_queue` — bao gồm
+cả SKU-level actions (grain: customer × SKU). Cards hiển thị context mua hàng gần nhất
+(`last_purchase_date`, `last_order_code` link → `/orders/…`, `last_sku_discount_rate`) cho tất cả
+action types (không giới hạn theo action_type như trước).
 
 Target: point-lookup ≤ 200ms (view `crm_party_360`). `refreshed_at` hiển thị tại P01.
 
@@ -33,9 +42,9 @@ Target: point-lookup ≤ 200ms (view `crm_party_360`). `refreshed_at` hiển th�
 │ [Gán NV ▼]  [+ Tag]  [Ghi log]  [Tạo task]  ├───────────────────────────────┤
 ├──────────────────────────────────────────────┤ THÔNG TIN CƠ BẢN          [✎] │
 │  MAIN (70%) — tabbar + lazy panels           │ tên, badges, phone,            │
-│  [Value & Behavior|Đơn|Timeline|Tasks|Ghi chú|Chat]│ sapo-id, sapo-code,            │
+│  [Value & Behavior|Ghi chú|Đơn|Timeline|Tasks|Chat|Gọi]│ sapo-id, sapo-code, │
 │                                              │ sex, owner, consent            │
-│  (P01 / P02 / P03 / P04 / P05 / P06)         ├───────────────────────────────┤
+│  (P01 / P05 / P02 / P03 / P04 / P06 / S14↗) ├───────────────────────────────┤
 │                                              │ HEAD LINE                      │
 │                                              │ LTV  ·  Đơn  ·  AOV  ·  Recency│
 │                                              ├───────────────────────────────┤
@@ -224,6 +233,12 @@ interactions:
     action: open_overlay
     target: M03
     payload: { party_id: "$party.id" }
+  - id: A-S03-018
+    element: tab_call_cockpit
+    region: tab_bar
+    trigger: click
+    action: mutate
+    effects: [main_col.show_panel_call_cockpit]
   - id: A-S03-LSN01
     listens_to: cache.refreshed
     action: mutate

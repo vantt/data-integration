@@ -3,7 +3,7 @@ id: C03
 type: component
 name: "Action Queue Card"
 platforms: [desktop]
-hosts: [P01, S01]
+hosts: [S01]
 status: active
 design_ref: ""
 rules: [R2]
@@ -16,9 +16,10 @@ regions: []
 
 Card hiển thị một action item từ `wh_action_queue`: action_type (CALL_NOW / WIN_BACK /
 REORDER_NUDGE / UPSELL / CROSS_SELL / LOYALTY_REWARD), rationale_vi, value_at_stake_vnd.
-Dùng trong Insight Panel (P01) và Worklist (S01). Card có hai nút hành động:
-- **"Gọi Ngay"** — vào Call Mode / Strategy Cockpit (S14) với AI talk-track cho đúng khách.
-- **"Đặt Lịch"** — mở M05 để tạo task follow-up với due date.
+Dùng trong Worklist (S01). P01 (Insight Panel) renders action cards inline (không dùng C03).
+Card có hai nút hành động:
+- **"Gọi Ngay"** — emit event để host navigate vào Call Mode (S14).
+- **"Đặt Lịch"** — emit event để host mở M05 tạo task follow-up.
 Click vào phần thân card → emit event để host navigate thẳng Customer 360.
 Màu card khác nhau theo action_type urgency.
 

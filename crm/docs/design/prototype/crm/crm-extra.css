@@ -87,22 +87,77 @@
 .chip--coral { color: var(--coral-500); background: color-mix(in srgb, var(--coral-bg) 55%, transparent); border-color: color-mix(in srgb, var(--coral-500) 33%, transparent); }
 .phone-prev { font-family: var(--font-mono); font-size: 13px; color: var(--moss-500); letter-spacing: var(--tracking-mono); display: inline-flex; align-items: center; gap: 6px; }
 
-/* ── Action queue card (C03) ────────────────────────────── */
+/* ── Action queue (C03) ─────────────────────────────────── */
+/* View A — single action card. Raised off the panel on ink/150 with a
+   strong hairline + the sanctioned 2px amber editorial rule (no shadow). */
 .aq-card {
-  display: flex; flex-direction: column; gap: var(--sp-2);
-  background: var(--bg-surface); border: 1px solid var(--border); border-left: 2px solid var(--accent);
-  border-radius: 0 var(--radii-control) var(--radii-control) 0; padding: var(--sp-3) var(--sp-4);
-  cursor: pointer; transition: border-color var(--dur-fast) var(--ease-fast), background var(--dur-fast) var(--ease-fast);
+  display: flex; flex-direction: column; gap: var(--sp-3);
+  background: var(--bg-raised); border: 1px solid var(--border-strong); border-left: 2px solid var(--accent);
+  border-radius: 0 var(--radii-control) var(--radii-control) 0; padding: var(--sp-4) var(--sp-5);
+  cursor: pointer; transition: border-color var(--dur-fast) var(--ease-fast);
 }
-.aq-card:hover { background: var(--bg-raised); }
-.aq-card--compact { border-left-width: 2px; padding: var(--sp-3) var(--sp-4); gap: var(--sp-2); }
+.aq-card:hover { border-color: var(--accent); }
+.aq-card--compact { padding: var(--sp-3) var(--sp-4); gap: var(--sp-2); }
 .aq-card__top { display: flex; align-items: center; justify-content: space-between; gap: var(--sp-3); }
-.aq-card__val { font-family: var(--num-font); font-size: 13px; color: var(--fg-1); letter-spacing: var(--tracking-mono); display: inline-flex; align-items: center; gap: 5px; white-space: nowrap; }
+/* value at stake — secondary to the rationale */
+.aq-card__val { font-family: var(--num-font); font-size: 13px; color: var(--fg-muted); letter-spacing: var(--tracking-mono); display: inline-flex; align-items: center; gap: 5px; white-space: nowrap; }
 .aq-card__val svg { color: var(--accent); }
 .aq-card__val-label { font-family: var(--font-mono); font-size: 9.5px; text-transform: uppercase; letter-spacing: var(--tracking-eyebrow); color: var(--fg-tertiary); margin-right: 2px; }
-.aq-card__rationale { font-size: 13px; color: var(--fg-1); line-height: var(--lh-snug); text-wrap: pretty; }
+/* rationale — the hero */
+.aq-card__rationale { font-size: 14px; color: var(--fg); line-height: var(--lh-snug); text-wrap: pretty; }
 .aq-card__foot { display: flex; gap: var(--sp-2); margin-top: var(--sp-1); }
-.aq-card__cta { padding: 6px 11px; font-size: 12px; }
+.aq-card__cta { padding: 7px 12px; font-size: 12.5px; }
+
+/* purchase-context chips — date (muted) · order (accent link) · discount (moss) */
+.aq-ctx { display: flex; flex-wrap: wrap; gap: var(--sp-2); padding-top: var(--sp-3); border-top: 1px solid var(--border); }
+.aq-ctx-chip {
+  font-family: var(--font-mono); font-size: 11px; letter-spacing: var(--tracking-mono);
+  color: var(--fg-tertiary); background: var(--bg-page); border: 1px solid var(--border);
+  border-radius: var(--radii-hairline); padding: 3px 8px; display: inline-flex; align-items: center; gap: 5px; white-space: nowrap;
+}
+.aq-ctx-chip--link { color: var(--accent); border-color: color-mix(in srgb, var(--accent) 30%, transparent); cursor: pointer; text-decoration: none; transition: background var(--dur-fast) var(--ease-fast); }
+.aq-ctx-chip--link:hover { background: color-mix(in srgb, var(--amber-bg) 45%, transparent); }
+.aq-ctx-chip--discount { color: var(--moss-500); border-color: color-mix(in srgb, var(--moss-500) 30%, transparent); background: color-mix(in srgb, var(--moss-bg) 45%, transparent); }
+
+/* View B — merged session checklist (≥2 actions) */
+.aq-session-card {
+  display: flex; flex-direction: column;
+  background: var(--bg-raised); border: 1px solid var(--border-strong); border-left: 2px solid var(--accent);
+  border-radius: 0 var(--radii-control) var(--radii-control) 0; overflow: hidden;
+}
+.aq-session-card__head { display: flex; align-items: center; gap: var(--sp-3); padding: var(--sp-3) var(--sp-4); border-bottom: 1px solid var(--border); }
+.aq-session-card__pill {
+  font-family: var(--font-mono); font-size: 11px; font-weight: var(--fw-medium); letter-spacing: var(--tracking-mono);
+  color: var(--on-accent); background: var(--accent); border-radius: var(--radii-hairline); padding: 3px 9px; white-space: nowrap;
+}
+.aq-session-card__hint { font-size: 12px; color: var(--fg-tertiary); line-height: var(--lh-snug); }
+.aq-session-card__body { display: flex; flex-direction: column; }
+
+/* checklist rows — breathe with sp-4 padding */
+.aq-check-row { display: flex; align-items: flex-start; gap: var(--sp-3); padding: var(--sp-4); cursor: pointer; transition: background var(--dur-fast) var(--ease-fast); }
+.aq-check-row + .aq-check-row { border-top: 1px solid var(--border); }
+.aq-check-row:hover { background: color-mix(in srgb, var(--accent) 5%, transparent); }
+.aq-check-row__box {
+  width: 18px; height: 18px; flex: none; margin-top: 1px; border: 1px solid var(--border-strong); border-radius: var(--radii-hairline);
+  display: grid; place-items: center; color: var(--on-accent); transition: all var(--dur-fast) var(--ease-fast);
+}
+.aq-check-row__box--on { background: var(--accent); border-color: var(--accent); }
+.aq-check-row__body { min-width: 0; flex: 1; display: flex; flex-direction: column; gap: var(--sp-2); }
+.aq-check-row__top { display: flex; align-items: center; justify-content: space-between; gap: var(--sp-3); }
+/* value chip — distinct from context chips: bare colored mono, no border */
+.aq-check-row__val { font-family: var(--num-font); font-size: 11.5px; letter-spacing: var(--tracking-mono); color: var(--fg-muted); white-space: nowrap; }
+.aq-check-row__why { font-size: 13px; color: var(--fg-1); line-height: var(--lh-snug); text-wrap: pretty; }
+
+/* resolved rows — clearly done, still readable */
+.aq-check-row--resolved { cursor: default; }
+.aq-check-row--resolved:hover { background: transparent; }
+.aq-check-row__done { width: 18px; height: 18px; flex: none; margin-top: 1px; display: grid; place-items: center; color: var(--moss-500); }
+.aq-check-row--resolved .aq-check-row__why { color: var(--fg-tertiary); font-style: italic; }
+
+/* CTA footer — separated from rows on the page surface */
+.aq-session-card__cta { display: flex; align-items: center; gap: var(--sp-3); padding: var(--sp-3) var(--sp-4); border-top: 1px solid var(--border-strong); background: var(--bg-page); }
+.aq-session-card__cta .btn--primary { margin-left: auto; }
+.aq-session-card__cta .btn { padding: 7px 13px; font-size: 12.5px; }
 
 /* ── Worklist task rows ─────────────────────────────────── */
 .wl-list { display: flex; flex-direction: column; border: 1px solid var(--border); border-radius: var(--radii-control); overflow: hidden; background: var(--bg-surface); }
@@ -697,10 +752,21 @@ html[data-theme="slate"] {
 }
 .s14-outcome__inner {
   width: 100%; max-width: 1180px; margin: 0 auto;
-  display: grid; grid-template-columns: minmax(0, 1fr) minmax(280px, 320px); gap: var(--sp-5);
+  display: grid; grid-template-columns: minmax(0, 1fr) minmax(280px, 320px); column-gap: var(--sp-5); row-gap: var(--sp-2);
 }
 .s14-outcome__row { grid-column: 1; display: flex; align-items: center; justify-content: center; gap: var(--sp-5); flex-wrap: wrap; }
 .s14-outcome__btns { display: flex; align-items: center; gap: var(--sp-2); flex-wrap: wrap; justify-content: center; }
+
+/* ghi chú tạm — scratch note that copies into M08 on outcome */
+.s14-outcome__note { grid-column: 1 / -1; }
+.s14-quicknote {
+  width: 100%; box-sizing: border-box; resize: vertical; min-height: 48px;
+  background: var(--bg-surface); border: 1px solid var(--border-strong); border-radius: var(--radii-control);
+  padding: 9px 12px; font-family: var(--font-body); font-size: 13px; line-height: 1.5; color: var(--fg-1);
+  transition: border-color var(--dur-fast) var(--ease-fast);
+}
+.s14-quicknote::placeholder { color: var(--fg-muted); }
+.s14-quicknote:focus { outline: none; border-color: var(--accent); }
 @container (max-width: 820px) {
   .s14-outcome__inner { grid-template-columns: 1fr; }
 }

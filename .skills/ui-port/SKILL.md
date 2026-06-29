@@ -1,6 +1,6 @@
 ---
 name: UI Surface Port
-description: Port a UI surface (screen / panel / modal / component) from a high-fidelity design prototype into the project's server-side template + HTMX stack with pixel-faithful fidelity. Tech-agnostic and path-agnostic — the user supplies two roots (DESIGN_PATH + SPEC_PATH) at invocation; nothing is hardcoded. Works with any template engine (Go templ, Jinja2, ERB, Blade, …). Always read design files first; never guess or invent CSS classes.
+description: Port a UI surface (screen / panel / modal / component) from a high-fidelity design prototype into the project's server-side template + HTMX stack with pixel-faithful fidelity. Tech-agnostic and path-agnostic — nothing is hardcoded. Before any work, the skill auto-detects the two roots (SPEC_PATH under ui-spec/ui-doc/ui-*, DESIGN_PATH under ui-design/design/prototype), confirms both paths with the user, then validates the material is complete enough to build — asking the user again if anything is missing or ambiguous. Works with any template engine (Go templ, Jinja2, ERB, Blade, …). Always read design files first; never guess or invent CSS classes.
 ---
 
 # UI Surface Port Skill
@@ -17,13 +17,59 @@ description: Port a UI surface (screen / panel / modal / component) from a high-
 
 ## 0. Inputs (resolve before any work)
 
-### Required — the user provides these two roots at invocation
+### Required roots
 | Input | What it points to |
 |-------|-------------------|
 | `DESIGN_PATH` | Root of the **design** material: the high-fidelity prototype (JSX/HTML) + design handoff docs + product CSS |
 | `SPEC_PATH` | Root of the **ui-spec**: behavioral contracts (the writing convention below is fixed; only the path varies) |
 
-If either is missing, **ask the user** for it before proceeding — do not guess a path.
+> **MANDATORY pre-flight — run §0.1 → §0.2 → §0.3 in order before any reading or coding.**
+> Do **not** start the Five-Step Reading Protocol (§2) until both roots are user-confirmed
+> **and** judged complete. If a step fails, stop and ask the user — never guess a path or
+> assume the material is sufficient.
+
+### 0.1 — Detect candidate roots (do this first, do not ask yet)
+Glob the repo (recurse — these usually live under `docs/`, not the repo root) for both roots:
+
+- **`SPEC_PATH` candidates** — directory names matching `ui-spec`, `ui-doc`, `ui-docs`, or `ui-*`.
+  A real spec root contains markdown contracts, typically in `screens/ panels/ modals/ overlays/ components/`
+  subdirs and an `00-overview.md`.
+- **`DESIGN_PATH` candidates** — directory names matching `ui-design`, `design`, or holding a
+  `*prototype*` / `design-system` / `screenshots` subdir. A real design root contains the
+  high-fidelity prototype (`*.jsx`/`*.html`) plus product CSS.
+
+Suggested globs (case-insensitive intent):
+```
+**/{ui-spec,ui-doc,ui-docs}/**        **/ui-*/**
+**/{ui-design,design}/**              **/prototype/**   **/design-system/**
+```
+Rank candidates by content match (has the expected subdirs/files), not just by name. If multiple
+plausible roots exist, keep them all for the confirmation step. If **zero** candidates match for
+either root, skip to asking the user in §0.2.
+
+### 0.2 — Confirm the two paths with the user (mandatory gate)
+Present what was detected and get an explicit confirmation **before reading deeply**:
+- If exactly one strong candidate per root → state both resolved paths + the evidence
+  (e.g. "`docs/ui-spec` — has `screens/ modals/ 00-overview.md`"; "`docs/ui-design` — has
+  `prototype/ design-system/`") and ask the user to confirm or correct.
+- If multiple candidates → use `AskUserQuestion` to let the user pick the correct `SPEC_PATH`
+  and `DESIGN_PATH`.
+- If none detected → ask the user to supply the path(s) directly.
+
+Do not proceed past this gate on assumption — wait for the user's confirmation/answer.
+
+### 0.3 — Validate sufficiency, then re-confirm if thin
+After paths are confirmed, **read enough to judge whether the material is workable** for the
+requested surface(s) — this is a completeness check, not yet the full §2 read:
+- **Spec side:** the target surface's `{ID}-*.md` exists and actually specifies regions,
+  interactions, states, and data fields (not a stub/TODO).
+- **Design side:** the prototype file/component for that surface exists and is high-fidelity
+  (real layout + CSS + copy), and the product CSS it references is present.
+
+If the surface is missing, the spec is a stub, the prototype is absent/placeholder, or spec and
+design clearly disagree on scope → **go back to the user**: report exactly what is missing or
+ambiguous and ask how to proceed. Only when both sides are present and sufficient do you continue
+to §1/§2.
 
 ### Derived from `DESIGN_PATH` (discover by role; folder layout may vary slightly)
 | Handle | Role | How to find |
@@ -242,9 +288,9 @@ ID counts and the surface→prototype-file mapping are **per project** — read 
 ## 8. Resolution Worksheet (fill at start of work)
 
 ```
-# Required (from user)
-DESIGN_PATH   = <user-provided>
-SPEC_PATH     = <user-provided>
+# Required (detect → confirm with user → validate sufficiency, per §0.1–0.3)
+DESIGN_PATH   = <detected, user-confirmed>   (e.g. docs/ui-design)
+SPEC_PATH     = <detected, user-confirmed>   (e.g. docs/ui-spec)
 
 # Discovered under DESIGN_PATH
 PROTOTYPE_DIR = …            (dir with *.jsx/*.html prototype)

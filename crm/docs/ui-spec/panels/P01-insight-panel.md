@@ -24,8 +24,20 @@ Panel tab "Value & Behavior" trong Customer 360 (S03). Hiển thị hai lớp in
 
 ```
 ┌ ACTION QUEUE ──────────────────────────────────────────────────────────┐
-│ CALL_NOW  "Sắp hết hàng yêu thích — gọi ngay"  💰 2.400.000đ         │
-│           [Đã xử lý ✓] hoặc [→ Tạo task]                             │
+│ MODE A — SESSION CHECKLIST (≥2 unresolved)                            │
+│  [2 việc] · Tích chọn xong rồi bấm Hoàn tất                         │
+│  ☑ CALL_NOW  💰 2.400.000đ                                           │
+│    "Sắp hết hàng yêu thích — gọi ngay"                              │
+│    [2025-06-15]  [ORD-123 ↗]  [−10%]                                │
+│  ☑ REORDER_NUDGE  "Chu kỳ mua đến — nhắc tái đơn"                   │
+│  ─────────── [📞 Gọi ngay]  [Hoàn tất (2) ✓] ────────────────────   │
+│                                                                        │
+│ MODE B — INDIVIDUAL CARD (1 unresolved)                               │
+│  ┌ CALL_NOW  💰 2.400.000đ ─────────────────────────────────────┐   │
+│  │ "Sắp hết hàng yêu thích — gọi ngay"                         │   │
+│  │ [2025-06-15]  [ORD-123 ↗]  [−10%]                           │   │
+│  │ [📞 Gọi ngay]  [🕐 Đặt Lịch]    resolved → [Đã xử lý ✓]   │   │
+│  └──────────────────────────────────────────────────────────────┘   │
 ├ RFM & SEGMENTS ────────────────────────────────────────────────────────┤
 │  R: Recency 28 ngày  |  F: Frequency 8 đơn  |  M: Monetary 2.350.000đ │
 │  [GOLD] [active] [ON_TRACK] [CHANNEL_XYZ] [discount sensitive]        │
@@ -48,10 +60,31 @@ Panel tab "Value & Behavior" trong Customer 360 (S03). Hiển thị hai lớp in
 └────────────────────────────────────────────────────────────────────────┘
 ```
 
-## Action Queue Item States
+## Action Queue Modes
 
-- Nếu `crm_task.action_queue_id = item.action_id` và `task.outcome IS NOT NULL` → badge "Đã xử lý ✓" + outcome label
-- Nếu chưa có task → button "→ Tạo task" (prefill từ action item)
+Action queue merges `wh_action_queue` UNION `wh_sku_action_queue` (SKU branch: grain customer × SKU).
+Display mode is determined by `unresolved_count` = items where `status != 'dismissed'` AND `action_id not in resolved_action_ids`.
+
+**Mode A — Session Checklist** (`unresolved_count >= 2`):
+- Card `aq-session-card` with count pill + hint.
+- Each unresolved action = checkbox row, checked by default.
+- Resolved actions shown below as muted ✓ rows.
+- CTA row: "Gọi ngay" + "Hoàn tất (N) ✓" submit.
+- Submit POSTs to `/customers/{party_id}/actions/dismiss-session`; hx-swaps `#aq-section`.
+
+**Mode B — Individual Card** (`unresolved_count == 1` or 0):
+- One `aq-card` per non-dismissed action.
+- Resolved: "Đã xử lý ✓" badge.
+- Unresolved: "Gọi ngay" button + "Đặt Lịch" ghost-link.
+
+**Purchase Context Chips** (both modes, shown when `last_purchase_date` is set — SKU-level actions only):
+- `last_purchase_date` chip — date of last SKU purchase.
+- `last_order_code` link chip → navigates to `/orders/{code}` (external).
+- `last_sku_discount_rate` chip — formatted as `−N%`.
+
+**"Gọi ngay" behavior** (both modes):
+JS first tries to click the "Gọi" tab on S03 via DOM query (`[role=tab]` with text "Gọi").
+If tab not found (standalone context), falls back to open M08 with `mode=log&hinh_thuc=call`.
 
 ## RFM & Segments Block
 
@@ -115,6 +148,33 @@ interactions:
     trigger: click
     action: mutate
     effects: [insight.is_active.set_false, rep_insights_block.reload]
+  - id: A-P01-005
+    element: btn_call_now
+    region: action_queue
+    trigger: click
+    guard: "tab_goi.not_found_in_dom"
+    action: open_overlay
+    target: M08
+    payload: { party_id: "$party.id", mode: "log", hinh_thuc: "call" }
+  - id: A-P01-006
+    element: action_card_order_link
+    region: action_queue
+    trigger: click
+    action: navigate
+    target: "external:/orders/$act.last_order_code"
+  - id: A-P01-007
+    element: btn_schedule_task
+    region: action_queue
+    trigger: click
+    action: open_overlay
+    target: M05
+    payload: { party_id: "$party.id", source: "action_queue", source_ref: "$act.action_id", prefill_priority: "$act.priority" }
+  - id: A-P01-008
+    element: session_checklist_form
+    region: action_queue
+    trigger: submit
+    action: mutate
+    effects: [checked_actions.dismiss, aq_section.reload]
   - id: A-P01-LSN01
     listens_to: cache.refreshed
     action: mutate
@@ -123,14 +183,4 @@ interactions:
     listens_to: freshness_badge.hovered
     action: mutate
     effects: [ui.tooltip.show_refresh_details]
-  - id: A-P01-LSN03
-    listens_to: action_queue.call_mode_requested
-    action: navigate
-    target: S14
-    payload: { party_id: "$event.party_id" }
-  - id: A-P01-LSN04
-    listens_to: action_queue.task_requested
-    action: open_overlay
-    target: M05
-    payload: { source: "action_queue", action_id: "$event.action_id", party_id: "$event.party_id" }
 ```

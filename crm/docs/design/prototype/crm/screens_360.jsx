@@ -95,7 +95,7 @@ function S03_Customer360({ route, nav, openModal, toast }) {
             ))}
           </div>
           <div className="tabpanel" key={tab}>
-            {tab === "P01" && <P01_Insight party={party} openModal={openModal} nav={nav} />}
+            {tab === "P01" && <P01_Insight party={party} openModal={openModal} nav={nav} toast={toast} />}
             {tab === "P02" && <P02_Orders party={party} openModal={openModal} />}
             {tab === "P03" && <P03_Timeline party={party} openModal={openModal} nav={nav} />}
             {tab === "P04" && <P04_Tasks party={party} openModal={openModal} toast={toast} />}
@@ -109,7 +109,7 @@ function S03_Customer360({ route, nav, openModal, toast }) {
 }
 
 /* ── P01 Insight ────────────────────────────────────────── */
-function P01_Insight({ party, openModal, nav }) {
+function P01_Insight({ party, openModal, nav, toast }) {
   const ins = party.insight;
   if (!ins || ins.frequency == null) return <EmptyState icon="bolt" title="Insight chưa có" sub="Chưa có row trong wh_customer_insight cho khách này." />;
   const sigTone = window.SIGNAL_META[ins.next_signal] || "muted";
@@ -118,15 +118,17 @@ function P01_Insight({ party, openModal, nav }) {
     <div className="stack stack-5">
       <div>
         <div className="panel-head"><span className="panel-title">Action queue</span><span className="panel-sub">{party.actions.length} đề xuất</span></div>
-        {party.actions.length === 0 ? (
-          <div className="caveat caveat--info">Không có hành động đề xuất nào cho khách này.</div>
-        ) : (
-          <div className="stack stack-3">
-            {party.actions.map((a) => <ActionQueueCard key={a.action_id} action={a} party={party.id}
-              onCall={(act) => window.DB.scriptByParty(party.id) ? nav({ screen: "S14", party: party.id }) : openModal("M08", { party: party.id, hinh_thuc: "call", party_name: party.name })}
-              onTask={(act) => openModal("M05", { party: party.id, action: act, source: "action_queue" })} />)}
-          </div>
-        )}
+        {(() => {
+          const onCall = () => window.DB.scriptByParty(party.id) ? nav({ screen: "S14", party: party.id }) : openModal("M08", { party: party.id, hinh_thuc: "call", party_name: party.name });
+          const onTask = (act) => openModal("M05", { party: party.id, action: act, source: "action_queue" });
+          if (party.actions.length === 0) return <div className="caveat caveat--info">Không có hành động đề xuất nào cho khách này.</div>;
+          if (party.actions.length === 1) return (
+            <div className="stack stack-3">
+              <ActionQueueCard key={party.actions[0].action_id} action={party.actions[0]} party={party.id} onCall={onCall} onTask={onTask} />
+            </div>
+          );
+          return <ActionSessionCard actions={party.actions} party={party.id} onCall={onCall} onTask={onTask} toast={toast} />;
+        })()}
       </div>
 
       <div>
