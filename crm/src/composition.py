@@ -67,23 +67,17 @@ from adapters.inbound.http.health_handler import create_health_router
 from adapters.inbound.http.admin_handler import create_admin_router
 from adapters.inbound.http.dedup_handler import make_dedup_router
 from adapters.inbound.http.customer360_handler import make_customer360_router
-from adapters.inbound.http.insight_handler import wire_insight_router, router as insight_router
-from adapters.inbound.http.activity_handler import wire_activity_router, router as activity_router
-from adapters.inbound.http.task_handler import wire_task_router, router as task_router
+from adapters.inbound.http.insight_handler import make_insight_router
+from adapters.inbound.http.activity_handler import make_activity_router
+from adapters.inbound.http.task_handler import make_task_router
 from adapters.inbound.http.conversation_handler import make_conversation_router
 from adapters.inbound.http.debug_handler import make_debug_router
 from adapters.inbound.http.segment_handler import make_segment_router
 from adapters.inbound.http.campaign_handler import make_campaign_router
 from adapters.inbound.http.json_api_mirror_handler import make_json_api_mirror_router
 from adapters.inbound.http.dataquality_handler import make_dataquality_router
-from adapters.inbound.http.approach_script_handler import (
-    wire_approach_script_router,
-    router as approach_script_router,
-)
-from adapters.inbound.http.script_nav_handler import (
-    wire_script_nav_router,
-    router as script_nav_router,
-)
+from adapters.inbound.http.approach_script_handler import make_approach_script_router
+from adapters.inbound.http.script_nav_handler import make_script_nav_router
 from adapters.inbound.http.cf_access_middleware import CFAccessMiddleware
 
 # ── Outbound: File ────────────────────────────────────────────────────────────
@@ -336,21 +330,11 @@ def _register_api_routes(
     """Register all HTTP API routers (prefix=/api already set per handler)."""
     app.include_router(create_health_router(sqlite_repos["db"]))
     app.include_router(create_admin_router())
-
-    wire_insight_router(sqlite_repos["party"], sqlite_repos["cache"])
-    app.include_router(insight_router)
-
-    wire_approach_script_router(sqlite_repos["party"], sqlite_repos["approach"])
-    app.include_router(approach_script_router)
-
-    wire_script_nav_router(sqlite_repos["party"], sqlite_repos["approach"], templates)
-    app.include_router(script_nav_router)
-
-    wire_activity_router(services["activity"])
-    app.include_router(activity_router)
-
-    wire_task_router(services["task"])
-    app.include_router(task_router)
+    app.include_router(make_insight_router(sqlite_repos["party"], sqlite_repos["cache"]))
+    app.include_router(make_approach_script_router(sqlite_repos["party"], sqlite_repos["approach"]))
+    app.include_router(make_script_nav_router(sqlite_repos["party"], sqlite_repos["approach"], templates))
+    app.include_router(make_activity_router(services["activity"]))
+    app.include_router(make_task_router(services["task"]))
 
     app.include_router(make_debug_router(services["app_user"]))
     app.include_router(make_conversation_router(services["conv"]))

@@ -323,10 +323,10 @@ class TestWorlistFilterBar:
         html = _render_fragment(self._ctx(
             available_types=["CALL_NOW", "WIN_BACK", "REORDER_PREEMPT"],
         ))
-        # Chips render as button.chip with title=<action_type>
-        assert 'title="CALL_NOW"' in html
-        assert 'title="WIN_BACK"' in html
-        assert 'title="REORDER_PREEMPT"' in html
+        # Filter bar renders a <select> with <option value="<action_type>"> per type.
+        assert 'value="CALL_NOW"' in html
+        assert 'value="WIN_BACK"' in html
+        assert 'value="REORDER_PREEMPT"' in html
 
     def test_no_chips_when_available_types_empty(self):
         html = _render_fragment(self._ctx(available_types=[]))
@@ -342,13 +342,13 @@ class TestWorlistFilterBar:
         assert "Xóa filter" in html
 
     def test_all_new_action_types_have_chips(self):
-        """All types reachable from the full mart type set render chips."""
+        """All types reachable from the full mart type set appear as select options."""
         types = ["CALL_NOW", "REORDER_NUDGE", "REORDER_PREEMPT",
                  "WIN_BACK", "SECOND_ORDER", "HIGH_CANCEL_RISK",
                  "UPSELL", "CROSS_SELL", "COLLECT_FEEDBACK"]
         html = _render_fragment(self._ctx(available_types=types))
         for t in types:
-            assert f'title="{t}"' in html, f"chip for {t!r} not found"
+            assert f'value="{t}"' in html, f"select option for {t!r} not found"
 
 
 # ── Badge catalog coverage for mart action types ─────────────────────────────

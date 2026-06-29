@@ -185,7 +185,9 @@ class SQLiteCacheRepository:
         full_sql = (
             "SELECT * FROM (" + _customer_branch + " UNION ALL " + _sku_branch + ") ORDER BY priority ASC"
         )
-        fallback_sql = _customer_branch + " ORDER BY priority ASC"
+        # Wrap in subquery (same pattern as full_sql) to avoid "ambiguous column name: priority"
+        # when crm_task.priority collides with wh_action_queue.priority in ORDER BY.
+        fallback_sql = "SELECT * FROM (" + _customer_branch + ") ORDER BY priority ASC"
 
         try:
             rows = self._conn.execute(full_sql).fetchall()
