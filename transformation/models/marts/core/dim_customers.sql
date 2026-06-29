@@ -19,6 +19,10 @@ benchmarks AS (
     SELECT * FROM {{ ref('int_customer_benchmarks') }}
 ),
 
+discount_metrics AS (
+    SELECT * FROM {{ ref('int_customer_discount_metrics') }}
+),
+
 joined_data AS (
     SELECT
         c.customer_key,
@@ -61,6 +65,16 @@ joined_data AS (
         m.cancel_rate,
         m.predicted_next_purchase_date,
         m.acquisition_source,
+
+        -- Discount metrics from int_customer_discount_metrics (4 buckets × 2 metrics)
+        dm.last_line_discount_rate,
+        dm.max_line_discount_rate,
+        dm.last_voucher_discount_rate,
+        dm.max_voucher_discount_rate,
+        dm.last_campaign_discount_rate,
+        dm.max_campaign_discount_rate,
+        dm.last_negotiated_discount_rate,
+        dm.max_negotiated_discount_rate,
 
         -- SKU-level product affinity (NULL = customer never purchased a paid line item)
         m.last_purchased_product,
@@ -113,6 +127,7 @@ joined_data AS (
     LEFT JOIN metrics m ON c.customer_key = m.customer_key
     LEFT JOIN economics e ON c.customer_key = e.customer_key
     LEFT JOIN benchmarks b ON c.customer_key = b.customer_key
+    LEFT JOIN discount_metrics dm ON c.customer_key = dm.customer_key
 )
 
 SELECT
@@ -262,6 +277,18 @@ SELECT
     discount_order_rate,
     cancel_rate,
     predicted_next_purchase_date,
+
+    -- Discount tracking: last + max rate per bucket (NULL = customer never had this type)
+    -- Rates are 0.0–1.0 (not percentages). 4 buckets: line_discount / voucher / campaign / negotiated.
+    -- See plans/260629-1215-customer-discount-tracking/ for taxonomy.
+    last_line_discount_rate,
+    max_line_discount_rate,
+    last_voucher_discount_rate,
+    max_voucher_discount_rate,
+    last_campaign_discount_rate,
+    max_campaign_discount_rate,
+    last_negotiated_discount_rate,
+    max_negotiated_discount_rate,
 
     -- Benchmark percentile rankings (populated for benchmark_status = 'ranked' only)
     -- benchmark_status: ranked | single_purchase | inactive_zero_value | non_retail

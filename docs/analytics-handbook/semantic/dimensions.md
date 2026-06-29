@@ -1466,6 +1466,77 @@ Use to flag orders with aggressive discounting. Combine with `primary_discount_t
 
 ---
 
+### Customer-Level Discount Rate Fields (4-Bucket)
+
+> **Type:** Dimension group | **Table:** `dim_customers`, `wh_customer_insight` | **Status:** `active`
+> **Values:** DOUBLE (0.0–1.0) or NULL | **Source:** derived from `fact_orders` + `fact_order_costs`
+
+Eight columns — two per bucket (`last_*` = most-recent order with that bucket, `max_*` = highest rate ever across all orders):
+
+| Column | Bucket | Meaning |
+|---|---|---|
+| `last_line_discount_rate` | line_discount | Rate on most-recent order with a line-item discount |
+| `max_line_discount_rate` | line_discount | Highest line-item discount rate customer has ever received |
+| `last_voucher_discount_rate` | voucher | Rate on most-recent order where customer redeemed a voucher |
+| `max_voucher_discount_rate` | voucher | Highest voucher discount rate ever |
+| `last_campaign_discount_rate` | campaign | Rate on most-recent order with a merchant-applied campaign discount |
+| `max_campaign_discount_rate` | campaign | Highest campaign discount rate ever |
+| `last_negotiated_discount_rate` | negotiated | Rate on most-recent order with a negotiated/contract/wholesale discount |
+| `max_negotiated_discount_rate` | negotiated | Highest negotiated discount rate ever |
+
+**Bucket definitions:**
+
+| Bucket | Source field(s) | discount_type values covered |
+|---|---|---|
+| `line_discount` | `order_items.discount_amount / (unit_price × quantity)` — NOT from `discount_items` | N/A |
+| `voucher` | `discount_items` | `voucher_promotional` |
+| `campaign` | `discount_items` | `bundle`, `campaign`, `sampling_gift` |
+| `negotiated` | `discount_items` | `negotiated_micro`, `negotiated_standard`, `negotiated_deep`, `wholesale_explicit`, `employee_internal`, `overseas` |
+
+**NULL semantics:** NULL = customer has never had an order of that bucket type. 0.0 is a valid rate (discount exists but amount is zero).
+
+**Double-count warning:** 31,890 orders carry BOTH a `line_discount` and an order-level discount. These buckets are tracked independently — do NOT sum across buckets.
+
+**Voucher vs campaign distinction:** `voucher` = customer proactively redeems a code (engagement signal). `campaign` = merchant proactively applies discount (dependency signal). Use this to distinguish price-sensitive customers who seek out deals (`voucher_discount_rate` high) from customers conditioned on always-on promotions (`campaign_discount_rate` high).
+
+**Use in SQL:**
+```sql
+-- Identify customers who have ever received a deep negotiated discount
+SELECT customer_key, max_negotiated_discount_rate
+FROM dim_customers
+WHERE max_negotiated_discount_rate > 0.4
+
+-- Compare voucher engagement vs campaign dependency
+SELECT
+  customer_key,
+  last_voucher_discount_rate,
+  last_campaign_discount_rate
+FROM dim_customers
+WHERE last_voucher_discount_rate IS NOT NULL
+   OR last_campaign_discount_rate IS NOT NULL
+```
+
+#### ⚠️ Conflicts
+*None.*
+
+#### 🔗 Similar (not synonym)
+| Dimension | Key difference | Use instead when |
+|---|---|---|
+| `discount_sensitivity` | Binary behavioral label (PROMO_DEPENDENT/MIXED/FULL_PRICE) based on `discount_order_rate` | Campaign segmentation at a glance |
+| `discount_order_rate` | Share of orders with any discount | Broad price-sensitivity signal, not bucket-specific |
+| `primary_discount_type` | Order-level dominant discount type | Analyzing single orders |
+
+#### ❌ Anti-patterns
+```sql
+-- ❌ Summing bucket rates to get "total" discount — rates across buckets are not additive
+SELECT last_line_discount_rate + last_voucher_discount_rate AS total_rate  -- meaningless
+
+-- ❌ Treating NULL as 0 — NULL means no history; 0 means discounted at 0% rate
+COALESCE(last_negotiated_discount_rate, 0)  -- masks customers with no negotiated orders
+```
+
+---
+
 ## Marketing Dimensions
 
 ### campaign_id

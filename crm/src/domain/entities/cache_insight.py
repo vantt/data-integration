@@ -100,6 +100,15 @@ class CustomerInsight:
     top_affinity_product: str = ""
     second_affinity_product: str = ""
     channel_preference: str = ""
+    # Discount bucket metrics (4 buckets × 2 metrics; 0.0–1.0; None = never had this type)
+    last_line_discount_rate:       float | None = None
+    max_line_discount_rate:        float | None = None
+    last_voucher_discount_rate:    float | None = None
+    max_voucher_discount_rate:     float | None = None
+    last_campaign_discount_rate:   float | None = None
+    max_campaign_discount_rate:    float | None = None
+    last_negotiated_discount_rate: float | None = None
+    max_negotiated_discount_rate:  float | None = None
 
 
 @dataclass

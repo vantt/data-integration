@@ -562,7 +562,42 @@ P3 Behavioral Metrics provide deeper insight into customer purchasing patterns a
 - **Common Use Cases:** Trigger "we miss you" campaign for OVERDUE segment; send product recommendations to DUE_SOON cohort; exclude ON_TRACK from re-engagement (avoid fatigue).
 - **Pitfalls / Edge Cases:** NULL for 1-time buyers; recency drift if product is seasonal (manually adjust thresholds for seasonal verticals).
 
-##### 8.8 SKU-Level Product Affinity — last/top/second
+##### 8.8 Discount Signals — 4-Bucket Per-Customer Rates
+
+> **Phase 1 Status:** Ready (Implemented 2026-06-29)
+> **dbt Model:** [dim_customers](../../../transformation/models/marts/core/dim_customers.sql) (8 columns) | **Also in:** `wh_customer_insight` (reverse-ETL to CRM)
+
+Eight columns capture per-customer discount history across 4 business buckets. Each bucket has a `last_*` (most-recent order) and `max_*` (highest ever) variant.
+
+| Column | Business Signal |
+|---|---|
+| `last_line_discount_rate` / `max_line_discount_rate` | Giảm trực tiếp trên dòng sản phẩm |
+| `last_voucher_discount_rate` / `max_voucher_discount_rate` | Khách CHỦ ĐỘNG dùng mã voucher — engagement signal |
+| `last_campaign_discount_rate` / `max_campaign_discount_rate` | Merchant CHỦ ĐỘNG áp: bundle/CTKM/tặng mẫu — dependency signal |
+| `last_negotiated_discount_rate` / `max_negotiated_discount_rate` | Thỏa thuận: đại lý/hợp đồng/nhân viên/overseas |
+
+**Scale:** 0.0–1.0 (not %). NULL = customer has never had an order of that bucket type.
+
+**Bucket → discount_type mapping:**
+- `line_discount` → from `order_items.discount_amount / (unit_price × quantity)` — NOT from `discount_items`
+- `voucher` → `discount_type = 'voucher_promotional'`
+- `campaign` → `bundle`, `campaign`, `sampling_gift`
+- `negotiated` → `negotiated_micro`, `negotiated_standard`, `negotiated_deep`, `wholesale_explicit`, `employee_internal`, `overseas`
+
+**Voucher vs Campaign — critical distinction:**
+- `voucher` = customer proactively redeems a code. High `max_voucher_discount_rate` = customer knows how to find and use promotions (positive engagement).
+- `campaign` = merchant applies discount automatically. High `last_campaign_discount_rate` = customer may be conditioned on always-on promos (margin risk if promos stop).
+
+**Double-count note:** 31,890 orders have BOTH a line-item discount and an order-level discount. The two sources are tracked independently — do NOT sum across buckets.
+
+**Common Use Cases:**
+- CRM scripts: "Khách này max negotiated rate = 42% → likely ex-B2B or wholesale contact; approach with contract framing."
+- Segmentation: Customers with `max_voucher_discount_rate > 0` AND `max_campaign_discount_rate = NULL` = voucher-native (engagement-driven), not promo-dependent.
+- Risk flag: High `max_negotiated_discount_rate` in an otherwise RETAIL customer = possible misclassified wholesale.
+
+**Pitfalls / Edge Cases:** Do not sum bucket rates (not additive). NULL ≠ 0 — NULL means no history in that bucket. Rates reflect the discount on qualifying order-level or item-level discount amounts, not the order's total discount as a share of gross_revenue.
+
+##### 8.9 SKU-Level Product Affinity — last/top/second
 
 > **Phase 1 Status:** Ready (Implemented 2026-06-13)
 > **dbt Model:** [int_customer_metrics](../../../transformation/models/marts/core/intermediate/int_customer_metrics.sql) (source) & [dim_customers](../../../transformation/models/marts/core/dim_customers.sql) (5 columns)

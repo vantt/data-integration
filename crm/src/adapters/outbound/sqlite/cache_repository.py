@@ -223,7 +223,11 @@ class SQLiteCacheRepository:
                    ci.last_purchased_sku, ci.top_affinity_product, ci.second_affinity_product,
                    ci.channel_preference, ci.lifetime_contribution_margin, ci.is_margin_negative,
                    ci.refreshed_at,
-                   COALESCE(cb.first_order_date, '') AS first_order_date
+                   COALESCE(cb.first_order_date, '') AS first_order_date,
+                   ci.last_line_discount_rate, ci.max_line_discount_rate,
+                   ci.last_voucher_discount_rate, ci.max_voucher_discount_rate,
+                   ci.last_campaign_discount_rate, ci.max_campaign_discount_rate,
+                   ci.last_negotiated_discount_rate, ci.max_negotiated_discount_rate
             FROM cache.wh_customer_insight ci
             LEFT JOIN cache.wh_customer_base cb ON cb.customer_id = ci.customer_id
             WHERE ci.customer_id = ?
@@ -256,6 +260,14 @@ class SQLiteCacheRepository:
             lifetime_contribution_margin=row["lifetime_contribution_margin"] or 0.0,
             is_margin_negative=bool(row["is_margin_negative"]),
             refreshed_at=row["refreshed_at"] or "",
+            last_line_discount_rate=row["last_line_discount_rate"],
+            max_line_discount_rate=row["max_line_discount_rate"],
+            last_voucher_discount_rate=row["last_voucher_discount_rate"],
+            max_voucher_discount_rate=row["max_voucher_discount_rate"],
+            last_campaign_discount_rate=row["last_campaign_discount_rate"],
+            max_campaign_discount_rate=row["max_campaign_discount_rate"],
+            last_negotiated_discount_rate=row["last_negotiated_discount_rate"],
+            max_negotiated_discount_rate=row["max_negotiated_discount_rate"],
         )
 
     def _fetch_actions(self, customer_key: str) -> list[ActionQueueItem]:

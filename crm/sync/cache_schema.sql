@@ -22,6 +22,15 @@ CREATE TABLE IF NOT EXISTS wh_customer_insight (
   channel_preference          TEXT,
   lifetime_contribution_margin REAL,
   is_margin_negative          INTEGER,              -- 0/1 (SQLite bool)
+  -- Discount bucket metrics (4 buckets × 2 metrics; 0.0–1.0; NULL = customer never had this type)
+  last_line_discount_rate       REAL,
+  max_line_discount_rate        REAL,
+  last_voucher_discount_rate    REAL,
+  max_voucher_discount_rate     REAL,
+  last_campaign_discount_rate   REAL,
+  max_campaign_discount_rate    REAL,
+  last_negotiated_discount_rate REAL,
+  max_negotiated_discount_rate  REAL,
   refreshed_at                TEXT NOT NULL DEFAULT (strftime('%Y-%m-%dT%H:%M:%fZ','now'))
 );
 

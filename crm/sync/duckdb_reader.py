@@ -47,6 +47,16 @@ _DIM_CUSTOMERS_INSIGHT_COLS = [
     "avg_order_spend",
     "discount_sensitivity",
     "cancel_rate",
+    # ── Discount bucket metrics (4 buckets × 2 metrics; 0.0–1.0; NULL = never had this type) ─
+    "last_line_discount_rate",
+    "max_line_discount_rate",
+    "last_voucher_discount_rate",
+    "max_voucher_discount_rate",
+    "last_campaign_discount_rate",
+    "max_campaign_discount_rate",
+    "last_negotiated_discount_rate",
+    "max_negotiated_discount_rate",
+    # ──────────────────────────────────────────────────────────────────────────────────────────
     "last_purchased_sku",
     "top_affinity_product",
     "second_affinity_product",

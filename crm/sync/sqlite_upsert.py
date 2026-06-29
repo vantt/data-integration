@@ -70,6 +70,15 @@ def apply_schema(conn: sqlite3.Connection) -> None:
         "ALTER TABLE wh_customer_base ADD COLUMN contact_quality TEXT NOT NULL DEFAULT 'real'",
         "ALTER TABLE wh_action_queue ADD COLUMN top_affinity_product TEXT",
         "ALTER TABLE wh_action_queue ADD COLUMN last_purchased_product TEXT",
+        # Discount bucket metrics (4 buckets × 2 metrics) — added 2026-06-29
+        "ALTER TABLE wh_customer_insight ADD COLUMN last_line_discount_rate REAL",
+        "ALTER TABLE wh_customer_insight ADD COLUMN max_line_discount_rate REAL",
+        "ALTER TABLE wh_customer_insight ADD COLUMN last_voucher_discount_rate REAL",
+        "ALTER TABLE wh_customer_insight ADD COLUMN max_voucher_discount_rate REAL",
+        "ALTER TABLE wh_customer_insight ADD COLUMN last_campaign_discount_rate REAL",
+        "ALTER TABLE wh_customer_insight ADD COLUMN max_campaign_discount_rate REAL",
+        "ALTER TABLE wh_customer_insight ADD COLUMN last_negotiated_discount_rate REAL",
+        "ALTER TABLE wh_customer_insight ADD COLUMN max_negotiated_discount_rate REAL",
     ]
     for stmt in _group_a:
         try:

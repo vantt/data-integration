@@ -1,8 +1,8 @@
 ---
 title: Discount Classification by Nature (Sapo)
-status: draft
-last_modified: 2026-05-27
-domain_refs: [domains/finance.md]
+status: active
+last_modified: 2026-06-29
+domain_refs: [domains/finance.md, domains/customer.md]
 related_designs: [order-pl-schema-design.md, order_detail_view.md]
 ---
 
@@ -28,6 +28,48 @@ Sapo `discount_items[]` hiện được phân loại thành 4 bucket dựa trên
 - **Discount rate không được pass** vào mart (`fact_order_costs`) → mất metric
 
 **Hậu quả:** Retail metrics (avg discount, ARPU) bị contaminate bởi hidden wholesale. Không thể reclassify customer (Sapo logic), phải reclassify discount.
+
+---
+
+## 4-Bucket Customer-Level Taxonomy
+
+Để phục vụ CRM và dim_customers, 10 `discount_type` values được gộp thành **4 bucket analytics**:
+
+| Bucket | Nguồn | discount_type values | Ý nghĩa |
+|---|---|---|---|
+| `line_discount` | `order_items.discount_amount / (unit_price × quantity)` | N/A (không có label) | Giảm trực tiếp trên dòng sản phẩm |
+| `voucher` | `discount_items WHERE discount_type = 'voucher_promotional'` | `voucher_promotional` | Khách **CHỦ ĐỘNG** dùng mã voucher — engagement signal |
+| `campaign` | `discount_items` (các type còn lại không phải negotiated) | `bundle`, `campaign`, `sampling_gift` | Merchant **CHỦ ĐỘNG** áp: bundle/CTKM/tặng mẫu — dependency signal |
+| `negotiated` | `discount_items` | `negotiated_micro`, `negotiated_standard`, `negotiated_deep`, `wholesale_explicit`, `employee_internal`, `overseas` | Thỏa thuận trực tiếp: đại lý/hợp đồng/nhân viên/overseas |
+
+**Phân biệt quan trọng — voucher vs campaign:**
+- `voucher` = khách chủ động nhập mã (engagement signal — khách biết & dùng chương trình)
+- `campaign` = merchant chủ động áp discount (dependency signal — khách quen được hưởng giá ưu đãi mà không cần effort)
+
+**Lưu ý double-count:** 31,890 đơn có BOTH line-item discount (từ `order_items`) AND order-level discount (từ `discount_items`). Hai nguồn được track **độc lập**, không cộng gộp. Line discount và order-level discount phản ánh 2 mechanism khác nhau trong Sapo.
+
+**Line discount đến từ `order_items.discount_amount`** — KHÔNG phải từ `discount_items_json`. Đây là discount áp tại dòng sản phẩm, khác với order-level discount items.
+
+---
+
+## 8 Fields trong `dim_customers` (Customer-Level Discount Signals)
+
+Mỗi bucket có 2 fields: `last_*` (đơn gần nhất có bucket đó) và `max_*` (cao nhất từ trước đến nay):
+
+| Field | Mô tả |
+|---|---|
+| `last_line_discount_rate` | Rate line discount trên đơn gần nhất có line discount |
+| `max_line_discount_rate` | Rate line discount cao nhất từ trước đến nay |
+| `last_voucher_discount_rate` | Rate voucher discount trên đơn gần nhất có voucher |
+| `max_voucher_discount_rate` | Rate voucher discount cao nhất từ trước đến nay |
+| `last_campaign_discount_rate` | Rate campaign discount trên đơn gần nhất có campaign |
+| `max_campaign_discount_rate` | Rate campaign discount cao nhất từ trước đến nay |
+| `last_negotiated_discount_rate` | Rate negotiated discount trên đơn gần nhất có negotiated |
+| `max_negotiated_discount_rate` | Rate negotiated discount cao nhất từ trước đến nay |
+
+**Scale:** Tất cả rate là 0.0–1.0 (không phải %). NULL = khách chưa bao giờ có đơn thuộc bucket đó.
+
+**Cũng có trong `wh_customer_insight`** (reverse-ETL sang CRM) để CRM đọc trực tiếp.
 
 ---
 

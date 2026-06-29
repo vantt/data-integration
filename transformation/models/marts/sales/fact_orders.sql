@@ -80,6 +80,24 @@ discount_order_summary AS (
     GROUP BY order_code
 ),
 
+-- NEW CTE: line-item discount summary per order
+-- Max discount_rate across all discounted lines per order.
+-- Do NOT confuse with max_discount_rate (order-level discount_items). Separate column.
+line_discount_order_summary AS (
+    SELECT
+        order_id,
+        MAX(
+            CASE
+                WHEN discount_amount > 0 AND unit_price > 0 AND quantity > 0
+                THEN discount_amount / NULLIF(unit_price * quantity, 0)
+                ELSE NULL
+            END
+        ) AS max_line_discount_rate
+    FROM {{ ref('std_order_items') }}
+    WHERE discount_amount > 0
+    GROUP BY order_id
+),
+
 channel_scope AS (
     SELECT channel_key, is_sales_channel, channel_format
     FROM {{ ref('dim_channels') }}
@@ -176,6 +194,7 @@ SELECT
     orders.order_coupon_code,
     dos.max_discount_rate,
     dos.primary_discount_type,
+    ld.max_line_discount_rate,   -- NEW: item-level max rate; separate from order-level max_discount_rate
 
     created_at as ordered_at,
     updated_at,
@@ -212,6 +231,7 @@ LEFT JOIN team_members tm ON lower(dseller.email) = tm.staff_email
     AND (tm.effective_to IS NULL OR cast(orders.created_at as date) <= tm.effective_to)
 LEFT JOIN teams t ON tm.team_code = t.team_code
 LEFT JOIN discount_order_summary dos ON orders.order_code = dos.order_code
+LEFT JOIN line_discount_order_summary ld ON orders.order_id = ld.order_id
 LEFT JOIN channel_scope ch ON (
     CASE
         WHEN sd.is_generic_source = true THEN

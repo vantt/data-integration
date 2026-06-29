@@ -706,20 +706,33 @@ FROM fact_orders WHERE scope_sales   -- wholesale_explicit dominates, obscures r
 
 **Intent:** `primary_discount_type` is a pre-classified enum derived from discount item reason text at pipeline time. It provides consistent, parseable categories for promotion analysis without requiring analysts to write fragile LIKE-pattern SQL on raw text fields.
 
-**Discount type reference:**
+**Discount type reference (10 granular types):**
 
-| primary_discount_type | Meaning |
-|---|---|
-| voucher_promotional | Seller voucher promotion |
-| bundle | Bundle deal discount |
-| sampling_gift | Sample / gift item |
-| wholesale_explicit | Explicit wholesale/agency pricing in reason |
-| overseas | US/overseas order pricing |
-| campaign | Named campaign (CTKM, Father's Day, etc.) |
-| employee_internal | Employee / CTV / commission benefit |
-| negotiated_micro | Negotiated discount < 20% |
-| negotiated_standard | Negotiated discount 20–40% |
-| negotiated_deep | Negotiated discount > 40% |
+| primary_discount_type | 4-Bucket Group | Meaning |
+|---|---|---|
+| voucher_promotional | `voucher` | Seller voucher — customer proactively redeems a code |
+| bundle | `campaign` | Bundle deal discount |
+| sampling_gift | `campaign` | Sample / gift item |
+| campaign | `campaign` | Named campaign (CTKM, Father's Day, etc.) |
+| wholesale_explicit | `negotiated` | Explicit wholesale/agency pricing in reason |
+| overseas | `negotiated` | US/overseas order pricing |
+| employee_internal | `negotiated` | Employee / CTV / commission benefit |
+| negotiated_micro | `negotiated` | Negotiated discount < 20% |
+| negotiated_standard | `negotiated` | Negotiated discount 20–40% |
+| negotiated_deep | `negotiated` | Negotiated discount > 40% |
+
+**4-Bucket grouping for customer-level analytics:**
+
+| Bucket | Source | Business Signal |
+|---|---|---|
+| `line_discount` | `order_items.discount_amount / (unit_price × quantity)` — NOT from `discount_items` | Line-level reduction; tracked independently |
+| `voucher` | `discount_type = 'voucher_promotional'` | Customer engagement (proactive redemption) |
+| `campaign` | `bundle`, `campaign`, `sampling_gift` | Merchant-initiated promotion (dependency signal) |
+| `negotiated` | `negotiated_*`, `wholesale_explicit`, `employee_internal`, `overseas` | Contract/relationship pricing |
+
+**Double-count note:** 31,890 orders have BOTH a `line_discount` (from `order_items`) AND an order-level discount (from `discount_items`). They are tracked independently — do NOT sum across buckets to get total discount.
+
+**Customer-level fields in `dim_customers` and `wh_customer_insight`:** 8 fields — per bucket, `last_*` (most-recent order with that bucket) and `max_*` (highest rate ever). All 0.0–1.0. NULL = customer never had an order of that type.
 
 **Applies To:**
 - [primary_discount_type](dimensions.md#primary_discount_type) — the pre-classified dimension

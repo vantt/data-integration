@@ -170,6 +170,60 @@
   {# ── Lịch sử trạng thái (inline from P07) ─────────────── #}
   {% include "fragments/c360_status_timeline_panel.html" %}
 
+  {# ── Discount Info ────────────────────────────────────────
+       4 buckets always shown. Rates 0.0–1.0 → display as % int.
+       "—" when customer has no order of that discount type.
+  #}
+  <div>
+    <div class="panel-head"><span class="panel-title">Discount Info</span></div>
+    <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:var(--sp-3)">
+      <div class="signal-cell">
+        <div class="signal-cell__k" data-tooltip="Giảm trực tiếp trên dòng sản phẩm&#10;(line-item discount, không có mã/lý do)">Sản phẩm</div>
+        <div class="signal-cell__v">
+          {% if ins.last_line_discount_rate is not none %}
+          <span style="font-weight:600">{{ "%.0f"|format(ins.last_line_discount_rate * 100) }}%</span>
+          {% if ins.max_line_discount_rate is not none and ins.max_line_discount_rate != ins.last_line_discount_rate %}
+          <span class="caption" style="color:var(--fg-tertiary);margin-left:var(--sp-2)">max {{ "%.0f"|format(ins.max_line_discount_rate * 100) }}%</span>
+          {% endif %}
+          {% else %}<span class="dash">—</span>{% endif %}
+        </div>
+      </div>
+      <div class="signal-cell">
+        <div class="signal-cell__k" data-tooltip="Merchant áp CTKM/bundle/tặng mẫu&#10;→ signal phụ thuộc khuyến mãi">KM / Bundle</div>
+        <div class="signal-cell__v">
+          {% if ins.last_campaign_discount_rate is not none %}
+          <span style="font-weight:600">{{ "%.0f"|format(ins.last_campaign_discount_rate * 100) }}%</span>
+          {% if ins.max_campaign_discount_rate is not none and ins.max_campaign_discount_rate != ins.last_campaign_discount_rate %}
+          <span class="caption" style="color:var(--fg-tertiary);margin-left:var(--sp-2)">max {{ "%.0f"|format(ins.max_campaign_discount_rate * 100) }}%</span>
+          {% endif %}
+          {% else %}<span class="dash">—</span>{% endif %}
+        </div>
+      </div>
+      <div class="signal-cell">
+        <div class="signal-cell__k" data-tooltip="Khách chủ động dùng mã voucher&#10;→ signal tìm kiếm ưu đãi">Voucher</div>
+        <div class="signal-cell__v">
+          {% if ins.last_voucher_discount_rate is not none %}
+          <span style="font-weight:600">{{ "%.0f"|format(ins.last_voucher_discount_rate * 100) }}%</span>
+          {% if ins.max_voucher_discount_rate is not none and ins.max_voucher_discount_rate != ins.last_voucher_discount_rate %}
+          <span class="caption" style="color:var(--fg-tertiary);margin-left:var(--sp-2)">max {{ "%.0f"|format(ins.max_voucher_discount_rate * 100) }}%</span>
+          {% endif %}
+          {% else %}<span class="dash">—</span>{% endif %}
+        </div>
+      </div>
+      <div class="signal-cell">
+        <div class="signal-cell__k" data-tooltip="Thỏa thuận trực tiếp: đại lý, hợp đồng&#10;nhân viên, CTV, khách US">Thỏa thuận</div>
+        <div class="signal-cell__v">
+          {% if ins.last_negotiated_discount_rate is not none %}
+          <span style="font-weight:600">{{ "%.0f"|format(ins.last_negotiated_discount_rate * 100) }}%</span>
+          {% if ins.max_negotiated_discount_rate is not none and ins.max_negotiated_discount_rate != ins.last_negotiated_discount_rate %}
+          <span class="caption" style="color:var(--fg-tertiary);margin-left:var(--sp-2)">max {{ "%.0f"|format(ins.max_negotiated_discount_rate * 100) }}%</span>
+          {% endif %}
+          {% else %}<span class="dash">—</span>{% endif %}
+        </div>
+      </div>
+    </div>
+  </div>
+
   {# ── Value Metrics ─────────────────────────────────────── #}
   <div>
     <div class="panel-head"><span class="panel-title">Value Metrics</span></div>

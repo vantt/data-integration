@@ -1,0 +1,24 @@
+version: 2
+
+models:
+  - name: int_customer_discount_metrics
+    description: "Per-customer discount metrics across 4 unified buckets: line_discount, voucher, campaign, negotiated."
+    columns:
+      - name: customer_key
+        tests: [unique, not_null]
+      - name: last_line_discount_rate
+        description: "Rate (0-1) of item-level discount from most recent order with line discount. NULL = never had line discount."
+      - name: max_line_discount_rate
+        description: "Highest item-level discount rate ever applied to this customer."
+      - name: last_voucher_discount_rate
+        description: "Rate from most recent order where customer actively redeemed a voucher."
+      - name: max_voucher_discount_rate
+        description: "Highest voucher discount rate ever redeemed."
+      - name: last_campaign_discount_rate
+        description: "Rate from most recent order with merchant-applied promo (bundle/CTKM/sampling)."
+      - name: max_campaign_discount_rate
+        description: "Highest campaign discount rate ever received."
+      - name: last_negotiated_discount_rate
+        description: "Rate from most recent order with B2B/direct deal (đại lý/hợp đồng/nhân viên/overseas)."
+      - name: max_negotiated_discount_rate
+        description: "Highest negotiated discount rate ever."

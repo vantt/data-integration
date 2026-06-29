@@ -32,6 +32,16 @@ SELECT
     
     discount_amount,
     distributed_discount_amount,
+    -- Rate: discount_amount / gross_line_amount (unit_price × quantity = pre-discount price)
+    -- NULL when no discount or price is zero (avoid division by zero)
+    CASE
+        WHEN discount_amount > 0 AND unit_price > 0 AND quantity > 0
+        THEN ROUND(
+            discount_amount / NULLIF(unit_price * quantity, 0),
+            4  -- keep 4 decimal places (~0.01% precision)
+        )
+        ELSE NULL
+    END AS discount_rate,
     lots_dates,
     
     -- Enriched Attributes (v2)

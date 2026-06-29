@@ -166,6 +166,41 @@ sapo_discounts AS (
 ),
 
 -- ============================================================
+-- Line-item discounts — from std_order_items (item-level price reduction)
+-- Separate from discount_items_json (order-level).
+-- Source: order_items.discount_amount > 0
+-- No reason/label available; classified as 'discount_line_item'.
+-- ============================================================
+line_item_discounts_raw AS (
+    SELECT
+        i.order_id,
+        SUM(ABS(i.discount_amount))                     AS amount,
+        MAX(i.discount_rate)                            AS discount_rate,
+        'line_item'                                     AS discount_type
+    FROM {{ ref('std_order_items') }} i
+    WHERE i.discount_amount > 0
+    GROUP BY i.order_id
+),
+
+line_item_discounts AS (
+    SELECT
+        om.order_id,
+        om.order_code,
+        'discount_line_item'    AS cost_type,
+        'DISCOUNT'              AS cost_category,
+        CAST(l.amount AS DECIMAL(18, 2)) AS amount,
+        l.discount_rate,
+        l.discount_type,
+        'sapo_v2'               AS source_system,
+        om.order_code           AS source_record,
+        'actual'                AS fee_source,
+        om.date_key,
+        om.channel_key
+    FROM line_item_discounts_raw l
+    JOIN order_meta om ON l.order_id = om.order_id
+),
+
+-- ============================================================
 -- Promo goods cost — revenue=0 gift lines valued at Sapo-MAC
 -- Marketing cost, NOT COGS (phase-03)
 -- ============================================================
@@ -285,3 +320,20 @@ SELECT
     date_key,
     channel_key
 FROM overhead
+
+UNION ALL
+
+SELECT
+    order_id,
+    order_code,
+    cost_type,
+    cost_category,
+    amount,
+    discount_rate,
+    discount_type,
+    source_system,
+    source_record,
+    fee_source,
+    date_key,
+    channel_key
+FROM line_item_discounts

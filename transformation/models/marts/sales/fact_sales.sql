@@ -77,6 +77,7 @@ SELECT
     ) as net_revenue,
     i.discount_amount,
     i.distributed_discount_amount,
+    i.discount_rate,
     i.weight_grams,
     
     -- Addresses
