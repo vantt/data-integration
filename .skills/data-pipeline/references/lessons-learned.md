@@ -4549,3 +4549,28 @@ elif filter_priority == "high":
 4. Protocol signatures must be verified against the concrete service signature at wire-time, not assumed from memory. L151+L152 both caused silent runtime failures from this gap.
 
 **Reference:** `screen_customer_360.py` (`handle_log_activity`, `handle_add_note`), `screen_inbox.py` (`ActivityLogger`, `handle_log_activity_on_conv`), `screen_modals.py` (`post_assign_owner`, `WebDeps`), `composition.py` (`_ModalDeps`). Fixed 2026-06-26.
+
+### L153 — A type-enum whitelist in a display condition silently suppresses any new data type added to the mart; gate on data presence, not type membership
+
+**Symptom:** SKU action cards in Customer 360 showed empty purchase context (`last_purchase_date`, `last_order_code`, `last_sku_discount_rate`) for many actions. Verified in container: all 4810 rows in `cache.wh_sku_action_queue` had `last_purchase_date` populated. Python's `_fetch_actions()` correctly read the values via UNION ALL. Yet the "Mua …" line didn't render.
+
+**Group:** SERVE / CRM-WEB
+
+**Root cause:** The Jinja template gated the purchase-context block on a hardcoded action-type whitelist:
+```jinja
+{% if act.action_type in ['USAGE_FOLLOWUP', 'PROGRESS_CHECK', 'REORDER_PREEMPT', 'REORDER_NUDGE', 'REORDER_OVERDUE'] and act.last_purchase_date %}
+```
+This whitelist mirrored the mart's SKU action types at one point in time. Any new type added later to `mart_customer_sku_action_queue` (which *would* have purchase context populated) silently renders no context block because the template's list is stale — no error, no warning.
+
+**Fix:** Replace the type membership check with a pure data-presence check:
+```jinja
+{% if act.last_purchase_date %}
+```
+The nullable field is the true source of truth: rows from `wh_action_queue` (customer-level) always have `last_purchase_date = ""` (NULL → empty via `or ""`); rows from `wh_sku_action_queue` always have it populated. The data itself encodes which rows carry context.
+
+**Rules:**
+1. When a field is nullable *by design* (some rows have it, others don't), template conditions should test the field directly — `{% if field %}` — not enumerate which types carry it. Type lists must be manually kept in sync with the mart; data presence is self-maintaining.
+2. When debugging "empty UI field despite data in DB": verify each layer independently — (a) DB query in container, (b) Python object via `get_customer_insight()` simulation, (c) template condition logic. The break can be at any layer and each needs its own confirmation.
+3. UNION ALL branches must carry the same column count in the same order. In SQLite, column *names* come from the first SELECT but *values* come from all branches. A NULL placeholder in branch 1 will be displaced by the real value from branch 2 at the same position — verify by running the UNION query directly, not just checking the individual branch.
+
+**Reference:** `c360_insight_panel.html` (purchase context condition), `cache_repository.py` (`_fetch_actions` UNION ALL). Fixed 2026-06-29.

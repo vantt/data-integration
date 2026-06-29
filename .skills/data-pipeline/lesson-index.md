@@ -234,6 +234,7 @@ Lessons that cut across multiple groups — canonical home is `playbooks/cross-c
 | L84 | UTC storage + ICT display — architecture chuẩn cho pipeline VN | `playbooks/cross-cutting.md#timezone-window-alignment` | TRUST, MODEL |
 | L151 | Protocol wired to wrong layer (repo vs service) silently passes structural typing, fails at runtime as SQLite type error swallowed by HTMX as silent 500 | `references/lessons-learned.md#L151` | SERVE |
 | L152 | Middleware-injected `request.state.current_user` is invisible to service calls unless each mutation handler explicitly threads it through — omission silently produces NULL audit columns and broken inbox log | `references/lessons-learned.md#L152` | SERVE |
+| L153 | A hardcoded action-type whitelist in a template display condition silently suppresses any new mart type; gate on data presence (`{% if field %}`), not type membership | `references/lessons-learned.md#L153` | SERVE |
 
 ---
 
@@ -243,7 +244,7 @@ Lessons that cut across multiple groups — canonical home is `playbooks/cross-c
 |-------|--------------------|---------------------|-----------------|-------|
 | INGEST | 20 | 0 | 0 | 20 |
 | MODEL | 9 | 0 | 14 | 23 |
-| SERVE | 3 + serving-layer.md | 0 | 1 (shared) | 4 + full doc |
+| SERVE | 4 + serving-layer.md | 0 | 1 (shared) | 5 + full doc |
 | TRUST | 11 | 0 | 0 | 11 |
 | OPS | 39 | 14 | 0 | 53 |
 | Cross-cutting | 15 (overlap from above) | 0 | 0 | 15 |
