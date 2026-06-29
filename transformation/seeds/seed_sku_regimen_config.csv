@@ -1,11 +1,11 @@
 sku,product_group,display_name,supply_days_per_unit,dose_reduction_buffer,remind_lead_days,journey_enabled
-VCSL21002C001,cordyceps,Cordyceps,30,1.3,7,true
 VCSC20001L001,cordyceps,Cordyceps,30,1.3,7,true
-VCSC23166L001,cordyceps,Cordyceps,30,1.3,7,true
+VCSC23166L001,cordyceps,Cordyceps,7.5,1.3,7,true
 VTSC20001L001,cordyceps,Cordyceps,30,1.3,7,true
-VCSL21002H010,cordyceps_plus,Cordyceps Plus,30,1.3,7,true
+VCSL21002C001,cordyceps_plus,Cordyceps Plus,1,1.3,7,true
+VCSL21002H010,cordyceps_plus,Cordyceps Plus,10,1.3,7,true
 VTSL24009C001,cordyceps_plus,Cordyceps Plus,1,1.3,7,true
-VTSL24009H010,cordyceps_plus,Cordyceps Plus,30,1.3,7,true
+VTSL24009H010,cordyceps_plus,Cordyceps Plus,10,1.3,7,true
 VCSL19001C001,collagen_plus,Hyaluron Collagen Plus,1,1.2,7,true
 VCSL19001H010,collagen_plus,Hyaluron Collagen Plus,10,1.2,7,true
 VTSL24010C001,collagen_plus,Hyaluron Collagen Plus,1,1.2,7,true
@@ -13,7 +13,7 @@ VTSL24010H010,collagen_plus,Hyaluron Collagen Plus,10,1.2,7,true
 VCSL21001C001,swallow_nest,Swallow Nest,1,1.25,7,true
 VCSL21001H010,swallow_nest,Swallow Nest,10,1.25,7,true
 VTSL21001C001,swallow_nest,Swallow Nest,1,1.25,7,true
-VTSL21001H010,swallow_nest,Swallow Nest,30,1.25,7,true
+VTSL21001H010,swallow_nest,Swallow Nest,10,1.25,7,true
 VCST21003L001,natto,Natto Kinase,30,1.3,7,true
 VTST23042L001,natto,Natto Kinase,30,1.3,7,true
 VCST21004L001,shark_cartilage,Shark Cartilage,52,1.3,7,true
