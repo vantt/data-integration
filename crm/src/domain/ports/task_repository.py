@@ -21,10 +21,10 @@ class TaskRepository(Protocol):
         ...
 
     def list_by_assignee_and_status(
-        self, assignee_user_id: str, status: str
+        self, assignee_id: str, statuses: list[str], limit: int = 100
     ) -> list[Task]:
-        """Return tasks filtered by assignee and/or status.
-        Empty string means 'any' for that filter."""
+        """Return tasks filtered by assignee and/or status list.
+        Empty string assignee_id or empty statuses list means 'any' for that filter."""
         ...
 
     def exists_by_source_ref(self, source: str, source_ref: str) -> bool:

@@ -20,7 +20,6 @@ from domain.entities.task import (
     TASK_SOURCE_ACTION_QUEUE,
 )
 from domain.ports.task_repository import TaskRepository
-from domain.ports.party_repository import PartyRepository
 from domain.ports.cache_repository import CacheRepository
 
 if TYPE_CHECKING:
@@ -36,12 +35,10 @@ class TaskService:
     def __init__(
         self,
         task_repo: TaskRepository,
-        party_repo: PartyRepository,
         cache_repo: CacheRepository,
         db: Optional[CRMDatabase] = None,
     ) -> None:
         self._task_repo = task_repo
-        self._party_repo = party_repo
         self._cache_repo = cache_repo
         self._db = db
 
@@ -202,20 +199,8 @@ class TaskService:
         if self._task_repo.exists_by_source_ref(TASK_SOURCE_ACTION_QUEUE, action.action_id):
             return 0
 
-        # Resolve customer_key → party_id via sapo_customer identity.
-        party_id: Optional[str] = None
-        if action.customer_key:
-            try:
-                party = self._party_repo.find_by_identity("sapo_customer", action.customer_key)
-                if party is not None:
-                    party_id = party.party_id
-            except Exception as exc:
-                log.warning(
-                    "task service: resolve party for customer_key=%s: %s",
-                    action.customer_key,
-                    exc,
-                )
-                # Non-fatal — create task without party link.
+        # party_id is pre-resolved by list_all_action_queue via crm_party_identity JOIN.
+        party_id: Optional[str] = action.party_id
 
         rationale = action.rationale_vi or ""
         if rationale:

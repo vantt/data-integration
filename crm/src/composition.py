@@ -263,7 +263,7 @@ def _build_services(sqlite_repos: dict) -> dict:
             db,
         ),
         "activity": ActivityService(sqlite_repos["activity"], sqlite_repos["last_contact"], db),
-        "task": TaskService(sqlite_repos["task"], sqlite_repos["party"], sqlite_repos["cache"], db),
+        "task": TaskService(sqlite_repos["task"], sqlite_repos["cache"], db),
         "conv": ConversationService(sqlite_repos["conv"], sqlite_repos["party"], db),
         "segment": SegmentService(sqlite_repos["segment"]),
         "campaign": CampaignService(

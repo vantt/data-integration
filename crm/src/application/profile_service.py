@@ -85,13 +85,14 @@ def _validate_custom_map(
         if err:
             errors.append(err)
 
-    # Check required active fields absent from the map
+    # Check required active fields absent from the map entirely.
+    # Fields present in custom_map (even empty) are already validated by the first loop above.
     for key, defn in defs_by_key.items():
         if not defn.is_required:
             continue
-        val = custom_map.get(key, "")
-        if not val.strip():
-            errors.append(CustomFieldError(key, "required field is missing or empty"))
+        if key in custom_map:
+            continue
+        errors.append(CustomFieldError(key, "required field is missing or empty"))
 
     return errors
 

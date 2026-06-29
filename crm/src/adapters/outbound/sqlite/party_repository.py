@@ -169,5 +169,6 @@ class SQLitePartyRepository:
         with self._conn:
             self.create(party)
             for identity in identities:
-                self.upsert_identity(identity)
+                # Call execute directly — upsert_identity() commits mid-transaction which breaks atomicity.
+                self._conn.execute(SQL_UPSERT_IDENTITY, identity_upsert_params(identity))
         return party
