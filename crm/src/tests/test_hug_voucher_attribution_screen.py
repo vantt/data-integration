@@ -1,4 +1,4 @@
-"""test_hug_voucher_attribution_screen.py — tests for the voucher attribution screen.
+﻿"""test_hug_voucher_attribution_screen.py — tests for the voucher attribution screen.
 
 Covers (no FastAPI TestClient — same pattern as test_hug_mint_reprint.py):
   - empty DB → empty-state message rendered
@@ -25,8 +25,8 @@ for _p in (_REPO_ROOT, _PYTHON_ROOT):
         sys.path.insert(0, _p)
 
 from hug.voucher_repository import record_issuance, mark_redeemed                    # noqa: E402
-from adapters.inbound.web.screen_hug_voucher_attribution_data import load_attribution  # noqa: E402
-from adapters.inbound.web.screen_hug_voucher_attribution_html import (                 # noqa: E402
+from adapters.inbound.web.screens.hug.screen_hug_voucher_attribution_data import load_attribution  # noqa: E402
+from adapters.inbound.web.screens.hug.screen_hug_voucher_attribution_html import (                 # noqa: E402
     render_attribution_page,
 )
 from adapters.outbound.sqlite.hug_voucher_repository_adapter import (                  # noqa: E402
@@ -237,7 +237,7 @@ def test_router_factory_returns_non_none():
     in the host Python environment (packages live in the Docker container).
     """
     fastapi = pytest.importorskip("fastapi", reason="fastapi not installed in host env")
-    from adapters.inbound.web.screen_hug_voucher_attribution import (
+    from adapters.inbound.web.screens.hug.screen_hug_voucher_attribution import (
         make_hug_voucher_attribution_router,
     )
 

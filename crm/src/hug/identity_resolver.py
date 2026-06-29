@@ -22,7 +22,7 @@ import sqlite3
 from pathlib import Path
 from typing import Optional
 
-from application.party_service import normalize_phone
+from domain.value_objects.phone import PhoneNumber
 from hug.identity_resolver_io import (
     CONF_ASSIGN,
     CONF_EXACT,
@@ -59,7 +59,7 @@ def _apply_policy(
     raw_phone: str = row.get("phone") or ""
     zalo_uid: Optional[str] = row.get("zalo_uid") or None
 
-    norm_phone = normalize_phone(raw_phone) if raw_phone else ""
+    norm_phone = PhoneNumber.normalize(raw_phone) if raw_phone else ""
 
     is_gift = get_is_gift(hug_conn, token)
     buyer_party_id = resolve_buyer_party(crm_conn, hug_conn, token, buyer_cid)

@@ -1,4 +1,4 @@
-"""test_hug_campaign_admin_ui.py — tests for the Hug campaign admin UI screens.
+﻿"""test_hug_campaign_admin_ui.py — tests for the Hug campaign admin UI screens.
 
 Covers the FastAPI-free HTML helpers and the data-flow helpers in the router module.
 No live HTTP server needed — mirrors the pattern established in test_hug_mint_reprint.py.
@@ -34,7 +34,7 @@ for _p in (_REPO_ROOT, _PYTHON_ROOT):
 from hug.targeting_catalog import TARGETING_CATALOG  # noqa: E402
 from hug.campaign_repository import upsert_campaign, get_campaign  # noqa: E402
 # FastAPI-free HTML helpers are always importable (no FastAPI dep in _html module).
-from adapters.inbound.web.screen_hug_campaign_html import (  # noqa: E402
+from adapters.inbound.web.screens.hug.screen_hug_campaign_html import (  # noqa: E402
     render_campaign_list,
     render_campaign_form,
     render_preview_panel,
@@ -45,7 +45,7 @@ from adapters.inbound.web.screen_hug_campaign_html import (  # noqa: E402
 # The router module imports FastAPI at module level; guard so the pure-HTML
 # and data-layer tests still run in the host Python (FastAPI lives in Docker).
 try:
-    from adapters.inbound.web.screen_hug_campaign import (  # noqa: E402
+    from adapters.inbound.web.screens.hug.screen_hug_campaign import (  # noqa: E402
         _parse_targeting,
         _build_row,
         _safe_campaign_id,
@@ -434,7 +434,7 @@ def test_unknown_attribute_rejected_by_validate_targeting():
 def test_valid_save_attempts_push(crm_conn):
     """After a successful upsert, push_campaign must be called with the saved row."""
     from hug.targeting_catalog import validate_targeting
-    from adapters.inbound.web.screen_hug_campaign import _attempt_push
+    from adapters.inbound.web.screens.hug.screen_hug_campaign import _attempt_push
 
     row = _minimal_campaign(targeting='{"tier": ["VIP"]}', priority=10)
     errors = validate_targeting(json.loads(row["targeting"]))
@@ -442,7 +442,7 @@ def test_valid_save_attempts_push(crm_conn):
 
     saved = upsert_campaign(crm_conn, row)
 
-    with patch("adapters.inbound.web.screen_hug_campaign.push_campaign") as mock_push:
+    with patch("adapters.inbound.web.screens.hug.screen_hug_campaign.push_campaign") as mock_push:
         mock_push.return_value = {"ok": True, "skipped": False}
         result = _attempt_push(dict(saved))
         mock_push.assert_called_once()
@@ -454,12 +454,12 @@ def test_valid_save_attempts_push(crm_conn):
 @_router_only
 def test_push_failure_does_not_crash_and_returns_false(crm_conn):
     """A push network error must be swallowed; local save already committed."""
-    from adapters.inbound.web.screen_hug_campaign import _attempt_push
+    from adapters.inbound.web.screens.hug.screen_hug_campaign import _attempt_push
 
     row = _minimal_campaign()
     saved = upsert_campaign(crm_conn, row)
 
-    with patch("adapters.inbound.web.screen_hug_campaign.push_campaign") as mock_push:
+    with patch("adapters.inbound.web.screens.hug.screen_hug_campaign.push_campaign") as mock_push:
         mock_push.return_value = {"ok": False, "skipped": False, "error": "timeout"}
         result = _attempt_push(dict(saved))
     assert result is False
@@ -478,7 +478,7 @@ def test_make_hug_campaign_router_returns_non_none(crm_conn):
     """
     try:
         from fastapi import APIRouter
-        from adapters.inbound.web.screen_hug_campaign import make_hug_campaign_router
+        from adapters.inbound.web.screens.hug.screen_hug_campaign import make_hug_campaign_router
         from adapters.outbound.sqlite.hug_campaign_repository_adapter import HugCampaignRepositoryAdapter
         port = HugCampaignRepositoryAdapter(crm_conn)
         result = make_hug_campaign_router(port)
@@ -645,7 +645,7 @@ def test_form_injects_preview_panel_when_provided():
 
 # ── Phase 6: history page HTML ────────────────────────────────────────────────
 
-from adapters.inbound.web.screen_hug_campaign_html_history import render_history_page  # noqa: E402
+from adapters.inbound.web.screens.hug.screen_hug_campaign_html_history import render_history_page  # noqa: E402
 
 
 class _FakeRow(dict):
@@ -753,7 +753,7 @@ def test_edit_form_shows_flash_amber_on_failure():
 
 def test_priority_duplicate_warning_no_collision(crm_conn):
     """No other campaign at same priority → no warning."""
-    from adapters.inbound.web.screen_hug_campaign_form_helpers import priority_duplicate_warning
+    from adapters.inbound.web.screens.hug.screen_hug_campaign_form_helpers import priority_duplicate_warning
     from adapters.outbound.sqlite.hug_campaign_repository_adapter import HugCampaignRepositoryAdapter
     port = HugCampaignRepositoryAdapter(crm_conn)
     upsert_campaign(crm_conn, _minimal_campaign(priority=50))
@@ -764,7 +764,7 @@ def test_priority_duplicate_warning_no_collision(crm_conn):
 
 def test_priority_duplicate_warning_collision_detected(crm_conn):
     """Another active campaign at same priority → warning mentions its name + next suggestion."""
-    from adapters.inbound.web.screen_hug_campaign_form_helpers import priority_duplicate_warning
+    from adapters.inbound.web.screens.hug.screen_hug_campaign_form_helpers import priority_duplicate_warning
     from adapters.outbound.sqlite.hug_campaign_repository_adapter import HugCampaignRepositoryAdapter
     port = HugCampaignRepositoryAdapter(crm_conn)
     upsert_campaign(crm_conn, _minimal_campaign(campaign_id="camp-a", priority=50))
@@ -779,7 +779,7 @@ def test_priority_duplicate_warning_collision_detected(crm_conn):
 
 def test_priority_duplicate_warning_archived_ignored(crm_conn):
     """Archived campaign at same priority must not trigger a warning."""
-    from adapters.inbound.web.screen_hug_campaign_form_helpers import priority_duplicate_warning
+    from adapters.inbound.web.screens.hug.screen_hug_campaign_form_helpers import priority_duplicate_warning
     from adapters.outbound.sqlite.hug_campaign_repository_adapter import HugCampaignRepositoryAdapter
     from hug.campaign_repository import archive_campaign
     port = HugCampaignRepositoryAdapter(crm_conn)
@@ -818,7 +818,7 @@ def test_restore_reverts_fields_and_appends_history(crm_conn):
 def test_restore_triggers_push(crm_conn):
     """Restore must call push_campaign with the restored row (best-effort)."""
     from hug.campaign_repository import restore_snapshot, list_history
-    from adapters.inbound.web.screen_hug_campaign_form_helpers import attempt_push
+    from adapters.inbound.web.screens.hug.screen_hug_campaign_form_helpers import attempt_push
 
     upsert_campaign(crm_conn, _minimal_campaign(name="V1"))
     upsert_campaign(crm_conn, _minimal_campaign(name="V2"))
@@ -827,7 +827,7 @@ def test_restore_triggers_push(crm_conn):
 
     restored = restore_snapshot(crm_conn, "test-camp-001", v1_snap_id)
 
-    with patch("adapters.inbound.web.screen_hug_campaign_form_helpers.push_campaign") as mock_push:
+    with patch("adapters.inbound.web.screens.hug.screen_hug_campaign_form_helpers.push_campaign") as mock_push:
         mock_push.return_value = {"ok": True, "skipped": False}
         result = attempt_push(dict(restored))
         mock_push.assert_called_once()

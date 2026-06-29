@@ -48,6 +48,22 @@ crm/
 └── docs/                       # UI spec, conventions
 ```
 
+## Hug Database Table Ownership
+
+Two SQLite databases serve the Hug subsystem. Changes to either schema must be
+coordinated between the two.
+
+| Database | Tables | Owner | Written by |
+|----------|--------|-------|------------|
+| `hug.db` | `hug_token`, `hug_customer_push` | Hug package | CLI mint tool (`hug_mint.py`), claim station handler |
+| `crm.db` | `crm_hug_campaign`, `crm_hug_campaign_history`, `crm_hug_voucher_allocation`, `crm_identity_link` | CRM server | `HugCampaignRepositoryAdapter`, `HugVoucherRepositoryAdapter` |
+
+**Why split?** `crm_hug_*` tables are owned by the CRM server (campaign admin UI,
+voucher attribution screen). They live in `crm.db` to avoid coupling the Hug token
+lifecycle (a separate, offline-capable process) to the CRM migration chain.
+`hug.db` is written only by Hug-specific tooling; the CRM server reads it via a
+separate connection (`hug_conn`) solely for token claim/mint screens.
+
 ## Plans & design
 
 Full schema design and phase breakdown: `plans/260613-1133-internal-crm-oltp-schema/plan.md`

@@ -21,7 +21,7 @@ from typing import Any
 
 log = logging.getLogger(__name__)
 
-_TIMEOUT_S = 8
+_TIMEOUT_S = 10
 _USER_AGENT = "FineJapan-Hug-Push/1.0"
 
 

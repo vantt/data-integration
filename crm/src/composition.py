@@ -1,4 +1,4 @@
-"""Composition root — the ONLY place that wires adapters to ports for the CRM Python server.
+﻿"""Composition root — the ONLY place that wires adapters to ports for the CRM Python server.
 
 Mirrors the wiring order in crm/src/cmd/server/main.go.
 All concrete adapter imports live here; the rest of the codebase depends on
@@ -56,6 +56,9 @@ from adapters.outbound.duckdb.dataquality_repository import DataQualityRepositor
 # ── Application services ──────────────────────────────────────────────────────
 from application.merge_service import MergeService
 from application.profile_service import ProfileService
+from application.note_service import NoteService
+from application.tag_service import TagService
+from application.custom_field_service import CustomFieldService
 from application.activity_service import ActivityService
 from application.task_service import TaskService
 from application.conversation_service import ConversationService
@@ -97,22 +100,22 @@ from adapters.inbound.web.format_helpers import (
     bdg_cls_filter, bdg_tip_filter,
 )
 from adapters.inbound.web.badge_catalog import bdg_lookup
-from adapters.inbound.web.screen_modals import init_modals, router as modals_router
-from adapters.inbound.web.screen_modals_party import make_party_modals_router
+from adapters.inbound.web.screens.modals.screen_modals import init_modals, router as modals_router
+from adapters.inbound.web.screens.modals.screen_modals_party import make_party_modals_router
 from adapters.inbound.web.screen_worklist import make_worklist_router
 from adapters.inbound.web.screen_customer_list import make_customer_list_router
-from adapters.inbound.web.screen_customer_360 import make_customer_360_router
+from adapters.inbound.web.screens.customer360.screen_customer_360 import make_customer_360_router
 from adapters.inbound.web.screen_tasks_board import make_tasks_board_router
 from adapters.inbound.web.screen_inbox import make_inbox_router
 from adapters.inbound.web.screen_order_detail import make_order_detail_router
-from adapters.inbound.web.screen_management import make_management_router
+from adapters.inbound.web.screens.management.screen_management import make_management_router
 from adapters.inbound.web.screen_search import make_search_router
 from adapters.inbound.web.screen_resolver import make_resolver_router
-from adapters.inbound.web.screen_hug_claim import make_hug_claim_router
-from adapters.inbound.web.screen_hug_mint import make_hug_mint_router
-from adapters.inbound.web.screen_hug_review import make_hug_review_router
-from adapters.inbound.web.screen_hug_campaign import make_hug_campaign_router
-from adapters.inbound.web.screen_hug_voucher_attribution import make_hug_voucher_attribution_router
+from adapters.inbound.web.screens.hug.screen_hug_claim import make_hug_claim_router
+from adapters.inbound.web.screens.hug.screen_hug_mint import make_hug_mint_router
+from adapters.inbound.web.screens.hug.screen_hug_review import make_hug_review_router
+from adapters.inbound.web.screens.hug.screen_hug_campaign import make_hug_campaign_router
+from adapters.inbound.web.screens.hug.screen_hug_voucher_attribution import make_hug_voucher_attribution_router
 
 # ── Hug — local token-provisioning master (separate Python-owned hug.db) ──────
 from hug import db as hug_db
@@ -156,6 +159,9 @@ class Services(TypedDict):
     """All application-layer services wired from SQLite repositories."""
     merge: MergeService
     profile: ProfileService
+    note: NoteService
+    tag: TagService
+    cf: CustomFieldService
     activity: ActivityService
     task: TaskService
     conv: ConversationService
@@ -300,10 +306,11 @@ def _build_services(sqlite_repos: SqliteRepos) -> Services:
         "profile": ProfileService(
             sqlite_repos["profile"],
             sqlite_repos["cf"],
-            sqlite_repos["tag"],
-            sqlite_repos["note"],
             db,
         ),
+        "note": NoteService(sqlite_repos["note"], db),
+        "tag": TagService(sqlite_repos["tag"], db),
+        "cf": CustomFieldService(sqlite_repos["cf"], db),
         "activity": ActivityService(sqlite_repos["activity"], sqlite_repos["last_contact"], db),
         "task": TaskService(sqlite_repos["task"], sqlite_repos["cache"], db),
         "conv": ConversationService(sqlite_repos["conv"], sqlite_repos["party"], db),
@@ -368,6 +375,71 @@ def _configure_templates(app: FastAPI):  # returns Jinja2Templates
     return templates
 
 
+class _ProfileTagCFComposite:
+    """Composite adapter satisfying both the ProfileSvc protocol (party modals)
+    and the settings_svc duck-type (management screen).
+
+    Delegates each method group to the matching application service so that
+    screens using a combined protocol receive a single object without requiring
+    ProfileService to know about tags or custom-field definitions.
+    """
+
+    def __init__(
+        self,
+        profile_svc: ProfileService,
+        tag_svc: TagService,
+        cf_svc: CustomFieldService,
+    ) -> None:
+        self._profile = profile_svc
+        self._tags = tag_svc
+        self._cf = cf_svc
+
+    # --- ProfileService delegates ---
+    def get_party_360(self, party_id):
+        return self._profile.get_party_360(party_id)
+
+    def upsert_profile(self, party_id, **kwargs):
+        return self._profile.upsert_profile(party_id, **kwargs)
+
+    # --- TagService delegates ---
+    def list_tags(self, category):
+        return self._tags.list_tags(category)
+
+    def list_party_tags(self, party_id):
+        return self._tags.list_party_tags(party_id)
+
+    def attach_tag(self, party_id, tag_id, user_id=None):
+        return self._tags.attach_tag(party_id, tag_id, user_id)
+
+    def detach_tag(self, party_id, tag_id):
+        return self._tags.detach_tag(party_id, tag_id)
+
+    def get_tag(self, tag_id):
+        return self._tags.get_tag(tag_id)
+
+    def create_tag(self, name, category, color, display_label=""):
+        return self._tags.create_tag(name, category, color, display_label)
+
+    def update_tag(self, tag_id, name, category, color, display_label=""):
+        return self._tags.update_tag(tag_id, name, category, color, display_label)
+
+    def delete_tag(self, tag_id):
+        return self._tags.delete_tag(tag_id)
+
+    # --- CustomFieldService delegates ---
+    def list_custom_field_defs(self, entity_type=None):
+        return self._cf.list_custom_field_defs(entity_type)
+
+    def get_custom_field_def(self, field_id):
+        return self._cf.get_custom_field_def(field_id)
+
+    def create_custom_field_def(self, def_data):
+        return self._cf.create_custom_field_def(def_data)
+
+    def update_custom_field_def(self, field_id, **kwargs):
+        return self._cf.update_custom_field_def(field_id, **kwargs)
+
+
 def _register_api_routes(
     app: FastAPI,
     sqlite_repos: SqliteRepos,
@@ -390,9 +462,9 @@ def _register_api_routes(
     app.include_router(make_customer360_router(
         profile_q=services["profile"],
         profile_w=services["profile"],
-        tags=services["profile"],
-        notes=services["profile"],
-        cf_admin=services["profile"],
+        tags=services["tag"],
+        notes=services["note"],
+        cf_admin=services["cf"],
         party_lookup=sqlite_repos["party"],
         insight_q=sqlite_repos["cache"],
     ))
@@ -424,9 +496,10 @@ def _register_web_routes(
     )
     app.include_router(modals_router)
 
+    _modal_profile = _ProfileTagCFComposite(services["profile"], services["tag"], services["cf"])
     app.include_router(make_party_modals_router(
         templates=templates,
-        profile=services["profile"],
+        profile=_modal_profile,
         party_repo=sqlite_repos["party"],
         task_svc=services["task"],
         app_users=sqlite_repos["app_user"],
@@ -459,7 +532,7 @@ def _register_web_routes(
         insight=sqlite_repos["cache"],
         activities=services["activity"],
         activity_log=services["activity"],
-        notes=services["profile"],
+        notes=services["note"],
         party_tasks=sqlite_repos["task"],
         party_finder=sqlite_repos["party"],
         customer_code_resolver=duckdb_repos["orders"],
@@ -499,6 +572,7 @@ def _register_web_routes(
         parties=sqlite_repos["party"],
         orders=duckdb_repos["orders"],
     ))
+    _settings_svc = _ProfileTagCFComposite(services["profile"], services["tag"], services["cf"])
     app.include_router(make_management_router(
         templates=templates,
         segments_svc=services["segment"],
@@ -506,7 +580,7 @@ def _register_web_routes(
         dedup_svc=sqlite_repos["dedup"],
         merger_svc=services["merge"],
         parties_svc=sqlite_repos["party"],
-        settings_svc=services["profile"],
+        settings_svc=_settings_svc,
         app_users_svc=sqlite_repos["app_user"],
     ))
 

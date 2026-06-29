@@ -1,4 +1,4 @@
-"""test_hug_mint_reprint.py — tests for the batch reprint feature in screen_hug_mint.
+﻿"""test_hug_mint_reprint.py — tests for the batch reprint feature in screen_hug_mint.
 
 Covers:
   - _render_batches: batch ID is wrapped in a clickable anchor to /hug/batch/labels
@@ -27,7 +27,7 @@ for _p in (_REPO_ROOT, _PYTHON_ROOT):
 from hug import db as hug_db  # noqa: E402
 from hug import repository  # noqa: E402
 # Import from the FastAPI-free HTML module so tests run without the framework.
-from adapters.inbound.web.screen_hug_mint_html import (  # noqa: E402
+from adapters.inbound.web.screens.hug.screen_hug_mint_html import (  # noqa: E402
     _render_batch_not_found,
     _render_batches,
 )

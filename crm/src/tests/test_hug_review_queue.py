@@ -1,4 +1,4 @@
-"""test_hug_review_queue.py — Tests for the Hug CS review-queue screen.
+﻿"""test_hug_review_queue.py — Tests for the Hug CS review-queue screen.
 
 Covers (no FastAPI TestClient required — same pattern as test_hug_mint_reprint.py):
   - GET /hug/review: queue lists only needs_review rows; empty state when none.
@@ -26,8 +26,8 @@ for _p in (_REPO_ROOT, _PYTHON_ROOT):
         sys.path.insert(0, _p)
 
 from crm.src.adapters.outbound.sqlite.connection import CRMDatabase           # noqa: E402
-from adapters.inbound.web.screen_hug_review_html import render_review_queue  # noqa: E402
-from adapters.inbound.web.screen_hug_review_data import (                     # noqa: E402
+from adapters.inbound.web.screens.hug.screen_hug_review_html import render_review_queue  # noqa: E402
+from adapters.inbound.web.screens.hug.screen_hug_review_data import (                     # noqa: E402
     load_queue,
     fetch_link,
     set_status,

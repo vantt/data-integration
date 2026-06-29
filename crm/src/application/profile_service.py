@@ -1,121 +1,51 @@
-"""ProfileService — Customer 360 business logic.
+"""ProfileService — Customer 360 profile read/write business logic.
 
 Depends only on domain entities and port protocols; no adapter imports.
+
+Responsibilities kept here:
+  - Party 360 view (get_party_360)
+  - Profile upsert / owner assignment
+  - Custom field value merge + validation (update_custom)
+
+Tag CRUD → TagService
+Note CRUD → NoteService
+Custom field definition CRUD → CustomFieldService
 """
 from __future__ import annotations
 
 import json
-import uuid
-from datetime import datetime
 from typing import TYPE_CHECKING, Optional
 
 from shared.timestamps import utc_now
-from domain.result import CustomFieldError, ValidationResult
+from domain.result import ValidationResult
 
 if TYPE_CHECKING:
     from adapters.outbound.sqlite.connection import CRMDatabase
+
+from application.custom_field_service import _validate_custom_map
+
 from domain.entities.profile import (
     CustomerProfile,
     CustomFieldDef,
-    PartyTag,
-    Note,
     Party360,
-    Tag,
 )
 from domain.ports.profile_repository import (
     ProfileRepository,
     CustomFieldRepository,
-    TagRepository,
-    NoteRepository,
 )
 
 
-# ---------------------------------------------------------------------------
-# Validator (ported from domain/custom_field_validator.go)
-# ---------------------------------------------------------------------------
-
-def _validate_custom_field(defn: CustomFieldDef, raw_value: str) -> Optional[CustomFieldError]:
-    """Validate one (def, raw_value) pair. Returns error or None."""
-    if defn.is_required and not raw_value.strip():
-        return CustomFieldError(defn.field_key, "required field is missing or empty")
-    if not raw_value:
-        return None  # allow clearing optional fields
-
-    dt = defn.data_type
-    if dt == "text":
-        return None
-    if dt == "number":
-        try:
-            float(raw_value)
-        except ValueError:
-            return CustomFieldError(defn.field_key, f"expected a number, got {raw_value!r}")
-    elif dt == "date":
-        try:
-            datetime.strptime(raw_value, "%Y-%m-%d")
-        except ValueError:
-            return CustomFieldError(defn.field_key, f"expected date YYYY-MM-DD, got {raw_value!r}")
-    elif dt == "bool":
-        if raw_value.lower() not in ("true", "false"):
-            return CustomFieldError(defn.field_key, f"expected true or false, got {raw_value!r}")
-    elif dt == "select":
-        opts = defn.options or []
-        if raw_value.strip() not in opts:
-            return CustomFieldError(defn.field_key, f"value {raw_value!r} not in allowed options {opts}")
-    elif dt == "multiselect":
-        opts = defn.options or []
-        for item in (p.strip() for p in raw_value.split(",") if p.strip()):
-            if item not in opts:
-                return CustomFieldError(defn.field_key, f"value {item!r} not in allowed options {opts}")
-    # unknown data_type: skip (forward-compatible)
-    return None
-
-
-def _validate_custom_map(
-    defs: list[CustomFieldDef], custom_map: dict[str, str]
-) -> list[CustomFieldError]:
-    """Validate a full key→value map against active defs. Returns all errors (non-short-circuit)."""
-    defs_by_key = {d.field_key: d for d in defs if d.is_active}
-    errors: list[CustomFieldError] = []
-
-    for key, val in custom_map.items():
-        defn = defs_by_key.get(key)
-        if defn is None:
-            continue  # unknown key — allowed, not validated
-        err = _validate_custom_field(defn, val)
-        if err:
-            errors.append(err)
-
-    # Check required active fields absent from the map entirely.
-    # Fields present in custom_map (even empty) are already validated by the first loop above.
-    for key, defn in defs_by_key.items():
-        if not defn.is_required:
-            continue
-        if key in custom_map:
-            continue
-        errors.append(CustomFieldError(key, "required field is missing or empty"))
-
-    return errors
-
-
-# ---------------------------------------------------------------------------
-# ProfileService
-# ---------------------------------------------------------------------------
-
 class ProfileService:
-    """Orchestrates profile enrichment, custom-field validation, tags, and notes."""
+    """Orchestrates profile enrichment and custom-field value validation."""
 
     def __init__(
         self,
         profile_repo: ProfileRepository,
         custom_field_repo: CustomFieldRepository,
-        tag_repo: TagRepository,
-        note_repo: NoteRepository,
         db: Optional[CRMDatabase] = None,
     ) -> None:
         self._profiles = profile_repo
         self._custom_fields = custom_field_repo
-        self._tags = tag_repo
-        self._notes = note_repo
         self._db = db
 
     # --- Profile ---
@@ -235,134 +165,6 @@ class ProfileService:
         if self._db:
             self._db.commit()
         return ValidationResult()
-
-    # --- Custom field defs ---
-
-    def list_custom_field_defs(self, entity_type: Optional[str] = None) -> list[CustomFieldDef]:
-        return self._custom_fields.list_active_defs(entity_type or "party")
-
-    def create_custom_field_def(self, def_data: CustomFieldDef) -> CustomFieldDef:
-        if not def_data.field_id:
-            def_data.field_id = str(uuid.uuid4())
-        if not def_data.entity_type:
-            def_data.entity_type = "party"
-        self._custom_fields.create_def(def_data)
-        if self._db:
-            self._db.commit()
-        return def_data
-
-    def update_custom_field_def(self, field_id: str, **kwargs) -> None:
-        defn = self._custom_fields.get_def(field_id)
-        if defn is None:
-            raise ValueError(f"profile service: custom field def {field_id!r} not found")
-        for k, v in kwargs.items():
-            if hasattr(defn, k):
-                setattr(defn, k, v)
-        self._custom_fields.update_def(defn)
-        if self._db:
-            self._db.commit()
-
-    # --- Tags ---
-
-    def attach_tag(self, party_id: str, tag_id: str, user_id: Optional[str] = None) -> None:
-        tag = self._tags.get_tag(tag_id)
-        if tag is None:
-            raise ValueError(f"profile service: tag {tag_id!r} not found")
-        pt = PartyTag(
-            party_id=party_id,
-            tag_id=tag_id,
-            name=tag.name,
-            tagged_at=utc_now(),
-            category=tag.category,
-            color=tag.color,
-            tagged_by=user_id,
-        )
-        self._tags.attach_tag(pt)
-        if self._db:
-            self._db.commit()
-
-    def detach_tag(self, party_id: str, tag_id: str) -> None:
-        self._tags.detach_tag(party_id, tag_id)
-        if self._db:
-            self._db.commit()
-
-    def list_party_tags(self, party_id: str) -> list[PartyTag]:
-        return self._tags.list_party_tags(party_id)
-
-    def list_tags(self, category: str) -> list[Tag]:
-        return self._tags.list_tags(category)
-
-    def get_tag(self, tag_id: str) -> Optional[Tag]:
-        return self._tags.get_tag(tag_id)
-
-    def create_tag(self, name: str, category: str, color: str, display_label: str = "") -> Tag:
-        tag = Tag(
-            tag_id=str(uuid.uuid4()),
-            name=name,
-            display_label=display_label or None,
-            category=category or "general",
-            color=color or "default",
-        )
-        self._tags.create_tag(tag)
-        if self._db:
-            self._db.commit()
-        return tag
-
-    def update_tag(self, tag_id: str, name: str, category: str, color: str, display_label: str = "") -> None:
-        tag = Tag(
-            tag_id=tag_id,
-            name=name,
-            display_label=display_label or None,
-            category=category or "general",
-            color=color or "default",
-        )
-        self._tags.update_tag(tag)
-        if self._db:
-            self._db.commit()
-
-    def delete_tag(self, tag_id: str) -> None:
-        self._tags.delete_tag(tag_id)
-        if self._db:
-            self._db.commit()
-
-    # --- Notes ---
-
-    def add_note(self, party_id: str, body: str, author_user_id: Optional[str] = None,
-                 note_type: str = "general", pinned: bool = False, visibility: str = "team",
-                 source_activity_id: Optional[str] = None) -> Note:
-        if not body.strip():
-            raise ValueError("profile service: note body must not be empty")
-        note = Note(
-            note_id=str(uuid.uuid4()),
-            party_id=party_id,
-            body=body,
-            author_user_id=author_user_id,
-            created_at=utc_now(),
-            note_type=note_type,
-            pinned=pinned,
-            visibility=visibility,
-            source_activity_id=source_activity_id,
-        )
-        self._notes.add_note(note)
-        if self._db:
-            self._db.commit()
-        return note
-
-    def list_notes(self, party_id: str) -> list[Note]:
-        return self._notes.list_notes(party_id)
-
-    def update_note(self, note_id: str, body: str, note_type: str = "general",
-                    pinned: bool = False, visibility: str = "team") -> None:
-        if not body.strip():
-            raise ValueError("profile service: note body must not be empty")
-        self._notes.update_note(note_id, body, note_type, pinned, visibility)
-        if self._db:
-            self._db.commit()
-
-    def delete_note(self, note_id: str) -> None:
-        self._notes.soft_delete_note(note_id)
-        if self._db:
-            self._db.commit()
 
     # --- Owner ---
 

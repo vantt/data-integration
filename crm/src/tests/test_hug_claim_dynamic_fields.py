@@ -1,4 +1,4 @@
-"""test_hug_claim_dynamic_fields.py — Phase 2: dynamic claim-field foundation tests.
+﻿"""test_hug_claim_dynamic_fields.py — Phase 2: dynamic claim-field foundation tests.
 
 Covers:
   - CLAIM_FIELDS structure + field metadata assertions
@@ -45,7 +45,7 @@ from hug import sapo_order_proxy      # noqa: E402
 try:
     from fastapi import FastAPI
     from fastapi.testclient import TestClient
-    from adapters.inbound.web.screen_hug_claim import make_hug_claim_router, _PROMOTED_COLS  # noqa: E402
+    from adapters.inbound.web.screens.hug.screen_hug_claim import make_hug_claim_router, _PROMOTED_COLS  # noqa: E402
     _FASTAPI_AVAILABLE = True
 except ImportError:
     _FASTAPI_AVAILABLE = False
@@ -525,7 +525,7 @@ try:
     # _render_page is a pure function; FastAPI is only needed for the router.
     # Import screen_hug_claim only when FastAPI is available (it imports APIRouter at module level).
     if _FASTAPI_AVAILABLE:
-        from adapters.inbound.web.screen_hug_claim import _render_page as _rp  # noqa: E402
+        from adapters.inbound.web.screens.hug.screen_hug_claim import _render_page as _rp  # noqa: E402
         _RENDER_PAGE_AVAILABLE = True
     else:
         _RENDER_PAGE_AVAILABLE = False
@@ -642,7 +642,7 @@ def test_render_page_syntax_warning_clean():
     import subprocess, sys
     result = subprocess.run(
         [sys.executable, "-W", "error::SyntaxWarning", "-c",
-         "from adapters.inbound.web.screen_hug_claim import _render_page"],
+         "from adapters.inbound.web.screens.hug.screen_hug_claim import _render_page"],
         capture_output=True, text=True,
         cwd=str(pathlib.Path(__file__).parents[1]),
     )

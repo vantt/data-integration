@@ -5,6 +5,11 @@ Graceful-empty: OperationalError for missing tables/columns → [] or None, neve
 Python is the SOLE writer of cache.db; this adapter never writes to it.
 Money = INTEGER (VND); realized_margin_pct (H010-corrected).
 date_key is ICT YYYYMMDD — passed through as-is, never recomputed.
+
+Cross-schema JOINs: list_all_action_queue() and _fetch_actions() intentionally JOIN
+crm.* tables (crm_party_identity, crm_action_state, crm_task). Both DBs are ATTACHed
+to the same connection via CRMDatabase. Schema changes to crm_task or crm_party_identity
+must be reflected in the SQL in this file.
 """
 
 from __future__ import annotations
@@ -126,6 +131,8 @@ class SQLiteCacheRepository:
         (e.g. before the first dbt run that materialises mart_customer_sku_action_queue).
         Returns [] when all tables are absent.
         """
+        # NOTE: wh_action_queue or wh_sku_action_queue schema changes must be applied
+        # in BOTH list_all_action_queue() and _fetch_actions().
         _customer_branch = """
             SELECT a.action_id, a.customer_key, a.action_type, a.rationale_vi,
                    a.value_at_stake_vnd, a.priority,
@@ -203,21 +210,11 @@ class SQLiteCacheRepository:
             else:
                 raise
         return [
-            ActionQueueItem(
-                action_id=row["action_id"],
-                customer_key=row["customer_key"],
-                action_type=row["action_type"],
-                rationale_vi=row["rationale_vi"] or "",
-                value_at_stake_vnd=row["value_at_stake_vnd"] or 0,
-                priority=row["priority"] or 0,
-                pending_since=row["pending_since"] or "",
-                generated_date=row["generated_date"] or "",
-                refreshed_at=row["refreshed_at"] or "",
+            self._row_to_action_queue_item(
+                row,
                 customer_name=row["customer_name"] or "",
                 party_id=row["party_id"],
                 customer_id=row["customer_id"],
-                status=row["status"] or "open",
-                snoozed_until=row["snoozed_until"],
                 top_affinity_product=row["top_affinity_product"] or "",
                 last_purchased_product=row["last_purchased_product"] or "",
             )
@@ -225,6 +222,29 @@ class SQLiteCacheRepository:
         ]
 
     # ── Private helpers ────────────────────────────────────────────────────────
+
+    @staticmethod
+    def _row_to_action_queue_item(row: sqlite3.Row, **extra: object) -> ActionQueueItem:
+        """Map the 11 common ActionQueueItem fields from a sqlite3.Row.
+
+        Method-specific fields (customer_name/party_id/customer_id/top_affinity_product/
+        last_purchased_product for list_all_action_queue; last_purchase_date/last_order_code/
+        last_sku_discount_rate for _fetch_actions) are passed by the caller as kwargs.
+        """
+        return ActionQueueItem(
+            action_id=row["action_id"],
+            customer_key=row["customer_key"],
+            action_type=row["action_type"],
+            rationale_vi=row["rationale_vi"] or "",
+            value_at_stake_vnd=row["value_at_stake_vnd"] or 0,
+            priority=row["priority"] or 0,
+            pending_since=row["pending_since"] or "",
+            generated_date=row["generated_date"] or "",
+            refreshed_at=row["refreshed_at"] or "",
+            status=row["status"] or "open",
+            snoozed_until=row["snoozed_until"],
+            **extra,  # type: ignore[arg-type]
+        )
 
     def _fetch_tier(self, customer_id: int) -> Optional[CustomerTier]:
         sql = """
@@ -321,6 +341,8 @@ class SQLiteCacheRepository:
         if not customer_key:
             return []
 
+        # NOTE: wh_action_queue or wh_sku_action_queue schema changes must be applied
+        # in BOTH list_all_action_queue() and _fetch_actions().
         _customer_branch = """
             SELECT a.action_id, a.customer_key, a.action_type, a.rationale_vi,
                    a.value_at_stake_vnd, a.priority,
@@ -368,18 +390,8 @@ class SQLiteCacheRepository:
             else:
                 raise
         return [
-            ActionQueueItem(
-                action_id=row["action_id"],
-                customer_key=row["customer_key"],
-                action_type=row["action_type"],
-                rationale_vi=row["rationale_vi"] or "",
-                value_at_stake_vnd=row["value_at_stake_vnd"] or 0,
-                priority=row["priority"] or 0,
-                pending_since=row["pending_since"] or "",
-                generated_date=row["generated_date"] or "",
-                refreshed_at=row["refreshed_at"] or "",
-                status=row["status"] or "open",
-                snoozed_until=row["snoozed_until"],
+            self._row_to_action_queue_item(
+                row,
                 last_purchase_date=row["last_purchase_date"] or "",
                 last_order_code=row["last_order_code"] or "",
                 last_sku_discount_rate=row["last_sku_discount_rate"],
