@@ -89,28 +89,46 @@
 
 /* ── Action queue card (C03) ────────────────────────────── */
 .aq-card {
-  display: flex; flex-direction: column; gap: var(--sp-3);
-  background: var(--bg-surface); border: 1px solid var(--border); border-left: 2px solid var(--accent);
-  border-radius: 0 var(--radii-control) var(--radii-control) 0; padding: var(--sp-4);
-  cursor: pointer; transition: border-color var(--dur-fast) var(--ease-fast), background var(--dur-fast) var(--ease-fast);
+  display: flex; flex-direction: column; gap: var(--sp-2);
+  background: var(--bg-surface); border: 1px solid var(--border); border-left: 3px solid var(--accent);
+  border-radius: 0 var(--radii-control) var(--radii-control) 0; padding: var(--sp-3) var(--sp-4);
+  transition: background var(--dur-fast) var(--ease-fast);
 }
 .aq-card:hover { background: var(--bg-raised); }
-.aq-card--compact { border-left-width: 2px; padding: var(--sp-3) var(--sp-4); gap: var(--sp-2); }
 .aq-card__top { display: flex; align-items: center; justify-content: space-between; gap: var(--sp-3); }
-.aq-card__val { font-family: var(--num-font); font-size: 13px; color: var(--fg-1); letter-spacing: var(--tracking-mono); display: inline-flex; align-items: center; gap: 5px; white-space: nowrap; }
-.aq-card__val svg { color: var(--accent); }
-.aq-card__rationale { font-size: 13.5px; color: var(--fg-1); line-height: var(--lh-snug); text-wrap: pretty; }
-.aq-card__foot { display: flex; }
-.aq-card__cta { padding: 7px 13px; font-size: 12.5px; }
+.aq-card__val { font-family: var(--num-font); font-size: 12px; color: var(--fg-tertiary); letter-spacing: var(--tracking-mono); display: inline-flex; align-items: center; gap: 4px; white-space: nowrap; }
+.aq-card__rationale { font-size: 13px; color: var(--fg-2); line-height: 1.5; text-wrap: pretty; }
+
+/* purchase context chip row — data-driven: show when last_purchase_date is present */
+.aq-ctx { display: flex; align-items: center; flex-wrap: wrap; gap: 4px; }
+.aq-ctx-chip {
+  display: inline-flex; align-items: center; gap: 3px;
+  font-family: var(--font-mono); font-size: 10px; letter-spacing: var(--tracking-mono);
+  color: var(--fg-tertiary); background: var(--bg-page);
+  border: 1px solid var(--border); border-radius: var(--radii-hairline);
+  padding: 1px 6px; white-space: nowrap;
+}
 
 /* ── Action session merged card (C03 ≥2 actions) ────────── */
-.aq-session-card { display: flex; flex-direction: column; gap: 0; background: var(--bg-surface); border: 1px solid var(--border); border-left: 2px solid var(--accent); border-radius: 0 var(--radii-control) var(--radii-control) 0; overflow: hidden; }
-.aq-session-card__head { padding: var(--sp-3) var(--sp-4) var(--sp-2); }
-.aq-session-card__cta { display: flex; align-items: center; gap: var(--sp-3); padding: var(--sp-3) var(--sp-4); border-top: 1px solid var(--border); }
-.aq-check-row { display: flex; align-items: flex-start; gap: var(--sp-3); padding: var(--sp-3) var(--sp-4); border-bottom: 1px solid var(--border); cursor: pointer; transition: background var(--dur-fast) var(--ease-fast); }
+.aq-session-card { display: flex; flex-direction: column; gap: 0; background: var(--bg-surface); border: 1px solid var(--border); border-left: 3px solid var(--accent); border-radius: 0 var(--radii-control) var(--radii-control) 0; overflow: hidden; }
+.aq-session-card__head {
+  display: flex; align-items: center; gap: var(--sp-2);
+  padding: var(--sp-2) var(--sp-4);
+  background: color-mix(in srgb, var(--accent) 4%, transparent);
+  border-bottom: 1px solid var(--border);
+}
+.aq-session-card__pill {
+  font-family: var(--font-mono); font-size: 10px; letter-spacing: var(--tracking-mono);
+  color: var(--accent); background: color-mix(in srgb, var(--accent) 12%, transparent);
+  border: 1px solid color-mix(in srgb, var(--accent) 30%, transparent);
+  border-radius: var(--radii-pill); padding: 2px 8px; white-space: nowrap; flex: none;
+}
+.aq-session-card__hint { font-size: 11.5px; color: var(--fg-tertiary); }
+.aq-session-card__cta { display: flex; align-items: center; justify-content: space-between; gap: var(--sp-3); padding: var(--sp-2) var(--sp-4); border-top: 1px solid var(--border); }
+.aq-check-row { display: flex; align-items: flex-start; gap: var(--sp-3); padding: var(--sp-2) var(--sp-4); border-bottom: 1px solid var(--border); cursor: pointer; transition: background var(--dur-fast) var(--ease-fast); }
 .aq-check-row:hover { background: var(--bg-raised); }
 .aq-check-row:last-of-type { border-bottom: none; }
-.aq-check-row--resolved { opacity: 0.5; cursor: default; pointer-events: none; }
+.aq-check-row--resolved { opacity: 0.45; cursor: default; pointer-events: none; }
 .aq-check-row input[type="checkbox"] { margin-top: 3px; flex-shrink: 0; accent-color: var(--accent); cursor: pointer; }
 .aq-check-row__body { flex: 1; display: flex; flex-direction: column; gap: var(--sp-1); min-width: 0; }
 .aq-check-row__top { display: flex; align-items: center; gap: var(--sp-2); flex-wrap: wrap; }

@@ -34,12 +34,14 @@
     {# ── Merged session checklist (≥2 unresolved) ── #}
     <div class="aq-session-card">
       <div class="aq-session-card__head">
-        <span style="font-size:12px;color:var(--fg-tertiary)">{{ ns.unresolved_count }} việc cần xử lý — tích chọn những việc đã xử lý rồi bấm Hoàn tất</span>
+        <span class="aq-session-card__pill">{{ ns.unresolved_count }} việc</span>
+        <span class="aq-session-card__hint">Tích chọn xong rồi bấm Hoàn tất</span>
       </div>
       <form hx-post="/customers/{{ party_id }}/actions/dismiss-session"
             hx-select="#aq-section"
             hx-target="#aq-section"
-            hx-swap="outerHTML">
+            hx-swap="outerHTML"
+            onchange="(function(f){var n=f.querySelectorAll('input[name=action_ids]:checked').length;f.querySelector('.aq-done-btn').textContent='Hoàn tất ('+n+') ✓';})(this)">
         {% for act in insight.actions %}{% if act.status != 'dismissed' and act.action_id not in resolved_action_ids %}
         <label class="aq-check-row">
           <input type="checkbox" name="action_ids" value="{{ act.action_id }}" checked>
@@ -47,12 +49,16 @@
             <div class="aq-check-row__top">
               <span class="{{ act.action_type | bdg_cls('action_type') }}" data-tooltip="{{ act.action_type | bdg_tip('action_type') }}">{{ act.action_type }}</span>
               {% if act.value_at_stake_vnd > 0 %}
-              <span style="font-size:11px;color:var(--fg-tertiary)">💰 {{ act.value_at_stake_vnd | fmt_vnd }}</span>
+              <span class="aq-ctx-chip">💰 {{ act.value_at_stake_vnd | fmt_vnd }}</span>
               {% endif %}
             </div>
             <div style="font-size:13px;color:var(--fg-2);line-height:1.5">{{ act.rationale_vi }}</div>
-            {% if act.action_type in ['USAGE_FOLLOWUP', 'PROGRESS_CHECK', 'REORDER_PREEMPT', 'REORDER_NUDGE', 'REORDER_OVERDUE'] and act.last_purchase_date %}
-            <div style="font-size:11px;color:var(--fg-tertiary)">Mua {{ act.last_purchase_date }}{% if act.last_order_code %} · {{ act.last_order_code }}{% endif %}{% if act.last_sku_discount_rate %} · giảm {{ "%.0f"|format(act.last_sku_discount_rate * 100) }}%{% endif %}</div>
+            {% if act.last_purchase_date %}
+            <div class="aq-ctx">
+              <span class="aq-ctx-chip">📅 {{ act.last_purchase_date }}</span>
+              {% if act.last_order_code %}<span class="aq-ctx-chip">{{ act.last_order_code }}</span>{% endif %}
+              {% if act.last_sku_discount_rate %}<span class="aq-ctx-chip">−{{ "%.0f"|format(act.last_sku_discount_rate * 100) }}%</span>{% endif %}
+            </div>
             {% endif %}
           </div>
         </label>
@@ -67,13 +73,12 @@
         {% endif %}{% endfor %}
         <div class="aq-session-card__cta">
           <button type="button"
-                  class="btn btn--secondary"
-                  style="font-size:13px;padding:5px 10px"
+                  class="btn btn--secondary btn--xs"
                   onclick="(function(){ var t=Array.from(document.querySelectorAll('[role=tab]')).find(function(b){ return b.textContent.trim()==='Gọi'; }); if(t) t.click(); })()">
             {% include "icons/phone.svg" %} Gọi ngay
           </button>
-          <button type="submit" class="btn btn--primary" style="font-size:13px;padding:5px 10px">
-            Hoàn tất ✓
+          <button type="submit" class="btn btn--primary btn--xs aq-done-btn">
+            Hoàn tất ({{ ns.unresolved_count }}) ✓
           </button>
         </div>
       </form>
@@ -88,22 +93,21 @@
     {% else %}
     <div class="stack stack-3">
       {% for act in insight.actions %}{% if act.status != 'dismissed' %}
-      <div class="aq-card aq-card--compact">
+      <div class="aq-card">
         <div class="aq-card__top">
           <span class="{{ act.action_type | bdg_cls('action_type') }}" data-tooltip="{{ act.action_type | bdg_tip('action_type') }}">{{ act.action_type }}</span>
           {% if act.value_at_stake_vnd > 0 %}
-          <span class="aq-card__val">💰 <span style="font-size:11px;opacity:.7">Giá trị ước tính</span> {{ act.value_at_stake_vnd | fmt_vnd }}</span>
+          <span class="aq-card__val">💰 {{ act.value_at_stake_vnd | fmt_vnd }}</span>
           {% endif %}
         </div>
-        <div style="font-size:13.5px;color:var(--fg-2);line-height:1.5;margin-top:var(--sp-2)">{{ act.rationale_vi }}</div>
-        {% if act.action_type in ['USAGE_FOLLOWUP', 'PROGRESS_CHECK', 'REORDER_PREEMPT', 'REORDER_NUDGE', 'REORDER_OVERDUE'] and act.last_purchase_date %}
-        <div style="font-size:11px;color:var(--fg-tertiary);margin-top:var(--sp-1)">
-          Mua {{ act.last_purchase_date }}{% if act.last_order_code %} · {{ act.last_order_code }}{% endif %}{% if act.last_sku_discount_rate %} · giảm {{ "%.0f"|format(act.last_sku_discount_rate * 100) }}%{% endif %}
+        <div class="aq-card__rationale">{{ act.rationale_vi }}</div>
+        {% if act.last_purchase_date %}
+        <div class="aq-ctx">
+          <span class="aq-ctx-chip">📅 {{ act.last_purchase_date }}</span>
+          {% if act.last_order_code %}<span class="aq-ctx-chip">{{ act.last_order_code }}</span>{% endif %}
+          {% if act.last_sku_discount_rate %}<span class="aq-ctx-chip">−{{ "%.0f"|format(act.last_sku_discount_rate * 100) }}%</span>{% endif %}
         </div>
         {% endif %}
-        <div style="margin-top:var(--sp-2)">
-          <span style="font-size:11px;color:var(--fg-tertiary)">Đề xuất ngày {{ act.generated_date }}</span>
-        </div>
         {# A-P01-001: resolved badge OR action CTAs #}
         {% if act.action_id in resolved_action_ids %}
         <div style="margin-top:var(--sp-3)">
