@@ -182,7 +182,9 @@ class SQLiteCacheRepository:
                    OR s.snoozed_until < date('now', '+7 hours'))
               AND t.task_id IS NULL"""
 
-        full_sql = _customer_branch + " UNION ALL " + _sku_branch + " ORDER BY priority ASC"
+        full_sql = (
+            "SELECT * FROM (" + _customer_branch + " UNION ALL " + _sku_branch + ") ORDER BY priority ASC"
+        )
         fallback_sql = _customer_branch + " ORDER BY priority ASC"
 
         try:
