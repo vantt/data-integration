@@ -17,4 +17,4 @@ SELECT
     occurred_at::TIMESTAMPTZ                    AS occurred_at,
     created_at::TIMESTAMPTZ                     AS logged_at
 FROM {{ source('crm_export', 'crm_activity_log') }}
-WHERE customer_id IS NOT NULL
+WHERE TRY_CAST(customer_id AS INTEGER) IS NOT NULL
