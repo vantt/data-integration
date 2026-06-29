@@ -403,6 +403,55 @@ models:
       - name: is_recently_contacted_positively
         data_type: boolean
 
+  - name: mart_customer_sku_action_queue
+    description: >
+      Product-aware outreach queue. Grain: (customer_key, sku) — one row per customer
+      per core SKU needing action today. One customer can have multiple rows (one per SKU).
+      Companion to mart_customer_action_queue (customer-level behavioral signals).
+      5 action types: USAGE_FOLLOWUP (D5-9), PROGRESS_CHECK (D12-16),
+      REORDER_OVERDUE (>7d past depletion), REORDER_NUDGE (D-7 to D0), REORDER_PREEMPT (within lead days).
+      Priority ranks integrate with the customer-level queue: 2=OVERDUE, 3=NUDGE, 5=PREEMPT,
+      6=PROGRESS_CHECK, 7=USAGE_FOLLOWUP.
+    columns:
+      - name: customer_key
+        data_type: varchar
+        tests: [not_null]
+      - name: customer_id
+        data_type: integer
+      - name: sku
+        data_type: varchar
+        tests: [not_null]
+      - name: product_group
+        data_type: varchar
+      - name: product_display_name
+        data_type: varchar
+      - name: last_purchase_date
+        data_type: date
+      - name: last_order_qty
+        data_type: integer
+      - name: effective_supply_days
+        data_type: integer
+      - name: estimated_depletion_date
+        data_type: date
+      - name: days_until_depletion
+        data_type: integer
+      - name: days_since_order
+        data_type: integer
+      - name: action_type
+        data_type: varchar
+        tests:
+          - not_null
+          - accepted_values:
+              arguments:
+                values: ['USAGE_FOLLOWUP', 'PROGRESS_CHECK', 'REORDER_OVERDUE', 'REORDER_NUDGE', 'REORDER_PREEMPT']
+      - name: priority_rank
+        data_type: integer
+        tests: [not_null]
+      - name: action_rationale
+        data_type: varchar
+      - name: queue_generated_at
+        data_type: timestamp with time zone
+
   - name: dim_customers_base
     description: "Base customer dimension (SCD Type 1) without circular dependencies."
     columns:

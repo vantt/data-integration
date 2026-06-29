@@ -132,6 +132,20 @@ _MART_ACTION_QUEUE_COLS = [
     "last_purchased_product",
 ]
 
+# mart_customer_sku_action_queue output columns (cache-facing names).
+# action_id derived Python-side as md5(customer_key|sku|action_type|generated_date).
+_MART_SKU_ACTION_QUEUE_COLS = [
+    "customer_key",
+    "sku",
+    "product_display_name",
+    "action_type",
+    "rationale_vi",
+    "days_until_depletion",
+    "estimated_depletion_date",
+    "priority",
+    "generated_date",
+]
+
 # dim_products output columns for product catalog (cache-facing names).
 # Live warehouse uses brand_name (→ brand) and last_sold_price (→ unit_price).
 _DIM_PRODUCTS_COLS = [
@@ -304,6 +318,36 @@ def fetch_action_queue(conn: "duckdb.DuckDBPyConnection") -> list[dict]:
     )
     rows = _fetch(conn, sql)
     _check_columns(rows, _MART_ACTION_QUEUE_COLS, "main_marts.mart_customer_action_queue")
+    return rows
+
+
+def fetch_sku_action_queue(conn: "duckdb.DuckDBPyConnection") -> list[dict]:
+    """Read SKU-level action queue from main_marts.mart_customer_sku_action_queue.
+
+    Returns [] gracefully when the mart does not exist yet (first-run before dbt build).
+    Source columns: action_rationale→rationale_vi, priority_rank→priority,
+    estimated_depletion_date (DATE) cast to text, queue_generated_at truncated to date.
+    """
+    sql = (
+        "SELECT "
+        "  customer_key, "
+        "  sku, "
+        "  product_display_name, "
+        "  action_type, "
+        "  action_rationale                                    AS rationale_vi, "
+        "  days_until_depletion, "
+        "  strftime(estimated_depletion_date, '%Y-%m-%d')     AS estimated_depletion_date, "
+        "  priority_rank                                       AS priority, "
+        "  strftime(queue_generated_at, '%Y-%m-%d')           AS generated_date "
+        "FROM main_marts.mart_customer_sku_action_queue"
+    )
+    try:
+        rows = _fetch(conn, sql)
+    except Exception as exc:
+        if "does not exist" in str(exc).lower() or "catalog error" in str(exc).lower():
+            return []
+        raise
+    _check_columns(rows, _MART_SKU_ACTION_QUEUE_COLS, "main_marts.mart_customer_sku_action_queue")
     return rows
 
 

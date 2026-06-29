@@ -73,8 +73,11 @@ _CATALOG: dict[str, dict[str, BadgeDef]] = {
     },
     "action_type": {
         "call_now":         BadgeDef("bad",    "Gọi ngay — khách có nguy cơ rời bỏ cao"),
-        "reorder_nudge":    BadgeDef("warn",   "Nhắc tái đặt hàng — sắp đến chu kỳ"),
-        "reorder_preempt":  BadgeDef("warn",   "Nhắc trước chu kỳ — sắp tới hạn mua"),
+        "reorder_overdue":  BadgeDef("bad",    "Đứt liệu trình — quá hạn dùng sản phẩm"),
+        "reorder_nudge":    BadgeDef("warn",   "Nhắc tái đặt hàng — sắp đến hạn hết sản phẩm"),
+        "reorder_preempt":  BadgeDef("warn",   "Đặt trước — trong vòng 7 ngày hết sản phẩm"),
+        "progress_check":   BadgeDef("accent", "Hỏi thăm tiến độ — dùng được 12-16 ngày"),
+        "usage_followup":   BadgeDef("accent", "Hỗ trợ trải nghiệm — dùng được 5-9 ngày"),
         "win_back":         BadgeDef("warn",   "Tái kích hoạt — đã lâu không mua"),
         "second_order":     BadgeDef("warn",   "Đẩy đơn 2 — mới mua lần đầu"),
         "high_cancel_risk": BadgeDef("bad",    "Tỷ lệ huỷ cao — cần xác nhận đơn"),

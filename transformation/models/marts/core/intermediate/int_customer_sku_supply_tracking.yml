@@ -1,0 +1,43 @@
+version: 2
+
+models:
+  - name: int_customer_sku_supply_tracking
+    description: >
+      Per-customer × SKU supply tracking with recursive stacking.
+      Grain: (customer_key, sku) — one row per customer per configured core SKU.
+      Computes estimated_depletion_date using recursive LAG stacking:
+        depletion(n) = GREATEST(purchase_date(n), depletion(n-1)) + effective_supply(n)
+      effective_supply = qty × supply_days_per_unit × dose_reduction_buffer.
+      Covers the 8 Fine Japan core SKUs from seed_sku_regimen_config only.
+      Materialized as TABLE (not incremental) — recursive CTE needs full history.
+    columns:
+      - name: customer_key
+        description: "Surrogate customer key (FK to dim_customers)."
+        tests: [not_null]
+      - name: sku
+        description: "Core SKU code (from seed_sku_regimen_config)."
+        tests: [not_null]
+      - name: product_group
+        description: "Product group identifier (e.g. cordyceps_vien)."
+      - name: display_name
+        description: "Human-readable product name for action queue rationale strings."
+      - name: supply_days_per_unit
+        description: "Standard days one unit lasts at recommended dose."
+      - name: dose_reduction_buffer
+        description: "Calibrated multiplier: >1 means customers use slower than standard."
+      - name: remind_lead_days
+        description: "Days before depletion to start REORDER_PREEMPT signal."
+      - name: journey_enabled
+        description: "Whether D5-9 / D12-16 journey touchpoints fire for this SKU."
+      - name: last_purchase_date
+        description: "Date of the customer's most recent purchase of this SKU (ICT)."
+      - name: last_order_qty
+        description: "Total units purchased in the most recent purchase event."
+      - name: effective_supply_days
+        description: "Stacked supply days remaining from last purchase = qty × supply_days × buffer."
+      - name: estimated_depletion_date
+        description: "Estimated date customer runs out of supply (post-stacking). Core signal for the action queue."
+    tests:
+      - dbt_utils.unique_combination_of_columns:
+          arguments:
+            combination_of_columns: [customer_key, sku]

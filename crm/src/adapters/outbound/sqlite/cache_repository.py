@@ -119,13 +119,14 @@ class SQLiteCacheRepository:
         ]
 
     def list_all_action_queue(self) -> list[ActionQueueItem]:
-        """Return actionable wh_action_queue rows for the worklist.
+        """Return actionable rows from wh_action_queue UNION wh_sku_action_queue.
 
-        Filters out: dismissed actions, snoozed-until-future actions,
-        and actions that already have an open/doing crm_task.
-        Returns [] when table is absent.
+        Filters out: dismissed, snoozed-until-future, and actions with open crm_task.
+        Falls back to customer-level queue only if wh_sku_action_queue is absent
+        (e.g. before the first dbt run that materialises mart_customer_sku_action_queue).
+        Returns [] when all tables are absent.
         """
-        sql = """
+        _customer_branch = """
             SELECT a.action_id, a.customer_key, a.action_type, a.rationale_vi,
                    a.value_at_stake_vnd, a.priority,
                    COALESCE(a.pending_since, a.generated_date) AS pending_since,
@@ -151,15 +152,52 @@ class SQLiteCacheRepository:
             WHERE COALESCE(s.status, 'open') != 'dismissed'
               AND (COALESCE(s.status, 'open') != 'snoozed'
                    OR s.snoozed_until < date('now', '+7 hours'))
-              AND t.task_id IS NULL
-            ORDER BY a.priority ASC
-        """
+              AND t.task_id IS NULL"""
+
+        _sku_branch = """
+            SELECT sa.action_id, sa.customer_key, sa.action_type, sa.rationale_vi,
+                   0 AS value_at_stake_vnd, sa.priority,
+                   COALESCE(sa.pending_since, sa.generated_date) AS pending_since,
+                   sa.generated_date, sa.refreshed_at,
+                   COALESCE(bc.display_name, '') AS customer_name,
+                   pi.party_id AS party_id,
+                   bc.customer_id AS customer_id,
+                   COALESCE(s.status, 'open') AS status,
+                   s.snoozed_until,
+                   COALESCE(sa.product_display_name, '') AS top_affinity_product,
+                   COALESCE(sa.sku, '') AS last_purchased_product
+            FROM cache.wh_sku_action_queue sa
+            LEFT JOIN cache.wh_customer_base bc ON bc.customer_key = sa.customer_key
+            LEFT JOIN cache.wh_party_seed ps ON ps.customer_key = sa.customer_key
+            LEFT JOIN crm_party_identity pi
+                   ON pi.identity_type = 'sapo_customer'
+                  AND pi.identity_value = CAST(ps.customer_id AS TEXT)
+            LEFT JOIN crm_action_state s ON s.action_id = sa.action_id
+            LEFT JOIN crm_task t
+                   ON t.source = 'action_queue'
+                  AND t.source_ref = sa.action_id
+                  AND t.status NOT IN ('done', 'cancelled')
+            WHERE COALESCE(s.status, 'open') != 'dismissed'
+              AND (COALESCE(s.status, 'open') != 'snoozed'
+                   OR s.snoozed_until < date('now', '+7 hours'))
+              AND t.task_id IS NULL"""
+
+        full_sql = _customer_branch + " UNION ALL " + _sku_branch + " ORDER BY priority ASC"
+        fallback_sql = _customer_branch + " ORDER BY priority ASC"
+
         try:
-            rows = self._conn.execute(sql).fetchall()
+            rows = self._conn.execute(full_sql).fetchall()
         except sqlite3.OperationalError as exc:
             if _is_missing_table(exc) or _is_missing_column(exc):
-                return []
-            raise
+                # wh_sku_action_queue not yet created — fall back to customer-level only
+                try:
+                    rows = self._conn.execute(fallback_sql).fetchall()
+                except sqlite3.OperationalError as exc2:
+                    if _is_missing_table(exc2) or _is_missing_column(exc2):
+                        return []
+                    raise
+            else:
+                raise
         return [
             ActionQueueItem(
                 action_id=row["action_id"],

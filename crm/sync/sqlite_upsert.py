@@ -226,6 +226,70 @@ def upsert_action_queue(conn: sqlite3.Connection, rows: list[dict]) -> int:
     return len(rows)
 
 
+def upsert_sku_action_queue(conn: sqlite3.Connection, rows: list[dict]) -> int:
+    """Upsert SKU-level action queue. Grain: (customer_key, sku, action_type).
+
+    action_id = md5(customer_key|sku|action_type|pending_since) — stable per episode.
+    Conflict key: (customer_key, sku, action_type) — one active row per type per SKU per customer.
+    On conflict: updates data fields only; preserves action_id and pending_since.
+    Cleanup: deletes rows not in today's batch (signal gone = no longer actionable).
+    """
+    import hashlib
+
+    upsert_sql = (
+        "INSERT INTO wh_sku_action_queue "
+        "  (action_id, customer_key, sku, product_display_name, action_type, rationale_vi, "
+        "   days_until_depletion, estimated_depletion_date, priority, pending_since, generated_date) "
+        "VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?) "
+        "ON CONFLICT(customer_key, sku, action_type) DO UPDATE SET "
+        "  generated_date           = excluded.generated_date, "
+        "  rationale_vi             = excluded.rationale_vi, "
+        "  days_until_depletion     = excluded.days_until_depletion, "
+        "  estimated_depletion_date = excluded.estimated_depletion_date, "
+        "  priority                 = excluded.priority, "
+        "  product_display_name     = excluded.product_display_name, "
+        "  refreshed_at             = strftime('%Y-%m-%dT%H:%M:%fZ','now')"
+        # action_id and pending_since intentionally preserved on conflict
+    )
+
+    def _action_id(customer_key: str, sku: str, action_type: str, date: str) -> str:
+        return hashlib.md5(f"{customer_key}|{sku}|{action_type}|{date}".encode()).hexdigest()
+
+    values = [
+        (
+            _action_id(r["customer_key"], r["sku"], r["action_type"], r["generated_date"]),
+            r["customer_key"],
+            r["sku"],
+            r.get("product_display_name"),
+            r["action_type"],
+            r.get("rationale_vi"),
+            r.get("days_until_depletion"),
+            r.get("estimated_depletion_date"),
+            r.get("priority"),
+            r["generated_date"],   # pending_since = generated_date on first insert
+            r["generated_date"],
+        )
+        for r in rows
+    ]
+
+    with conn:
+        conn.executemany(upsert_sql, values)
+
+        # Remove rows whose warehouse signal disappeared.
+        if rows:
+            placeholders = ",".join(["(?,?,?)"] * len(rows))
+            flat_args = [v for r in rows for v in (r["customer_key"], r["sku"], r["action_type"])]
+            conn.execute(
+                f"DELETE FROM wh_sku_action_queue "
+                f"WHERE (customer_key, sku, action_type) NOT IN ({placeholders})",
+                flat_args,
+            )
+        else:
+            conn.execute("DELETE FROM wh_sku_action_queue")
+
+    return len(rows)
+
+
 def upsert_customer_tier(conn: sqlite3.Connection, rows: list[dict]) -> int:
     """Full-replace upsert for wh_customer_tier (1 row per customer, keyed on customer_key).
 

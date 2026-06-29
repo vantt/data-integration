@@ -187,6 +187,28 @@ CREATE TABLE IF NOT EXISTS wh_deadstock_target (
   PRIMARY KEY (product_key, customer_key)
 );
 
+-- ─── SKU-level action queue (product-aware regimen reminders) ────────────────
+-- Grain: (customer_key, sku, action_type) — one row per customer per core SKU per signal type.
+-- Companion to wh_action_queue (customer-level behavioral NBA).
+-- action_id = md5(customer_key|sku|action_type|pending_since) — stable per episode.
+-- 5 signal types: USAGE_FOLLOWUP, PROGRESS_CHECK, REORDER_PREEMPT, REORDER_NUDGE, REORDER_OVERDUE.
+
+CREATE TABLE IF NOT EXISTS wh_sku_action_queue (
+  action_id                TEXT    PRIMARY KEY,  -- md5(customer_key|sku|action_type|pending_since)
+  customer_key             TEXT,
+  sku                      TEXT,                 -- Fine Japan core SKU (e.g. VCSC20001L001)
+  product_display_name     TEXT,                 -- human-readable product name (e.g. 'Cordyceps')
+  action_type              TEXT,                 -- USAGE_FOLLOWUP|PROGRESS_CHECK|REORDER_PREEMPT|REORDER_NUDGE|REORDER_OVERDUE
+  rationale_vi             TEXT,                 -- Vietnamese rationale string (product name + context embedded)
+  days_until_depletion     INTEGER,              -- days until supply runs out (<0 = overdue)
+  estimated_depletion_date TEXT,                 -- YYYY-MM-DD
+  priority                 INTEGER,
+  pending_since            TEXT,                 -- first day this episode appeared (never updated)
+  generated_date           TEXT,                 -- last warehouse refresh date
+  refreshed_at             TEXT NOT NULL DEFAULT (strftime('%Y-%m-%dT%H:%M:%fZ','now'))
+  -- status/snoozed_until live in crm.db:crm_action_state (keyed on action_id, same mechanism)
+);
+
 -- ─── INDEXES ─────────────────────────────────────────────────────────────────
 
 CREATE INDEX IF NOT EXISTS idx_wh_customer_insight_customer_id  ON wh_customer_insight (customer_id);
@@ -200,3 +222,5 @@ CREATE INDEX IF NOT EXISTS idx_wh_customer_tier_customer_id      ON wh_customer_
 CREATE INDEX IF NOT EXISTS idx_wh_customer_tier_strategic_tier   ON wh_customer_tier (strategic_tier);
 CREATE INDEX IF NOT EXISTS idx_wh_deadstock_target_route_holdout ON wh_deadstock_target (route_channel, is_holdout);
 CREATE INDEX IF NOT EXISTS idx_wh_deadstock_target_customer_key  ON wh_deadstock_target (customer_key);
+CREATE UNIQUE INDEX IF NOT EXISTS uidx_wh_sku_action_queue_key ON wh_sku_action_queue (customer_key, sku, action_type);
+CREATE INDEX IF NOT EXISTS idx_wh_sku_action_queue_customer ON wh_sku_action_queue (customer_key, priority);

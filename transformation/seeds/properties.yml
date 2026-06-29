@@ -48,6 +48,22 @@ seeds:
         misa_qty_multiplier: integer
         notes: varchar
 
+  - name: seed_sku_regimen_config
+    description: >
+      Per-SKU supply regimen config for the customer SKU action queue.
+      supply_days_per_unit: days 1 unit lasts at standard dose.
+      dose_reduction_buffer: multiplier from calibrated repurchase data (>1 = customers use slower than standard).
+      Buffer = 1.0 is a safe default when data is insufficient.
+    config:
+      column_types:
+        sku: varchar
+        product_group: varchar
+        display_name: varchar
+        supply_days_per_unit: integer
+        dose_reduction_buffer: double
+        remind_lead_days: integer
+        journey_enabled: boolean
+
   - name: seed_channel_targets
     description: >
       Raw CSV seed: channel-level budget targets maintained manually. One row per
