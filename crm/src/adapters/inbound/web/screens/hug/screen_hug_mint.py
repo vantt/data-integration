@@ -13,9 +13,9 @@ Design notes:
   that mirrors screen_hug_claim.py.
 - HTML rendering helpers live in screen_hug_mint_html.py (no FastAPI dependency)
   so they can be unit-tested independently of the HTTP framework.
-- QR labels HTML is produced by hug_qr_print.render_labels_html() — the same
-  function the CLI calls — so token generation and QR rendering are never
-  duplicated (DRY).
+- QR labels HTML is produced by hug.labels.render_labels_html() — the same
+  function the CLI (crm/ops/hug_qr_print.py) calls — so token generation and
+  QR rendering are never duplicated (DRY).
 - Minting delegates to token_port.mint_batch() — same function the CLI uses.
 - The labels page embeds an "← Sinh batch khác" back-link and a print button so
   warehouse staff never need the CLI.
@@ -41,7 +41,7 @@ from adapters.inbound.web.screens.hug.screen_hug_mint_html import (
 )
 
 # Shared QR renderer — same function used by the hug_qr_print.py CLI.
-from hug_qr_print import render_labels_html
+from hug.labels import render_labels_html
 
 log = logging.getLogger(__name__)
 

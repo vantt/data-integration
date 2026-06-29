@@ -140,6 +140,13 @@
 .aq-check-row input[type="checkbox"] { margin-top: 3px; flex-shrink: 0; accent-color: var(--accent); cursor: pointer; }
 .aq-check-row__body { flex: 1; display: flex; flex-direction: column; gap: var(--sp-1); min-width: 0; }
 .aq-check-row__top { display: flex; align-items: center; gap: var(--sp-2); flex-wrap: wrap; }
+.aq-check-row__val { font-family: var(--num-font); font-size: 11px; color: var(--fg-tertiary); letter-spacing: var(--tracking-mono); margin-left: auto; white-space: nowrap; }
+.aq-check-row__why { font-size: 13px; color: var(--fg-1); line-height: var(--lh-snug); }
+/* client-side tick: item marked done in session checklist (reversible) */
+.aq-check-row--done { background: color-mix(in srgb, var(--moss-bg) 25%, transparent); }
+.aq-check-row--done:hover { background: color-mix(in srgb, var(--moss-bg) 35%, transparent); }
+.aq-check-row--done .aq-check-row__top { opacity: 0.6; }
+.aq-check-row--done .aq-check-row__why { color: var(--fg-tertiary); text-decoration: line-through; }
 
 /* ── Worklist task rows ─────────────────────────────────── */
 .wl-list { display: flex; flex-direction: column; border: 1px solid var(--border); border-radius: var(--radii-control); overflow: hidden; background: var(--bg-surface); }

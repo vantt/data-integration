@@ -31,7 +31,7 @@ from adapters.inbound.web.screens.hug.screen_hug_mint_html import (  # noqa: E40
     _render_batch_not_found,
     _render_batches,
 )
-from hug_qr_print import render_labels_html  # noqa: E402
+from hug.labels import render_labels_html  # noqa: E402
 
 
 # ── fixtures ──────────────────────────────────────────────────────────────────

@@ -2,6 +2,56 @@
 
 Internal CRM OLTP sub-project. Read global `AGENTS.md` at repo root first — this file adds CRM-specific constraints only.
 
+## Architecture & Clean Code Rules
+
+### Hexagonal architecture — mandatory
+
+**Every repository adapter must have a port.**
+Before writing `class SQLiteXxxRepository`, create `crm/src/domain/ports/xxx_repository.py` with a `typing.Protocol` defining the public API. Services accept the Protocol type, never the concrete class. Check `domain/ports/` first — don't add a port that already exists.
+
+**Single composition root.**
+`crm/src/composition.py` is the ONLY place that imports concrete adapter classes and wires them to ports. All other code (`application/`, `adapters/inbound/`) depends on protocols/ports only. Never import a concrete SQLite or DuckDB adapter outside `composition.py`.
+
+**No duplicate wiring.**
+Each service or composite adapter is instantiated exactly once in `composition.py`. If two screens need the same combined service object, share one instance — don't construct identical objects twice.
+
+**Cross-cutting composites.**
+When 2+ screens need methods from multiple services (e.g., Profile + Tag + CustomField), use `_XxxComposite` in `composition.py` as a thin delegating adapter. Instantiate once; pass the same instance to all screens that need it. Do NOT add cross-cutting logic to `_XxxComposite` — it only delegates.
+
+### Screen boundaries — typed protocols required
+
+Every `make_xxx_router(svc: Any, ...)` parameter typed `Any` is a bug waiting to happen. For each service parameter passed into a screen factory:
+
+1. Define a `typing.Protocol` in the same file (or in `screen_modal_shared.py` if shared across modals) that lists exactly the methods the screen calls.
+2. Use the Protocol as the type annotation: `def make_xxx_router(templates, my_svc: MySvc, ...)`.
+3. The Protocol lives in the **adapter layer** (`adapters/inbound/web/screens/...`), not in `domain/ports/`. It describes what the screen needs, not what the repo stores.
+
+**Split read/write when access patterns differ.**
+If a screen only reads, give it a narrower read-only protocol (e.g., `TaskQuerier` with `list_by_party`). If another screen also writes, give it `TaskCreator` separately. Never force a screen to accept a fat service interface just because another screen needs the write methods.
+
+### Code placement rules
+
+| Code type | Where it lives |
+|---|---|
+| Standalone CLI / ops scripts | `crm/ops/` |
+| Functions imported by app code | proper module under `crm/src/` |
+| Domain entities (pure dataclasses) | `crm/src/domain/entities/` |
+| Port protocols | `crm/src/domain/ports/` |
+| Business logic | `crm/src/application/` |
+| HTTP/web handlers | `crm/src/adapters/inbound/` |
+| DB adapters | `crm/src/adapters/outbound/` |
+
+**Never mix library code into a CLI script.** If a CLI script contains a function (`render_html`, `parse_x`) that the app imports, extract that function to a proper `src/` module first; the CLI becomes a thin wrapper.
+
+### Service & repository discipline
+
+- Services (`application/`) accept **port protocols**, return **domain entities**. No HTTP, no SQLite, no template imports.
+- Repositories (`adapters/outbound/`) accept a `sqlite3.Connection` or similar — not a service. Don't call services from repos.
+- When adding a method to a service, verify the method name matches what the repository port actually exposes. A typo in a method name (`list_targets_by_campaign_and_status` vs `list_targets`) is a silent runtime bug.
+- `domain/ports/` must not contain duplicate protocol definitions. If a port for `XxxRepository` exists in `xxx_repository.py`, do not redeclare it in `profile_repository.py` or elsewhere.
+
+---
+
 ## Boundary rule
 
 Python app, migrations, Python sync, and SQLite data files live ONLY under `crm/`. Never cross-write into `ingestion/`, `transformation/`, `orchestration/`, `detailView/`, or any other sub-project.

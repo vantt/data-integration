@@ -1,4 +1,4 @@
-"""hug_qr_print.py — render a minted batch as printable QR labels (HTML).
+"""hug/labels.py — render a minted batch as printable QR labels (HTML).
 
 Each label shows:
   - a QR encoding  https://{HUG_DOMAIN}/h/{token}
@@ -16,27 +16,18 @@ QR rendering:
     the qrcodejs CDN library, so labels still print from a connected machine.
     A warning is logged so the dependency can be added when going fully offline.
 
-Usage:
-    python hug_qr_print.py --batch-id B-20260619-...  [--out labels.html] [--data ./data]
-    python hug_qr_print.py --latest                    # most recent batch
+Imported by both the CLI (crm/ops/hug_qr_print.py) and the web admin screen
+(screen_hug_mint.py) so QR HTML is never duplicated.
 """
 from __future__ import annotations
 
-import argparse
 import html
 import logging
-import os
-import sys
 
-sys.path.insert(0, os.path.dirname(__file__))
+from hug import config as hug_config
+from hug.op_types import OP_TYPES, op_meta
+from hug.tokens import grouped_code
 
-from hug import config as hug_config  # noqa: E402
-from hug import db as hug_db  # noqa: E402
-from hug import repository  # noqa: E402
-from hug.op_types import OP_TYPES, op_meta  # noqa: E402
-from hug.tokens import grouped_code  # noqa: E402
-
-logging.basicConfig(level=logging.INFO, format="%(levelname)s %(message)s")
 log = logging.getLogger(__name__)
 
 
@@ -114,8 +105,8 @@ def render_labels_html(
     86mm thermal roll.  Operator can pick a different preset or enter manual
     dimensions; settings persist to localStorage.
 
-    This function is imported by both the CLI (hug_qr_print.py) and the web
-    admin screen (screen_hug_mint.py) so QR HTML is never duplicated.
+    Imported by both the CLI (crm/ops/hug_qr_print.py) and the web admin screen
+    (screen_hug_mint.py) so QR HTML is never duplicated.
     """
     badge = op_meta(op_type)
     use_server_qr = _qr_svg("probe") is not None
@@ -391,53 +382,3 @@ def render_labels_html(
   {layout_js}
 </body>
 </html>"""
-
-
-# Keep internal alias used by main() for the CLI path (no API change).
-_render = render_labels_html
-
-
-def main() -> None:
-    parser = argparse.ArgumentParser(description="Render Hug QR labels for a batch.")
-    g = parser.add_mutually_exclusive_group(required=True)
-    g.add_argument("--batch-id", help="Batch id to print.")
-    g.add_argument("--latest", action="store_true", help="Print the most recent batch.")
-    parser.add_argument("--out", default=None, help="Output HTML path (default: hug_labels_<batch>.html).")
-    parser.add_argument("--data", default=None, help="Override data dir (else CRM_DATA_DIR / HUG_DB).")
-    args = parser.parse_args()
-
-    if args.data:
-        os.environ["CRM_DATA_DIR"] = args.data
-
-    conn = hug_db.connect()
-    try:
-        if args.latest:
-            batches = repository.list_recent_batches(conn, limit=1)
-            if not batches:
-                log.error("no batches found in hug.db")
-                sys.exit(1)
-            batch_id = batches[0]["batch_id"]
-        else:
-            batch_id = args.batch_id
-        rows = repository.list_batch(conn, batch_id)
-    finally:
-        conn.close()
-
-    if not rows:
-        log.error("batch %s has no tokens", batch_id)
-        sys.exit(1)
-
-    tokens = [r["token"] for r in rows]
-    # op_type is uniform across a mint batch — read it off the first row.
-    op_type = rows[0]["op_type"] if "op_type" in rows[0].keys() else "package_insert"
-    out = args.out or f"hug_labels_{batch_id}.html"
-    html_doc = _render(tokens, batch_id, op_type)
-    with open(out, "w", encoding="utf-8") as fh:
-        fh.write(html_doc)
-
-    print(f"wrote {len(tokens)} labels for batch {batch_id} -> {out}")
-    print("Open it and Ctrl-P -> Save as PDF (or print to a label sheet).")
-
-
-if __name__ == "__main__":
-    main()
