@@ -136,32 +136,45 @@ def make_worklist_router(
             except Exception as exc:
                 log.warning("worklist: last_contact fetch: %s", exc)
 
-        # --- Identify actions contacted in last 24h with a positive outcome --
-        # When hide_contacted is active, these items are removed from all_actions
-        # entirely (existing behaviour). Otherwise they are moved to band 4
-        # ("Đã liên hệ") so they stay visible but collapsed out of the main flow.
+        # --- Identify recently-contacted parties for band 4 + hide filter -------
+        # Band 4 ("Đã liên hệ"): ANY contact attempt in last 24h (regardless of outcome)
+        #   so the agent can see what they already tried today.
+        # hide_contacted filter: only removes POSITIVE outcomes (answered/replied/met) —
+        #   unresolved attempts (no_answer) stay visible since the agent may retry.
         now_utc = datetime.now(timezone.utc)
 
-        def _recently_contacted_positively(pid: str) -> bool:
+        def _lc_age_seconds(pid: str) -> float:
+            """Return seconds since last contact for pid, or inf when unavailable."""
             lc = party_extras.get(pid or "", {}).get("last_contact")
-            if lc is None or lc.last_contact_result not in POSITIVE_OUTCOMES:
-                return False
+            if lc is None:
+                return float("inf")
             try:
                 lc_dt = datetime.fromisoformat(
                     lc.last_contacted_at.replace("Z", "+00:00")
                 )
-                return (now_utc - lc_dt).total_seconds() <= 86400
+                return (now_utc - lc_dt).total_seconds()
             except Exception:
-                return False
+                return float("inf")
+
+        def _lc_result(pid: str) -> str:
+            lc = party_extras.get(pid or "", {}).get("last_contact")
+            return lc.last_contact_result if lc else ""
 
         if filters.get("hide_contacted"):
-            all_actions = [a for a in all_actions
-                           if not _recently_contacted_positively(a.party_id)]
+            # Remove POSITIVE-outcome contacts from the list entirely.
+            all_actions = [
+                a for a in all_actions
+                if not (
+                    _lc_age_seconds(a.party_id) <= 86400
+                    and _lc_result(a.party_id) in POSITIVE_OUTCOMES
+                )
+            ]
             contacted_party_ids: set = set()
         else:
+            # Move ALL recent contacts (any outcome) to band 4.
             contacted_party_ids = {
-                pid for pid in (a.party_id for a in all_actions if a.party_id)
-                if _recently_contacted_positively(pid)
+                a.party_id for a in all_actions
+                if a.party_id and _lc_age_seconds(a.party_id) <= 86400
             }
 
         # --- Rank into banded structure ------------------------------------
