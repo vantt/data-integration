@@ -3,7 +3,7 @@
 SELECT
     activity_id,
     party_id,
-    customer_id::INTEGER                        AS customer_id,
+    TRY_CAST(customer_id AS INTEGER)            AS customer_id,
     activity_type,
     direction,
     channel,
