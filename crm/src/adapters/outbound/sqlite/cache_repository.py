@@ -165,7 +165,7 @@ class SQLiteCacheRepository:
                    COALESCE(s.status, 'open') AS status,
                    s.snoozed_until,
                    COALESCE(sa.product_display_name, '') AS top_affinity_product,
-                   COALESCE(sa.sku, '') AS last_purchased_product
+                   '' AS last_purchased_product
             FROM cache.wh_sku_action_queue sa
             LEFT JOIN cache.wh_customer_base bc ON bc.customer_key = sa.customer_key
             LEFT JOIN cache.wh_party_seed ps ON ps.customer_key = sa.customer_key
@@ -311,10 +311,15 @@ class SQLiteCacheRepository:
         )
 
     def _fetch_actions(self, customer_key: str) -> list[ActionQueueItem]:
-        """Return all actions for a customer (customer 360 view — no status filtering)."""
+        """Return all actions for a customer (customer 360 view — no status filtering).
+
+        UNIONs customer-level (wh_action_queue) and SKU-level (wh_sku_action_queue) actions.
+        Falls back to customer-level only when wh_sku_action_queue is absent.
+        """
         if not customer_key:
             return []
-        sql = """
+
+        _customer_branch = """
             SELECT a.action_id, a.customer_key, a.action_type, a.rationale_vi,
                    a.value_at_stake_vnd, a.priority,
                    COALESCE(a.pending_since, a.generated_date) AS pending_since,
@@ -323,16 +328,37 @@ class SQLiteCacheRepository:
                    s.snoozed_until
             FROM cache.wh_action_queue a
             LEFT JOIN crm_action_state s ON s.action_id = a.action_id
-            WHERE a.customer_key = ?
-            ORDER BY a.priority ASC
-            LIMIT 10
-        """
+            WHERE a.customer_key = ?"""
+
+        _sku_branch = """
+            SELECT sa.action_id, sa.customer_key, sa.action_type, sa.rationale_vi,
+                   0 AS value_at_stake_vnd, sa.priority,
+                   COALESCE(sa.pending_since, sa.generated_date) AS pending_since,
+                   sa.generated_date, sa.refreshed_at,
+                   COALESCE(s.status, 'open') AS status,
+                   s.snoozed_until
+            FROM cache.wh_sku_action_queue sa
+            LEFT JOIN crm_action_state s ON s.action_id = sa.action_id
+            WHERE sa.customer_key = ?"""
+
+        full_sql = (
+            "SELECT * FROM (" + _customer_branch + " UNION ALL " + _sku_branch
+            + ") ORDER BY priority ASC LIMIT 20"
+        )
+        fallback_sql = _customer_branch + " ORDER BY priority ASC LIMIT 20"
+
         try:
-            rows = self._conn.execute(sql, (customer_key,)).fetchall()
+            rows = self._conn.execute(full_sql, (customer_key, customer_key)).fetchall()
         except sqlite3.OperationalError as exc:
             if _is_missing_table(exc) or _is_missing_column(exc):
-                return []
-            raise
+                try:
+                    rows = self._conn.execute(fallback_sql, (customer_key,)).fetchall()
+                except sqlite3.OperationalError as exc2:
+                    if _is_missing_table(exc2) or _is_missing_column(exc2):
+                        return []
+                    raise
+            else:
+                raise
         return [
             ActionQueueItem(
                 action_id=row["action_id"],
