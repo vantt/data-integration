@@ -37,4 +37,4 @@ SELECT
     DATE_TRUNC('day', a.occurred_at AT TIME ZONE 'Asia/Ho_Chi_Minh')::DATE AS activity_date
 
 FROM {{ ref('stg_crm__activity_log') }} a
-LEFT JOIN {{ ref('dim_customers') }} c ON c.customer_id = a.customer_id
+LEFT JOIN {{ ref('dim_customers') }} c ON c.customer_id = TRY_CAST(a.customer_id AS BIGINT)

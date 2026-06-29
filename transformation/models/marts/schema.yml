@@ -1010,11 +1010,11 @@ models:
       - name: discount_rate
         description: "Raw rate (0-100) from Sapo discount_items. NULL for COGS and platform fee rows. Note: always 0 for voucher_promotional (Sapo design). See: docs/architecture/order-pl/discount-classification.md"
       - name: discount_type
-        description: "Semantic classification of this discount. NULL for COGS and platform fee rows. See: docs/architecture/order-pl/discount-classification.md"
+        description: "Semantic classification of this discount. NULL for COGS and platform fee rows. 'line_item' = item-level price reduction (no label). See: docs/architecture/order-pl/discount-classification.md"
         tests:
           - accepted_values:
               arguments:
-                values: [voucher_promotional, bundle, sampling_gift, wholesale_explicit, overseas, campaign, employee_internal, negotiated_micro, negotiated_standard, negotiated_deep]
+                values: [voucher_promotional, bundle, sampling_gift, wholesale_explicit, overseas, campaign, employee_internal, negotiated_micro, negotiated_standard, negotiated_deep, line_item]
               config:
                 where: "discount_type IS NOT NULL"
 
