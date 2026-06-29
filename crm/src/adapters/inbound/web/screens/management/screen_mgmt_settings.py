@@ -7,13 +7,14 @@ require admin via require_admin.
 from __future__ import annotations
 
 import uuid
-from typing import Any
+from typing import Any, Optional, Protocol
 
 from fastapi import APIRouter, Depends, Form, Query, Request, Response
 from fastapi.responses import HTMLResponse
 from fastapi.templating import Jinja2Templates
 
 from adapters.inbound.http.auth_dependency import require_admin
+from domain.entities.profile import CustomFieldDef, Tag
 from adapters.inbound.web.screens.management.screen_mgmt_helpers import (
     _is_valid_hex_color,
     _parse_options,
@@ -23,9 +24,23 @@ from adapters.inbound.web.screens.management.screen_mgmt_helpers import (
 _NAMED_COLORS = {"default", "moss", "coral", "amber"}
 
 
+class SettingsSvc(Protocol):
+    """Structural protocol for the settings service used by make_settings_router."""
+
+    def list_custom_field_defs(self, entity_type: Optional[str] = None) -> list[CustomFieldDef]: ...
+    def get_custom_field_def(self, field_id: str) -> Optional[CustomFieldDef]: ...
+    def create_custom_field_def(self, **kwargs: Any) -> Any: ...
+    def update_custom_field_def(self, field_id: str, **kwargs: Any) -> None: ...
+    def list_tags(self, category: str) -> list[Tag]: ...
+    def get_tag(self, tag_id: str) -> Optional[Tag]: ...
+    def create_tag(self, name: str, category: str, color: str, display_label: str = "") -> Tag: ...
+    def update_tag(self, tag_id: str, name: str, category: str, color: str, display_label: str = "") -> None: ...
+    def delete_tag(self, tag_id: str) -> None: ...
+
+
 def make_settings_router(
     templates: Jinja2Templates,
-    settings_svc: Any,
+    settings_svc: SettingsSvc,
     app_users_svc: Any,
 ) -> APIRouter:
     router = APIRouter()

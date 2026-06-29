@@ -29,10 +29,8 @@ from domain.entities.profile import (
     CustomFieldDef,
     Party360,
 )
-from domain.ports.profile_repository import (
-    ProfileRepository,
-    CustomFieldRepository,
-)
+from domain.ports.profile_repository import ProfileRepository
+from domain.ports.custom_field_repository import CustomFieldRepository
 
 
 class ProfileService:

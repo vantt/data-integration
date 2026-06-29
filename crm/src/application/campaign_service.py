@@ -9,6 +9,7 @@ from typing import Any
 
 from shared.timestamps import utc_now
 
+from domain.ports.campaign_repository import CampaignRepository
 from domain.entities.segment import (
     VALID_CAMPAIGN_OBJECTIVES,
     VALID_TARGET_STATUSES,
@@ -55,7 +56,7 @@ class CampaignService:
 
     def __init__(
         self,
-        campaign_repo: Any,
+        campaign_repo: CampaignRepository,
         segment_repo: Any,
         party_repo: Any,
     ) -> None:
@@ -225,7 +226,7 @@ class CampaignService:
                     f"invalid target status {status!r} — must be one of: "
                     + ", ".join(VALID_TARGET_STATUSES)
                 )
-            return self._campaign_repo.list_targets_by_campaign_and_status(campaign_id, status)
+            return self._campaign_repo.list_targets(campaign_id, status)
         return self._campaign_repo.list_targets(campaign_id)
 
     # ── Conversion scanning ────────────────────────────────────────────────────

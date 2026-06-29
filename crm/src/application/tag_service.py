@@ -13,7 +13,7 @@ if TYPE_CHECKING:
     from adapters.outbound.sqlite.connection import CRMDatabase
 
 from domain.entities.profile import PartyTag, Tag
-from domain.ports.profile_repository import TagRepository
+from domain.ports.tag_repository import TagRepository
 
 
 class TagService:

@@ -15,7 +15,7 @@ if TYPE_CHECKING:
     from adapters.outbound.sqlite.connection import CRMDatabase
 
 from domain.entities.profile import CustomFieldDef
-from domain.ports.profile_repository import CustomFieldRepository
+from domain.ports.custom_field_repository import CustomFieldRepository
 from domain.result import CustomFieldError
 
 

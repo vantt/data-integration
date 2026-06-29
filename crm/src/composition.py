@@ -433,8 +433,21 @@ class _ProfileTagCFComposite:
     def get_custom_field_def(self, field_id):
         return self._cf.get_custom_field_def(field_id)
 
-    def create_custom_field_def(self, def_data):
-        return self._cf.create_custom_field_def(def_data)
+    def create_custom_field_def(self, **kwargs):
+        from domain.entities.profile import CustomFieldDef
+        defn = CustomFieldDef(
+            field_id=kwargs.get("field_id", ""),
+            entity_type=kwargs.get("entity_type", "party"),
+            field_key=kwargs.get("field_key", ""),
+            label=kwargs.get("label", ""),
+            data_type=kwargs.get("data_type", "text"),
+            is_required=kwargs.get("is_required", False),
+            is_active=kwargs.get("is_active", True),
+            sort_order=kwargs.get("sort_order", 0),
+            options=kwargs.get("options"),
+            section=kwargs.get("section"),
+        )
+        return self._cf.create_custom_field_def(defn)
 
     def update_custom_field_def(self, field_id, **kwargs):
         return self._cf.update_custom_field_def(field_id, **kwargs)
@@ -496,10 +509,10 @@ def _register_web_routes(
     )
     app.include_router(modals_router)
 
-    _modal_profile = _ProfileTagCFComposite(services["profile"], services["tag"], services["cf"])
+    _profile_cf_tag = _ProfileTagCFComposite(services["profile"], services["tag"], services["cf"])
     app.include_router(make_party_modals_router(
         templates=templates,
-        profile=_modal_profile,
+        profile=_profile_cf_tag,
         party_repo=sqlite_repos["party"],
         task_svc=services["task"],
         app_users=sqlite_repos["app_user"],
@@ -572,7 +585,6 @@ def _register_web_routes(
         parties=sqlite_repos["party"],
         orders=duckdb_repos["orders"],
     ))
-    _settings_svc = _ProfileTagCFComposite(services["profile"], services["tag"], services["cf"])
     app.include_router(make_management_router(
         templates=templates,
         segments_svc=services["segment"],
@@ -580,7 +592,7 @@ def _register_web_routes(
         dedup_svc=sqlite_repos["dedup"],
         merger_svc=services["merge"],
         parties_svc=sqlite_repos["party"],
-        settings_svc=_settings_svc,
+        settings_svc=_profile_cf_tag,
         app_users_svc=sqlite_repos["app_user"],
     ))
 

@@ -13,7 +13,7 @@ if TYPE_CHECKING:
     from adapters.outbound.sqlite.connection import CRMDatabase
 
 from domain.entities.profile import Note
-from domain.ports.profile_repository import NoteRepository
+from domain.ports.tag_repository import NoteRepository
 
 
 class NoteService:
