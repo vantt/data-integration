@@ -93,6 +93,11 @@ class ActionTaskResolver(Protocol):
     def resolved_action_ids(self, party_id: str) -> set[str]: ...
 
 
+class ActionStateWriter(Protocol):
+    """Marks action queue items as dismissed."""
+    def dismiss(self, action_id: str, user_id: Optional[str] = None) -> None: ...
+
+
 class TaskQuerier(Protocol):
     def list_by_party(self, party_id: str) -> list[Task]: ...
 
@@ -130,6 +135,7 @@ def make_customer_360_router(
     task_svc: Optional[TaskCreator] = None,
     app_users: Optional[AppUserReader] = None,
     approach_repo=None,
+    action_state: Optional[ActionStateWriter] = None,
 ) -> APIRouter:
     """Return APIRouter wired with all Customer 360 routes."""
     router = APIRouter()
@@ -256,6 +262,7 @@ def make_customer_360_router(
         party_tasks=party_tasks,
         party_insights=party_insights,
         action_task_resolver=action_task_resolver,
+        action_state=action_state,
         customer_timeline=customer_timeline,
         customer_orders=customer_orders,
         customer_dim_metrics=customer_dim_metrics,

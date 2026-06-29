@@ -25,6 +25,51 @@ WITH supply AS (
     SELECT * FROM {{ ref('int_customer_sku_supply_tracking') }}
 ),
 
+config AS (
+    SELECT sku FROM {{ ref('seed_sku_regimen_config') }}
+),
+
+-- Most recent order context (order_code + discount_rate) per (customer, base SKU).
+-- Mirrors the two-branch pattern from int_customer_sku_supply_tracking so combo/pack
+-- purchases resolve to the same base SKU as the supply stack.
+last_order_ctx AS (
+    SELECT
+        customer_key,
+        sku,
+        last_order_code,
+        last_sku_discount_rate,
+        ROW_NUMBER() OVER (
+            PARTITION BY customer_key, sku
+            ORDER BY ordered_at DESC
+        ) AS rn
+    FROM (
+        SELECT fs.customer_key, cfg.sku,
+               fo.order_code  AS last_order_code,
+               fs.discount_rate AS last_sku_discount_rate,
+               fs.ordered_at
+        FROM {{ ref('fact_sales') }}    fs
+        JOIN {{ ref('dim_products') }}  dp  ON fs.product_key = dp.product_key
+        JOIN config                    cfg ON dp.sku          = cfg.sku
+        JOIN {{ ref('fact_orders') }}   fo  ON fs.order_id    = fo.order_id
+        WHERE fo.is_active_order = TRUE
+
+        UNION ALL
+
+        SELECT fs.customer_key, cfg.sku,
+               fo.order_code  AS last_order_code,
+               fs.discount_rate AS last_sku_discount_rate,
+               fs.ordered_at
+        FROM {{ ref('fact_sales') }}    fs
+        JOIN {{ ref('dim_products') }}  dp  ON fs.product_key  = dp.product_key
+        JOIN {{ ref('dim_sku_alias') }} da  ON dp.sku          = da.sapo_pack_sku
+        JOIN config                    cfg ON da.sapo_base_sku = cfg.sku
+        JOIN {{ ref('fact_orders') }}   fo  ON fs.order_id     = fo.order_id
+        WHERE fo.is_active_order = TRUE
+          AND dp.sku NOT IN (SELECT sku FROM config)
+          AND da.sapo_pack_sku != da.sapo_base_sku
+    )
+),
+
 customers AS (
     SELECT
         customer_key,
@@ -151,6 +196,10 @@ SELECT
         ELSE NULL
     END AS action_rationale,
 
+    -- Last purchase context (for CS display: date · order · discount)
+    loctx.last_order_code,
+    loctx.last_sku_discount_rate,
+
     -- Last CRM contact context
     lc.last_contacted_at,
     lc.last_contact_result,
@@ -164,6 +213,11 @@ SELECT
     current_timestamp AS queue_generated_at
 
 FROM classified
-LEFT JOIN last_contact lc ON classified.customer_id::INTEGER = lc.customer_id
+LEFT JOIN last_contact lc
+    ON classified.customer_id::INTEGER = lc.customer_id
+LEFT JOIN last_order_ctx loctx
+    ON  classified.customer_key = loctx.customer_key
+    AND classified.sku          = loctx.sku
+    AND loctx.rn = 1
 WHERE classified.action_type IS NOT NULL
 ORDER BY priority_rank, classified.lifetime_value DESC NULLS LAST

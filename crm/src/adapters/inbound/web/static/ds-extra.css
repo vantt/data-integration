@@ -103,6 +103,18 @@
 .aq-card__foot { display: flex; }
 .aq-card__cta { padding: 7px 13px; font-size: 12.5px; }
 
+/* ── Action session merged card (C03 ≥2 actions) ────────── */
+.aq-session-card { display: flex; flex-direction: column; gap: 0; background: var(--bg-surface); border: 1px solid var(--border); border-left: 2px solid var(--accent); border-radius: 0 var(--radii-control) var(--radii-control) 0; overflow: hidden; }
+.aq-session-card__head { padding: var(--sp-3) var(--sp-4) var(--sp-2); }
+.aq-session-card__cta { display: flex; align-items: center; gap: var(--sp-3); padding: var(--sp-3) var(--sp-4); border-top: 1px solid var(--border); }
+.aq-check-row { display: flex; align-items: flex-start; gap: var(--sp-3); padding: var(--sp-3) var(--sp-4); border-bottom: 1px solid var(--border); cursor: pointer; transition: background var(--dur-fast) var(--ease-fast); }
+.aq-check-row:hover { background: var(--bg-raised); }
+.aq-check-row:last-of-type { border-bottom: none; }
+.aq-check-row--resolved { opacity: 0.5; cursor: default; pointer-events: none; }
+.aq-check-row input[type="checkbox"] { margin-top: 3px; flex-shrink: 0; accent-color: var(--accent); cursor: pointer; }
+.aq-check-row__body { flex: 1; display: flex; flex-direction: column; gap: var(--sp-1); min-width: 0; }
+.aq-check-row__top { display: flex; align-items: center; gap: var(--sp-2); flex-wrap: wrap; }
+
 /* ── Worklist task rows ─────────────────────────────────── */
 .wl-list { display: flex; flex-direction: column; border: 1px solid var(--border); border-radius: var(--radii-control); overflow: hidden; background: var(--bg-surface); }
 .wl-row { display: grid; grid-template-columns: auto 1fr auto; gap: var(--sp-4); align-items: center; padding: var(--sp-4) var(--sp-5); cursor: pointer; transition: background var(--dur-fast) var(--ease-fast); }

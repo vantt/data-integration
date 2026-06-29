@@ -25,31 +25,59 @@ WITH RECURSIVE config AS (
     SELECT * FROM {{ ref('seed_sku_regimen_config') }}
 ),
 
--- Active purchases of configured SKUs only, aggregated to day-grain
--- (handles multiple line items of same SKU in one order)
+-- Active purchases of configured SKUs only, aggregated to day-grain.
+-- Two branches UNIONed before GROUP BY:
+--   Branch 1 — direct: fact_sales SKU matches config exactly.
+--   Branch 2 — alias:  pack/combo SKU maps to a base config SKU via dim_sku_alias;
+--              quantity multiplied by units_per_pack so supply accumulates correctly.
+-- Branch 2 guards prevent double-counting:
+--   • NOT IN config  — skip SKUs already handled by Branch 1
+--   • pack ≠ base    — skip self-referential aliases (e.g. Metabo H030→H030 MISA entry)
 raw_purchases AS (
     SELECT
-        fs.customer_key,
-        cfg.sku,
-        cfg.product_group,
-        cfg.display_name,
-        cfg.supply_days_per_unit,
-        cfg.dose_reduction_buffer,
-        cfg.remind_lead_days,
-        cfg.journey_enabled,
-        CAST(fs.ordered_at AT TIME ZONE 'Asia/Ho_Chi_Minh' AS DATE) AS purchase_date,
-        SUM(fs.quantity)                                             AS total_qty
-    FROM {{ ref('fact_sales') }}  fs
-    JOIN {{ ref('dim_products') }} dp  ON fs.product_key  = dp.product_key
-    JOIN config                   cfg ON dp.sku           = cfg.sku
-    JOIN {{ ref('fact_orders') }}  fo  ON fs.order_id     = fo.order_id
-    WHERE fo.is_active_order = TRUE
+        customer_key,
+        sku, product_group, display_name,
+        supply_days_per_unit, dose_reduction_buffer, remind_lead_days, journey_enabled,
+        purchase_date,
+        SUM(qty) AS total_qty
+    FROM (
+        -- Branch 1: individual SKU sold directly (pack_sku exactly in config)
+        SELECT
+            fs.customer_key,
+            cfg.sku, cfg.product_group, cfg.display_name,
+            cfg.supply_days_per_unit, cfg.dose_reduction_buffer,
+            cfg.remind_lead_days, cfg.journey_enabled,
+            CAST(fs.ordered_at AT TIME ZONE 'Asia/Ho_Chi_Minh' AS DATE) AS purchase_date,
+            fs.quantity AS qty
+        FROM {{ ref('fact_sales') }}   fs
+        JOIN {{ ref('dim_products') }} dp  ON fs.product_key = dp.product_key
+        JOIN config                   cfg ON dp.sku          = cfg.sku
+        JOIN {{ ref('fact_orders') }}  fo  ON fs.order_id    = fo.order_id
+        WHERE fo.is_active_order = TRUE
+
+        UNION ALL
+
+        -- Branch 2: pack/combo SKU → base config SKU via alias; qty × units_per_pack
+        SELECT
+            fs.customer_key,
+            cfg.sku, cfg.product_group, cfg.display_name,
+            cfg.supply_days_per_unit, cfg.dose_reduction_buffer,
+            cfg.remind_lead_days, cfg.journey_enabled,
+            CAST(fs.ordered_at AT TIME ZONE 'Asia/Ho_Chi_Minh' AS DATE) AS purchase_date,
+            fs.quantity * da.units_per_pack AS qty
+        FROM {{ ref('fact_sales') }}    fs
+        JOIN {{ ref('dim_products') }}  dp  ON fs.product_key  = dp.product_key
+        JOIN {{ ref('dim_sku_alias') }} da  ON dp.sku          = da.sapo_pack_sku
+        JOIN config                    cfg ON da.sapo_base_sku = cfg.sku
+        JOIN {{ ref('fact_orders') }}   fo  ON fs.order_id     = fo.order_id
+        WHERE fo.is_active_order = TRUE
+          AND dp.sku NOT IN (SELECT sku FROM config)
+          AND da.sapo_pack_sku != da.sapo_base_sku
+    )
     GROUP BY
-        fs.customer_key,
-        cfg.sku, cfg.product_group, cfg.display_name,
-        cfg.supply_days_per_unit, cfg.dose_reduction_buffer,
-        cfg.remind_lead_days, cfg.journey_enabled,
-        CAST(fs.ordered_at AT TIME ZONE 'Asia/Ho_Chi_Minh' AS DATE)
+        customer_key, sku, product_group, display_name,
+        supply_days_per_unit, dose_reduction_buffer, remind_lead_days, journey_enabled,
+        purchase_date
 ),
 
 -- Assign row number per (customer, sku) for recursive traversal

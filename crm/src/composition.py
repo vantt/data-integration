@@ -9,7 +9,8 @@ from __future__ import annotations
 import logging
 import os
 from pathlib import Path
-from typing import Optional
+import sqlite3
+from typing import Optional, TypedDict
 
 from fastapi import FastAPI
 from fastapi.staticfiles import StaticFiles
@@ -61,6 +62,8 @@ from application.conversation_service import ConversationService
 from application.segment_service import SegmentService
 from application.campaign_service import CampaignService
 from application.app_user_service import AppUserService
+from application.worklist_query_service import WorklistQueryService
+from application.customer_list_query_service import CustomerListQueryService
 
 # ── Inbound: HTTP API handlers ────────────────────────────────────────────────
 from adapters.inbound.http.health_handler import create_health_router

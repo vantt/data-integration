@@ -130,6 +130,10 @@ class ActionQueueItem:
     snoozed_until: Optional[str] = None # YYYY-MM-DD; set when status = 'snoozed'
     top_affinity_product: str = ""      # product customer buys most (for CS context + search)
     last_purchased_product: str = ""    # product from customer's last order (for CS context + search)
+    # SKU-level purchase context (populated for SKU actions only; empty for customer-level actions)
+    last_purchase_date: str = ""        # YYYY-MM-DD of the most recent purchase of this SKU
+    last_order_code: str = ""           # order_code of that purchase
+    last_sku_discount_rate: Optional[float] = None  # 0.0–1.0; None when no discount data
 
 
 @dataclass

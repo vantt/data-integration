@@ -327,7 +327,10 @@ class SQLiteCacheRepository:
                    COALESCE(a.pending_since, a.generated_date) AS pending_since,
                    a.generated_date, a.refreshed_at,
                    COALESCE(s.status, 'open') AS status,
-                   s.snoozed_until
+                   s.snoozed_until,
+                   NULL AS last_purchase_date,
+                   NULL AS last_order_code,
+                   NULL AS last_sku_discount_rate
             FROM cache.wh_action_queue a
             LEFT JOIN crm_action_state s ON s.action_id = a.action_id
             WHERE a.customer_key = ?"""
@@ -338,7 +341,10 @@ class SQLiteCacheRepository:
                    COALESCE(sa.pending_since, sa.generated_date) AS pending_since,
                    sa.generated_date, sa.refreshed_at,
                    COALESCE(s.status, 'open') AS status,
-                   s.snoozed_until
+                   s.snoozed_until,
+                   sa.last_purchase_date,
+                   sa.last_order_code,
+                   sa.last_sku_discount_rate
             FROM cache.wh_sku_action_queue sa
             LEFT JOIN crm_action_state s ON s.action_id = sa.action_id
             WHERE sa.customer_key = ?"""
@@ -374,6 +380,9 @@ class SQLiteCacheRepository:
                 refreshed_at=row["refreshed_at"] or "",
                 status=row["status"] or "open",
                 snoozed_until=row["snoozed_until"],
+                last_purchase_date=row["last_purchase_date"] or "",
+                last_order_code=row["last_order_code"] or "",
+                last_sku_discount_rate=row["last_sku_discount_rate"],
             )
             for row in rows
         ]

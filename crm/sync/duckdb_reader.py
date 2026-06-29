@@ -144,6 +144,9 @@ _MART_SKU_ACTION_QUEUE_COLS = [
     "estimated_depletion_date",
     "priority",
     "generated_date",
+    "last_purchase_date",
+    "last_order_code",
+    "last_sku_discount_rate",
 ]
 
 # dim_products output columns for product catalog (cache-facing names).
@@ -338,7 +341,10 @@ def fetch_sku_action_queue(conn: "duckdb.DuckDBPyConnection") -> list[dict]:
         "  days_until_depletion, "
         "  strftime(estimated_depletion_date, '%Y-%m-%d')     AS estimated_depletion_date, "
         "  priority_rank                                       AS priority, "
-        "  strftime(queue_generated_at, '%Y-%m-%d')           AS generated_date "
+        "  strftime(queue_generated_at, '%Y-%m-%d')           AS generated_date, "
+        "  strftime(last_purchase_date, '%Y-%m-%d')           AS last_purchase_date, "
+        "  last_order_code, "
+        "  last_sku_discount_rate "
         "FROM main_marts.mart_customer_sku_action_queue"
     )
     try:

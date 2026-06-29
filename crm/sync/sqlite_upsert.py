@@ -79,6 +79,10 @@ def apply_schema(conn: sqlite3.Connection) -> None:
         "ALTER TABLE wh_customer_insight ADD COLUMN max_campaign_discount_rate REAL",
         "ALTER TABLE wh_customer_insight ADD COLUMN last_negotiated_discount_rate REAL",
         "ALTER TABLE wh_customer_insight ADD COLUMN max_negotiated_discount_rate REAL",
+        # Purchase context for SKU-level action cards — added 2026-06-29
+        "ALTER TABLE wh_sku_action_queue ADD COLUMN last_purchase_date TEXT",
+        "ALTER TABLE wh_sku_action_queue ADD COLUMN last_order_code TEXT",
+        "ALTER TABLE wh_sku_action_queue ADD COLUMN last_sku_discount_rate REAL",
     ]
     for stmt in _group_a:
         try:
@@ -239,8 +243,9 @@ def upsert_sku_action_queue(conn: sqlite3.Connection, rows: list[dict]) -> int:
     upsert_sql = (
         "INSERT INTO wh_sku_action_queue "
         "  (action_id, customer_key, sku, product_display_name, action_type, rationale_vi, "
-        "   days_until_depletion, estimated_depletion_date, priority, pending_since, generated_date) "
-        "VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?) "
+        "   days_until_depletion, estimated_depletion_date, priority, pending_since, generated_date, "
+        "   last_purchase_date, last_order_code, last_sku_discount_rate) "
+        "VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?) "
         "ON CONFLICT(customer_key, sku, action_type) DO UPDATE SET "
         "  generated_date           = excluded.generated_date, "
         "  rationale_vi             = excluded.rationale_vi, "
@@ -248,6 +253,9 @@ def upsert_sku_action_queue(conn: sqlite3.Connection, rows: list[dict]) -> int:
         "  estimated_depletion_date = excluded.estimated_depletion_date, "
         "  priority                 = excluded.priority, "
         "  product_display_name     = excluded.product_display_name, "
+        "  last_purchase_date       = excluded.last_purchase_date, "
+        "  last_order_code          = excluded.last_order_code, "
+        "  last_sku_discount_rate   = excluded.last_sku_discount_rate, "
         "  refreshed_at             = strftime('%Y-%m-%dT%H:%M:%fZ','now')"
         # action_id and pending_since intentionally preserved on conflict
     )
@@ -268,6 +276,9 @@ def upsert_sku_action_queue(conn: sqlite3.Connection, rows: list[dict]) -> int:
             r.get("priority"),
             r["generated_date"],   # pending_since = generated_date on first insert
             r["generated_date"],
+            r.get("last_purchase_date"),
+            r.get("last_order_code"),
+            r.get("last_sku_discount_rate"),
         )
         for r in rows
     ]

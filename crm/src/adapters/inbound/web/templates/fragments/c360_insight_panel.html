@@ -18,7 +18,7 @@
 <div class="stack stack-5">
 
   {# ── Action queue ─────────────────────────────────────── #}
-  <div>
+  <div id="aq-section">
     <div class="panel-head">
       <span class="panel-title">Action queue</span>
       <span class="panel-sub">{{ insight.actions | length }} đề xuất</span>
@@ -26,8 +26,68 @@
     {% if not insight.actions %}
     <div class="caveat caveat--info">Không có hành động đề xuất nào cho khách này.</div>
     {% else %}
+    {# Count active (non-dismissed, non-resolved-task) actions to decide view mode #}
+    {% set ns = namespace(unresolved_count=0) %}
+    {% for act in insight.actions %}{% if act.status != 'dismissed' and act.action_id not in resolved_action_ids %}{% set ns.unresolved_count = ns.unresolved_count + 1 %}{% endif %}{% endfor %}
+
+    {% if ns.unresolved_count >= 2 %}
+    {# ── Merged session checklist (≥2 unresolved) ── #}
+    <div class="aq-session-card">
+      <div class="aq-session-card__head">
+        <span style="font-size:12px;color:var(--fg-tertiary)">{{ ns.unresolved_count }} việc cần xử lý — tích chọn những việc đã xử lý rồi bấm Hoàn tất</span>
+      </div>
+      <form hx-post="/customers/{{ party_id }}/actions/dismiss-session"
+            hx-select="#aq-section"
+            hx-target="#aq-section"
+            hx-swap="outerHTML">
+        {% for act in insight.actions %}{% if act.status != 'dismissed' and act.action_id not in resolved_action_ids %}
+        <label class="aq-check-row">
+          <input type="checkbox" name="action_ids" value="{{ act.action_id }}" checked>
+          <div class="aq-check-row__body">
+            <div class="aq-check-row__top">
+              <span class="{{ act.action_type | bdg_cls('action_type') }}" data-tooltip="{{ act.action_type | bdg_tip('action_type') }}">{{ act.action_type }}</span>
+              {% if act.value_at_stake_vnd > 0 %}
+              <span style="font-size:11px;color:var(--fg-tertiary)">💰 {{ act.value_at_stake_vnd | fmt_vnd }}</span>
+              {% endif %}
+            </div>
+            <div style="font-size:13px;color:var(--fg-2);line-height:1.5">{{ act.rationale_vi }}</div>
+            {% if act.action_type in ['USAGE_FOLLOWUP', 'PROGRESS_CHECK', 'REORDER_PREEMPT', 'REORDER_NUDGE', 'REORDER_OVERDUE'] and act.last_purchase_date %}
+            <div style="font-size:11px;color:var(--fg-tertiary)">Mua {{ act.last_purchase_date }}{% if act.last_order_code %} · {{ act.last_order_code }}{% endif %}{% if act.last_sku_discount_rate %} · giảm {{ "%.0f"|format(act.last_sku_discount_rate * 100) }}%{% endif %}</div>
+            {% endif %}
+          </div>
+        </label>
+        {% endif %}{% endfor %}
+        {% for act in insight.actions %}{% if act.action_id in resolved_action_ids %}
+        <div class="aq-check-row aq-check-row--resolved">
+          <span style="margin-top:3px;color:var(--moss-500);font-size:13px;flex-shrink:0">✓</span>
+          <div class="aq-check-row__body">
+            <div style="font-size:13px">{{ act.rationale_vi }}</div>
+          </div>
+        </div>
+        {% endif %}{% endfor %}
+        <div class="aq-session-card__cta">
+          <button type="button"
+                  class="btn btn--secondary"
+                  style="font-size:13px;padding:5px 10px"
+                  onclick="(function(){ var t=Array.from(document.querySelectorAll('[role=tab]')).find(function(b){ return b.textContent.trim()==='Gọi'; }); if(t) t.click(); })()">
+            {% include "icons/phone.svg" %} Gọi ngay
+          </button>
+          <button type="submit" class="btn btn--primary" style="font-size:13px;padding:5px 10px">
+            Hoàn tất ✓
+          </button>
+        </div>
+      </form>
+    </div>
+
+    {% else %}
+    {# ── Individual card (exactly 1 active) or empty ── #}
+    {% set has_active = namespace(v=false) %}
+    {% for act in insight.actions %}{% if act.status != 'dismissed' %}{% set has_active.v = true %}{% endif %}{% endfor %}
+    {% if not has_active.v %}
+    <div class="caveat caveat--info">Không có hành động đề xuất nào cho khách này.</div>
+    {% else %}
     <div class="stack stack-3">
-      {% for act in insight.actions %}
+      {% for act in insight.actions %}{% if act.status != 'dismissed' %}
       <div class="aq-card aq-card--compact">
         <div class="aq-card__top">
           <span class="{{ act.action_type | bdg_cls('action_type') }}" data-tooltip="{{ act.action_type | bdg_tip('action_type') }}">{{ act.action_type }}</span>
@@ -36,6 +96,11 @@
           {% endif %}
         </div>
         <div style="font-size:13.5px;color:var(--fg-2);line-height:1.5;margin-top:var(--sp-2)">{{ act.rationale_vi }}</div>
+        {% if act.action_type in ['USAGE_FOLLOWUP', 'PROGRESS_CHECK', 'REORDER_PREEMPT', 'REORDER_NUDGE', 'REORDER_OVERDUE'] and act.last_purchase_date %}
+        <div style="font-size:11px;color:var(--fg-tertiary);margin-top:var(--sp-1)">
+          Mua {{ act.last_purchase_date }}{% if act.last_order_code %} · {{ act.last_order_code }}{% endif %}{% if act.last_sku_discount_rate %} · giảm {{ "%.0f"|format(act.last_sku_discount_rate * 100) }}%{% endif %}
+        </div>
+        {% endif %}
         <div style="margin-top:var(--sp-2)">
           <span style="font-size:11px;color:var(--fg-tertiary)">Đề xuất ngày {{ act.generated_date }}</span>
         </div>
@@ -61,8 +126,10 @@
         </div>
         {% endif %}
       </div>
-      {% endfor %}
+      {% endif %}{% endfor %}
     </div>
+    {% endif %}
+    {% endif %}
     {% endif %}
   </div>
 

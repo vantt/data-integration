@@ -28,6 +28,7 @@ def register_panel_routes(
     party_tasks,
     party_insights=None,
     action_task_resolver=None,
+    action_state=None,
     customer_timeline=None,
     customer_orders=None,
     customer_dim_metrics=None,
@@ -163,3 +164,37 @@ def register_panel_routes(
                 {**ctx, "script": script_dict, "meta": meta_dict},
             )
         return HTMLResponse("panel not found", status_code=404)
+
+    # ── Bulk-dismiss action session ───────────────────────────────────────────
+
+    @router.post("/customers/{party_id}/actions/dismiss-session", response_class=HTMLResponse)
+    async def handle_dismiss_session(request: Request, party_id: str) -> Response:
+        """Dismiss multiple action_ids in one session, return refreshed insight panel."""
+        if action_state is not None:
+            form = await request.form()
+            action_ids = form.getlist("action_ids")
+            for aid in action_ids:
+                try:
+                    action_state.dismiss(aid, user_id=None)
+                except Exception as exc:
+                    log.error("c360: dismiss action %s: %s", aid, exc)
+        _, ids = _load_base(party_id)
+        ins = _load_insight(ids)
+        resolved_ids: set[str] = set()
+        if action_task_resolver is not None:
+            try:
+                resolved_ids = action_task_resolver.resolved_action_ids(party_id)
+            except Exception as exc:
+                log.warning("c360: dismiss-session resolved_ids %s: %s", party_id, exc)
+        rep_ins: list = []
+        if party_insights is not None:
+            try:
+                rep_ins = [i for i in party_insights.list_by_party(party_id) if not i.deleted_at]
+            except Exception as exc:
+                log.warning("c360: dismiss-session rep_ins %s: %s", party_id, exc)
+        return templates.TemplateResponse(
+            "fragments/c360_insight_panel.html",
+            {"request": request, "party_id": party_id, "insight": ins,
+             "rep_insights": rep_ins, "resolved_action_ids": resolved_ids,
+             "dim_metrics": None, "snapshots": [], "timeline_available": False},
+        )
