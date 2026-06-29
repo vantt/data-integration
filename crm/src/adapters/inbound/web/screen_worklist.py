@@ -36,8 +36,15 @@ log = logging.getLogger(__name__)
 # ── Service protocols ─────────────────────────────────────────────────────────
 
 
-class ActionQueueReader(Protocol):
+class WorklistSvc(Protocol):
+    """Interface satisfied by WorklistQueryService.
+
+    Screens depend on this protocol, not on the concrete service or repos
+    directly, so the service can be swapped or extended without touching
+    the screen layer.
+    """
     def list_all_action_queue(self) -> list[ActionQueueItem]: ...
+    def get_map_for_parties(self, party_ids: list[str]) -> dict[str, LastContact]: ...
 
 
 class TaskQuerier(Protocol):
@@ -59,21 +66,16 @@ class PartyContactReader(Protocol):
     def list_pinned_contact_pref_notes(self, party_id: str) -> list[Note]: ...
 
 
-class LastContactReader(Protocol):
-    def get_map_for_parties(self, party_ids: list[str]) -> dict[str, LastContact]: ...
-
-
 # ── Router factory ────────────────────────────────────────────────────────────
 
 
 def make_worklist_router(
     templates: Jinja2Templates,
-    action_queue: ActionQueueReader,
+    worklist_svc: WorklistSvc,
     tasks: TaskQuerier,
     task_writer: TaskWriter,
     action_state: Optional[ActionStateWriter] = None,
     party_contacts: Optional[PartyContactReader] = None,
-    last_contact: Optional[LastContactReader] = None,
 ) -> APIRouter:
     """Return APIRouter wired with all Worklist routes."""
     router = APIRouter()
@@ -88,7 +90,7 @@ def make_worklist_router(
         once per request by the route handler from approach_repo.list_customer_ids().
         """
         try:
-            all_actions = action_queue.list_all_action_queue()
+            all_actions = worklist_svc.list_all_action_queue()
         except Exception as exc:
             log.error("worklist: list actions: %s", exc)
             all_actions = []
@@ -126,15 +128,14 @@ def make_worklist_router(
                     log.warning("worklist: enrich party %s: %s", pid, exc)
 
         # --- Merge last_contact snapshot into party_extras ----------------
-        if last_contact is not None:
-            try:
-                lc_map = last_contact.get_map_for_parties(all_party_ids)
-                for pid, lc in lc_map.items():
-                    if pid not in party_extras:
-                        party_extras[pid] = {"preferred_identity": None, "contact_pref_notes": []}
-                    party_extras[pid]["last_contact"] = lc
-            except Exception as exc:
-                log.warning("worklist: last_contact fetch: %s", exc)
+        try:
+            lc_map = worklist_svc.get_map_for_parties(all_party_ids)
+            for pid, lc in lc_map.items():
+                if pid not in party_extras:
+                    party_extras[pid] = {"preferred_identity": None, "contact_pref_notes": []}
+                party_extras[pid]["last_contact"] = lc
+        except Exception as exc:
+            log.warning("worklist: last_contact fetch: %s", exc)
 
         # --- Identify recently-contacted parties for band 4 + hide filter -------
         # Band 4 ("Đã liên hệ"): ANY contact attempt in last 24h (regardless of outcome)

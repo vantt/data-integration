@@ -119,6 +119,51 @@ from hug import db as hug_db
 
 log = logging.getLogger(__name__)
 
+
+class SqliteRepos(TypedDict):
+    """All SQLite-backed repositories plus the raw connection and database handle."""
+    db: CRMDatabase
+    conn: sqlite3.Connection
+    party: SQLitePartyRepository
+    dedup: SQLiteDedupRepository
+    cache: SQLiteCacheRepository
+    action_state: SQLiteActionStateRepository
+    profile: SQLiteProfileRepository
+    cf: SQLiteCustomFieldRepository
+    tag: SQLiteTagRepository
+    note: SQLiteNoteRepository
+    activity: SQLiteActivityRepository
+    last_contact: SQLiteLastContactRepository
+    task: SQLiteTaskRepository
+    conv: SQLiteConversationRepository
+    segment: SQLiteSegmentRepository
+    campaign: SQLiteCampaignRepository
+    app_user: SQLiteAppUserRepository
+    approach: FileApproachScriptRepository
+
+
+class DuckdbRepos(TypedDict):
+    """All DuckDB-backed repositories — Optional because olap.duckdb may be absent."""
+    orders: Optional[DuckDBOrderRepository]
+    timeline: Optional[CustomerTimelineRepository]
+    customer_orders: Optional[CustomerOrdersRepository]
+    dim_metrics: Optional[CustomerDimMetricsRepository]
+    list_rfm: Optional[CustomerListRFMRepository]
+    dq: Optional[DataQualityRepository]
+
+
+class Services(TypedDict):
+    """All application-layer services wired from SQLite repositories."""
+    merge: MergeService
+    profile: ProfileService
+    activity: ActivityService
+    task: TaskService
+    conv: ConversationService
+    segment: SegmentService
+    campaign: CampaignService
+    app_user: AppUserService
+
+
 # Paths relative to this file (crm/src/).
 _THIS_DIR = Path(__file__).parent
 _TEMPLATES_DIR = _THIS_DIR / "adapters" / "inbound" / "web" / "templates"
@@ -136,9 +181,9 @@ def _resolve_static_dir() -> Optional[Path]:
 def create_app() -> FastAPI:
     """Wire all dependencies and return a ready-to-serve FastAPI application."""
     db = _setup_database()
-    sqlite_repos = _build_sqlite_repos(db)
-    duckdb_repos = _build_duckdb_repos(olap_path())
-    services = _build_services(sqlite_repos)
+    sqlite_repos: SqliteRepos = _build_sqlite_repos(db)
+    duckdb_repos: DuckdbRepos = _build_duckdb_repos(olap_path())
+    services: Services = _build_services(sqlite_repos)
     app = FastAPI(title="CRM", docs_url="/api/docs", redoc_url=None)
     _configure_middleware(app, services["app_user"])
     templates = _configure_templates(app)
@@ -159,7 +204,7 @@ def _setup_database() -> CRMDatabase:
     return db
 
 
-def _build_sqlite_repos(db: CRMDatabase) -> dict:
+def _build_sqlite_repos(db: CRMDatabase) -> SqliteRepos:
     """Instantiate all SQLite repositories and return as a named dict.
 
     Includes ``conn`` (raw SQLite connection) and ``db`` (CRMDatabase) so
@@ -195,7 +240,7 @@ def _build_sqlite_repos(db: CRMDatabase) -> dict:
     }
 
 
-def _build_duckdb_repos(olap: str) -> dict:
+def _build_duckdb_repos(olap: str) -> DuckdbRepos:
     """Instantiate DuckDB repositories — non-fatal if olap.duckdb is unavailable.
 
     All values are Optional; callers must handle None (handlers return 503).
@@ -247,7 +292,7 @@ def _build_duckdb_repos(olap: str) -> dict:
     }
 
 
-def _build_services(sqlite_repos: dict) -> dict:
+def _build_services(sqlite_repos: SqliteRepos) -> Services:
     """Instantiate all application services from SQLite repository objects."""
     db = sqlite_repos["db"]
     return {
@@ -325,9 +370,9 @@ def _configure_templates(app: FastAPI):  # returns Jinja2Templates
 
 def _register_api_routes(
     app: FastAPI,
-    sqlite_repos: dict,
-    duckdb_repos: dict,
-    services: dict,
+    sqlite_repos: SqliteRepos,
+    duckdb_repos: DuckdbRepos,
+    services: Services,
     templates,
 ) -> None:
     """Register all HTTP API routers (prefix=/api already set per handler)."""
@@ -362,9 +407,9 @@ def _register_api_routes(
 
 def _register_web_routes(
     app: FastAPI,
-    sqlite_repos: dict,
-    duckdb_repos: dict,
-    services: dict,
+    sqlite_repos: SqliteRepos,
+    duckdb_repos: DuckdbRepos,
+    services: Services,
     templates,
 ) -> None:
     """Register all Web UI screen routers (served at root paths, no /api prefix)."""
@@ -386,21 +431,26 @@ def _register_web_routes(
         task_svc=services["task"],
         app_users=sqlite_repos["app_user"],
     ))
+    worklist_svc = WorklistQueryService(
+        action_queue=sqlite_repos["cache"],
+        last_contact=sqlite_repos["last_contact"],
+    )
     app.include_router(make_worklist_router(
         templates=templates,
-        action_queue=sqlite_repos["cache"],
+        worklist_svc=worklist_svc,
         tasks=services["task"],
         task_writer=services["task"],
         action_state=sqlite_repos["action_state"],
-        last_contact=sqlite_repos["last_contact"],
     ))
-    app.include_router(make_customer_list_router(
-        templates=templates,
+    customer_list_svc = CustomerListQueryService(
         parties=sqlite_repos["party"],
-        customer_code_resolver=duckdb_repos["orders"],
-        sapo_id_resolver=sqlite_repos["party"],
         rfm_loader=duckdb_repos["list_rfm"],
         tier_loader=sqlite_repos["cache"],
+    )
+    app.include_router(make_customer_list_router(
+        templates=templates,
+        customer_list_svc=customer_list_svc,
+        customer_code_resolver=duckdb_repos["orders"],
     ))
     app.include_router(make_customer_360_router(
         templates=templates,

@@ -38,28 +38,24 @@ _UUID_RE = re.compile(
 # ── Service protocols ─────────────────────────────────────────────────────────
 
 
-class PartyLister(Protocol):
+class CustomerListSvc(Protocol):
+    """Interface satisfied by CustomerListQueryService.
+
+    Screens depend on this protocol, not on the concrete service or repos
+    directly, so the service can be swapped or extended without touching
+    the screen layer.
+    """
     def list_all(self, offset: int, limit: int) -> tuple[list[Party], int]: ...
     def search_unified(self, q: str) -> list[str]: ...  # returns party_ids
     def get_by_id(self, party_id: str) -> Optional[Party]: ...
-    def list_by_phone(self, q: str) -> list[Party]: ...
     def find_by_identity(self, identity_type: str, identity_value: str) -> Optional[Party]: ...
+    def get_sapo_ids_for_parties(self, party_ids: list[str]) -> dict[str, int]: ...
+    def get_rfm_for_customer_ids(self, customer_ids: list[int]) -> dict[int, dict]: ...
+    def get_tiers_batch(self, customer_ids: list[int]) -> dict[int, str]: ...
 
 
 class CustomerCodeResolver(Protocol):
     def find_customer_id_by_code(self, customer_code: str) -> Optional[str]: ...
-
-
-class PartySapoIdResolver(Protocol):
-    def get_sapo_ids_for_parties(self, party_ids: list[str]) -> dict[str, int]: ...
-
-
-class PartyRFMLookup(Protocol):
-    def get_rfm_for_customer_ids(self, customer_ids: list[int]) -> dict[int, dict]: ...
-
-
-class PartyTierLookup(Protocol):
-    def get_tiers_batch(self, customer_ids: list[int]) -> dict[int, str]: ...
 
 
 # ── Router factory ────────────────────────────────────────────────────────────
@@ -67,37 +63,31 @@ class PartyTierLookup(Protocol):
 
 def make_customer_list_router(
     templates: Jinja2Templates,
-    parties: PartyLister,
+    customer_list_svc: CustomerListSvc,
     customer_code_resolver: Optional[CustomerCodeResolver] = None,
-    sapo_id_resolver: Optional[PartySapoIdResolver] = None,
-    rfm_loader: Optional[PartyRFMLookup] = None,
-    tier_loader: Optional[PartyTierLookup] = None,
 ) -> APIRouter:
     """Return APIRouter wired with all Customer List routes."""
     router = APIRouter()
 
     def _build_rfm_map(party_list: list[Party]) -> dict[str, dict]:
         """Return {party_id: {customer_type, last_order_date, order_count, strategic_tier}} for the page."""
-        if sapo_id_resolver is None or not party_list:
+        if not party_list:
             return {}
         try:
-            pid_to_cid = sapo_id_resolver.get_sapo_ids_for_parties(
+            pid_to_cid = customer_list_svc.get_sapo_ids_for_parties(
                 [p.party_id for p in party_list]
             )
             if not pid_to_cid:
                 return {}
             cids = list(pid_to_cid.values())
 
-            cid_to_rfm: dict[int, dict] = {}
-            if rfm_loader is not None:
-                cid_to_rfm = rfm_loader.get_rfm_for_customer_ids(cids)
+            cid_to_rfm: dict[int, dict] = customer_list_svc.get_rfm_for_customer_ids(cids)
 
             cid_to_tier: dict[int, str] = {}
-            if tier_loader is not None:
-                try:
-                    cid_to_tier = tier_loader.get_tiers_batch(cids)
-                except Exception:
-                    log.warning("customer list: tier enrichment failed", exc_info=True)
+            try:
+                cid_to_tier = customer_list_svc.get_tiers_batch(cids)
+            except Exception:
+                log.warning("customer list: tier enrichment failed", exc_info=True)
 
             result: dict[str, dict] = {}
             for pid, cid in pid_to_cid.items():
@@ -113,13 +103,13 @@ def make_customer_list_router(
 
     def _search_parties(q: str) -> list[Party]:
         try:
-            ids = parties.search_unified(_fts_query(q))
+            ids = customer_list_svc.search_unified(_fts_query(q))
         except Exception as exc:
             log.error("customer search: %r: %s", q, exc)
             ids = []
         out = []
         for pid in ids:
-            p = parties.get_by_id(pid)
+            p = customer_list_svc.get_by_id(pid)
             if p and not p.is_merged:
                 out.append(p)
         return out
@@ -146,7 +136,7 @@ def make_customer_list_router(
         if key.isdigit():
             party = None
             try:
-                party = parties.find_by_identity("sapo_customer", key)
+                party = customer_list_svc.find_by_identity("sapo_customer", key)
             except Exception as exc:
                 log.error("customer by-key: sapo_customer %r: %s", key, exc)
             if party is not None:
@@ -157,7 +147,7 @@ def make_customer_list_router(
             try:
                 customer_id = customer_code_resolver.find_customer_id_by_code(key)
                 if customer_id:
-                    party = parties.find_by_identity("sapo_customer", customer_id)
+                    party = customer_list_svc.find_by_identity("sapo_customer", customer_id)
                     if party is not None:
                         return RedirectResponse(url=f"/customers/{party.party_id}", status_code=302)
             except Exception as exc:
@@ -181,7 +171,7 @@ def make_customer_list_router(
             total = len(party_list)
         else:
             try:
-                party_list, total = parties.list_all(offset, DEFAULT_PAGE_SIZE)
+                party_list, total = customer_list_svc.list_all(offset, DEFAULT_PAGE_SIZE)
             except Exception as exc:
                 log.error("customer list: list all: %s", exc)
                 party_list, total = [], 0
@@ -209,7 +199,7 @@ def make_customer_list_router(
             party_list = _search_parties(q)
         else:
             try:
-                party_list, _ = parties.list_all(0, DEFAULT_PAGE_SIZE)
+                party_list, _ = customer_list_svc.list_all(0, DEFAULT_PAGE_SIZE)
             except Exception as exc:
                 log.error("customer search: list: %s", exc)
                 party_list = []
