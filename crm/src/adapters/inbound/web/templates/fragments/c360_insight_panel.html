@@ -26,10 +26,10 @@
     {% if not insight.actions %}
     <div class="caveat caveat--info">Không có hành động đề xuất nào cho khách này.</div>
     {% else %}
-    {# Sort: SKU actions with last_purchase_date newest-first, undated actions appended #}
-    {% set _aq_dated = insight.actions | selectattr('last_purchase_date') | list | sort(attribute='last_purchase_date', reverse=True) %}
+    {# Sort: user-level actions first, then SKU actions newest last_purchase_date first #}
     {% set _aq_nodal = insight.actions | rejectattr('last_purchase_date') | list %}
-    {% set sorted_actions = _aq_dated + _aq_nodal %}
+    {% set _aq_dated = insight.actions | selectattr('last_purchase_date') | list | sort(attribute='last_purchase_date', reverse=True) %}
+    {% set sorted_actions = _aq_nodal + _aq_dated %}
     {# Count non-dismissed, non-resolved actions to select display mode #}
     {% set ns = namespace(unresolved_count=0) %}
     {% for act in sorted_actions %}{% if act.status != 'dismissed' and act.action_id not in resolved_action_ids %}{% set ns.unresolved_count = ns.unresolved_count + 1 %}{% endif %}{% endfor %}
@@ -60,7 +60,7 @@
               <div class="aq-check-row__why">{{ act.rationale_vi }}</div>
               {% if act.last_purchase_date %}
               <div class="aq-ctx">
-                {% if act.last_order_code %}<a href="/orders/{{ act.last_order_code }}" class="aq-ctx-chip aq-ctx-chip--link" onclick="event.stopPropagation()">{{ act.last_order_code }}</a>{% endif %}
+                {% if act.last_order_code %}<a href="/orders/{{ act.last_order_code }}" class="aq-ctx-chip aq-ctx-chip--link" onclick="event.stopPropagation();window.open(this.href,'_blank','noopener');return false;">{{ act.last_order_code }}</a>{% endif %}
                 <span class="aq-ctx-chip">{{ act.last_purchase_date }}</span>
                 {% if act.last_net_unit_price %}<span class="aq-ctx-chip">{{ act.last_net_unit_price | fmt_vnd }}</span>{% endif %}
                 {% if act.last_sku_discount_rate %}<span class="aq-ctx-chip aq-ctx-chip--discount">−{{ "%.0f"|format(act.last_sku_discount_rate * 100) }}%</span>{% endif %}
@@ -113,8 +113,9 @@
         <div class="aq-card__rationale">{{ act.rationale_vi }}</div>
         {% if act.last_purchase_date %}
         <div class="aq-ctx">
-          {% if act.last_order_code %}<a href="/orders/{{ act.last_order_code }}" class="aq-ctx-chip aq-ctx-chip--link" onclick="event.stopPropagation()">{{ act.last_order_code }}</a>{% endif %}
+          {% if act.last_order_code %}<a href="/orders/{{ act.last_order_code }}" class="aq-ctx-chip aq-ctx-chip--link" onclick="event.stopPropagation();window.open(this.href,'_blank','noopener');return false;">{{ act.last_order_code }}</a>{% endif %}
           <span class="aq-ctx-chip">{{ act.last_purchase_date }}</span>
+          {% if act.last_net_unit_price %}<span class="aq-ctx-chip">{{ act.last_net_unit_price | fmt_vnd }}</span>{% endif %}
           {% if act.last_sku_discount_rate %}<span class="aq-ctx-chip aq-ctx-chip--discount">−{{ "%.0f"|format(act.last_sku_discount_rate * 100) }}%</span>{% endif %}
         </div>
         {% endif %}

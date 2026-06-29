@@ -126,7 +126,7 @@ supply_stack (
         ON  p.customer_key = s.customer_key
         AND p.sku          = s.sku
         AND p.rn           = s.rn + 1
-)
+),
 
 -- Most recent order context per (customer, base_sku).
 -- Computed here (not in mart) so last_order_code and last_purchase_date share the same

@@ -345,7 +345,8 @@ def fetch_sku_action_queue(conn: "duckdb.DuckDBPyConnection") -> list[dict]:
         "  strftime(queue_generated_at, '%Y-%m-%d')           AS generated_date, "
         "  strftime(last_purchase_date, '%Y-%m-%d')           AS last_purchase_date, "
         "  last_order_code, "
-        "  last_sku_discount_rate "
+        "  last_sku_discount_rate, "
+        "  last_net_unit_price "
         "FROM main_marts.mart_customer_sku_action_queue"
     )
     try:
