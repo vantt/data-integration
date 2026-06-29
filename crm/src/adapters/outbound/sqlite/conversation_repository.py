@@ -123,7 +123,6 @@ class SQLiteConversationRepository:
         )
         row = self._conn.execute(_SQL_UPSERT_CONV, params).fetchone()
         if row is not None:
-            self._conn.commit()
             return row[0]
         # ON CONFLICT DO NOTHING → no RETURNING row; fall back to fetch existing.
         existing = self._conn.execute(
@@ -149,7 +148,6 @@ class SQLiteConversationRepository:
             (c.party_id, c.status, c.assignee_user_id, c.last_message_at,
              c.unread_count, c.updated_at, c.conversation_id),
         )
-        self._conn.commit()
 
     def update_conversation_on_message(
         self, conversation_id: str, sent_at: str, unread_delta: int
@@ -159,7 +157,6 @@ class SQLiteConversationRepository:
             _SQL_UPDATE_CONV_ON_MSG,
             (sent_at, sent_at, unread_delta, conversation_id),
         )
-        self._conn.commit()
 
     def list_conversations(
         self,
@@ -201,7 +198,6 @@ class SQLiteConversationRepository:
         )
         row = self._conn.execute(_SQL_INSERT_MSG, params).fetchone()
         if row is not None:
-            self._conn.commit()
             return row[0], True
         # Duplicate — ON CONFLICT DO NOTHING, idempotent skip.
         return "", False

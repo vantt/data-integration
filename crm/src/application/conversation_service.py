@@ -7,7 +7,7 @@ from __future__ import annotations
 import logging
 import uuid
 from shared.timestamps import utc_now
-from typing import Optional
+from typing import TYPE_CHECKING, Optional
 
 from domain.entities.conversation import (
     Conversation,
@@ -21,6 +21,9 @@ from domain.entities.party import Party
 from domain.ports.conversation_repository import ConversationRepository
 from domain.ports.party_repository import PartyRepository
 
+if TYPE_CHECKING:
+    from adapters.outbound.sqlite.connection import CRMDatabase
+
 log = logging.getLogger(__name__)
 
 
@@ -31,9 +34,11 @@ class ConversationService:
         self,
         conv_repo: ConversationRepository,
         party_repo: PartyRepository,
+        db: Optional[CRMDatabase] = None,
     ) -> None:
         self._conv_repo = conv_repo
         self._party_repo = party_repo
+        self._db = db
 
     # ------------------------------------------------------------------
     # Ingest
@@ -83,7 +88,10 @@ class ConversationService:
         )
         _, inserted = self._conv_repo.insert_message(message)
         if not inserted:
-            return  # duplicate — nothing more to do
+            # Commit the conversation upsert (if a new conv was inserted) then stop.
+            if self._db:
+                self._db.commit()
+            return  # duplicate message — nothing more to do
 
         # Step 3: advance last_message_at and increment unread_count.
         # unread_delta=1 for inbound only; duplicates are already gated above.
@@ -108,6 +116,8 @@ class ConversationService:
             if party is not None:
                 existing.party_id = party.party_id
                 self._conv_repo.update_conversation(existing)
+        if self._db:
+            self._db.commit()
 
     # ------------------------------------------------------------------
     # Inbox
@@ -136,6 +146,8 @@ class ConversationService:
         conv = self._get_or_raise(conversation_id)
         conv.assignee_user_id = assignee_user_id
         self._conv_repo.update_conversation(conv)
+        if self._db:
+            self._db.commit()
 
     def set_status(self, conversation_id: str, new_status: str) -> None:
         """Transition a conversation status (open|pending|closed)."""
@@ -149,12 +161,16 @@ class ConversationService:
             )
         conv.status = new_status
         self._conv_repo.update_conversation(conv)
+        if self._db:
+            self._db.commit()
 
     def link_party(self, conversation_id: str, party_id: str) -> None:
         """Directly link a conversation to a known party."""
         conv = self._get_or_raise(conversation_id)
         conv.party_id = party_id
         self._conv_repo.update_conversation(conv)
+        if self._db:
+            self._db.commit()
 
     def resolve_party_from_external_id(
         self, channel: str, sender_ref: str

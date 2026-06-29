@@ -202,12 +202,10 @@ class SQLiteProfileRepository:
             profile.created_at,
             profile.updated_at,
         ))
-        self._db.conn.commit()
 
     def update_custom_json(self, party_id: str, custom_json: str) -> None:
         """Replace the custom column; caller is responsible for merging values."""
         self._db.conn.execute(self._SQL_UPDATE_CUSTOM, (custom_json, party_id))
-        self._db.conn.commit()
 
     def get_party360(self, party_id: str) -> Optional[Party360]:
         row = self._db.conn.execute(self._SQL_GET_360, (party_id,)).fetchone()

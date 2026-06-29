@@ -7,10 +7,13 @@ from __future__ import annotations
 import logging
 import uuid
 from shared.timestamps import utc_now
-from typing import Optional
+from typing import TYPE_CHECKING, Optional
 
 from domain.entities.activity import Activity, VALID_ACTIVITY_TYPES
 from domain.ports.activity_repository import ActivityRepository
+
+if TYPE_CHECKING:
+    from adapters.outbound.sqlite.connection import CRMDatabase
 
 log = logging.getLogger(__name__)
 
@@ -18,9 +21,15 @@ log = logging.getLogger(__name__)
 class ActivityService:
     """Handles business logic for activity logging and timeline retrieval."""
 
-    def __init__(self, activity_repo: ActivityRepository, last_contact_repo=None) -> None:
+    def __init__(
+        self,
+        activity_repo: ActivityRepository,
+        last_contact_repo=None,
+        db: Optional[CRMDatabase] = None,
+    ) -> None:
         self._repo = activity_repo
         self._last_contact_repo = last_contact_repo
+        self._db = db
 
     def log_activity(self, activity_data: dict) -> Activity:
         """Validate and store a new activity for a party. Returns the Activity."""
@@ -63,6 +72,9 @@ class ActivityService:
                 )
             except Exception as exc:
                 log.warning("last_contact upsert %s: %s", activity.party_id, exc)
+        # Single commit covers both activity insert and last_contact upsert atomically.
+        if self._db:
+            self._db.commit()
         return activity
 
     def list_activities(self, party_id: str, limit: int = 50) -> list[Activity]:

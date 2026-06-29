@@ -89,7 +89,6 @@ class SQLiteActivityRepository:
             activity.created_at,
             json.dumps(activity.custom_fields) if activity.custom_fields else None,
         ))
-        self._conn.commit()
         return activity
 
     def list_by_party(self, party_id: str, limit: int = 50) -> list[Activity]:

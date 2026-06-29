@@ -23,6 +23,7 @@ from domain.entities.profile import (
     Party360,
     VALID_CUSTOM_DATA_TYPES,
 )
+from domain.result import ValidationResult
 
 log = logging.getLogger(__name__)
 
@@ -42,7 +43,7 @@ class PartyLookup(Protocol):
 
 class ProfileWriter(Protocol):
     def upsert_profile(self, party_id: str, **kwargs: Any) -> CustomerProfile: ...
-    def update_custom(self, party_id: str, field_key: str, value: str) -> None: ...
+    def update_custom(self, party_id: str, field_key: str, value: str) -> ValidationResult: ...
 
 
 class TagManager(Protocol):
@@ -144,10 +145,10 @@ def make_customer360_router(
         profile_w.upsert_profile(id, **kwargs)
         if body.custom_fields:
             for field_key, value in body.custom_fields.items():
-                try:
-                    profile_w.update_custom(id, field_key, value)
-                except ValueError as exc:
-                    raise HTTPException(status_code=400, detail=str(exc)) from exc
+                result = profile_w.update_custom(id, field_key, value)
+                if not result.ok:
+                    msgs = "; ".join(str(e) for e in result.errors)
+                    raise HTTPException(status_code=400, detail=msgs)
         return {"status": "ok", "party_id": id}
 
     # GET /api/parties/{id}/insight

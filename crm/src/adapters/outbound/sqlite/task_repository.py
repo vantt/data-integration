@@ -152,7 +152,6 @@ class SQLiteTaskRepository:
             task.updated_at,
             task.completed_at,
         ))
-        self._conn.commit()
         return task
 
     def get_by_id(self, task_id: str) -> Optional[Task]:
@@ -172,7 +171,6 @@ class SQLiteTaskRepository:
             task.completed_at,
             task.task_id,
         ))
-        self._conn.commit()
 
     def list_by_assignee_and_status(
         self,

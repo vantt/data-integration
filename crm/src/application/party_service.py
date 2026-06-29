@@ -1,70 +1,38 @@
 """party_service.py — PartyService: golden-record creation and identity attachment.
 
 Called by PartySeedService to turn wh_party_seed rows into crm_party + identities.
-Normalisation helpers (normalize_phone, normalize_email) port normalize.go exactly.
+Normalisation helpers delegate to domain value objects (PhoneNumber, Email).
 """
 from __future__ import annotations
 
-import re
 import uuid
 from typing import Optional
 
 from shared.timestamps import utc_now
 from domain.entities.party import Party, PartyIdentity
 from domain.ports.party_repository import PartyRepository
+from domain.value_objects.phone import PhoneNumber
+from domain.value_objects.email import Email
 
 
 # ---------------------------------------------------------------------------
-# Normalisation (ports normalize.go)
+# Normalisation — public free functions kept for backward compatibility;
+# logic lives in the value objects.
 # ---------------------------------------------------------------------------
-
-_NON_DIGIT_NON_PLUS = re.compile(r"[^\d+]")
-
 
 def normalize_phone(raw: str) -> str:
-    """Convert Vietnamese phone to local VN format (09...).
-
-    Rules:
-      - Strip everything except digits and '+'.
-      - "+84..." → '0' + rest (strip +84, prepend 0).
-      - "84..."  (≥11 digits total) → '0' + digits[2:].
-      - "0..."   → keep as-is.
-      - No digit remaining after strip → return "".
-      - Other unrecognised formats → return stripped digits only.
-    """
-    s = _NON_DIGIT_NON_PLUS.sub("", raw)
-    if not s:
-        return ""
-    # Must have at least one digit
-    if not any(c.isdigit() for c in s):
-        return ""
-    if s.startswith("+84"):
-        return "0" + s[3:]
-    if s.startswith("84") and len(s) >= 11:
-        return "0" + s[2:]
-    if s.startswith("0"):
-        return s
-    return s
+    """Convert Vietnamese phone to local VN format. Delegates to PhoneNumber.normalize."""
+    return PhoneNumber.normalize(raw)
 
 
 def phone_to_e164(local: str) -> str:
-    """Convert local VN format (09...) to E.164 (+84...) for external export.
-
-    Rules:
-      - "0..."    → "+84" + rest.
-      - "+84..."  → keep as-is (already E.164).
-      - Otherwise → return as-is.
-    """
-    if local.startswith("0"):
-        return "+84" + local[1:]
-    if local.startswith("+84"):
-        return local
-    return local
+    """Convert local VN format to E.164. Delegates to PhoneNumber.to_e164."""
+    return PhoneNumber.to_e164(local)
 
 
 def normalize_email(raw: str) -> str:
-    """Lower-case and strip whitespace from an email address."""
-    return raw.strip().lower()
+    """Lower-case and strip whitespace. Delegates to Email.normalize."""
+    return Email.normalize(raw)
 
 
 # ---------------------------------------------------------------------------

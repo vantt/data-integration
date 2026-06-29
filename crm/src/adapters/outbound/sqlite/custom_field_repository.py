@@ -134,7 +134,6 @@ class SQLiteCustomFieldRepository:
             int(defn.is_active),
             defn.sort_order,
         ))
-        self._db.conn.commit()
         return defn
 
     def update_def(self, field_id: str, **kwargs) -> None:
@@ -162,4 +161,3 @@ class SQLiteCustomFieldRepository:
             sort_order,
             field_id,
         ))
-        self._db.conn.commit()

@@ -112,24 +112,19 @@ class SQLiteTagRepository:
 
     def create_tag(self, tag: Tag) -> None:
         self._db.conn.execute(self._SQL_CREATE, (tag.tag_id, tag.name, tag.display_label, tag.category, tag.color))
-        self._db.conn.commit()
 
     def update_tag(self, tag: Tag) -> None:
         self._db.conn.execute(self._SQL_UPDATE, (tag.name, tag.display_label, tag.category, tag.color, tag.tag_id))
-        self._db.conn.commit()
 
     def delete_tag(self, tag_id: str) -> None:
         self._db.conn.execute(self._SQL_DELETE, (tag_id,))
-        self._db.conn.commit()
 
     def attach_tag(self, party_tag: PartyTag) -> None:
         """INSERT OR IGNORE — idempotent on duplicate (party_id, tag_id)."""
         self._db.conn.execute(self._SQL_ATTACH, (party_tag.party_id, party_tag.tag_id, party_tag.tagged_by, party_tag.tagged_at))
-        self._db.conn.commit()
 
     def detach_tag(self, party_id: str, tag_id: str) -> None:
         self._db.conn.execute(self._SQL_DETACH, (party_id, tag_id))
-        self._db.conn.commit()
 
     def list_party_tags(self, party_id: str) -> list[Tag]:
         """Return Tag objects for all tags attached to party_id."""
@@ -204,7 +199,6 @@ class SQLiteNoteRepository:
             note.created_at,
             note.source_activity_id,
         ))
-        self._db.conn.commit()
 
     def list_notes(self, party_id: str, limit: int = 50) -> list[Note]:
         rows = self._db.conn.execute(self._SQL_LIST, (party_id,)).fetchmany(limit)
@@ -228,8 +222,6 @@ class SQLiteNoteRepository:
     def update_note(self, note_id: str, body: str, note_type: str = "general",
                     pinned: bool = False, visibility: str = "team") -> None:
         self._db.conn.execute(self._SQL_UPDATE, (body, note_type, 1 if pinned else 0, visibility, note_id))
-        self._db.conn.commit()
 
     def soft_delete_note(self, note_id: str) -> None:
         self._db.conn.execute(self._SQL_SOFT_DELETE, (note_id,))
-        self._db.conn.commit()

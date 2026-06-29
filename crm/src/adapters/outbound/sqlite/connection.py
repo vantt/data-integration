@@ -11,6 +11,7 @@ from __future__ import annotations
 
 import os
 import sqlite3
+from contextlib import contextmanager
 from pathlib import Path
 from typing import Optional
 
@@ -78,6 +79,23 @@ class CRMDatabase:
     def conn(self) -> sqlite3.Connection:
         """Return the underlying sqlite3.Connection."""
         return self._conn
+
+    def commit(self) -> None:
+        """Commit the current transaction."""
+        self._conn.commit()
+
+    @contextmanager
+    def transaction(self):
+        """Context manager for atomic multi-repo operations.
+
+        On normal exit: commits. On exception: rolls back and re-raises.
+        """
+        try:
+            yield self._conn
+            self._conn.commit()
+        except Exception:
+            self._conn.rollback()
+            raise
 
     def ping(self) -> None:
         """Raise sqlite3.Error if the connection is not alive."""

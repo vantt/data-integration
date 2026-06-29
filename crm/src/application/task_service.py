@@ -7,7 +7,7 @@ from __future__ import annotations
 import logging
 import uuid
 from shared.timestamps import utc_now
-from typing import Optional
+from typing import TYPE_CHECKING, Optional
 
 from domain.entities.task import (
     Task,
@@ -23,6 +23,9 @@ from domain.ports.task_repository import TaskRepository
 from domain.ports.party_repository import PartyRepository
 from domain.ports.cache_repository import CacheRepository
 
+if TYPE_CHECKING:
+    from adapters.outbound.sqlite.connection import CRMDatabase
+
 log = logging.getLogger(__name__)
 
 
@@ -35,10 +38,12 @@ class TaskService:
         task_repo: TaskRepository,
         party_repo: PartyRepository,
         cache_repo: CacheRepository,
+        db: Optional[CRMDatabase] = None,
     ) -> None:
         self._task_repo = task_repo
         self._party_repo = party_repo
         self._cache_repo = cache_repo
+        self._db = db
 
     # ------------------------------------------------------------------
     # Manual CRUD
@@ -67,6 +72,8 @@ class TaskService:
             created_by=task_data.get("created_by"),
         )
         self._task_repo.insert(task)
+        if self._db:
+            self._db.commit()
         return task
 
     def get_task(self, task_id: str) -> Optional[Task]:
@@ -89,6 +96,8 @@ class TaskService:
         if "assignee_user_id" in data:
             task.assignee_user_id = data["assignee_user_id"] or None
         self._task_repo.update(task)
+        if self._db:
+            self._db.commit()
         return task
 
     def assign_task(self, task_id: str, assignee_id: str) -> None:
@@ -99,6 +108,8 @@ class TaskService:
         task.assignee_user_id = assignee_id
         # updated_at is owned by the DB trigger — no app-side stamp needed.
         self._task_repo.update(task)
+        if self._db:
+            self._db.commit()
 
     def transition_status(self, task_id: str, new_status: str) -> Task:
         """Apply a status change, enforcing domain transition rules.
@@ -128,6 +139,8 @@ class TaskService:
             task.completed_at = None
 
         self._task_repo.update(task)
+        if self._db:
+            self._db.commit()
         return task
 
     def list_tasks(
@@ -227,4 +240,6 @@ class TaskService:
             updated_at=now,
         )
         self._task_repo.insert(task)
+        if self._db:
+            self._db.commit()
         return 1

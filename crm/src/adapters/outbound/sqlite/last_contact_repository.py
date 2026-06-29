@@ -57,7 +57,6 @@ class SQLiteLastContactRepository:
     ) -> None:
         now = datetime.now(timezone.utc).isoformat()
         self._conn.execute(_UPSERT, (party_id, activity_id, contacted_at, result, channel, now))
-        self._conn.commit()
 
     def get_by_party(self, party_id: str) -> Optional[LastContact]:
         row = self._conn.execute(_GET, (party_id,)).fetchone()

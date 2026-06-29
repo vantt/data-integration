@@ -252,6 +252,7 @@ def _build_duckdb_repos(olap: str) -> dict:
 
 def _build_services(sqlite_repos: dict) -> dict:
     """Instantiate all application services from SQLite repository objects."""
+    db = sqlite_repos["db"]
     return {
         "merge": MergeService(sqlite_repos["party"], sqlite_repos["dedup"]),
         "profile": ProfileService(
@@ -259,10 +260,11 @@ def _build_services(sqlite_repos: dict) -> dict:
             sqlite_repos["cf"],
             sqlite_repos["tag"],
             sqlite_repos["note"],
+            db,
         ),
-        "activity": ActivityService(sqlite_repos["activity"], sqlite_repos["last_contact"]),
-        "task": TaskService(sqlite_repos["task"], sqlite_repos["party"], sqlite_repos["cache"]),
-        "conv": ConversationService(sqlite_repos["conv"], sqlite_repos["party"]),
+        "activity": ActivityService(sqlite_repos["activity"], sqlite_repos["last_contact"], db),
+        "task": TaskService(sqlite_repos["task"], sqlite_repos["party"], sqlite_repos["cache"], db),
+        "conv": ConversationService(sqlite_repos["conv"], sqlite_repos["party"], db),
         "segment": SegmentService(sqlite_repos["segment"]),
         "campaign": CampaignService(
             sqlite_repos["campaign"],

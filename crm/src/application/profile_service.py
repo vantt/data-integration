@@ -7,9 +7,13 @@ from __future__ import annotations
 import json
 import uuid
 from datetime import datetime
-from typing import Optional
+from typing import TYPE_CHECKING, Optional
 
 from shared.timestamps import utc_now
+from domain.result import CustomFieldError, ValidationResult
+
+if TYPE_CHECKING:
+    from adapters.outbound.sqlite.connection import CRMDatabase
 from domain.entities.profile import (
     CustomerProfile,
     CustomFieldDef,
@@ -29,13 +33,6 @@ from domain.ports.profile_repository import (
 # ---------------------------------------------------------------------------
 # Validator (ported from domain/custom_field_validator.go)
 # ---------------------------------------------------------------------------
-
-class CustomFieldError(Exception):
-    def __init__(self, field_key: str, message: str) -> None:
-        self.field_key = field_key
-        self.message = message
-        super().__init__(f"custom field {field_key!r}: {message}")
-
 
 def _validate_custom_field(defn: CustomFieldDef, raw_value: str) -> Optional[CustomFieldError]:
     """Validate one (def, raw_value) pair. Returns error or None."""
@@ -112,11 +109,13 @@ class ProfileService:
         custom_field_repo: CustomFieldRepository,
         tag_repo: TagRepository,
         note_repo: NoteRepository,
+        db: Optional[CRMDatabase] = None,
     ) -> None:
         self._profiles = profile_repo
         self._custom_fields = custom_field_repo
         self._tags = tag_repo
         self._notes = note_repo
+        self._db = db
 
     # --- Profile ---
 
@@ -187,10 +186,15 @@ class ProfileService:
                 updated_at=now,
             )
         self._profiles.upsert_profile(profile)
+        if self._db:
+            self._db.commit()
         return profile
 
-    def update_custom(self, party_id: str, field_key: str, value: str) -> None:
-        """Merge {field_key: value} into the existing custom JSON, validate, then persist."""
+    def update_custom(self, party_id: str, field_key: str, value: str) -> ValidationResult:
+        """Merge {field_key: value} into the existing custom JSON, validate, then persist.
+
+        Returns ValidationResult; caller checks result.ok rather than catching ValueError.
+        """
         # 1. Load active field defs for 'party'
         defs = self._custom_fields.list_active_defs("party")
 
@@ -210,11 +214,10 @@ class ProfileService:
         # 3. Merge single key
         existing[field_key] = value
 
-        # 4. Validate full merged map
+        # 4. Validate full merged map — return errors without persisting
         errors = _validate_custom_map(defs, existing)
         if errors:
-            msgs = "; ".join(str(e) for e in errors)
-            raise ValueError(f"profile service: custom field validation failed: {msgs}")
+            return ValidationResult(errors=errors)
 
         # 5. Persist
         merged_json = json.dumps(existing)
@@ -228,6 +231,9 @@ class ProfileService:
             ))
         else:
             self._profiles.update_custom_json(party_id, merged_json)
+        if self._db:
+            self._db.commit()
+        return ValidationResult()
 
     # --- Custom field defs ---
 
@@ -240,6 +246,8 @@ class ProfileService:
         if not def_data.entity_type:
             def_data.entity_type = "party"
         self._custom_fields.create_def(def_data)
+        if self._db:
+            self._db.commit()
         return def_data
 
     def update_custom_field_def(self, field_id: str, **kwargs) -> None:
@@ -250,6 +258,8 @@ class ProfileService:
             if hasattr(defn, k):
                 setattr(defn, k, v)
         self._custom_fields.update_def(defn)
+        if self._db:
+            self._db.commit()
 
     # --- Tags ---
 
@@ -267,9 +277,13 @@ class ProfileService:
             tagged_by=user_id,
         )
         self._tags.attach_tag(pt)
+        if self._db:
+            self._db.commit()
 
     def detach_tag(self, party_id: str, tag_id: str) -> None:
         self._tags.detach_tag(party_id, tag_id)
+        if self._db:
+            self._db.commit()
 
     def list_party_tags(self, party_id: str) -> list[PartyTag]:
         return self._tags.list_party_tags(party_id)
@@ -289,6 +303,8 @@ class ProfileService:
             color=color or "default",
         )
         self._tags.create_tag(tag)
+        if self._db:
+            self._db.commit()
         return tag
 
     def update_tag(self, tag_id: str, name: str, category: str, color: str, display_label: str = "") -> None:
@@ -300,9 +316,13 @@ class ProfileService:
             color=color or "default",
         )
         self._tags.update_tag(tag)
+        if self._db:
+            self._db.commit()
 
     def delete_tag(self, tag_id: str) -> None:
         self._tags.delete_tag(tag_id)
+        if self._db:
+            self._db.commit()
 
     # --- Notes ---
 
@@ -323,6 +343,8 @@ class ProfileService:
             source_activity_id=source_activity_id,
         )
         self._notes.add_note(note)
+        if self._db:
+            self._db.commit()
         return note
 
     def list_notes(self, party_id: str) -> list[Note]:
@@ -333,9 +355,13 @@ class ProfileService:
         if not body.strip():
             raise ValueError("profile service: note body must not be empty")
         self._notes.update_note(note_id, body, note_type, pinned, visibility)
+        if self._db:
+            self._db.commit()
 
     def delete_note(self, note_id: str) -> None:
         self._notes.soft_delete_note(note_id)
+        if self._db:
+            self._db.commit()
 
     # --- Owner ---
 
