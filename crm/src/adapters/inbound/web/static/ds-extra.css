@@ -326,6 +326,7 @@
 .wl-band__header--b1 { border-left-color: var(--coral-500); }
 .wl-band__header--b2 { border-left-color: var(--border-strong); }
 .wl-band__header--b3 { border-left-color: transparent; color: var(--fg-muted); }
+.wl-band__header--b4 { border-left-color: var(--success); color: var(--fg-muted); }
 
 .wl-band__icon { font-size: 15px; flex: none; }
 .wl-band__label { flex: 1; }
@@ -355,6 +356,8 @@
 .wl-list--b3 .wl-row { padding: var(--sp-3) var(--sp-4); font-size: 13px; }
 .wl-list--b3 .wl-row__name { font-size: 14px; }
 .wl-list--b3 .wl-row__why { font-size: 12.5px; }
+/* Band 4 rows: muted left border — already contacted, lower visual weight */
+.wl-list--b4 .wl-row { border-left: 3px solid color-mix(in srgb, var(--success) 35%, transparent); }
 
 /* "Xem thêm" expander inside a band */
 .wl-more { }

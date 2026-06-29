@@ -160,7 +160,7 @@ def _sort_key_b3(row: WorklistRow) -> tuple:
     return (-row.value,)
 
 
-_BAND_SORT_KEYS = {0: _sort_key_b0, 1: _sort_key_b1, 2: _sort_key_b2, 3: _sort_key_b3}
+_BAND_SORT_KEYS = {0: _sort_key_b0, 1: _sort_key_b1, 2: _sort_key_b2, 3: _sort_key_b3, 4: _sort_key_b1}
 
 # ---------------------------------------------------------------------------
 # Band metadata
@@ -171,6 +171,7 @@ _BAND_META = {
     1: {"id": 1, "label": "Hôm nay / Khẩn", "icon": "⏰"},
     2: {"id": 2, "label": "Trong hạn",       "icon": "📋"},
     3: {"id": 3, "label": "Treo lâu",        "icon": "💤"},
+    4: {"id": 4, "label": "Đã liên hệ",      "icon": "✅"},
 }
 
 
@@ -182,6 +183,7 @@ def rank_worklist(
     actions: list,   # list[ActionQueueItem]
     tasks: list,     # list[Task]
     today: date,
+    contacted_party_ids: Optional[set] = None,
 ) -> dict:
     """Merge actions + tasks into an urgency-banded sorted structure.
 
@@ -194,6 +196,8 @@ def rank_worklist(
       task_open   — count of tasks with status not done/cancelled (for KPI strip)
       urgent_count — count of rows in bands 0+1 (for progress KPI)
     """
+    _contacted = contacted_party_ids or set()
+
     rows: list[WorklistRow] = []
 
     for a in actions:
@@ -203,6 +207,10 @@ def rank_worklist(
         snooze_d = _parse_date(getattr(a, "snoozed_until", None))
         status = getattr(a, "status", "open") or "open"
         band = assign_band("action", us, None, pending, snooze_d, status, today)
+        # Actions whose party was positively contacted recently move to band 4.
+        pid = getattr(a, "party_id", None) or ""
+        if pid and pid in _contacted:
+            band = 4
         neglect = (today - pending).days if pending else 0
         rows.append(WorklistRow(
             kind="action",
@@ -231,16 +239,16 @@ def rank_worklist(
         ))
 
     # Group into bands and sort within each band
-    bands_map: dict[int, list[WorklistRow]] = {0: [], 1: [], 2: [], 3: []}
+    bands_map: dict[int, list[WorklistRow]] = {0: [], 1: [], 2: [], 3: [], 4: []}
     for row in rows:
         bands_map[row.band].append(row)
 
     for band_id, band_rows in bands_map.items():
         band_rows.sort(key=_BAND_SORT_KEYS[band_id])
 
-    # Build output structure
+    # Build output structure — band 4 ("Đã liên hệ") renders above band 0 in template.
     bands = []
-    for band_id in (0, 1, 2, 3):
+    for band_id in (4, 0, 1, 2, 3):
         band_rows = bands_map[band_id]
         total_val = sum(r.value for r in band_rows)
         bands.append({

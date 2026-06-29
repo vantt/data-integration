@@ -35,6 +35,11 @@ from crm.src.domain.entities.cache_insight import ActionQueueItem  # noqa: E402
 
 # ── helpers / fixture factories ───────────────────────────────────────────────
 
+def _b(result: dict, band_id: int) -> dict:
+    """Find band dict by ID — order-independent band lookup."""
+    return next(b for b in result["bands"] if b["id"] == band_id)
+
+
 _TS = "2026-06-23T00:00:00.000Z"
 TODAY = date(2026, 6, 23)
 YESTERDAY = TODAY - timedelta(days=1)
@@ -326,7 +331,7 @@ class TestAssignBand:
 # =============================================================================
 
 class TestRankWorklistStructure:
-    """rank_worklist always returns 4 bands in order 0→3."""
+    """rank_worklist always returns 5 bands in order 4→0→1→2→3."""
 
     def test_empty_input_returns_well_formed_structure(self):
         result = rank_worklist([], [], TODAY)
@@ -336,13 +341,13 @@ class TestRankWorklistStructure:
         assert "task_open" in result
         assert "urgent_count" in result
 
-    def test_empty_input_has_exactly_4_bands(self):
+    def test_empty_input_has_exactly_5_bands(self):
         result = rank_worklist([], [], TODAY)
-        assert len(result["bands"]) == 4
+        assert len(result["bands"]) == 5
 
-    def test_empty_input_band_ids_ordered_0_to_3(self):
+    def test_empty_input_band_ids_ordered_4_0_to_3(self):
         result = rank_worklist([], [], TODAY)
-        assert [b["id"] for b in result["bands"]] == [0, 1, 2, 3]
+        assert [b["id"] for b in result["bands"]] == [4, 0, 1, 2, 3]
 
     def test_empty_input_all_bands_have_zero_count(self):
         result = rank_worklist([], [], TODAY)
@@ -429,7 +434,7 @@ class TestRankWorklistRouting:
     def test_overdue_task_routes_to_band0(self):
         t = make_task("t-1", due_at=str(YESTERDAY))
         result = rank_worklist([], [t], TODAY)
-        band0 = result["bands"][0]
+        band0 = _b(result, 0)
         assert band0["count"] == 1
         assert band0["rows"][0].kind == "task"
         assert band0["rows"][0].ref_id == "t-1"
@@ -437,27 +442,27 @@ class TestRankWorklistRouting:
     def test_task_due_today_routes_to_band1(self):
         t = make_task("t-1", due_at=str(TODAY) + "T00:00:00.000Z")
         result = rank_worklist([], [t], TODAY)
-        band1 = result["bands"][1]
+        band1 = _b(result, 1)
         assert any(r.ref_id == "t-1" for r in band1["rows"])
 
     def test_call_now_action_routes_to_band1(self):
         a = make_action("a-1", priority=1)
         result = rank_worklist([a], [], TODAY)
-        band1 = result["bands"][1]
+        band1 = _b(result, 1)
         assert any(r.ref_id == "a-1" for r in band1["rows"])
 
     def test_neglected_action_routes_to_band3(self):
         a = make_action("a-1", priority=4,
                         pending_since=str(TODAY - timedelta(days=8)))
         result = rank_worklist([a], [], TODAY)
-        band3 = result["bands"][3]
+        band3 = _b(result, 3)
         assert any(r.ref_id == "a-1" for r in band3["rows"])
 
     def test_normal_open_action_routes_to_band2(self):
         a = make_action("a-1", priority=5,
                         pending_since=str(TODAY - timedelta(days=2)))
         result = rank_worklist([a], [], TODAY)
-        band2 = result["bands"][2]
+        band2 = _b(result, 2)
         assert any(r.ref_id == "a-1" for r in band2["rows"])
 
     def test_woken_snoozed_action_routes_to_band1(self):
@@ -465,7 +470,7 @@ class TestRankWorklistRouting:
                         snoozed_until=str(YESTERDAY),
                         pending_since=str(TODAY - timedelta(days=3)))
         result = rank_worklist([a], [], TODAY)
-        band1 = result["bands"][1]
+        band1 = _b(result, 1)
         assert any(r.ref_id == "a-1" for r in band1["rows"])
 
 
@@ -477,7 +482,7 @@ class TestRankWorklistSortOrder:
         t_very_old = make_task("t-old", due_at=str(TODAY - timedelta(days=5)))
         t_recent = make_task("t-recent", due_at=str(YESTERDAY))
         result = rank_worklist([], [t_very_old, t_recent], TODAY)
-        band0_rows = result["bands"][0]["rows"]
+        band0_rows = _b(result, 0)["rows"]
         assert len(band0_rows) == 2
         # most overdue first (t-old is further past)
         assert band0_rows[0].ref_id == "t-old"
@@ -499,7 +504,7 @@ class TestRankWorklistSortOrder:
             pending_since=str(TODAY - timedelta(days=3)),
         )
         result = rank_worklist([a_call_now, a_woken], [], TODAY)
-        band1_rows = result["bands"][1]["rows"]
+        band1_rows = _b(result, 1)["rows"]
         assert len(band1_rows) == 2
         # urgency=9 (a-call) must sort before urgency=6 (a-woken)
         assert band1_rows[0].ref_id == "a-call"
@@ -510,7 +515,7 @@ class TestRankWorklistSortOrder:
         a_low_val = make_action("a-low", priority=1, value_at_stake_vnd=100_000)
         a_high_val = make_action("a-high", priority=1, value_at_stake_vnd=900_000)
         result = rank_worklist([a_low_val, a_high_val], [], TODAY)
-        band1_rows = result["bands"][1]["rows"]
+        band1_rows = _b(result, 1)["rows"]
         assert len(band1_rows) == 2
         assert band1_rows[0].ref_id == "a-high"
         assert band1_rows[1].ref_id == "a-low"
@@ -524,7 +529,7 @@ class TestRankWorklistSortOrder:
         a_low_urg = make_action("a-low", priority=5, value_at_stake_vnd=2_000_000,
                                 pending_since=str(TODAY - timedelta(days=2)))
         result = rank_worklist([a_mid, a_low_urg], [], TODAY)
-        band2_rows = result["bands"][2]["rows"]
+        band2_rows = _b(result, 2)["rows"]
         assert len(band2_rows) == 2
         assert band2_rows[0].ref_id == "a-mid"   # higher urgency wins
         assert band2_rows[1].ref_id == "a-low"
@@ -536,7 +541,7 @@ class TestRankWorklistSortOrder:
         a_big = make_action("a-big", priority=4, value_at_stake_vnd=500_000,
                             pending_since=str(TODAY - timedelta(days=8)))
         result = rank_worklist([a_small, a_big], [], TODAY)
-        band3_rows = result["bands"][3]["rows"]
+        band3_rows = _b(result, 3)["rows"]
         assert len(band3_rows) == 2
         assert band3_rows[0].ref_id == "a-big"
         assert band3_rows[1].ref_id == "a-small"
@@ -550,7 +555,7 @@ class TestRankWorklistMixedItems:
         a = make_action("a-1", priority=1)
         t = make_task("t-1", due_at=str(TODAY) + "T00:00:00.000Z")
         result = rank_worklist([a], [t], TODAY)
-        band1 = result["bands"][1]
+        band1 = _b(result, 1)
         kinds = {r.kind for r in band1["rows"]}
         assert "action" in kinds
         assert "task" in kinds
@@ -622,7 +627,7 @@ class TestWorklistRowFields:
         due_3_days_ago = TODAY - timedelta(days=3)
         t = make_task("t-1", due_at=str(due_3_days_ago))
         result = rank_worklist([], [t], TODAY)
-        band0_rows = result["bands"][0]["rows"]
+        band0_rows = _b(result, 0)["rows"]
         assert len(band0_rows) == 1
         assert band0_rows[0].neglect_days == 3
 

@@ -136,28 +136,37 @@ def make_worklist_router(
             except Exception as exc:
                 log.warning("worklist: last_contact fetch: %s", exc)
 
-        # --- hide_contacted: suppress actions contacted in last 24h -------
+        # --- Identify actions contacted in last 24h with a positive outcome --
+        # When hide_contacted is active, these items are removed from all_actions
+        # entirely (existing behaviour). Otherwise they are moved to band 4
+        # ("Đã liên hệ") so they stay visible but collapsed out of the main flow.
+        now_utc = datetime.now(timezone.utc)
+
+        def _recently_contacted_positively(pid: str) -> bool:
+            lc = party_extras.get(pid or "", {}).get("last_contact")
+            if lc is None or lc.last_contact_result not in POSITIVE_OUTCOMES:
+                return False
+            try:
+                lc_dt = datetime.fromisoformat(
+                    lc.last_contacted_at.replace("Z", "+00:00")
+                )
+                return (now_utc - lc_dt).total_seconds() <= 86400
+            except Exception:
+                return False
+
         if filters.get("hide_contacted"):
-            now_utc = datetime.now(timezone.utc)
-
-            def _recently_contacted_positively(pid: str) -> bool:
-                lc = party_extras.get(pid or "", {}).get("last_contact")
-                if lc is None or lc.last_contact_result not in POSITIVE_OUTCOMES:
-                    return False
-                try:
-                    lc_dt = datetime.fromisoformat(
-                        lc.last_contacted_at.replace("Z", "+00:00")
-                    )
-                    return (now_utc - lc_dt).total_seconds() <= 86400
-                except Exception:
-                    return False
-
             all_actions = [a for a in all_actions
                            if not _recently_contacted_positively(a.party_id)]
+            contacted_party_ids: set = set()
+        else:
+            contacted_party_ids = {
+                pid for pid in (a.party_id for a in all_actions if a.party_id)
+                if _recently_contacted_positively(pid)
+            }
 
         # --- Rank into banded structure ------------------------------------
         today = today_ict()
-        ranked = rank_worklist(all_actions, all_tasks, today)
+        ranked = rank_worklist(all_actions, all_tasks, today, contacted_party_ids)
 
         return {
             **ranked,
