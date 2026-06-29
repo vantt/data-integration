@@ -9,15 +9,16 @@ All endpoints return HTTP 200 (errors encoded in the JSON body) unless noted.
 from __future__ import annotations
 
 import logging
-import sqlite3
 
 from fastapi import APIRouter, Request
 from fastapi.responses import JSONResponse
 
-from hug import d1_push, repository
+from hug import d1_push
 from hug.claim_fields import CLAIM_FIELDS, VALIDATORS, get_field
 from hug.repository import AlreadyBoundError
 from hug.tokens import human_code, is_valid_token, normalize_input
+
+from domain.ports.hug_ports import HugTokenPort
 
 log = logging.getLogger(__name__)
 
@@ -28,8 +29,8 @@ log = logging.getLogger(__name__)
 _PROMOTED_COLS: frozenset[str] = frozenset({"order_code", "is_gift"})
 
 
-def make_claim_ajax_router(conn: sqlite3.Connection) -> APIRouter:
-    """Return the AJAX router bound to an open hug.db connection."""
+def make_claim_ajax_router(token_port: HugTokenPort) -> APIRouter:
+    """Return the AJAX router bound to a HugTokenPort."""
     router = APIRouter()
 
     @router.get("/hug/claim/check-token", response_class=JSONResponse)
@@ -47,7 +48,7 @@ def make_claim_ajax_router(conn: sqlite3.Connection) -> APIRouter:
         if not is_valid_token(norm):
             return JSONResponse({"state": "invalid", "message": "Tem không hợp lệ"})
 
-        row = repository.get_token(conn, norm)
+        row = token_port.get_token(norm)
         if row is None:
             return JSONResponse({"state": "unknown", "message": "Tem chưa mint"})
 
@@ -161,8 +162,7 @@ def make_claim_ajax_router(conn: sqlite3.Connection) -> APIRouter:
         is_gift = is_gift_raw in (True, 1, "1", "true", "on", "yes")
 
         try:
-            row = repository.bind_token(
-                conn,
+            row = token_port.bind_token(
                 token,
                 order_code=order_code,
                 is_gift=is_gift,
@@ -182,7 +182,7 @@ def make_claim_ajax_router(conn: sqlite3.Connection) -> APIRouter:
         # Best-effort edge publish — never blocks the claim
         push = d1_push.push_bound_token(row)
         if push.get("ok"):
-            repository.mark_pushed(conn, token)
+            token_port.mark_pushed(token)
             edge = "Đã đẩy lên edge (D1)."
         elif push.get("skipped"):
             edge = "Edge: pending deploy."

@@ -16,7 +16,7 @@ Design notes:
 - QR labels HTML is produced by hug_qr_print.render_labels_html() — the same
   function the CLI calls — so token generation and QR rendering are never
   duplicated (DRY).
-- Minting delegates to hug.repository.mint_batch() — same function the CLI uses.
+- Minting delegates to token_port.mint_batch() — same function the CLI uses.
 - The labels page embeds an "← Sinh batch khác" back-link and a print button so
   warehouse staff never need the CLI.
 """
@@ -24,13 +24,12 @@ from __future__ import annotations
 
 import html
 import logging
-import sqlite3
 from datetime import datetime, timezone
 
 from fastapi import APIRouter, Form, Query
 from fastapi.responses import HTMLResponse
 
-from hug import repository
+from domain.ports.hug_ports import HugTokenPort
 
 # Pure-HTML helpers (no FastAPI imports — independently testable).
 from adapters.inbound.web.screen_hug_mint_html import (
@@ -51,8 +50,8 @@ def _default_batch_id() -> str:
     return "LOT-" + datetime.now(timezone.utc).strftime("%Y%m%d-%H%M")
 
 
-def make_hug_mint_router(conn: sqlite3.Connection) -> APIRouter:
-    """Return the mint-station router bound to an open hug.db connection."""
+def make_hug_mint_router(token_port: HugTokenPort) -> APIRouter:
+    """Return the mint-station router bound to a HugTokenPort."""
     router = APIRouter()
 
     @router.get("/hug/mint", response_class=HTMLResponse)
@@ -81,7 +80,7 @@ def make_hug_mint_router(conn: sqlite3.Connection) -> APIRouter:
         op = op_type.strip() or "package_insert"
 
         try:
-            tokens = repository.mint_batch(conn, n, batch_id=bid, op_type=op)
+            tokens = token_port.mint_batch(n, batch_id=bid, op_type=op)
         except Exception as exc:  # noqa: BLE001
             log.error("hug mint: failed batch=%s count=%d: %s", bid, n, exc)
             return HTMLResponse(_render_form(error=f"Lỗi khi sinh token: {html.escape(str(exc))}"))
@@ -94,7 +93,7 @@ def make_hug_mint_router(conn: sqlite3.Connection) -> APIRouter:
 
     @router.get("/hug/batches", response_class=HTMLResponse)
     async def batch_list() -> HTMLResponse:
-        batches = repository.list_recent_batches(conn, limit=50)
+        batches = token_port.list_recent_batches(limit=50)
         return HTMLResponse(_render_batches(list(batches)))
 
     @router.get("/hug/batch/labels", response_class=HTMLResponse)
@@ -111,7 +110,7 @@ def make_hug_mint_router(conn: sqlite3.Connection) -> APIRouter:
         Returns the same print-ready HTML that POST /hug/mint produces originally.
         Returns a friendly error page (HTTP 200) when the batch does not exist.
         """
-        rows = repository.list_batch(conn, batch_id)
+        rows = token_port.list_batch(batch_id)
         if not rows:
             return HTMLResponse(_render_batch_not_found(batch_id))
 

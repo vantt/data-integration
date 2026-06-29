@@ -90,6 +90,18 @@ class HugCampaignPort(Protocol):
         """Return MAX(priority)+10 across active campaigns, or 10 if none exist."""
         ...
 
+    def find_overlapping_campaigns(
+        self,
+        targeting: dict,
+        exclude_id: str | None = None,
+    ) -> list[dict]:
+        """Return active campaigns whose targeting can overlap with `targeting`.
+
+        Each entry is {campaign_id, name, priority}.
+        exclude_id skips the campaign being edited (avoid self-overlap).
+        """
+        ...
+
 
 class HugVoucherPort(Protocol):
     """Outbound port for crm_hug_voucher issuance ledger."""

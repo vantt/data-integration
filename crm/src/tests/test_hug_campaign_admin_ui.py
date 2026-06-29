@@ -479,7 +479,9 @@ def test_make_hug_campaign_router_returns_non_none(crm_conn):
     try:
         from fastapi import APIRouter
         from adapters.inbound.web.screen_hug_campaign import make_hug_campaign_router
-        result = make_hug_campaign_router(crm_conn)
+        from adapters.outbound.sqlite.hug_campaign_repository_adapter import HugCampaignRepositoryAdapter
+        port = HugCampaignRepositoryAdapter(crm_conn)
+        result = make_hug_campaign_router(port)
         assert result is not None, "make_hug_campaign_router must not return None"
         assert isinstance(result, APIRouter), (
             f"Expected APIRouter, got {type(result).__name__}"
@@ -752,19 +754,23 @@ def test_edit_form_shows_flash_amber_on_failure():
 def test_priority_duplicate_warning_no_collision(crm_conn):
     """No other campaign at same priority → no warning."""
     from adapters.inbound.web.screen_hug_campaign_form_helpers import priority_duplicate_warning
+    from adapters.outbound.sqlite.hug_campaign_repository_adapter import HugCampaignRepositoryAdapter
+    port = HugCampaignRepositoryAdapter(crm_conn)
     upsert_campaign(crm_conn, _minimal_campaign(priority=50))
     # Checking own ID against itself must produce no warning.
-    warn = priority_duplicate_warning(crm_conn, 50, "test-camp-001")
+    warn = priority_duplicate_warning(port, 50, "test-camp-001")
     assert warn == ""
 
 
 def test_priority_duplicate_warning_collision_detected(crm_conn):
     """Another active campaign at same priority → warning mentions its name + next suggestion."""
     from adapters.inbound.web.screen_hug_campaign_form_helpers import priority_duplicate_warning
+    from adapters.outbound.sqlite.hug_campaign_repository_adapter import HugCampaignRepositoryAdapter
+    port = HugCampaignRepositoryAdapter(crm_conn)
     upsert_campaign(crm_conn, _minimal_campaign(campaign_id="camp-a", priority=50))
     upsert_campaign(crm_conn, _minimal_campaign(campaign_id="camp-b", name="Camp B", priority=50))
     # camp-b shares priority with camp-a — checking from camp-a's perspective.
-    warn = priority_duplicate_warning(crm_conn, 50, "camp-a")
+    warn = priority_duplicate_warning(port, 50, "camp-a")
     assert "Camp B" in warn
     assert "⚠️" in warn
     # Suggestion should be present (MAX+10 = 50+10 = 60).
@@ -774,11 +780,13 @@ def test_priority_duplicate_warning_collision_detected(crm_conn):
 def test_priority_duplicate_warning_archived_ignored(crm_conn):
     """Archived campaign at same priority must not trigger a warning."""
     from adapters.inbound.web.screen_hug_campaign_form_helpers import priority_duplicate_warning
+    from adapters.outbound.sqlite.hug_campaign_repository_adapter import HugCampaignRepositoryAdapter
     from hug.campaign_repository import archive_campaign
+    port = HugCampaignRepositoryAdapter(crm_conn)
     upsert_campaign(crm_conn, _minimal_campaign(campaign_id="camp-live", priority=30))
     upsert_campaign(crm_conn, _minimal_campaign(campaign_id="camp-dead", name="Dead", priority=30))
     archive_campaign(crm_conn, "camp-dead")
-    warn = priority_duplicate_warning(crm_conn, 30, "camp-live")
+    warn = priority_duplicate_warning(port, 30, "camp-live")
     assert warn == ""
 
 

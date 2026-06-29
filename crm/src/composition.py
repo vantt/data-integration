@@ -26,6 +26,9 @@ from config import (
 
 # ── Outbound: SQLite ──────────────────────────────────────────────────────────
 from adapters.outbound.sqlite.connection import CRMDatabase
+from adapters.outbound.sqlite.hug_campaign_repository_adapter import HugCampaignRepositoryAdapter
+from adapters.outbound.sqlite.hug_voucher_repository_adapter import HugVoucherRepositoryAdapter
+from adapters.outbound.sqlite.hug_token_repository import HugTokenRepository
 from adapters.outbound.sqlite.party_repository import SQLitePartyRepository
 from adapters.outbound.sqlite.dedup_repository import SQLiteDedupRepository
 from adapters.outbound.sqlite.profile_repository import SQLiteProfileRepository
@@ -392,16 +395,17 @@ def create_app() -> FastAPI:
     try:
         hug_conn = hug_db.connect()
         app.state.hug_conn = hug_conn  # keep alive for the app's lifetime
-        app.include_router(make_hug_claim_router(hug_conn))
-        app.include_router(make_hug_mint_router(hug_conn))
+        hug_token_repo = HugTokenRepository(hug_conn)
+        app.include_router(make_hug_claim_router(hug_token_repo))
+        app.include_router(make_hug_mint_router(hug_token_repo))
         # Review queue reads crm.db only; conn is the crm.db connection.
         app.include_router(make_hug_review_router(conn))
         # Campaign admin also uses crm.db (crm_hug_campaign lives there, not hug.db).
-        campaign_router = make_hug_campaign_router(conn)
+        campaign_router = make_hug_campaign_router(HugCampaignRepositoryAdapter(conn))
         assert campaign_router is not None, "make_hug_campaign_router returned None"
         app.include_router(campaign_router)
         # Attribution readout — crm.db only; read-only screen.
-        attribution_router = make_hug_voucher_attribution_router(conn)
+        attribution_router = make_hug_voucher_attribution_router(HugVoucherRepositoryAdapter(conn))
         assert attribution_router is not None, "make_hug_voucher_attribution_router returned None"
         app.include_router(attribution_router)
         log.info("hug stations mounted at /hug/claim, /hug/mint, /hug/review, /hug/campaigns, /hug/vouchers")

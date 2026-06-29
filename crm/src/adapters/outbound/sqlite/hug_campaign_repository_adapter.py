@@ -56,3 +56,12 @@ class HugCampaignRepositoryAdapter:
     def restore_snapshot(self, campaign_id: str, snapshot_id: int) -> sqlite3.Row:
         """Restore a campaign to a prior state captured in history."""
         return _repo.restore_snapshot(self._conn, campaign_id, snapshot_id)
+
+    def find_overlapping_campaigns(
+        self,
+        targeting: dict,
+        exclude_id: str | None = None,
+    ) -> list[dict]:
+        """Return active campaigns whose targeting overlaps with `targeting`."""
+        from hug.campaign_overlap import find_overlapping_campaigns as _find
+        return _find(self._conn, targeting, exclude_id=exclude_id)

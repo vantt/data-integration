@@ -92,8 +92,9 @@ def api_client(hug_conn):
     """FastAPI TestClient wired to a temp hug.db connection (skipped if no FastAPI)."""
     if not _FASTAPI_AVAILABLE:
         pytest.skip("FastAPI not available")
+    from adapters.outbound.sqlite.hug_token_repository import HugTokenRepository
     app = FastAPI()
-    router = make_hug_claim_router(hug_conn)
+    router = make_hug_claim_router(HugTokenRepository(hug_conn))
     app.include_router(router)
     return TestClient(app, raise_server_exceptions=True), hug_conn
 

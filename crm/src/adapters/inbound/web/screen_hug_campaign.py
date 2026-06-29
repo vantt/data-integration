@@ -23,22 +23,14 @@ from __future__ import annotations
 
 import html
 import logging
-import sqlite3
 
 from fastapi import APIRouter, Form, Request
 from fastapi.responses import HTMLResponse, RedirectResponse
 
-from hug.campaign_repository import (
-    get_campaign,
-    list_campaigns,
-    list_history,
-    restore_snapshot,
-    suggest_next_priority,
-    upsert_campaign,
-)
+from hug.campaign_push import push_campaign  # imported at module level for test mocking
 from hug.targeting_catalog import TARGETING_CATALOG, validate_targeting
 from hug.targeting_engine import preview_match_customers_d1
-from hug.campaign_overlap import find_overlapping_campaigns
+from domain.ports.hug_ports import HugCampaignPort
 from adapters.inbound.web.screen_hug_campaign_html_list import render_campaign_list
 from adapters.inbound.web.screen_hug_campaign_html_form import (
     render_campaign_form,
@@ -49,6 +41,7 @@ from adapters.inbound.web.screen_hug_campaign_form_helpers import (
     attempt_push,
     build_campaign_row,
     form_to_partial,
+    parse_targeting,
     priority_duplicate_warning,
     safe_campaign_id,
     VALID_STATUS_ACTIONS,
@@ -57,9 +50,25 @@ from adapters.inbound.web.screen_hug_campaign_form_helpers import (
 
 log = logging.getLogger(__name__)
 
+# Private aliases exported for test compatibility (tests import from this module).
+_parse_targeting = parse_targeting
+_build_row = build_campaign_row
+_safe_campaign_id = safe_campaign_id
 
-def make_hug_campaign_router(conn: sqlite3.Connection) -> APIRouter:
-    """Return the campaign admin router bound to a crm.db connection.
+
+def _attempt_push(saved_row: dict) -> bool:
+    """Push a saved campaign row to the edge Worker.
+
+    Defined here (not just aliased from form_helpers) so tests can mock
+    `adapters.inbound.web.screen_hug_campaign.push_campaign` and have the
+    patch apply to the call inside this function.
+    """
+    result = push_campaign(saved_row)
+    return result.get("ok", False) or result.get("skipped", False)
+
+
+def make_hug_campaign_router(campaign_port: HugCampaignPort) -> APIRouter:
+    """Return the campaign admin router bound to a HugCampaignPort.
 
     IMPORTANT: must end with `return router`. A missing return yields None,
     causing include_router(None) to disable all hug stations. The assert in
@@ -71,7 +80,7 @@ def make_hug_campaign_router(conn: sqlite3.Connection) -> APIRouter:
 
     @router.get("/hug/campaigns", response_class=HTMLResponse)
     async def campaign_list(request: Request) -> HTMLResponse:
-        rows = [dict(r) for r in list_campaigns(conn)]
+        rows = [dict(r) for r in campaign_port.list_campaigns()]
         flash = request.query_params.get("flash", "")
         flash_ok = request.query_params.get("flash_ok", "1") == "1"
         return HTMLResponse(render_campaign_list(rows, flash=flash, flash_ok=flash_ok))
@@ -83,7 +92,7 @@ def make_hug_campaign_router(conn: sqlite3.Connection) -> APIRouter:
         return HTMLResponse(
             render_campaign_form(
                 campaign=None, errors=[], catalog=TARGETING_CATALOG,
-                suggested_priority=suggest_next_priority(conn), is_new=True,
+                suggested_priority=campaign_port.suggest_next_priority(), is_new=True,
             )
         )
 
@@ -94,29 +103,29 @@ def make_hug_campaign_router(conn: sqlite3.Connection) -> APIRouter:
         form_multi = _multi(await request.form())
         action = form_multi.get("action", ["save"])[0]
 
-        cid = safe_campaign_id(form_multi.get("campaign_id", [""])[0])
+        cid = _safe_campaign_id(form_multi.get("campaign_id", [""])[0])
         if not cid:
             return HTMLResponse(_rerender(form_multi, ["Campaign ID chỉ dùng chữ, số, gạch ngang, "
-                "gạch dưới (tối đa 128 ký tự)."], conn, is_new=True))
+                "gạch dưới (tối đa 128 ký tự)."], campaign_port, is_new=True))
 
         targeting = _validated_targeting_or_errors(form_multi)
         if isinstance(targeting, list):  # errors list
-            return HTMLResponse(_rerender(form_multi, targeting, conn, is_new=True))
+            return HTMLResponse(_rerender(form_multi, targeting, campaign_port, is_new=True))
 
         if action == "preview":
             return HTMLResponse(_rerender_with_preview(
-                form_multi, targeting, conn, exclude_id=None, is_new=True,
+                form_multi, targeting, campaign_port, exclude_id=None, is_new=True,
             ))
 
         # action == "save" (default)
-        row = build_campaign_row(cid, form_multi, targeting)
+        row = _build_row(cid, form_multi, targeting)
         try:
-            saved = upsert_campaign(conn, row)
+            saved = campaign_port.upsert_campaign(row)
         except ValueError as exc:
-            return HTMLResponse(_rerender(form_multi, [str(exc)], conn, is_new=True))
+            return HTMLResponse(_rerender(form_multi, [str(exc)], campaign_port, is_new=True))
 
-        ok = attempt_push(dict(saved))
-        prio_warn = priority_duplicate_warning(conn, saved["priority"], cid)
+        ok = _attempt_push(dict(saved))
+        prio_warn = priority_duplicate_warning(campaign_port, saved["priority"], cid)
         log.info("hug campaign: created %r push_ok=%s prio_dup=%s", cid, ok, bool(prio_warn))
         return RedirectResponse(_flash_url(row["name"], ok, prio_warn), status_code=303)
 
@@ -124,10 +133,10 @@ def make_hug_campaign_router(conn: sqlite3.Connection) -> APIRouter:
 
     @router.get("/hug/campaign/{campaign_id}/edit", response_class=HTMLResponse)
     async def campaign_edit_form(campaign_id: str, request: Request) -> HTMLResponse:
-        cid = safe_campaign_id(campaign_id)
+        cid = _safe_campaign_id(campaign_id)
         if not cid:
             return HTMLResponse(_bad_id(campaign_id), status_code=400)
-        row = get_campaign(conn, cid)
+        row = campaign_port.get_campaign(cid)
         if row is None:
             return HTMLResponse(_not_found(cid), status_code=404)
         # Flash from restore or other redirects (non-blocking info banner).
@@ -136,7 +145,7 @@ def make_hug_campaign_router(conn: sqlite3.Connection) -> APIRouter:
         return HTMLResponse(
             render_campaign_form(
                 campaign=dict(row), errors=[], catalog=TARGETING_CATALOG,
-                suggested_priority=suggest_next_priority(conn), is_new=False,
+                suggested_priority=campaign_port.suggest_next_priority(), is_new=False,
                 flash=flash, flash_ok=flash_ok,
             )
         )
@@ -145,10 +154,10 @@ def make_hug_campaign_router(conn: sqlite3.Connection) -> APIRouter:
 
     @router.post("/hug/campaign/{campaign_id}/edit", response_class=HTMLResponse)
     async def campaign_edit_submit(campaign_id: str, request: Request) -> HTMLResponse:
-        cid = safe_campaign_id(campaign_id)
+        cid = _safe_campaign_id(campaign_id)
         if not cid:
             return HTMLResponse(_bad_id(campaign_id), status_code=400)
-        if get_campaign(conn, cid) is None:
+        if campaign_port.get_campaign(cid) is None:
             return HTMLResponse(_not_found(cid), status_code=404)
 
         form_multi = _multi(await request.form())
@@ -161,29 +170,29 @@ def make_hug_campaign_router(conn: sqlite3.Connection) -> APIRouter:
             return HTMLResponse(
                 render_campaign_form(campaign=partial, errors=targeting,
                     catalog=TARGETING_CATALOG,
-                    suggested_priority=suggest_next_priority(conn), is_new=False)
+                    suggested_priority=campaign_port.suggest_next_priority(), is_new=False)
             )
 
         if action == "preview":
             return HTMLResponse(_rerender_with_preview(
-                form_multi, targeting, conn, exclude_id=cid, is_new=False,
+                form_multi, targeting, campaign_port, exclude_id=cid, is_new=False,
             ))
 
         # action == "save" (default)
-        row = build_campaign_row(cid, form_multi, targeting)
+        row = _build_row(cid, form_multi, targeting)
         try:
-            saved = upsert_campaign(conn, row)
+            saved = campaign_port.upsert_campaign(row)
         except ValueError as exc:
             partial = form_to_partial(form_multi)
             partial["campaign_id"] = cid
             return HTMLResponse(
                 render_campaign_form(campaign=partial, errors=[str(exc)],
                     catalog=TARGETING_CATALOG,
-                    suggested_priority=suggest_next_priority(conn), is_new=False)
+                    suggested_priority=campaign_port.suggest_next_priority(), is_new=False)
             )
 
-        ok = attempt_push(dict(saved))
-        prio_warn = priority_duplicate_warning(conn, saved["priority"], cid)
+        ok = _attempt_push(dict(saved))
+        prio_warn = priority_duplicate_warning(campaign_port, saved["priority"], cid)
         log.info("hug campaign: updated %r push_ok=%s prio_dup=%s", cid, ok, bool(prio_warn))
         return RedirectResponse(_flash_url(row["name"], ok, prio_warn), status_code=303)
 
@@ -194,21 +203,21 @@ def make_hug_campaign_router(conn: sqlite3.Connection) -> APIRouter:
         campaign_id: str,
         action: str = Form(default=""),
     ) -> HTMLResponse:
-        cid = safe_campaign_id(campaign_id)
+        cid = _safe_campaign_id(campaign_id)
         if not cid:
             return HTMLResponse(_bad_id(campaign_id), status_code=400)
         if action not in VALID_STATUS_ACTIONS:
             return HTMLResponse(
                 _err(f"Hành động không hợp lệ: '{html.escape(action)}'"), status_code=400
             )
-        existing = get_campaign(conn, cid)
+        existing = campaign_port.get_campaign(cid)
         if existing is None:
             return HTMLResponse(_not_found(cid), status_code=404)
 
         row = dict(existing)
         row["status"] = STATUS_FOR_ACTION[action]
-        saved = upsert_campaign(conn, row)
-        ok = attempt_push(dict(saved))
+        saved = campaign_port.upsert_campaign(row)
+        ok = _attempt_push(dict(saved))
         log.info("hug campaign: %r status→%s push_ok=%s", cid, row["status"], ok)
         return HTMLResponse(render_status_result(cid, row["status"], ok))
 
@@ -216,12 +225,12 @@ def make_hug_campaign_router(conn: sqlite3.Connection) -> APIRouter:
 
     @router.get("/hug/campaign/{campaign_id}/history", response_class=HTMLResponse)
     async def campaign_history(campaign_id: str) -> HTMLResponse:
-        cid = safe_campaign_id(campaign_id)
+        cid = _safe_campaign_id(campaign_id)
         if not cid:
             return HTMLResponse(_bad_id(campaign_id), status_code=400)
-        if get_campaign(conn, cid) is None:
+        if campaign_port.get_campaign(cid) is None:
             return HTMLResponse(_not_found(cid), status_code=404)
-        snapshots = list_history(conn, cid, limit=20)
+        snapshots = campaign_port.list_history(cid, limit=20)
         return HTMLResponse(render_history_page(cid, snapshots))
 
     # ── Restore snapshot ──────────────────────────────────────────────────────
@@ -230,13 +239,13 @@ def make_hug_campaign_router(conn: sqlite3.Connection) -> APIRouter:
                  response_class=HTMLResponse)
     async def campaign_restore(campaign_id: str, snapshot_id: int) -> HTMLResponse:
         from urllib.parse import quote as _quote
-        cid = safe_campaign_id(campaign_id)
+        cid = _safe_campaign_id(campaign_id)
         if not cid:
             return HTMLResponse(_bad_id(campaign_id), status_code=400)
         if snapshot_id < 1:
             return HTMLResponse(_err("snapshot_id không hợp lệ."), status_code=400)
         try:
-            restored = restore_snapshot(conn, cid, snapshot_id)
+            restored = campaign_port.restore_snapshot(cid, snapshot_id)
         except KeyError as exc:
             return HTMLResponse(_err(html.escape(str(exc))), status_code=404)
         except (ValueError, Exception) as exc:
@@ -244,7 +253,7 @@ def make_hug_campaign_router(conn: sqlite3.Connection) -> APIRouter:
             return HTMLResponse(
                 _err(f"Khôi phục thất bại: {html.escape(str(exc))}"), status_code=500
             )
-        push_result = attempt_push(dict(restored))
+        push_result = _attempt_push(dict(restored))
         push_note = "✓" if push_result else "✗ (kiểm tra log)"
         flash = f"Đã khôi phục phiên bản #{snapshot_id}. Đẩy D1: {push_note}"
         log.info("hug campaign: restored %r snap=%s push_ok=%s", cid, snapshot_id, push_result)
@@ -268,17 +277,16 @@ def _multi(form) -> dict[str, list[str]]:
 
 def _validated_targeting_or_errors(form_multi: dict[str, list[str]]):
     """Return targeting dict if valid, else list[str] of errors."""
-    from adapters.inbound.web.screen_hug_campaign_form_helpers import parse_targeting
-    targeting = parse_targeting(form_multi)
+    targeting = _parse_targeting(form_multi)
     errors = validate_targeting(targeting)
     return errors if errors else targeting
 
 
-def _rerender(form_multi, errors, conn, *, is_new: bool) -> str:
+def _rerender(form_multi, errors, campaign_port: HugCampaignPort, *, is_new: bool) -> str:
     partial = form_to_partial(form_multi)
     return render_campaign_form(
         campaign=partial, errors=errors, catalog=TARGETING_CATALOG,
-        suggested_priority=suggest_next_priority(conn), is_new=is_new,
+        suggested_priority=campaign_port.suggest_next_priority(), is_new=is_new,
     )
 
 
@@ -303,7 +311,7 @@ def _touchpoint_warning(targeting: dict) -> str | None:
 def _rerender_with_preview(
     form_multi: dict[str, list[str]],
     targeting: dict,
-    conn,
+    campaign_port: HugCampaignPort,
     *,
     exclude_id: str | None,
     is_new: bool,
@@ -320,9 +328,9 @@ def _rerender_with_preview(
     if ub_warn:
         preview_result["upper_bound_warning"] = ub_warn
 
-    # Detect overlapping active campaigns.
+    # Detect overlapping active campaigns via the port.
     try:
-        overlaps = find_overlapping_campaigns(conn, targeting, exclude_id=exclude_id)
+        overlaps = campaign_port.find_overlapping_campaigns(targeting, exclude_id=exclude_id)
     except Exception as exc:
         log.warning("find_overlapping_campaigns failed: %s", exc)
         overlaps = []
@@ -331,7 +339,7 @@ def _rerender_with_preview(
         campaign=partial,
         errors=[],
         catalog=TARGETING_CATALOG,
-        suggested_priority=suggest_next_priority(conn),
+        suggested_priority=campaign_port.suggest_next_priority(),
         is_new=is_new,
         preview=preview_result,
         overlaps=overlaps,

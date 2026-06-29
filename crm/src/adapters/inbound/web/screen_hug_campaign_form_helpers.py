@@ -143,20 +143,19 @@ def attempt_push(saved_row: dict) -> bool:
     return result.get("ok", False) or result.get("skipped", False)
 
 
-def priority_duplicate_warning(conn, priority: int, own_id: str) -> str:
+def priority_duplicate_warning(port, priority: int, own_id: str) -> str:
     """Return a warning string if another non-archived campaign shares this priority.
 
     Soft enforcement: the caller decides whether to append to flash. own_id is
     excluded so an edit-save does not warn against itself.
 
     Kept FastAPI-free (no HTTP imports) so it is directly testable without Docker.
-    conn is sqlite3.Connection — typed as Any to avoid a circular import chain.
+    port must implement HugCampaignPort (list_campaigns() and suggest_next_priority()).
     """
     import html as _html
-    from hug.campaign_repository import list_campaigns, suggest_next_priority
 
     others = [
-        c for c in list_campaigns(conn)
+        c for c in port.list_campaigns()
         if c["priority"] == priority
         and c["campaign_id"] != own_id
         and c["status"] != "archived"
@@ -164,7 +163,7 @@ def priority_duplicate_warning(conn, priority: int, own_id: str) -> str:
     if not others:
         return ""
     other = others[0]
-    next_free = suggest_next_priority(conn)
+    next_free = port.suggest_next_priority()
     return (
         f" ⚠️ Priority {priority} cũng dùng bởi "
         f"'{_html.escape(str(other['name']))}' — tie-break theo campaign_id. "

@@ -11,23 +11,23 @@ scan. The JS-driven happy path uses the AJAX endpoints in
 from __future__ import annotations
 
 import logging
-import sqlite3
 
 from fastapi import APIRouter, Request
 from fastapi.responses import HTMLResponse, JSONResponse
 
 from hug import config as hug_config
-from hug import d1_push, repository
+from hug import d1_push
 from hug.claim_fields import CLAIM_FIELDS
 from hug.tokens import human_code, is_valid_token, normalize_input
 
+from domain.ports.hug_ports import HugTokenPort
 from adapters.inbound.web.screen_hug_claim_render import _render_page, _render_result
 
 log = logging.getLogger(__name__)
 
 
-def make_claim_form_router(conn: sqlite3.Connection) -> APIRouter:
-    """Return the HTML-form router bound to an open hug.db connection."""
+def make_claim_form_router(token_port: HugTokenPort) -> APIRouter:
+    """Return the HTML-form router bound to a HugTokenPort."""
     router = APIRouter()
 
     @router.get("/hug/claim", response_class=HTMLResponse)
@@ -59,8 +59,7 @@ def make_claim_form_router(conn: sqlite3.Connection) -> APIRouter:
             )
 
         try:
-            row = repository.bind_token(
-                conn,
+            row = token_port.bind_token(
                 token,
                 order_code=order_code,
                 is_gift=gift,
@@ -76,7 +75,7 @@ def make_claim_form_router(conn: sqlite3.Connection) -> APIRouter:
         # Best-effort edge publish — never blocks/fails the claim.
         push = d1_push.push_bound_token(row)
         if push.get("ok"):
-            repository.mark_pushed(conn, token)
+            token_port.mark_pushed(token)
             edge = "Đã đẩy lên edge (D1)."
         elif push.get("skipped"):
             edge = "Edge: pending deploy (chưa cấu hình Worker)."
@@ -90,7 +89,7 @@ def make_claim_form_router(conn: sqlite3.Connection) -> APIRouter:
     async def claim_health() -> JSONResponse:
         return JSONResponse(
             {
-                "counts": repository.counts_by_status(conn),
+                "counts": token_port.counts_by_status(),
                 "push_enabled": hug_config.push_enabled(),
                 "hug_domain": hug_config.hug_domain(),
             }

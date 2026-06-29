@@ -27,10 +27,9 @@ screen_hug_claim_render + screen_hug_claim_template.
 """
 from __future__ import annotations
 
-import sqlite3
-
 from fastapi import APIRouter
 
+from domain.ports.hug_ports import HugTokenPort
 from adapters.inbound.web.screen_hug_claim_ajax import (  # noqa: F401  (re-exported for tests)
     _PROMOTED_COLS,
     make_claim_ajax_router,
@@ -39,9 +38,9 @@ from adapters.inbound.web.screen_hug_claim_form import make_claim_form_router
 from adapters.inbound.web.screen_hug_claim_render import _render_page  # noqa: F401  (re-exported for tests)
 
 
-def make_hug_claim_router(conn: sqlite3.Connection) -> APIRouter:
-    """Return the claim-station router bound to an open hug.db connection."""
+def make_hug_claim_router(token_port: HugTokenPort) -> APIRouter:
+    """Return the claim-station router bound to a HugTokenPort."""
     router = APIRouter()
-    router.include_router(make_claim_form_router(conn))
-    router.include_router(make_claim_ajax_router(conn))
+    router.include_router(make_claim_form_router(token_port))
+    router.include_router(make_claim_ajax_router(token_port))
     return router

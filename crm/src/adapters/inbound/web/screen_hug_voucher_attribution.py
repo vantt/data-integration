@@ -20,24 +20,24 @@ all routes registered after it in composition.py (observed in screen_hug_campaig
 from __future__ import annotations
 
 import logging
-import sqlite3
 
 from fastapi import APIRouter
 from fastapi.responses import HTMLResponse
 
+from domain.ports.hug_ports import HugVoucherPort
 from adapters.inbound.web.screen_hug_voucher_attribution_data import load_attribution
 from adapters.inbound.web.screen_hug_voucher_attribution_html import render_attribution_page
 
 log = logging.getLogger(__name__)
 
 
-def make_hug_voucher_attribution_router(conn: sqlite3.Connection) -> APIRouter:
-    """Return the voucher attribution router bound to the crm.db connection."""
+def make_hug_voucher_attribution_router(voucher_port: HugVoucherPort) -> APIRouter:
+    """Return the voucher attribution router bound to a HugVoucherPort."""
     router = APIRouter()
 
     @router.get("/hug/vouchers", response_class=HTMLResponse)
     async def voucher_attribution() -> HTMLResponse:
-        rows = load_attribution(conn)
+        rows = load_attribution(voucher_port)
         log.debug("hug vouchers: %d attribution rows", len(rows))
         return HTMLResponse(render_attribution_page(rows))
 

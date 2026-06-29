@@ -24,12 +24,13 @@ for _p in (_REPO_ROOT, _PYTHON_ROOT):
     if _p not in sys.path:
         sys.path.insert(0, _p)
 
-from hug.voucher_repository import record_issuance, mark_redeemed          # noqa: E402
-from adapters.inbound.web.screen_hug_voucher_attribution_data import (     # noqa: E402
-    load_attribution,
-)
-from adapters.inbound.web.screen_hug_voucher_attribution_html import (     # noqa: E402
+from hug.voucher_repository import record_issuance, mark_redeemed                    # noqa: E402
+from adapters.inbound.web.screen_hug_voucher_attribution_data import load_attribution  # noqa: E402
+from adapters.inbound.web.screen_hug_voucher_attribution_html import (                 # noqa: E402
     render_attribution_page,
+)
+from adapters.outbound.sqlite.hug_voucher_repository_adapter import (                  # noqa: E402
+    HugVoucherRepositoryAdapter,
 )
 
 _MIGRATION_PATH = (
@@ -61,7 +62,7 @@ def _redeem(conn, *, code="HUG50", customer_id, order_code):
 # ── load_attribution ──────────────────────────────────────────────────────────
 
 def test_load_attribution_empty_db_returns_empty_list(conn):
-    rows = load_attribution(conn)
+    rows = load_attribution(HugVoucherRepositoryAdapter(conn))
     assert rows == []
 
 
@@ -70,7 +71,7 @@ def test_load_attribution_counts_issued_correctly(conn):
     _issue(conn, customer_id="C002")
     _issue(conn, customer_id="C003")
 
-    rows = load_attribution(conn)
+    rows = load_attribution(HugVoucherRepositoryAdapter(conn))
     assert len(rows) == 1
     assert rows[0]["issued"] == 3
     assert rows[0]["campaign_id"] == "a2-test"
@@ -84,7 +85,7 @@ def test_load_attribution_counts_redeemed_correctly(conn):
     _redeem(conn, customer_id="C001", order_code="ORD-1")
     _redeem(conn, customer_id="C002", order_code="ORD-2")
 
-    rows = load_attribution(conn)
+    rows = load_attribution(HugVoucherRepositoryAdapter(conn))
     assert rows[0]["redeemed"] == 2
 
 
@@ -95,7 +96,7 @@ def test_load_attribution_rate_pct_rounded(conn):
     _redeem(conn, customer_id="C001", order_code="ORD-1")
     _redeem(conn, customer_id="C002", order_code="ORD-2")
 
-    rows = load_attribution(conn)
+    rows = load_attribution(HugVoucherRepositoryAdapter(conn))
     # 2/3 * 100 = 66.666... → rounded to 66.7
     assert abs(rows[0]["redeem_rate_pct"] - 66.7) < 0.05
 
@@ -104,7 +105,7 @@ def test_load_attribution_zero_redeemed_shows_zero_rate(conn):
     _issue(conn, customer_id="C001")
     _issue(conn, customer_id="C002")
 
-    rows = load_attribution(conn)
+    rows = load_attribution(HugVoucherRepositoryAdapter(conn))
     assert rows[0]["redeemed"] == 0
     assert rows[0]["redeem_rate_pct"] == pytest.approx(0.0)
 
@@ -115,7 +116,7 @@ def test_load_attribution_multiple_campaigns_each_counted_separately(conn):
     _issue(conn, customer_id="C003", campaign_id="camp-b")
     _redeem(conn, customer_id="C001", order_code="ORD-1")
 
-    rows = load_attribution(conn)
+    rows = load_attribution(HugVoucherRepositoryAdapter(conn))
     assert len(rows) == 2
 
     by_camp = {r["campaign_id"]: r for r in rows}
@@ -130,7 +131,7 @@ def test_load_attribution_sorted_by_issued_desc(conn):
     for cid in ("C002", "C003", "C004"):
         _issue(conn, customer_id=cid, campaign_id="large")
 
-    rows = load_attribution(conn)
+    rows = load_attribution(HugVoucherRepositoryAdapter(conn))
     assert rows[0]["campaign_id"] == "large"   # 3 issued > 1 issued
 
 
@@ -217,7 +218,7 @@ def test_roundtrip_seed_load_render(conn):
     _issue(conn, customer_id="C003", campaign_id="a2-masked-repeat-optin")
     _redeem(conn, customer_id="C001", order_code="ORD-A1")
 
-    rows = load_attribution(conn)
+    rows = load_attribution(HugVoucherRepositoryAdapter(conn))
     out = render_attribution_page(rows)
 
     assert "a2-masked-repeat-optin" in out
@@ -241,7 +242,8 @@ def test_router_factory_returns_non_none():
     )
 
     c = sqlite3.connect(":memory:")
-    router = make_hug_voucher_attribution_router(c)
+    port = HugVoucherRepositoryAdapter(c)
+    router = make_hug_voucher_attribution_router(port)
     c.close()
 
     assert router is not None
