@@ -5,6 +5,11 @@
 
 WITH staff_source AS (
     SELECT * FROM {{ ref('std_accounts') }}
+),
+
+crm_users AS (
+    SELECT crm_user_id, email FROM {{ ref('stg_crm__app_user') }}
+    WHERE is_active = TRUE
 )
 
 SELECT DISTINCT
@@ -16,9 +21,13 @@ SELECT DISTINCT
     -- Name and Email from Accounts API
     staff_name as full_name,
     staff_email as email,
-    staff_phone as phone_number
+    staff_phone as phone_number,
+
+    -- CRM identity bridge (UUID → Sapo staff_id join key for cross-system reporting)
+    cu.crm_user_id
 
 FROM staff_source
+LEFT JOIN crm_users cu ON lower(trim(cu.email)) = lower(trim(staff_email))
 WHERE account_id IS NOT NULL
 
 UNION ALL
@@ -28,4 +37,5 @@ SELECT
     '-1' as staff_id,
     'Unknown Staff' as full_name,
     'unknown@example.com' as email,
-    NULL as phone_number
+    NULL as phone_number,
+    NULL as crm_user_id

@@ -52,6 +52,7 @@ from adapters.outbound.duckdb.customer_orders_repository import CustomerOrdersRe
 from adapters.outbound.duckdb.customer_dim_metrics_repository import CustomerDimMetricsRepository
 from adapters.outbound.duckdb.customer_list_rfm_repository import CustomerListRFMRepository
 from adapters.outbound.duckdb.dataquality_repository import DataQualityRepository
+from adapters.outbound.duckdb.staff_id_resolver import StaffIdResolver
 
 # ── Application services ──────────────────────────────────────────────────────
 from application.merge_service import MergeService
@@ -321,7 +322,10 @@ def _build_services(sqlite_repos: SqliteRepos) -> Services:
             sqlite_repos["segment"],
             sqlite_repos["party"],
         ),
-        "app_user": AppUserService(sqlite_repos["app_user"]),
+        "app_user": AppUserService(
+            sqlite_repos["app_user"],
+            staff_resolver=StaffIdResolver(olap_path()) if olap_path() else None,
+        ),
     }
 
 

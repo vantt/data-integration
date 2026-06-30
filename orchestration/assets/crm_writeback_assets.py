@@ -18,6 +18,7 @@ _DEFAULT_CURSOR = "1970-01-01T00:00:00.000Z"
 _CRM_TABLE_NAMES = [
     "crm_last_contact", "crm_party_identity", "crm_hug_voucher",
     "crm_campaign_target", "crm_task", "crm_action_state", "crm_activity_log",
+    "crm_app_user",
 ]
 
 
@@ -87,6 +88,32 @@ CRM_WRITEBACK_TABLES: list[CrmWritebackTable] = [
             FROM crm_campaign_target ct
             LEFT JOIN crm_party_identity pi
                    ON pi.party_id = ct.party_id AND pi.identity_type = 'sapo_customer'
+        """,
+    ),
+    CrmWritebackTable(
+        name="crm_app_user",
+        mode="snapshot",
+        export_query="""
+            SELECT user_id, staff_id, email, full_name, role,
+                   is_active, lark_user_id, created_at, updated_at
+            FROM crm_app_user
+        """,
+    ),
+    CrmWritebackTable(
+        name="crm_task",
+        mode="incremental_append",
+        watermark_column="updated_at",
+        export_query="""
+            SELECT t.task_id, t.party_id, pi.identity_value AS customer_id,
+                   t.title, t.status, t.priority,
+                   t.source, t.source_ref,
+                   t.assignee_user_id, t.created_by,
+                   t.due_at, t.completed_at,
+                   t.created_at, t.updated_at
+            FROM crm_task t
+            LEFT JOIN crm_party_identity pi
+                   ON pi.party_id = t.party_id AND pi.identity_type = 'sapo_customer'
+            WHERE t.updated_at > '{cursor}'
         """,
     ),
 ]
@@ -186,4 +213,10 @@ crm_hug_voucher_export = _make_snapshot_asset(
 )
 crm_campaign_target_export = _make_snapshot_asset(
     next(t for t in CRM_WRITEBACK_TABLES if t.name == "crm_campaign_target")
+)
+crm_app_user_export = _make_snapshot_asset(
+    next(t for t in CRM_WRITEBACK_TABLES if t.name == "crm_app_user")
+)
+crm_task_export = _make_incremental_asset(
+    next(t for t in CRM_WRITEBACK_TABLES if t.name == "crm_task")
 )

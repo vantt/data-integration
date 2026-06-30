@@ -27,8 +27,9 @@ def _is_derived_name(name: str, email: str) -> bool:
 
 
 class AppUserService:
-    def __init__(self, repo) -> None:
+    def __init__(self, repo, staff_resolver=None) -> None:
         self._repo = repo
+        self._staff_resolver = staff_resolver  # StaffIdResolver | None
 
     def provision_or_sync(self, email: str, full_name: str, crm_role: str, lark_user_id: str = "") -> AppUser:
         """Return existing AppUser or create one on first login.
@@ -56,7 +57,9 @@ class AppUserService:
             )
             self._repo.create(user)
             log.info("auto-provisioned AppUser %s role=%s lark_user_id=%s", email, crm_role, lark_user_id)
-            return user
+            # Resolve Sapo staff_id once on first provision; non-blocking on failure.
+            self._try_sync_staff_id(user.user_id, email)
+            return self._repo.get_by_email(email) or user
 
         # Sync name and lark_user_id; never override role.
         # Never overwrite a real IDP name with an email-derived fallback.
@@ -69,5 +72,20 @@ class AppUserService:
         if not user.is_active:
             log.warning("inactive user %s attempted login", email)
         self._repo.update(user.user_id, **updates)
+        # Backfill staff_id on subsequent logins if still unset (e.g. dim_staff was unavailable on provision).
+        if user.staff_id is None:
+            self._try_sync_staff_id(user.user_id, email)
         # Re-fetch so caller sees the updated values (update() mutates DB, not the object).
         return self._repo.get_by_email(email) or user
+
+    def _try_sync_staff_id(self, user_id: str, email: str) -> None:
+        """Resolve and persist staff_id from dim_staff; no-op when resolver absent or lookup fails."""
+        if self._staff_resolver is None:
+            return
+        try:
+            sid = self._staff_resolver.resolve(email)
+            if sid is not None:
+                self._repo.update(user_id, staff_id=sid)
+                log.info("synced staff_id=%s for user %s", sid, email)
+        except Exception as exc:
+            log.debug("staff_id sync failed for %s: %s", email, exc)

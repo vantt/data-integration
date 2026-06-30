@@ -35,3 +35,4 @@ class AppUser:
     created_at: str     # UTC ISO-8601 with 'Z'
     updated_at: str     # UTC ISO-8601 with 'Z'
     lark_user_id: Optional[str] = None  # Lark open_id (ou_...) from CF Access JWT custom.sub
+    staff_id: Optional[int] = None      # Sapo account_id — cross-system bridge to dim_staff

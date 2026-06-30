@@ -16,7 +16,7 @@ class SQLiteAppUserRepository:
     """SQLite adapter for crm_app_user persistence and lookup."""
 
     _SELECT = (
-        "SELECT user_id, email, full_name, role, is_active, created_at, updated_at, lark_user_id "
+        "SELECT user_id, staff_id, email, full_name, role, is_active, created_at, updated_at, lark_user_id "
         "FROM crm_app_user"
     )
 
@@ -64,12 +64,13 @@ class SQLiteAppUserRepository:
         """Insert a new AppUser row. Raises sqlite3.IntegrityError on duplicate email/id."""
         sql = (
             "INSERT INTO crm_app_user "
-            "(user_id, email, full_name, role, is_active, created_at, updated_at, lark_user_id) "
-            "VALUES (?, ?, ?, ?, ?, ?, ?, ?)"
+            "(user_id, staff_id, email, full_name, role, is_active, created_at, updated_at, lark_user_id) "
+            "VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)"
         )
         with self._conn:
             self._conn.execute(sql, (
                 user.user_id,
+                user.staff_id,
                 user.email,
                 user.full_name,
                 user.role,
@@ -88,7 +89,7 @@ class SQLiteAppUserRepository:
         """
         # Hardcoded whitelist — only column names in this set are interpolated into SQL.
         # User-supplied values are always passed as query parameters (?), never interpolated.
-        _ALLOWED = {"email", "full_name", "role", "is_active", "updated_at", "lark_user_id"}
+        _ALLOWED = {"email", "full_name", "role", "is_active", "updated_at", "lark_user_id", "staff_id"}
         fields = {k: v for k, v in kwargs.items() if k in _ALLOWED}
         if not fields:
             raise ValueError(f"update() requires at least one of: {_ALLOWED}")
@@ -116,4 +117,5 @@ def _row_to_user(row: sqlite3.Row) -> AppUser:
         created_at=row["created_at"],
         updated_at=row["updated_at"],
         lark_user_id=row["lark_user_id"],
+        staff_id=row["staff_id"],
     )
