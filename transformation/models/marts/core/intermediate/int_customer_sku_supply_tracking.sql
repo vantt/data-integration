@@ -133,6 +133,19 @@ supply_stack (
 -- (customer, sku) grain — eliminates the dual-CTE desync that caused mismatched dates
 -- and order codes in action card context chips.
 -- Branch 2 divides by units_per_pack so last_net_unit_price is always per-base-unit.
+--
+-- last_sku_discount_rate: total effective discount = (line_discount + distributed_order_discount) / gross_price.
+--   fact_sales.discount_rate is line-level only; distributed_discount_amount is the order-level
+--   voucher/campaign discount pro-rated to this line. Both must be combined for the true rate.
+--   Three cases:
+--     1. No distributed discount → use line-level discount_rate as-is.
+--     2. Both line + distributed → gross = discount_amount / discount_rate; total = (both) / gross.
+--     3. No line discount but distributed exists → back-calculate gross via vat_ratio from fact_orders.
+--
+-- last_net_unit_price: actual price paid per unit (VAT-exclusive, after ALL discounts).
+--   = (net_revenue − distributed_discount_vat_excl) / quantity
+--   where distributed_discount_vat_excl = distributed_discount_amount × vat_ratio
+--   vat_ratio = (total_collected − vat_amount) / total_collected  (from fact_orders)
 last_order_ctx AS (
     SELECT
         customer_key,
@@ -145,9 +158,40 @@ last_order_ctx AS (
         SELECT
             fs.customer_key,
             cfg.sku,
-            fo.order_code                                               AS last_order_code,
-            fs.discount_rate                                            AS last_sku_discount_rate,
-            ROUND(fs.net_revenue / NULLIF(fs.quantity, 0))::BIGINT     AS last_net_unit_price,
+            fo.order_code AS last_order_code,
+            -- Effective total discount rate: line discount + pro-rated order discount
+            CASE
+                WHEN COALESCE(fs.distributed_discount_amount, 0) = 0
+                    THEN fs.discount_rate
+                WHEN fs.discount_rate > 0 AND fs.discount_amount > 0
+                    THEN ROUND(
+                        (fs.discount_amount + fs.distributed_discount_amount)
+                        / NULLIF(fs.discount_amount / fs.discount_rate, 0),
+                        4
+                    )
+                ELSE  -- no line discount; back-calculate VAT-incl gross from net_revenue and vat_ratio
+                    ROUND(
+                        fs.distributed_discount_amount
+                        / NULLIF(
+                            fs.net_revenue
+                                * fo.total_collected
+                                / NULLIF(fo.total_collected - COALESCE(fo.vat_amount, 0), 0)
+                            + fs.distributed_discount_amount,
+                            0
+                        ),
+                        4
+                    )
+            END AS last_sku_discount_rate,
+            -- Actual price paid per unit: VAT-exclusive, after all discounts
+            ROUND(
+                (fs.net_revenue
+                    - COALESCE(fs.distributed_discount_amount, 0)
+                        * COALESCE(
+                            (fo.total_collected - fo.vat_amount) / NULLIF(fo.total_collected, 0),
+                            1
+                        )
+                ) / NULLIF(fs.quantity, 0)
+            )::BIGINT AS last_net_unit_price,
             fs.ordered_at
         FROM {{ ref('fact_sales') }}   fs
         JOIN {{ ref('dim_products') }} dp  ON fs.product_key = dp.product_key
@@ -160,9 +204,38 @@ last_order_ctx AS (
         SELECT
             fs.customer_key,
             cfg.sku,
-            fo.order_code                                                                   AS last_order_code,
-            fs.discount_rate                                                                AS last_sku_discount_rate,
-            ROUND(fs.net_revenue / NULLIF(fs.quantity * da.units_per_pack, 0))::BIGINT     AS last_net_unit_price,
+            fo.order_code AS last_order_code,
+            CASE
+                WHEN COALESCE(fs.distributed_discount_amount, 0) = 0
+                    THEN fs.discount_rate
+                WHEN fs.discount_rate > 0 AND fs.discount_amount > 0
+                    THEN ROUND(
+                        (fs.discount_amount + fs.distributed_discount_amount)
+                        / NULLIF(fs.discount_amount / fs.discount_rate, 0),
+                        4
+                    )
+                ELSE
+                    ROUND(
+                        fs.distributed_discount_amount
+                        / NULLIF(
+                            fs.net_revenue
+                                * fo.total_collected
+                                / NULLIF(fo.total_collected - COALESCE(fo.vat_amount, 0), 0)
+                            + fs.distributed_discount_amount,
+                            0
+                        ),
+                        4
+                    )
+            END AS last_sku_discount_rate,
+            ROUND(
+                (fs.net_revenue
+                    - COALESCE(fs.distributed_discount_amount, 0)
+                        * COALESCE(
+                            (fo.total_collected - fo.vat_amount) / NULLIF(fo.total_collected, 0),
+                            1
+                        )
+                ) / NULLIF(fs.quantity * da.units_per_pack, 0)
+            )::BIGINT AS last_net_unit_price,
             fs.ordered_at
         FROM {{ ref('fact_sales') }}    fs
         JOIN {{ ref('dim_products') }}  dp  ON fs.product_key  = dp.product_key
