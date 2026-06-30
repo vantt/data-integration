@@ -55,6 +55,7 @@ from adapters.outbound.duckdb.dataquality_repository import DataQualityRepositor
 
 # ── Application services ──────────────────────────────────────────────────────
 from application.merge_service import MergeService
+from application.party_seed_service import PartySeedService
 from application.profile_service import ProfileService
 from application.note_service import NoteService
 from application.tag_service import TagService
@@ -324,6 +325,29 @@ def _build_services(sqlite_repos: SqliteRepos) -> Services:
     }
 
 
+def _make_sync_parties_runner():
+    """Return a plain callable that runs sync_parties (used with run_in_executor).
+
+    Keeps concrete outbound-adapter wiring inside the composition root so that
+    the admin inbound adapter never imports from adapters.outbound.*.
+    """
+    def _run() -> None:
+        import os as _os
+        data_dir = _os.environ.get("CRM_DATA_DIR", "./data")
+        db = CRMDatabase(data_dir)
+        try:
+            db.apply_migrations()
+            party_repo = SQLitePartyRepository(db.conn)
+            cache_repo = SQLiteCacheRepository(db.conn)
+            svc = PartySeedService(cache_repo, party_repo)
+            n = svc.sync_parties(cache_repo)
+            log.info("syncparties: %d parties upserted", n)
+        finally:
+            db.close()
+
+    return _run
+
+
 def _configure_middleware(app: FastAPI, app_user_svc: AppUserService) -> None:
     """Add CFAccessMiddleware to the FastAPI application."""
     app.add_middleware(CFAccessMiddleware, user_svc=app_user_svc)
@@ -462,7 +486,7 @@ def _register_api_routes(
 ) -> None:
     """Register all HTTP API routers (prefix=/api already set per handler)."""
     app.include_router(create_health_router(sqlite_repos["db"]))
-    app.include_router(create_admin_router())
+    app.include_router(create_admin_router(sync_parties_runner=_make_sync_parties_runner()))
     app.include_router(make_insight_router(sqlite_repos["party"], sqlite_repos["cache"]))
     app.include_router(make_approach_script_router(sqlite_repos["party"], sqlite_repos["approach"]))
     app.include_router(make_script_nav_router(sqlite_repos["party"], sqlite_repos["approach"], templates))

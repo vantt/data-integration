@@ -14,6 +14,7 @@ from fastapi.responses import HTMLResponse
 from fastapi.templating import Jinja2Templates
 
 from adapters.inbound.http.auth_dependency import require_admin
+from domain.entities.app_user import AppUser
 from domain.entities.profile import CustomFieldDef, Tag
 from adapters.inbound.web.screens.management.screen_mgmt_helpers import (
     _is_valid_hex_color,
@@ -38,10 +39,16 @@ class SettingsSvc(Protocol):
     def delete_tag(self, tag_id: str) -> None: ...
 
 
+class AppUsersSvc(Protocol):
+    """Structural protocol for the app-user repository used by make_settings_router."""
+
+    def list_active(self) -> list[AppUser]: ...
+
+
 def make_settings_router(
     templates: Jinja2Templates,
     settings_svc: SettingsSvc,
-    app_users_svc: Any,
+    app_users_svc: AppUsersSvc,
 ) -> APIRouter:
     router = APIRouter()
 

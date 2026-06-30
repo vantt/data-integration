@@ -5,18 +5,33 @@ Mirrors Go screen_segments.go (same URL patterns, same redirect semantics).
 """
 from __future__ import annotations
 
-from typing import Any
+from typing import Any, Optional, Protocol
 
 from fastapi import APIRouter, Form, Request, Response
 from fastapi.responses import HTMLResponse
 from fastapi.templating import Jinja2Templates
 
 from adapters.inbound.web.screens.management.screen_mgmt_helpers import _build_rule_definition, _safe
+from domain.entities.segment import Segment, SegmentMember
+
+
+class SegmentsSvc(Protocol):
+    """Structural protocol for the segments service used by make_segments_router."""
+
+    def list_segments(self) -> list[Segment]: ...
+    def count_members_for_segments(self, segment_ids: list[str]) -> dict[str, int]: ...
+    def create_segment(self, data: dict) -> Segment: ...
+    def get_segment(self, segment_id: str) -> Optional[Segment]: ...
+    def list_members(self, segment_id: str) -> list[SegmentMember]: ...
+    def update_segment(self, segment_id: str, **kwargs: Any) -> None: ...
+    def refresh_dynamic_segment(self, segment_id: str) -> int: ...
+    def add_member(self, segment_id: str, party_id: str) -> None: ...
+    def remove_member(self, segment_id: str, party_id: str) -> None: ...
 
 
 def make_segments_router(
     templates: Jinja2Templates,
-    segments_svc: Any,
+    segments_svc: SegmentsSvc,
 ) -> APIRouter:
     router = APIRouter()
 

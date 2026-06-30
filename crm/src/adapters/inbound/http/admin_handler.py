@@ -13,7 +13,7 @@ import asyncio
 import logging
 import os
 from datetime import datetime, timezone
-from typing import Any
+from typing import Any, Callable
 
 from fastapi import APIRouter, Header, HTTPException
 from fastapi.responses import JSONResponse
@@ -22,28 +22,6 @@ log = logging.getLogger(__name__)
 
 _REFRESH_TIMEOUT_S = 15 * 60  # 15-minute safety cap — matches Go defaultRefreshTimeout
 
-
-def _sync_parties_run() -> None:
-    """Run sync_parties inline without invoking argparse (safe for programmatic call)."""
-    import os as _os
-    data_dir = _os.environ.get("CRM_DATA_DIR", "./data")
-
-    # Imports are relative to crm/src/ on sys.path (set by the server entrypoint).
-    from adapters.outbound.sqlite.connection import CRMDatabase
-    from adapters.outbound.sqlite.party_repository import SQLitePartyRepository
-    from adapters.outbound.sqlite.cache_repository import SQLiteCacheRepository
-    from application.party_seed_service import PartySeedService
-
-    db = CRMDatabase(data_dir)
-    try:
-        db.apply_migrations()
-        party_repo = SQLitePartyRepository(db.conn)
-        cache_repo = SQLiteCacheRepository(db.conn)
-        svc = PartySeedService(cache_repo, party_repo)
-        n = svc.sync_parties(cache_repo)
-        log.info("syncparties: %d parties upserted", n)
-    finally:
-        db.close()
 
 
 def _reverse_etl_run() -> None:
@@ -189,7 +167,7 @@ def _rebuild_search_index_run() -> None:
     log.info("search_index: %d parties indexed", n)
 
 
-def create_admin_router() -> APIRouter:
+def create_admin_router(sync_parties_runner: Callable[[], None]) -> APIRouter:
     """Return the admin router.  Token is read from CRM_REFRESH_TOKEN at request time."""
     r = APIRouter()
 
@@ -253,7 +231,7 @@ def create_admin_router() -> APIRouter:
                 log.error("admin: hug_customer_push failed (non-critical): %s", push_exc)
             log.info("admin: sync_parties starting")
             await asyncio.wait_for(
-                loop.run_in_executor(None, _sync_parties_run),
+                loop.run_in_executor(None, sync_parties_runner),
                 timeout=_REFRESH_TIMEOUT_S,
             )
             log.info("admin: rebuild_search_index starting")

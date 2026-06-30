@@ -6,21 +6,59 @@ scanning, and per-target status updates. Mirrors Go screen_campaigns.go
 """
 from __future__ import annotations
 
-from typing import Any
+from typing import Any, Optional, Protocol
 
 from fastapi import APIRouter, Form, Request, Response
 from fastapi.responses import HTMLResponse
 from fastapi.templating import Jinja2Templates
 
 from adapters.inbound.web.screens.management.screen_mgmt_helpers import _build_party_names, _safe
+from domain.entities.app_user import AppUser
+from domain.entities.party import Party
+from domain.entities.segment import Campaign, CampaignTarget, Segment
+
+
+class CampaignsSvc(Protocol):
+    """Structural protocol for the campaigns service used by make_campaigns_router."""
+
+    def list_campaigns(self) -> list[Campaign]: ...
+    def get_campaign(self, campaign_id: str) -> Optional[Campaign]: ...
+    def create_campaign(self, data: dict) -> Campaign: ...
+    def update_campaign(self, campaign_id: str, **kwargs: Any) -> None: ...
+    def list_targets(self, campaign_id: str, status: str) -> list[CampaignTarget]: ...
+    def get_target(self, campaign_id: str, party_id: str) -> Optional[CampaignTarget]: ...
+    def generate_targets(self, campaign_id: str) -> int: ...
+    def scan_conversions(self, campaign_id: str) -> int: ...
+    def get_roi(self, campaign_id: str) -> dict: ...
+    def record_conversion(self, campaign_id: str, party_id: str, order_code: Optional[str] = None, revenue_vnd: Optional[int] = None) -> None: ...
+    def update_target_status(self, campaign_id: str, party_id: str, status: str) -> None: ...
+
+
+class SegmentsSvc(Protocol):
+    """Structural protocol for the segments service used by make_campaigns_router."""
+
+    def get_segment(self, segment_id: str) -> Optional[Segment]: ...
+    def list_segments(self) -> list[Segment]: ...
+
+
+class PartiesSvc(Protocol):
+    """Structural protocol for the party repository used by make_campaigns_router."""
+
+    def get_by_id(self, party_id: str) -> Optional[Party]: ...
+
+
+class AppUsersSvc(Protocol):
+    """Structural protocol for the app-user repository used by make_campaigns_router."""
+
+    def list_active(self) -> list[AppUser]: ...
 
 
 def make_campaigns_router(
     templates: Jinja2Templates,
-    campaigns_svc: Any,
-    segments_svc: Any,
-    parties_svc: Any,
-    app_users_svc: Any,
+    campaigns_svc: CampaignsSvc,
+    segments_svc: SegmentsSvc,
+    parties_svc: PartiesSvc,
+    app_users_svc: AppUsersSvc,
 ) -> APIRouter:
     router = APIRouter()
 

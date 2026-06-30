@@ -8,8 +8,8 @@ from domain.entities.activity import Activity
 class ActivityRepository(Protocol):
     """Outbound port for Activity persistence."""
 
-    def insert(self, activity: Activity) -> None:
-        """Store a new activity row."""
+    def insert(self, activity: Activity) -> Activity:
+        """Store a new activity row and return it."""
         ...
 
     def list_by_party(self, party_id: str) -> list[Activity]:
