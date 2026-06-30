@@ -93,6 +93,13 @@ SELECT
     (s.cogs_goods_sapo - m.cogs_goods_misa)
         / NULLIF(m.cogs_goods_misa, 0)                             AS cogs_variance_pct,
 
+    -- Flag: variance > 10% of MISA value (NULL when either side absent)
+    CASE
+        WHEN s.cogs_goods_sapo IS NOT NULL AND m.cogs_goods_misa IS NOT NULL AND m.cogs_goods_misa != 0
+        THEN ABS((s.cogs_goods_sapo - m.cogs_goods_misa)::DOUBLE / m.cogs_goods_misa) > 0.10
+        ELSE NULL
+    END                                                             AS is_high_cogs_variance,
+
     -- Presence flags (used in cogs_source derivation below)
     s.cogs_goods_sapo IS NOT NULL                                   AS has_sapo_cogs,
     m.cogs_goods_misa IS NOT NULL                                   AS has_misa_cogs,

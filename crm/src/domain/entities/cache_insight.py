@@ -63,7 +63,7 @@ VALID_ACTION_TYPES = [
     ACTION_COLLECT_FEEDBACK,
 ]
 
-CANCEL_RISK_THRESHOLD: float = 0.10
+CANCEL_RISK_THRESHOLD: float = 0.25
 ACTION_QUEUE_CHECKLIST_THRESHOLD: int = 2
 
 # ---------------------------------------------------------------------------

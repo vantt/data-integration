@@ -105,6 +105,12 @@ SELECT
     -- Revenue (from Sapo)
     o.gross_revenue,
     o.discount_amount,
+    -- Order-level discount rate: promotion intensity for this specific order
+    CASE
+        WHEN o.gross_revenue > 0
+        THEN o.discount_amount::DOUBLE / o.gross_revenue
+        ELSE NULL
+    END AS order_discount_rate,
     o.net_revenue,
     o.vat_amount,
     o.total_collected,

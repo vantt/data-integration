@@ -446,6 +446,45 @@ Use to flag high-risk customers (payment issues, order regret) or exclude them f
 
 ---
 
+### is_high_cancel_risk
+
+> **Type:** Dimension | **Column:** `dim_customers.is_high_cancel_risk` | **Status:** `active`
+> **Values:** `true`, `false` | **Source:** `dim_customers`
+
+**Definition:** TRUE when the customer's `cancel_rate` exceeds 25%. Early warning badge for reps before committing fulfillment resources.
+
+**Formula:** `cancel_rate > 0.25`
+
+**Use in SQL:** `WHERE is_high_cancel_risk = true`
+
+#### 🎯 When to Use
+Use for CRM rep alerting on the C360 view. Distinct from the action queue trigger — see Conflicts.
+
+#### ⚠️ Conflicts
+| Source | Threshold | Purpose | Note |
+|---|---|---|---|
+| `is_high_cancel_risk` (this column) | `cancel_rate > 0.25` | C360 badge — early warning for reps | Lower bar intentional: surfaces risk before fulfillment committed |
+| `mart_customer_action_queue HIGH_CANCEL_RISK` | `cancel_rate > 0.50 AND order_count >= 3` | Operational action trigger | Higher bar + min-order guard prevents false positives on low-volume customers |
+
+Do NOT conflate these two thresholds — they operate at different semantic levels.
+
+#### 🔗 Similar (not synonym)
+| Dimension | Key difference | Use instead when |
+|---|---|---|
+| cancel_rate | Continuous ratio | Filtering by exact threshold or custom range |
+
+#### ❌ Anti-patterns
+```sql
+-- WRONG: re-applying the 50% action-queue threshold to this flag
+WHERE is_high_cancel_risk = true AND cancel_rate > 0.50
+-- is_high_cancel_risk is pre-computed at 25%; do not override its semantics
+
+-- WRONG: conflating with HIGH_CANCEL_RISK in mart_customer_action_queue
+-- The action queue uses a different (stricter) threshold with an order_count guard
+```
+
+---
+
 ### avg_order_spend
 
 > **Type:** Dimension | **Column:** `dim_customers.avg_order_spend` | **Status:** `active`
@@ -485,6 +524,154 @@ Customer scoring, segmentation, and CRM action prioritization. For period-level 
 -- ❌ Using aov (net_revenue) for value_at_stake estimation
 --    Underestimates actual cash by ~8-10% VAT — use avg_order_spend instead
 ```
+
+---
+
+### avg_order_contribution_margin_pct
+
+> **Type:** Dimension | **Column:** `dim_customers.avg_order_contribution_margin_pct` | **Status:** `active`
+> **Values:** DOUBLE (ratio, 0-1) or `NULL` | **Source:** `int_customer_metrics` → `dim_customers`
+
+**Definition:** Customer's average contribution margin % per order after Shopee platform fees. The LTV profitability KPI for CRM prioritization.
+
+**Formula (computed per customer):**
+```sql
+AVG(channel_net_profit / net_revenue) FILTER (WHERE has_cogs)
+```
+
+**Intent:** Captures post-fee profitability at the customer level. For non-Shopee customers equals `avg_gross_margin_pct` (no platform fees). For Shopee customers, lower than `avg_gross_margin_pct` by the effective Shopee fee rate.
+
+**Use in SQL:** `dim_customers.avg_order_contribution_margin_pct` (pre-computed)
+
+#### 🎯 When to Use
+Primary customer-level profitability KPI for CRM action ranking and LTV analysis. Use `avg_gross_margin_pct` when you need COGS-only efficiency (before fees) or for non-Shopee segment analysis.
+
+#### ⚠️ Conflicts
+*None.*
+
+#### 🔗 Similar (not synonym)
+| Dimension | Key difference | Use instead when |
+|---|---|---|
+| avg_gross_margin_pct | BEFORE Shopee fees — COGS efficiency only | Pricing/sourcing analysis, non-Shopee segments |
+| avg_order_spend | Cash per order (VAT-inclusive), not margin ratio | Estimating value_at_stake in CRM actions |
+
+#### ❌ Anti-patterns
+```sql
+-- WRONG: using avg_gross_margin_pct as the profitability KPI for Shopee customers
+--        Ignores platform fee drag — overstates profitability
+-- CORRECT: use avg_order_contribution_margin_pct for channel-adjusted ranking
+```
+
+---
+
+### total_cogs
+
+> **Type:** Dimension | **Column:** `dim_customers.total_cogs` | **Status:** `active`
+> **Values:** BIGINT (VND) or `NULL` | **Source:** `int_customer_metrics` → `dim_customers`
+
+**Definition:** SUM of `cogs_amount` across the customer's orders where `has_cogs = true` (VND).
+
+**Use in SQL:** `SELECT total_cogs FROM dim_customers WHERE customer_key = :k`
+
+#### 🎯 When to Use
+Use for absolute COGS exposure per customer in financial analysis. NULL = no COGS-covered orders. Basis for customer-level margin absolute calculations.
+
+#### ⚠️ Conflicts
+*None.*
+
+#### 🔗 Similar (not synonym)
+| Dimension | Key difference | Use instead when |
+|---|---|---|
+| avg_gross_margin_pct | Efficiency ratio, not absolute VND | Comparing margin efficiency across customers |
+| cogs_order_count | Count of COGS-covered orders, not VND | Checking COGS coverage breadth |
+
+#### ❌ Anti-patterns
+*None.*
+
+---
+
+### total_return_amount
+
+> **Type:** Dimension | **Column:** `dim_customers.total_return_amount` | **Status:** `active`
+> **Values:** BIGINT (VND) or `NULL` | **Source:** `int_customer_metrics` → `dim_customers`
+
+**Definition:** SUM of `return_amount` across all return events for the customer (VND).
+
+**Use in SQL:** `SELECT total_return_amount FROM dim_customers WHERE customer_key = :k`
+
+#### 🎯 When to Use
+Use for financial exposure from this customer's returns. Pair with `return_count` (customer-level) for average refund per event, or with `lifetime_value` for return burden as % of total spend.
+
+#### ⚠️ Conflicts
+*None.*
+
+#### 🔗 Similar (not synonym)
+| Dimension | Key difference | Use instead when |
+|---|---|---|
+| return_count (customer-level) | Number of return events, not VND | Volume analysis |
+| cancel_rate | Cancellation fraction, not returns | Pre-fulfillment risk |
+
+#### ❌ Anti-patterns
+*None.*
+
+---
+
+### return_count (customer-level)
+
+> **Type:** Dimension | **Column:** `dim_customers.return_count` | **Status:** `active`
+> **Values:** INTEGER or `NULL` | **Source:** `int_customer_metrics` → `dim_customers`
+
+**Definition:** Total return events for the customer across their lifetime history. A customer-level attribute — distinct from the ops-period `return_count` metric.
+
+**Use in SQL:** `SELECT return_count FROM dim_customers WHERE customer_key = :k`
+
+#### 🎯 When to Use
+Use for customer-level return pattern analysis. For period-scoped or P&L return analysis use the order-level metrics in metrics.md.
+
+#### ⚠️ Conflicts
+| Source | Column | Definition difference | Note |
+|---|---|---|---|
+| metrics.md | [`return_count` metric](metrics.md#return_count) | Period ops count of RETURNED-status orders | Different grain: period ops signal vs lifetime customer attribute |
+
+#### 🔗 Similar (not synonym)
+| Dimension | Key difference | Use instead when |
+|---|---|---|
+| total_return_amount | VND value of returns, not count | Financial exposure analysis |
+| cancel_rate | Cancellation fraction, not returns | Pre-fulfillment risk |
+
+#### ❌ Anti-patterns
+```sql
+-- WRONG: confusing with the ops-level return_count metric from metrics.md
+-- This is a lifetime customer attribute; metrics.md entry is a period-scoped ops signal
+```
+
+---
+
+### cogs_order_count
+
+> **Type:** Dimension | **Column:** `dim_customers.cogs_order_count` | **Status:** `active`
+> **Values:** INTEGER | **Source:** `int_customer_metrics` → `dim_customers`
+
+**Definition:** Count of the customer's orders with COGS data (`has_cogs = true`). Denominator for `margin_cogs_coverage_pct`.
+
+**Use in SQL:** `SELECT cogs_order_count FROM dim_customers WHERE customer_key = :k`
+
+#### 🎯 When to Use
+Use to assess COGS coverage quality before relying on margin metrics. Low `cogs_order_count / order_count` means margin figures represent only a fraction of actual orders.
+
+#### ⚠️ Conflicts
+*None.*
+
+#### 🔗 Similar (not synonym)
+| Dimension | Key difference | Use instead when |
+|---|---|---|
+| order_count | Total orders (all, not just COGS-covered) | Overall purchase frequency |
+| total_cogs | VND total, not order count | Absolute COGS magnitude |
+
+#### ❌ Anti-patterns
+*None.*
+
+---
 
 ### first_order_date
 

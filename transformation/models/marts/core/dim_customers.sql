@@ -101,6 +101,11 @@ joined_data AS (
         e.avg_order_contribution_margin_pct,
         e.margin_cogs_coverage_pct,
         e.is_margin_negative,
+        e.total_cogs,
+        e.avg_gross_margin_pct,
+        e.total_return_amount,
+        e.return_count,
+        e.cogs_order_count,
 
         -- Benchmark percentile columns (NULL for non-ranked customers; see benchmark_status)
         b.benchmark_status,
@@ -270,6 +275,16 @@ SELECT
     avg_order_contribution_margin_pct,              -- NULL when no active orders
     margin_cogs_coverage_pct,                       -- NULL when no active orders
     COALESCE(is_margin_negative, FALSE)             AS is_margin_negative,
+
+    -- Pre-computed profitability/returns metrics (avoids live JOIN on C360 load)
+    total_cogs,                                     -- NULL when no COGS-matched orders
+    avg_gross_margin_pct,                           -- NULL when no COGS-matched orders
+    total_return_amount,                            -- NULL when no return events
+    return_count,                                   -- NULL when no return events
+    cogs_order_count,                               -- NULL when no COGS-matched orders
+
+    -- Cancel risk flag (threshold = 25%; derived from cancel_rate in joined_data)
+    (cancel_rate > 0.25)                            AS is_high_cancel_risk,
 
     -- P3 metrics
     avg_order_spend,

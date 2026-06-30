@@ -18,7 +18,11 @@ WITH order_economics AS (
         foe.channel_net_profit,     -- contribution: gross_profit − direct Shopee fees, no overhead
         foe.net_revenue,
         foe.has_cogs,
-        foe.is_active_order
+        foe.is_active_order,
+        foe.gross_margin_pct,
+        foe.cogs_amount,
+        foe.return_amount,
+        foe.return_count
     FROM {{ ref('fact_order_economics') }} foe
     JOIN {{ ref('fact_orders') }} fo ON foe.order_id = fo.order_id
     WHERE foe.is_active_order
@@ -54,6 +58,14 @@ customer_economics AS (
             ELSE SUM(oe.channel_net_profit) FILTER (WHERE oe.has_cogs) < 0
         END                                                               AS is_margin_negative,
 
+        -- Pre-computed profitability/returns metrics (pre-compute here; exposed via dim_customers)
+        SUM(oe.cogs_amount) FILTER (WHERE oe.has_cogs)::BIGINT           AS total_cogs,
+        AVG(oe.gross_margin_pct) FILTER (WHERE oe.has_cogs)              AS avg_gross_margin_pct,
+        -- No has_cogs filter for returns — returns can occur on any order
+        SUM(oe.return_amount)::BIGINT                                     AS total_return_amount,
+        SUM(oe.return_count)::INTEGER                                     AS return_count,
+        COUNT(*) FILTER (WHERE oe.has_cogs)::INTEGER                     AS cogs_order_count,
+
         current_timestamp                                                 AS metric_calculated_at
 
     FROM order_economics oe
@@ -67,5 +79,10 @@ SELECT
     avg_order_contribution_margin_pct,
     margin_cogs_coverage_pct,
     is_margin_negative,
+    total_cogs,
+    avg_gross_margin_pct,
+    total_return_amount,
+    return_count,
+    cogs_order_count,
     metric_calculated_at
 FROM customer_economics

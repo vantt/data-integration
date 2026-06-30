@@ -1131,6 +1131,144 @@ Pair with `target_achievement_rate`. Use when you need to size the gap in money 
 
 ---
 
+## cogs_variance
+
+> **Type:** Metric | **Domain:** [Finance](../domains/finance.md) | **Unit:** VND
+> **Status:** `active` | **Scope:** `int_order_cogs_reconciled` | **Grain:** per order × SKU | **Since:** 2022-01-01
+
+**Definition:** Absolute difference between Sapo-MAC and MISA COGS for the same (order × SKU) line.
+
+**Real question:** "Chênh lệch giá vốn giữa Sapo-MAC và MISA cho một dòng hàng là bao nhiêu?"
+
+**Formula:**
+```sql
+cogs_goods_sapo - cogs_goods_misa
+```
+
+**Column:** `int_order_cogs_reconciled.cogs_variance`
+
+**Intent:** Measures raw COGS gap between two systems at the SKU level. Foundation for `cogs_variance_pct` and `is_high_cogs_variance`.
+
+**Use in SQL:** `cogs_variance` from `int_order_cogs_reconciled` — do not recompute from mart columns.
+
+#### 🎯 When to Use
+Use for COGS reconciliation audits. Pair with `cogs_variance_pct` for relative context. Positive = Sapo higher than MISA; negative = Sapo lower.
+
+#### ⚠️ Conflicts
+*None identified.*
+
+#### 🔗 Similar (not synonym)
+| Concept | File | Key difference | Use instead when |
+|---|---|---|---|
+| `cogs_variance_pct` | [metrics.md](#cogs_variance_pct) | ratio form (0-1) not absolute VND | comparing variance across SKUs of different price |
+| `is_high_cogs_variance` | [metrics.md](#is_high_cogs_variance) | boolean alert flag | flagging outliers in bulk |
+
+#### ❌ Anti-patterns
+```sql
+-- ❌ Computing at aggregate level — masks offsetting positive/negative variances per line
+SELECT SUM(cogs_goods_sapo) - SUM(cogs_goods_misa) AS variance
+-- ✅ Use row-level cogs_variance from int_order_cogs_reconciled
+```
+
+#### 🏷️ Used In
+*Not tracked yet.*
+
+---
+
+## cogs_variance_pct
+
+> **Type:** Metric | **Domain:** [Finance](../domains/finance.md) | **Unit:** ratio (0-1, NOT %)
+> **Status:** `active` | **Scope:** `int_order_cogs_reconciled` (MISA > 0 only) | **Grain:** per order × SKU | **Since:** 2022-01-01
+
+**Definition:** COGS variance as a fraction of the MISA value. **Stored as a ratio (0-1), NOT a percentage.** A value of 0.10 means 10% variance.
+
+**Real question:** "Chênh lệch giá vốn chiếm bao nhiêu phần so với giá trị MISA?"
+
+**Formula:**
+```sql
+(cogs_goods_sapo - cogs_goods_misa) / cogs_goods_misa
+-- 0.10 = 10% variance (ratio, not percentage)
+```
+
+**Column:** `int_order_cogs_reconciled.cogs_variance_pct`
+
+**Intent:** Normalizes variance for cross-SKU comparison. A 50,000đ gap means differently on a 100,000đ item vs a 1,000,000đ item.
+
+**Use in SQL:** `WHERE ABS(cogs_variance_pct) > 0.10` — the column is a ratio; 0.10 means 10%.
+
+#### 🎯 When to Use
+Use for cross-SKU variance comparison and for computing `is_high_cogs_variance`. Multiply by 100 only at the display layer — never in filter conditions.
+
+#### ⚠️ Conflicts
+*None identified.*
+
+#### 🔗 Similar (not synonym)
+| Concept | File | Key difference | Use instead when |
+|---|---|---|---|
+| `cogs_variance` | [metrics.md](#cogs_variance) | absolute VND difference | understanding magnitude on a single SKU |
+| `gross_margin_pct` | [metrics.md](#gross_margin_pct) | order-level profitability ratio | profitability analysis |
+
+#### ❌ Anti-patterns
+```sql
+-- ❌ CRITICAL: treating as percentage (0-100) — column is stored as ratio (0-1)
+WHERE cogs_variance_pct > 10  -- wrong: this means >1000% variance, not >10%
+-- ✅ Correct ratio comparison
+WHERE ABS(cogs_variance_pct) > 0.10  -- means >10% variance
+
+-- ❌ Null denominator — MISA=0 rows must be excluded before computing ratio
+SELECT (cogs_goods_sapo - cogs_goods_misa) / cogs_goods_misa  -- divide by zero risk
+-- ✅ Filter: WHERE cogs_goods_misa > 0
+```
+
+#### 🏷️ Used In
+*Not tracked yet.*
+
+---
+
+## is_high_cogs_variance
+
+> **Type:** Metric | **Domain:** [Finance](../domains/finance.md) | **Unit:** boolean
+> **Status:** `active` | **Scope:** `int_order_cogs_reconciled` | **Grain:** per order × SKU | **Since:** 2022-01-01
+
+**Definition:** TRUE when the absolute COGS variance between Sapo-MAC and MISA exceeds 10% of the MISA value.
+
+**Real question:** "Dòng hàng này có chênh lệch giá vốn đáng kể giữa Sapo và MISA không?"
+
+**Formula:**
+```sql
+ABS(cogs_variance_pct) > 0.10
+-- cogs_variance_pct is stored as ratio (0-1)
+```
+
+**Column:** `int_order_cogs_reconciled.is_high_cogs_variance` (NEW)
+
+**Intent:** Flags SKU lines requiring manual COGS reconciliation review. The 10% threshold surfaces systematic pricing or mapping issues.
+
+**Use in SQL:** `WHERE is_high_cogs_variance = true` from `int_order_cogs_reconciled`.
+
+#### 🎯 When to Use
+Use as a first-pass filter in COGS audit workflows. Applies only where both Sapo-MAC and MISA values exist — not a COGS-coverage issue, a COGS-accuracy issue.
+
+#### ⚠️ Conflicts
+*None identified.*
+
+#### 🔗 Similar (not synonym)
+| Concept | File | Key difference | Use instead when |
+|---|---|---|---|
+| `cogs_variance_pct` | [metrics.md](#cogs_variance_pct) | continuous ratio, not boolean | trend or distribution analysis |
+
+#### ❌ Anti-patterns
+```sql
+-- ❌ Recomputing from raw columns — use the pre-computed flag
+WHERE ABS(cogs_goods_sapo - cogs_goods_misa) / cogs_goods_misa > 0.10
+-- ✅ Use: WHERE is_high_cogs_variance = true
+```
+
+#### 🏷️ Used In
+*Not tracked yet.*
+
+---
+
 ## Logistics Metrics
 
 ---
@@ -1713,6 +1851,57 @@ Planned for use after `fact_marketing_spend` is complete with channel attributio
 | Dimension | Status | Note |
 |---|---|---|
 | Coverage | planned | Needs full fact_marketing_spend with channel attribution |
+
+#### 🏷️ Used In
+*Not tracked yet.*
+
+---
+
+## avg_gross_margin_pct
+
+> **Type:** Metric | **Domain:** [Customer](../domains/customer.md)/[Finance](../domains/finance.md) | **Unit:** ratio (0-1)
+> **Status:** `active` | **Scope:** customers with has_cogs orders | **Grain:** per customer | **Since:** 2022-01-01
+
+**Definition:** Customer's average gross margin % across their orders with COGS data. Measures COGS efficiency **before** Shopee platform fees.
+
+**Real question:** "Biên lợi nhuận gộp trung bình của khách hàng này là bao nhiêu (trước phí sàn)?"
+
+**Formula:**
+```sql
+AVG(gross_margin_pct) FILTER (WHERE has_cogs)  -- per customer
+-- where gross_margin_pct = gross_profit / net_revenue per order
+```
+
+**Column:** `dim_customers.avg_gross_margin_pct` (NEW)
+
+**Intent:** Profiles COGS/pricing efficiency at the customer level, before any channel fees are deducted. NULL when customer has no has_cogs orders.
+
+**Use in SQL:** `dim_customers.avg_gross_margin_pct` (pre-computed)
+
+#### 🎯 When to Use
+Use to segment customers by COGS efficiency (e.g., high-margin vs low-margin order profiles). For Shopee customers, pair with `avg_order_contribution_margin_pct` to see the fee impact. For non-Shopee customers, both values are identical.
+
+#### ⚠️ Conflicts
+*None identified.*
+
+#### 🔗 Similar (not synonym)
+| Concept | File | Key difference | Use instead when |
+|---|---|---|---|
+| `avg_order_contribution_margin_pct` | [dimensions.md](dimensions.md#avg_order_contribution_margin_pct) | AFTER Shopee fees — LTV profitability KPI | CRM action prioritization, channel-adjusted profitability |
+| `gross_margin_pct` | [metrics.md](#gross_margin_pct) | order-level, period-scoped (not per-customer) | period trend and channel comparison |
+
+#### ❌ Anti-patterns
+```sql
+-- ❌ Using as the sole LTV KPI for Shopee customers — ignores platform fee drag
+--    Use avg_order_contribution_margin_pct for Shopee LTV ranking
+
+-- ❌ Treating NULL as 0% margin
+--    NULL = no has_cogs orders; exclude from margin averages
+WHERE avg_gross_margin_pct IS NOT NULL  -- required before averaging
+```
+
+#### 🔍 Null & Zero
+NULL = customer has no orders with `has_cogs = true`. Do not treat as 0% margin — these customers simply have no COGS coverage.
 
 #### 🏷️ Used In
 *Not tracked yet.*

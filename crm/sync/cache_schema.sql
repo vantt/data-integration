@@ -99,6 +99,18 @@ CREATE TABLE IF NOT EXISTS wh_order_hdr (
   refreshed_at TEXT NOT NULL DEFAULT (strftime('%Y-%m-%dT%H:%M:%fZ','now'))
 );
 
+-- ─── COGS reconciliation summary (order-grain) ───────────────────────────────
+
+CREATE TABLE IF NOT EXISTS wh_order_cogs_summary (
+    order_code         TEXT NOT NULL PRIMARY KEY,
+    sapo_total         REAL,
+    misa_total         REAL,
+    cogs_variance      REAL,
+    cogs_variance_pct  REAL,
+    is_high_variance   INTEGER,  -- 0/1 boolean
+    sku_count          INTEGER
+);
+
 -- ─── GROUP 2 (cont): Strategic tier — NBA resell engine ──────────────────────
 
 CREATE TABLE IF NOT EXISTS wh_customer_tier (
