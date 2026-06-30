@@ -71,3 +71,11 @@ class Task:
     source_ref: Optional[str] = None        # action_id or campaign_id (idempotency key)
     created_by: Optional[str] = None        # FK → crm_app_user nullable
     completed_at: Optional[str] = None      # UTC ISO-8601 nullable
+
+    @property
+    def priority_label(self) -> str:
+        if self.priority >= TASK_PRIORITY_URGENT:
+            return "P1"
+        if self.priority == TASK_PRIORITY_HIGH:
+            return "P2"
+        return "P3"

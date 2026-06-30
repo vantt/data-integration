@@ -43,9 +43,7 @@
       <tbody>
       {% for o in orders %}
         {% set margin_pct = o.gross_margin_pct %}
-        {% set margin_cls = "pct--good" if (margin_pct is not none and margin_pct >= 0.28)
-                            else "pct--bad" if (margin_pct is not none and margin_pct < 0.24)
-                            else "" %}
+        {% set margin_cls = margin_pct | margin_quality_cls %}
         <tr class="is-clickable"
             onclick="window.location.href='/orders/{{ o.order_code }}'"
             title="Xem đơn {{ o.order_code }}"
@@ -113,8 +111,7 @@
       <tr>
         <td class="cell-strong mono">
           <a href="/orders/{{ o.order_code }}" class="link">{{ o.order_code }}</a>
-          {% set dk = o.date_key | string %}
-          <div class="muted" style="font-size:11px">{{ dk[:4] }}-{{ dk[4:6] }}-{{ dk[6:] }}</div>
+          <div class="muted" style="font-size:11px">{{ o.date_key | format_date_key }}</div>
         </td>
         <td class="muted">{{ o.channel or "—" }}</td>
         <td><span class="{{ o.status | bdg_cls('order_status') }}" data-tooltip="{{ o.status | bdg_tip('order_status') }}">{{ o.status }}</span></td>

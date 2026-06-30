@@ -8,6 +8,7 @@ from __future__ import annotations
 from dataclasses import dataclass, field
 from typing import Optional
 
+COGS_VARIANCE_WARN_PCT: float = 10.0  # >10 % variance = high
 
 # ---------------------------------------------------------------------------
 # Entities — header / financial split for clarity and line-limit compliance
@@ -84,6 +85,41 @@ class OrderFinancial:
     has_unpriced_sku: bool = False
     unpriced_sku_count: int = 0
 
+    @property
+    def discount_rate(self) -> Optional[float]:
+        if not self.gross_revenue or not self.discount_amount:
+            return None
+        return self.discount_amount / self.gross_revenue
+
+    @property
+    def cogs_source_label(self) -> str:
+        if not self.cogs_source or self.cogs_source == "none":
+            return "unverified"
+        if self.cogs_source in ("sapo_mac", "both"):
+            return "Sapo-MAC"
+        return ""
+
+    def composition_segments(self) -> Optional[dict]:
+        """Normalized COGS/fees/profit proportions for revenue composition bar.
+
+        Returns {cogs_pct, fees_pct, profit_pct} that roughly sum to 100,
+        or None when unavailable (US order, zero revenue, or no COGS).
+        """
+        if self.is_us or not self.net_revenue or self.net_revenue <= 0 or not self.cogs_amount:
+            return None
+        fees_val = abs(self.shopee_platform_fees) if self.has_platform_fees and self.shopee_platform_fees else 0
+        profit_val = max(self.gross_profit, 0)
+        cogs_raw = max(self.cogs_amount / self.net_revenue * 100, 0.0)
+        fees_raw = max(fees_val / self.net_revenue * 100, 0.0)
+        profit_raw = max(profit_val / self.net_revenue * 100, 0.0)
+        total = cogs_raw + fees_raw + profit_raw
+        if not total:
+            return None
+        def _p(raw: float) -> float:
+            return min(round(raw / total * 100, 1), 100.0)
+        cogs_pct = _p(cogs_raw)
+        return {"cogs_pct": cogs_pct, "fees_pct": _p(fees_raw), "profit_pct": _p(profit_raw)} if cogs_pct > 0 else None
+
 
 @dataclass
 class OrderLineItem:
@@ -141,6 +177,24 @@ class CogsItem:
     qty_sapo: float
     is_promo: bool
     is_gift_no_invoice: bool
+
+    @property
+    def variance(self) -> Optional[int]:
+        if self.cogs_goods_sapo is None or self.cogs_goods_misa is None:
+            return None
+        return self.cogs_goods_sapo - self.cogs_goods_misa
+
+    @property
+    def variance_pct(self) -> Optional[float]:
+        v = self.variance
+        if v is None or not self.cogs_goods_misa:
+            return None
+        return v / self.cogs_goods_misa * 100
+
+    @property
+    def is_high_variance(self) -> bool:
+        v = self.variance_pct
+        return v is not None and abs(v) > COGS_VARIANCE_WARN_PCT
 
 
 @dataclass
@@ -226,4 +280,27 @@ class OrderDetail:
     payments: list[Payment] = field(default_factory=list)
     returns: list[ReturnEvent] = field(default_factory=list)
     shipments: list[Shipment] = field(default_factory=list)
+
+    @property
+    def cogs_reconciliation_totals(self) -> Optional[dict]:
+        """Pre-aggregated Sapo/MISA totals for the COGS reconciliation footer.
+
+        Returns None when items don't have both sources.
+        """
+        sapo_vals = [i.cogs_goods_sapo for i in self.cogs_items if i.cogs_goods_sapo is not None]
+        misa_vals = [i.cogs_goods_misa for i in self.cogs_items if i.cogs_goods_misa is not None]
+        if not sapo_vals or not misa_vals:
+            return None
+        sapo_total = sum(sapo_vals)
+        misa_total = sum(misa_vals)
+        variance = sapo_total - misa_total
+        variance_pct = variance / misa_total * 100 if misa_total else None
+        return {
+            "sapo_total": sapo_total,
+            "misa_total": misa_total,
+            "variance": variance,
+            "variance_pct": variance_pct,
+            "is_high_variance": variance_pct is not None and abs(variance_pct) > COGS_VARIANCE_WARN_PCT,
+        }
+
     customer: Optional[CustomerRef] = None  # None when order has no linked customer

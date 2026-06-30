@@ -63,6 +63,9 @@ VALID_ACTION_TYPES = [
     ACTION_COLLECT_FEEDBACK,
 ]
 
+CANCEL_RISK_THRESHOLD: float = 0.10
+ACTION_QUEUE_CHECKLIST_THRESHOLD: int = 2
+
 # ---------------------------------------------------------------------------
 # Action lifecycle status constants (crm_action_state)
 # ---------------------------------------------------------------------------
@@ -109,6 +112,10 @@ class CustomerInsight:
     max_campaign_discount_rate:    float | None = None
     last_negotiated_discount_rate: float | None = None
     max_negotiated_discount_rate:  float | None = None
+
+    @property
+    def is_high_cancel_risk(self) -> bool:
+        return self.cancel_rate > CANCEL_RISK_THRESHOLD
 
 
 @dataclass
@@ -177,6 +184,51 @@ class CacheInsight:
     actions: list[ActionQueueItem] = field(default_factory=list)
     recent_orders: list[RecentOrder] = field(default_factory=list)
 
+    @property
+    def sorted_actions(self) -> list[ActionQueueItem]:
+        """User-level actions (no SKU/last_purchase_date) first; SKU actions newest first."""
+        nodal = [a for a in self.actions if not a.last_purchase_date]
+        dated = sorted(
+            [a for a in self.actions if a.last_purchase_date],
+            key=lambda a: a.last_purchase_date,
+            reverse=True,
+        )
+        return nodal + dated
+
+    @property
+    def has_active_actions(self) -> bool:
+        return any(a.status != ACTION_STATUS_DISMISSED for a in self.actions)
+
+    def unresolved_count(self, resolved_ids: set) -> int:
+        return sum(
+            1 for a in self.actions
+            if a.status != ACTION_STATUS_DISMISSED and a.action_id not in resolved_ids
+        )
+
+    def best_next_purchase_display(self, today: str) -> Optional[str]:
+        """Return the soonest future or most recent past next-purchase date.
+
+        Candidates: non-dismissed action depletion dates + insight.predicted_next_purchase_date.
+        today: YYYY-MM-DD string — ISO-8601 lexicographic comparison is correct.
+        """
+        best_future: Optional[str] = None
+        best_past: Optional[str] = None
+        candidates = [
+            a.estimated_depletion_date
+            for a in self.actions
+            if a.estimated_depletion_date and a.status != ACTION_STATUS_DISMISSED
+        ]
+        if self.insight and self.insight.predicted_next_purchase_date:
+            candidates.append(self.insight.predicted_next_purchase_date)
+        for d in candidates:
+            if d >= today:
+                if best_future is None or d < best_future:
+                    best_future = d
+            else:
+                if best_past is None or d > best_past:
+                    best_past = d
+        return best_future if best_future is not None else best_past
+
 
 # ---------------------------------------------------------------------------
 # Status timeline snapshot (mart_customer_status_snapshot_monthly)
@@ -197,6 +249,12 @@ class StatusSnapshot:
     days_since_last_order: Optional[int]
     value_group: str
     is_new: bool
+
+    @property
+    def abbreviation(self) -> str:
+        return {"ACTIVE": "A", "AT_RISK": "R", "CHURNED": "C"}.get(
+            (self.status or "").upper(), "·"
+        )
 
 
 # ---------------------------------------------------------------------------
@@ -247,3 +305,17 @@ class CustomerDimMetrics:
     order_count: Optional[int] = None
     total_return_amount: Optional[float] = None
     return_count: Optional[int] = None
+
+    @property
+    def cogs_coverage_pct(self) -> Optional[int]:
+        if self.cogs_order_count is None or not self.order_count:
+            return None
+        return round(self.cogs_order_count / self.order_count * 100)
+
+    @property
+    def has_partial_cogs_coverage(self) -> bool:
+        return (
+            self.cogs_order_count is not None
+            and bool(self.order_count)
+            and self.cogs_order_count < self.order_count
+        )

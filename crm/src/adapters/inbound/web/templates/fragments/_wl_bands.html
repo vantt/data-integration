@@ -37,12 +37,12 @@
 
 {# Band caps: Band 3 (neglected/long-pending) gets a tighter cap of 5
    so it doesn't overwhelm the view; all other bands cap at 10. #}
-{% set cap = 5 if band.id == 3 else 10 %}
+{% set cap = band.display_capacity | default(10) %}
 {% set visible_rows = band.rows[:cap] %}
 {% set overflow_rows = band.rows[cap:] %}
 
 {# Bands 0/1/2 are open by default; Bands 3 and 4 collapsed to reduce noise #}
-<details class="wl-band" {% if band.id not in (3, 4) %}open{% endif %}>
+<details class="wl-band" {% if band.is_expanded | default(true) %}open{% endif %}>
   <summary class="wl-band__header wl-band__header--b{{ band.id }}">
     <span class="wl-band__icon" aria-hidden="true">{{ band.icon }}</span>
     <span class="wl-band__label">{{ band.label }}</span>

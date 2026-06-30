@@ -14,8 +14,6 @@
 {% set cp_notes = extras.get('contact_pref_notes', []) %}
 {% set last_contact = extras.get('last_contact') %}
 {% set _has_script = script_cids is not none and a.customer_id is not none and a.customer_id in script_cids %}
-{% set _LC_LABELS = {'answered': 'Đã nghe', 'no_answer': 'Không bắt', 'callback': 'Hẹn lại', 'refused': 'Từ chối', 'replied': 'Đã phản hồi', 'no_reply': 'Không phản hồi', 'met': 'Gặp được', 'not_met': 'Không gặp được', 'other': 'Khác'} %}
-{% set _LC_POSITIVE = ('answered', 'replied', 'met') %}
 
 {# ── Shared quick-contact button ──────────────────────────────────────────── #}
 {% macro contact_btn(party_id, pref_id) %}
@@ -85,7 +83,7 @@
     {% endfor %}
     {% if last_contact %}
     <div class="wl-lc-strip">
-      <span class="wl-lc-badge wl-lc-badge--{% if last_contact.last_contact_result in _LC_POSITIVE %}pos{% elif last_contact.last_contact_result == 'refused' %}neg{% else %}neu{% endif %}">
+      <span class="wl-lc-badge wl-lc-badge--{{ last_contact.sentiment_class }}">
         {% if last_contact.last_contact_result == 'answered' %}✅
         {% elif last_contact.last_contact_result == 'replied' %}💬
         {% elif last_contact.last_contact_result == 'met' %}🤝
@@ -93,7 +91,7 @@
         {% elif last_contact.last_contact_result == 'callback' %}⏰
         {% elif last_contact.last_contact_result == 'no_answer' %}📵
         {% else %}📞{% endif %}
-        {{ last_contact.last_contacted_at | format_relative }} · {{ _LC_LABELS.get(last_contact.last_contact_result, last_contact.last_contact_result) }}
+        {{ last_contact.last_contacted_at | format_relative }} · {{ last_contact.display_label }}
       </span>
       {% if pid %}
       <a href="/customers/{{ pid }}?tab=activities" class="wl-lc-link"
@@ -155,9 +153,7 @@
    Band 0 overdue tasks get extra reschedule + cancel controls.
    ════════════════════════════════════════════════════════════ #}
 {% set t = a %}
-{% if t.priority >= 2 %}{% set prio_label = 'P1' %}
-{% elif t.priority == 1 %}{% set prio_label = 'P2' %}
-{% else %}{% set prio_label = 'P3' %}{% endif %}
+{% set prio_label = t.priority_label %}
 
 <div class="wl-row wl-row--task wl-row--b{{ row.band }}{% if t.status in ('done', 'cancelled') %} wl-row--done{% endif %}"
      id="task-{{ t.task_id }}">
@@ -195,7 +191,7 @@
     {% endfor %}
     {% if last_contact %}
     <div class="wl-lc-strip">
-      <span class="wl-lc-badge wl-lc-badge--{% if last_contact.last_contact_result in _LC_POSITIVE %}pos{% elif last_contact.last_contact_result == 'refused' %}neg{% else %}neu{% endif %}">
+      <span class="wl-lc-badge wl-lc-badge--{{ last_contact.sentiment_class }}">
         {% if last_contact.last_contact_result == 'answered' %}✅
         {% elif last_contact.last_contact_result == 'replied' %}💬
         {% elif last_contact.last_contact_result == 'met' %}🤝
@@ -203,7 +199,7 @@
         {% elif last_contact.last_contact_result == 'callback' %}⏰
         {% elif last_contact.last_contact_result == 'no_answer' %}📵
         {% else %}📞{% endif %}
-        {{ last_contact.last_contacted_at | format_relative }} · {{ _LC_LABELS.get(last_contact.last_contact_result, last_contact.last_contact_result) }}
+        {{ last_contact.last_contacted_at | format_relative }} · {{ last_contact.display_label }}
       </span>
       {% if pid %}
       <a href="/customers/{{ pid }}?tab=activities" class="wl-lc-link"

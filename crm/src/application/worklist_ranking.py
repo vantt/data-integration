@@ -167,11 +167,11 @@ _BAND_SORT_KEYS = {0: _sort_key_b0, 1: _sort_key_b1, 2: _sort_key_b2, 3: _sort_k
 # ---------------------------------------------------------------------------
 
 _BAND_META = {
-    0: {"id": 0, "label": "Quá hạn",        "icon": "🔴"},
-    1: {"id": 1, "label": "Hôm nay / Khẩn", "icon": "⏰"},
-    2: {"id": 2, "label": "Trong hạn",       "icon": "📋"},
-    3: {"id": 3, "label": "Treo lâu",        "icon": "💤"},
-    4: {"id": 4, "label": "Đã liên hệ",      "icon": "✅"},
+    0: {"id": 0, "label": "Quá hạn",        "icon": "🔴", "display_capacity": 10, "is_expanded": True},
+    1: {"id": 1, "label": "Hôm nay / Khẩn", "icon": "⏰", "display_capacity": 10, "is_expanded": True},
+    2: {"id": 2, "label": "Trong hạn",       "icon": "📋", "display_capacity": 10, "is_expanded": True},
+    3: {"id": 3, "label": "Treo lâu",        "icon": "💤", "display_capacity": 5,  "is_expanded": False},
+    4: {"id": 4, "label": "Đã liên hệ",      "icon": "✅", "display_capacity": 10, "is_expanded": False},
 }
 
 

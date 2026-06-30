@@ -65,16 +65,13 @@
   {# ── Filter bar (assignee/priority + type chips + search + value toggle) ── #}
   {% include "fragments/_wl_filter_bar.html" %}
 
-  {# ── Banded rows (urgency bands rendered via the wl_row macro) ── #}
-  {% include "fragments/_wl_bands.html" %}
-
-  {# ── Team Queue — unassigned tasks any user can pick up ─────── #}
+  {# ── Team Queue — unassigned tasks, shown above Quá Hạn band ── #}
   {% set unassigned_tasks = unassigned_tasks | default([]) %}
   {% if unassigned_tasks %}
-  <details class="wl-band" style="margin-top:var(--sp-4)">
+  <details class="wl-band" style="margin-bottom:var(--sp-2)">
     <summary class="wl-band__header" style="background:var(--bg-secondary)">
       <span class="wl-band__icon" aria-hidden="true">📥</span>
-      <span class="wl-band__label">Hàng đợi chung</span>
+      <span class="wl-band__label">Hàng Đợi Chung (Custom Tasks)</span>
       <span class="wl-band__count">{{ unassigned_tasks | length }}</span>
       <span class="wl-band__chevron" aria-hidden="true"></span>
     </summary>
@@ -101,6 +98,9 @@
     </div>
   </details>
   {% endif %}
+
+  {# ── Banded rows (urgency bands rendered via the wl_row macro) ── #}
+  {% include "fragments/_wl_bands.html" %}
 
   {# ── Freshness footer ─────────────────────────────────────── #}
   <div class="row-between" style="padding-top:var(--sp-3);margin-top:var(--sp-2);border-top:1px solid var(--border)">

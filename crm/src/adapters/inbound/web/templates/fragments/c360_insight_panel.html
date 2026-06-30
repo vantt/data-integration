@@ -26,19 +26,14 @@
     {% if not insight.actions %}
     <div class="caveat caveat--info">Không có hành động đề xuất nào cho khách này.</div>
     {% else %}
-    {# Sort: user-level actions first, then SKU actions newest last_purchase_date first #}
-    {% set _aq_nodal = insight.actions | rejectattr('last_purchase_date') | list %}
-    {% set _aq_dated = insight.actions | selectattr('last_purchase_date') | list | sort(attribute='last_purchase_date', reverse=True) %}
-    {% set sorted_actions = _aq_nodal + _aq_dated %}
-    {# Count non-dismissed, non-resolved actions to select display mode #}
-    {% set ns = namespace(unresolved_count=0) %}
-    {% for act in sorted_actions %}{% if act.status != 'dismissed' and act.action_id not in resolved_action_ids %}{% set ns.unresolved_count = ns.unresolved_count + 1 %}{% endif %}{% endfor %}
+    {% set sorted_actions = insight.sorted_actions %}
+    {% set unresolved_count = insight.unresolved_count(resolved_action_ids) %}
 
-    {% if ns.unresolved_count >= 2 %}
+    {% if unresolved_count >= 2 %}
     {# ── Mode A — Session checklist (≥2 unresolved) ── #}
     <div class="aq-session-card">
       <div class="aq-session-card__head">
-        <span class="aq-session-card__pill">{{ ns.unresolved_count }} việc</span>
+        <span class="aq-session-card__pill">{{ unresolved_count }} việc</span>
         <span class="aq-session-card__hint">Tích chọn xong rồi bấm Hoàn tất</span>
       </div>
       <form hx-post="/customers/{{ party_id }}/actions/dismiss-session"
@@ -63,7 +58,7 @@
                 {% if act.last_order_code %}<a href="/orders/{{ act.last_order_code }}" class="aq-ctx-chip aq-ctx-chip--link" onclick="event.stopPropagation();window.open(this.href+'?tab=items','_blank','noopener');return false;">{{ act.last_order_code }}</a>{% endif %}
                 <span class="aq-ctx-chip">{{ act.last_purchase_date }}</span>
                 {% if act.last_net_unit_price %}<span class="aq-ctx-chip">{{ act.last_net_unit_price | fmt_vnd }}</span>{% endif %}
-                {% if act.last_sku_discount_rate %}<span class="aq-ctx-chip aq-ctx-chip--discount">−{{ "%.0f"|format(act.last_sku_discount_rate * 100) }}%</span>{% endif %}
+                {% if act.last_sku_discount_rate %}<span class="aq-ctx-chip aq-ctx-chip--discount">−{{ act.last_sku_discount_rate | fmt_discount_pct }}</span>{% endif %}
               </div>
               {% endif %}
             </div>
@@ -92,9 +87,7 @@
 
     {% else %}
     {# ── Mode B — Individual card (0–1 unresolved) ── #}
-    {% set has_active = namespace(v=false) %}
-    {% for act in sorted_actions %}{% if act.status != 'dismissed' %}{% set has_active.v = true %}{% endif %}{% endfor %}
-    {% if not has_active.v %}
+    {% if not insight.has_active_actions %}
     <div class="caveat caveat--info">Không có hành động đề xuất nào cho khách này.</div>
     {% else %}
     <div class="stack stack-3">
@@ -174,40 +167,7 @@
         </div>
       </div>
       {% endif %}
-      {#
-        Next-purchase selection rule (YYYY-MM-DD string comparison works lexicographically):
-        - Future dates (>= today): pick the earliest (soonest upcoming)
-        - Past dates (< today):   pick the latest (most recent, closest to today)
-        - Prefer any future date over any past date
-        Candidates: predicted_next_purchase_date + all non-dismissed SKU depletion dates.
-      #}
-      {% set np_ns = namespace(best_future=None, best_past=None) %}
-      {% set _today = today() %}
-      {% for act in insight.actions %}
-        {% if act.estimated_depletion_date and act.status != 'dismissed' %}
-          {% if act.estimated_depletion_date >= _today %}
-            {% if np_ns.best_future is none or act.estimated_depletion_date < np_ns.best_future %}
-              {% set np_ns.best_future = act.estimated_depletion_date %}
-            {% endif %}
-          {% else %}
-            {% if np_ns.best_past is none or act.estimated_depletion_date > np_ns.best_past %}
-              {% set np_ns.best_past = act.estimated_depletion_date %}
-            {% endif %}
-          {% endif %}
-        {% endif %}
-      {% endfor %}
-      {% if ins.predicted_next_purchase_date %}
-        {% if ins.predicted_next_purchase_date >= _today %}
-          {% if np_ns.best_future is none or ins.predicted_next_purchase_date < np_ns.best_future %}
-            {% set np_ns.best_future = ins.predicted_next_purchase_date %}
-          {% endif %}
-        {% else %}
-          {% if np_ns.best_past is none or ins.predicted_next_purchase_date > np_ns.best_past %}
-            {% set np_ns.best_past = ins.predicted_next_purchase_date %}
-          {% endif %}
-        {% endif %}
-      {% endif %}
-      {% set _next_purchase_display = np_ns.best_future if np_ns.best_future else np_ns.best_past %}
+      {% set _next_purchase_display = insight.best_next_purchase_display(today()) %}
       <div class="signal-cell">
         <div class="signal-cell__k" data-tooltip="Dự đoán sớm nhất: chu kỳ mua lịch sử&#10;hoặc ngày hết hàng SKU (lấy ngày gần hơn)">Next purchase</div>
         <div class="signal-cell__v">
@@ -267,7 +227,7 @@
       {% if ins.discount_sensitivity == 'HIGH' %}
       <span class="bdg bdg--warn">discount sensitive</span>
       {% endif %}
-      {% if ins.cancel_rate > 0.1 %}
+      {% if ins.is_high_cancel_risk %}
       <span class="bdg bdg--bad">high cancel</span>
       {% endif %}
       {# Extended behavior segments from dim_customers (live DuckDB) #}
@@ -305,9 +265,9 @@
         <div class="signal-cell__k" data-tooltip="Giảm trực tiếp trên dòng sản phẩm&#10;(line-item discount, không có mã/lý do)">Sản phẩm</div>
         <div class="signal-cell__v">
           {% if ins.last_line_discount_rate is not none %}
-          <span style="font-weight:600">{{ "%.0f"|format(ins.last_line_discount_rate * 100) }}%</span>
+          <span style="font-weight:600">{{ ins.last_line_discount_rate | fmt_discount_pct }}</span>
           {% if ins.max_line_discount_rate is not none and ins.max_line_discount_rate != ins.last_line_discount_rate %}
-          <span class="caption" style="color:var(--fg-tertiary);margin-left:var(--sp-2)">max {{ "%.0f"|format(ins.max_line_discount_rate * 100) }}%</span>
+          <span class="caption" style="color:var(--fg-tertiary);margin-left:var(--sp-2)">max {{ ins.max_line_discount_rate | fmt_discount_pct }}</span>
           {% endif %}
           {% else %}<span class="dash">—</span>{% endif %}
         </div>
@@ -316,9 +276,9 @@
         <div class="signal-cell__k" data-tooltip="Merchant áp CTKM/bundle/tặng mẫu&#10;→ signal phụ thuộc khuyến mãi">KM / Bundle</div>
         <div class="signal-cell__v">
           {% if ins.last_campaign_discount_rate is not none %}
-          <span style="font-weight:600">{{ "%.0f"|format(ins.last_campaign_discount_rate * 100) }}%</span>
+          <span style="font-weight:600">{{ ins.last_campaign_discount_rate | fmt_discount_pct }}</span>
           {% if ins.max_campaign_discount_rate is not none and ins.max_campaign_discount_rate != ins.last_campaign_discount_rate %}
-          <span class="caption" style="color:var(--fg-tertiary);margin-left:var(--sp-2)">max {{ "%.0f"|format(ins.max_campaign_discount_rate * 100) }}%</span>
+          <span class="caption" style="color:var(--fg-tertiary);margin-left:var(--sp-2)">max {{ ins.max_campaign_discount_rate | fmt_discount_pct }}</span>
           {% endif %}
           {% else %}<span class="dash">—</span>{% endif %}
         </div>
@@ -327,9 +287,9 @@
         <div class="signal-cell__k" data-tooltip="Khách chủ động dùng mã voucher&#10;→ signal tìm kiếm ưu đãi">Voucher</div>
         <div class="signal-cell__v">
           {% if ins.last_voucher_discount_rate is not none %}
-          <span style="font-weight:600">{{ "%.0f"|format(ins.last_voucher_discount_rate * 100) }}%</span>
+          <span style="font-weight:600">{{ ins.last_voucher_discount_rate | fmt_discount_pct }}</span>
           {% if ins.max_voucher_discount_rate is not none and ins.max_voucher_discount_rate != ins.last_voucher_discount_rate %}
-          <span class="caption" style="color:var(--fg-tertiary);margin-left:var(--sp-2)">max {{ "%.0f"|format(ins.max_voucher_discount_rate * 100) }}%</span>
+          <span class="caption" style="color:var(--fg-tertiary);margin-left:var(--sp-2)">max {{ ins.max_voucher_discount_rate | fmt_discount_pct }}</span>
           {% endif %}
           {% else %}<span class="dash">—</span>{% endif %}
         </div>
@@ -338,9 +298,9 @@
         <div class="signal-cell__k" data-tooltip="Thỏa thuận trực tiếp: đại lý, hợp đồng&#10;nhân viên, CTV, khách US">Thỏa thuận</div>
         <div class="signal-cell__v">
           {% if ins.last_negotiated_discount_rate is not none %}
-          <span style="font-weight:600">{{ "%.0f"|format(ins.last_negotiated_discount_rate * 100) }}%</span>
+          <span style="font-weight:600">{{ ins.last_negotiated_discount_rate | fmt_discount_pct }}</span>
           {% if ins.max_negotiated_discount_rate is not none and ins.max_negotiated_discount_rate != ins.last_negotiated_discount_rate %}
-          <span class="caption" style="color:var(--fg-tertiary);margin-left:var(--sp-2)">max {{ "%.0f"|format(ins.max_negotiated_discount_rate * 100) }}%</span>
+          <span class="caption" style="color:var(--fg-tertiary);margin-left:var(--sp-2)">max {{ ins.max_negotiated_discount_rate | fmt_discount_pct }}</span>
           {% endif %}
           {% else %}<span class="dash">—</span>{% endif %}
         </div>
@@ -378,7 +338,7 @@
         <div class="signal-cell__k" data-tooltip="Tỷ lệ đơn hủy ÷ tổng đơn đặt&#10;>10% = rủi ro cao">Cancel rate</div>
         <div class="signal-cell__v">
           {% if ins.cancel_rate > 0 %}
-          <span style="color:{{ 'var(--coral-500)' if ins.cancel_rate > 0.1 else 'var(--fg-2)' }}">{{ "%.0f"|format(ins.cancel_rate * 100) }}%</span>
+          <span style="color:{{ 'var(--coral-500)' if ins.is_high_cancel_risk else 'var(--fg-2)' }}">{{ "%.0f"|format(ins.cancel_rate * 100) }}%</span>
           {% else %}<span class="dash">—</span>{% endif %}
         </div>
       </div>
@@ -395,7 +355,7 @@
 
   {# ── Profitability & Returns (dim_metrics from DuckDB) ── #}
   {% if dim_metrics and dim_metrics.total_gross_profit is not none %}
-  {% set cov_pct = ((dim_metrics.cogs_order_count or 0) / (dim_metrics.order_count or 1) * 100) | round | int %}
+  {% set cov_pct = dim_metrics.cogs_coverage_pct %}
   <div>
     <div class="panel-head"><span class="panel-title">Profitability & Returns</span></div>
     <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:var(--sp-3)">
@@ -412,7 +372,7 @@
         <div class="signal-cell__v">
           {% if dim_metrics.avg_gross_margin_pct is not none %}
           <span style="color:var(--moss-500);font-weight:600">{{ "%.1f"|format(dim_metrics.avg_gross_margin_pct * 100) }}%</span>
-          {% if dim_metrics.cogs_order_count is not none and dim_metrics.order_count and dim_metrics.cogs_order_count < dim_metrics.order_count %}
+          {% if dim_metrics.has_partial_cogs_coverage %}
           <span class="bdg bdg--warn" style="margin-left:var(--sp-2)">{{ cov_pct }}% COGS coverage</span>
           {% endif %}
           {% else %}<span class="dash">—</span>{% endif %}

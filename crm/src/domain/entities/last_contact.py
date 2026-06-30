@@ -15,6 +15,18 @@ PENDING_OUTCOMES = frozenset({"callback"})
 # Outcomes that indicate the customer actively rejected contact.
 REJECTED_OUTCOMES = frozenset({"refused"})
 
+LC_LABELS: dict = {
+    "answered":  "Đã nghe",
+    "no_answer": "Không bắt",
+    "callback":  "Hẹn lại",
+    "refused":   "Từ chối",
+    "replied":   "Đã phản hồi",
+    "no_reply":  "Không phản hồi",
+    "met":       "Gặp được",
+    "not_met":   "Không gặp được",
+    "other":     "Khác",
+}
+
 
 @dataclass
 class LastContact:
@@ -25,3 +37,15 @@ class LastContact:
     last_contact_result: str        # enum: answered|no_answer|callback|refused|replied|no_reply|met|not_met|other
     channel: Optional[str] = None   # call|zalo|fb|email|visit|other
     updated_at: str = ""
+
+    @property
+    def display_label(self) -> str:
+        return LC_LABELS.get(self.last_contact_result, self.last_contact_result)
+
+    @property
+    def sentiment_class(self) -> str:
+        if self.last_contact_result in POSITIVE_OUTCOMES:
+            return "pos"
+        if self.last_contact_result in REJECTED_OUTCOMES:
+            return "neg"
+        return "neu"

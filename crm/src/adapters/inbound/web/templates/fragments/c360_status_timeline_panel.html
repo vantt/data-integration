@@ -47,10 +47,7 @@
     <div class="strip" role="list" aria-label="Monthly status strip">
       {% for snap in snapshots %}
         {% set st = (snap.status or "NONE") | upper %}
-        {% set abbr = "A" if st == "ACTIVE"
-                      else "R" if st == "AT_RISK"
-                      else "C" if st == "CHURNED"
-                      else "·" %}
+        {% set abbr = snap.abbreviation %}
 
         {# Build tooltip parts #}
         {% set tip_parts = [] %}

@@ -37,4 +37,31 @@ def make_templates(directory: str) -> Jinja2Templates:
     )
     # today() callable so it resolves at render time, not at startup
     env.globals["today"] = lambda: date.today().isoformat()
+
+    # Margin quality thresholds (visual classification)
+    _MARGIN_GOOD = 0.28
+    _MARGIN_BAD = 0.24
+
+    def _fmt_discount_pct(rate) -> str:
+        if rate is None:
+            return ""
+        return f"{rate * 100:.0f}%"
+
+    def _format_date_key(dk) -> str:
+        s = str(int(dk))
+        return f"{s[:4]}-{s[4:6]}-{s[6:]}" if len(s) == 8 else s
+
+    def _margin_quality_cls(pct) -> str:
+        if pct is None:
+            return ""
+        if pct >= _MARGIN_GOOD:
+            return "pct--good"
+        if pct < _MARGIN_BAD:
+            return "pct--bad"
+        return ""
+
+    env.filters["fmt_discount_pct"] = _fmt_discount_pct
+    env.filters["format_date_key"] = _format_date_key
+    env.filters["margin_quality_cls"] = _margin_quality_cls
+
     return Jinja2Templates(env=env)
