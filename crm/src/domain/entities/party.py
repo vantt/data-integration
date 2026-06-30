@@ -166,6 +166,13 @@ class PartySeed:
     contact_quality: str         # masked|unverified|verified — initial value from warehouse
     customer_code: str = ""
     seen_at: str = ""
+    # Sapo basic profile fields for non-destructive seeding into crm_party + crm_customer_profile
+    address1: str = ""
+    ward: str = ""
+    district: str = ""
+    province: str = ""
+    birth_date: str = ""
+    gender: str = ""
 
 
 def partition_identities_by_channel(identities: list) -> dict:

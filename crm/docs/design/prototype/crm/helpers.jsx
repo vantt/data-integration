@@ -177,19 +177,7 @@ function TagChips({ tagIds, editable, onAdd, onRemove, maxVisible = 6 }) {
   );
 }
 
-/* ── C03 Action Queue — purchase-context chips ──────────── */
-function AqContext({ context }) {
-  if (!context || (!context.date && !context.order && !context.discount)) return null;
-  return (
-    <div className="aq-ctx">
-      {context.date && <span className="aq-ctx-chip">{fmtDateOnly(context.date)}</span>}
-      {context.order && <a className="aq-ctx-chip aq-ctx-chip--link" onClick={(e) => e.stopPropagation()}>{context.order}</a>}
-      {context.discount && <span className="aq-ctx-chip aq-ctx-chip--discount">{context.discount}</span>}
-    </div>
-  );
-}
-
-/* ── C03 Action Queue Card — View A (single active action) ─ */
+/* ── C03 Action Queue Card ──────────────────────────────── */
 function ActionQueueCard({ action, party, compact, onTask, onCall, onOpen }) {
   const m = ACTION_META[action.type] || { label: action.type, tone: "default" };
   return (
@@ -205,7 +193,6 @@ function ActionQueueCard({ action, party, compact, onTask, onCall, onOpen }) {
         )}
       </div>
       <div className="aq-card__rationale">{action.rationale}</div>
-      <AqContext context={action.context} />
       {!compact && (
         <div className="aq-card__foot">
           <button className="btn btn--secondary aq-card__cta" onClick={(e) => { e.stopPropagation(); onCall && onCall(action, party); }}>
@@ -216,63 +203,6 @@ function ActionQueueCard({ action, party, compact, onTask, onCall, onOpen }) {
           </button>
         </div>
       )}
-    </div>
-  );
-}
-
-/* ── C03 Action Queue — View B (≥2 actions merged into one session checklist) ─ */
-function ActionSessionCard({ actions, party, onCall, onTask, toast }) {
-  const [done, setDone] = React.useState([]);
-  const [ticked, setTicked] = React.useState(() => actions.map((a) => a.action_id));
-  const active = actions.filter((a) => !done.includes(a.action_id));
-  const resolved = actions.filter((a) => done.includes(a.action_id));
-  const toggle = (id) => setTicked((t) => t.includes(id) ? t.filter((x) => x !== id) : [...t, id]);
-  const finish = () => {
-    const toResolve = active.filter((a) => ticked.includes(a.action_id)).map((a) => a.action_id);
-    if (!toResolve.length) { toast && toast("Chưa chọn việc nào để hoàn tất"); return; }
-    setDone((d) => [...d, ...toResolve]);
-    setTicked((t) => t.filter((id) => !toResolve.includes(id)));
-    toast && toast("Đã xử lý " + toResolve.length + " việc");
-  };
-  return (
-    <div className="aq-session-card">
-      <div className="aq-session-card__head">
-        <span className="aq-session-card__pill">{active.length} việc</span>
-        <span className="aq-session-card__hint">Tích chọn xong rồi bấm Hoàn tất</span>
-      </div>
-      <div className="aq-session-card__body">
-        {active.map((a) => {
-          const m = ACTION_META[a.type] || { label: a.type, tone: "default" };
-          const on = ticked.includes(a.action_id);
-          return (
-            <div key={a.action_id} className="aq-check-row" onClick={() => toggle(a.action_id)}>
-              <span className={"aq-check-row__box" + (on ? " aq-check-row__box--on" : "")}>{on && <Icon name="check" size={12} />}</span>
-              <div className="aq-check-row__body">
-                <div className="aq-check-row__top">
-                  <Chip tone={m.tone}>{m.label}</Chip>
-                  {a.value > 0 && <span className="aq-check-row__val">{fmtVND(a.value)}</span>}
-                </div>
-                <div className="aq-check-row__why">{a.rationale}</div>
-                <AqContext context={a.context} />
-              </div>
-            </div>
-          );
-        })}
-        {resolved.map((a) => (
-          <div key={a.action_id} className="aq-check-row aq-check-row--resolved">
-            <span className="aq-check-row__done"><Icon name="check" size={13} /></span>
-            <div className="aq-check-row__body"><div className="aq-check-row__why">{a.rationale}</div></div>
-          </div>
-        ))}
-      </div>
-      <div className="aq-session-card__cta">
-        <button className="btn btn--secondary" onClick={() => onCall && onCall(active[0] || actions[0], party)}>
-          <Icon name="phone" size={13} /> Gọi ngay
-        </button>
-        <button className="btn btn--primary" onClick={finish}>
-          <Icon name="check" size={13} /> Hoàn tất
-        </button>
-      </div>
     </div>
   );
 }
@@ -386,6 +316,6 @@ function Spark({ data, w = 76, h = 22 }) {
 Object.assign(window, {
   fmtVND, fmtVNDShort, fmtDate, fmtDateOnly, fmtTime, fmtDateTime, relTime, hoursSince, ictParts, NOW,
   Icon, ACTION_META, GROUP_TONE, STATUS_META, SIGNAL_META,
-  Bdg, Chip, GroupBadge, StatusBadge, Avatar, FreshnessBadge, TagChips, ActionQueueCard, ActionSessionCard,
+  Bdg, Chip, GroupBadge, StatusBadge, Avatar, FreshnessBadge, TagChips, ActionQueueCard,
   FilterSelect, FilterBar, Modal, Field, TextInput, TextArea, Select, EmptyState, PageHead, Spark,
 });

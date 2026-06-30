@@ -101,6 +101,10 @@ extracted AS (
         json_extract_string(payload, '$.addresses[0].ward') as ward,
         json_extract_string(payload, '$.addresses[0].address1') as address1,
         json_extract_string(payload, '$.addresses[0].country') as country,
+        json_extract_string(payload, '$.addresses[0].address2') as address2,
+        json_extract_string(payload, '$.addresses[0].zip') as zip,
+        json_extract_string(payload, '$.addresses[0].company') as company,
+        json_extract_string(payload, '$.addresses[0].phone') as address_phone,
 
         -- Financials
         try_cast(json_extract_string(payload, '$.total_expense') as DECIMAL(18,2)) as total_expense,
@@ -108,8 +112,25 @@ extracted AS (
         try_cast(json_extract_string(payload, '$.loyalty_point') as INTEGER) as loyalty_point,
         try_cast(json_extract_string(payload, '$.debt') as DECIMAL(18,2)) as debt,
 
+        -- B2B / misc scalars
+        json_extract_string(payload, '$.assignee_id') as assignee_id,
+        json_extract_string(payload, '$.tax_number') as tax_number,
+        json_extract_string(payload, '$.website') as website,
+        json_extract_string(payload, '$.description') as description,
+        try_cast(json_extract_string(payload, '$.default_discount_rate') as REAL) as default_discount_rate,
+        json_extract_string(payload, '$.default_price_list_id') as default_price_list_id,
+
         -- Timestamps
-        json_extract_string(payload, '$.created_on') as created_on
+        json_extract_string(payload, '$.created_on') as created_on,
+
+        -- JSON arrays as text: bridge tables (tags/notes/contacts/addresses) read from stg;
+        -- loyalty_customer_json and social_customers_json also flow through to dim_customers.
+        json_extract_string(payload, '$.tags') as tags_json,
+        json_extract_string(payload, '$.notes') as notes_json,
+        json_extract_string(payload, '$.contacts') as contacts_json,
+        json_extract_string(payload, '$.social_customers') as social_customers_json,
+        json_extract_string(payload, '$.addresses') as addresses_json,
+        json_extract_string(payload, '$.loyalty_customer') as loyalty_customer_json
 
     FROM deduped
     WHERE rn = 1
@@ -117,7 +138,7 @@ extracted AS (
 
 -- Step 2: Business dedup by sapo_customer_id — compare new vs existing before overwriting
 -- NOTE: Use explicit column names (not SELECT *) to prevent positional mismatch
-{% set union_cols = 'entity_id, entity_type, event_timestamp, ingest_method, _dlt_load_id, sapo_customer_id, modified_on, customer_code, full_name, phone_number, email, status, birthday, dob, sex, customer_group, city, province, district, ward, address1, country, total_expense, orders_count, loyalty_point, debt, created_on' %}
+{% set union_cols = 'entity_id, entity_type, event_timestamp, ingest_method, _dlt_load_id, sapo_customer_id, modified_on, customer_code, full_name, phone_number, email, status, birthday, dob, sex, customer_group, city, province, district, ward, address1, country, address2, zip, company, address_phone, total_expense, orders_count, loyalty_point, debt, assignee_id, tax_number, website, description, default_discount_rate, default_price_list_id, created_on, tags_json, notes_json, contacts_json, social_customers_json, addresses_json, loyalty_customer_json' %}
 SELECT * FROM (
     SELECT {{ union_cols }} FROM extracted
     {% if is_incremental() and '_dlt_load_id' in existing_cols %}

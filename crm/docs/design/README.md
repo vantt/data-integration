@@ -68,7 +68,9 @@ of truth for navigation. The harness header shows the live count — **42 surfac
 Vietnamese label, host(s), and the business-rule tags it must honor (`R1`–`R14`).
 
 ### Screens (S01–S14)
-- **S01 Worklist / Dashboard** — rep's morning queue: KPI tiles → filter bar → task list (check-to-
+- **S01 Worklist / Dashboard** — rep's morning queue: KPI tiles → **WLFilterBar** (redesigned
+  two-row sticky filter: search + mode toggles on row 1, collapsible advanced selects on row 2,
+  active-filter count pill — in `wl_filter.jsx`, replaces the generic C05 here) → task list (check-to-
   complete · action-type chip or `AUTO` · customer (hover → O02) · value `đ` · due · priority).
   States: all-done, empty, loading, stale-cache. _R2, R6, R8._
 - **S02 Customer List & Search** — segment cards (GOLD/VIP/SILVER/NEW/All) → toolbar (FTS + facets)
@@ -110,7 +112,8 @@ close · header/body/actions; primary action guarded per spec; success → toast
 - **O01** Confirm / Toast — destructive-confirm dialog + auto-dismiss toast stack.
 - **O02** Quick Customer Preview — popover from a name in S01/S07 → "Mở hồ sơ" → S03.
 - **C01** Sidebar Nav · **C02** Global Search · **C03** Action Queue Card · **C04** Tag Chips ·
-  **C05** Filter Bar · **C06** Freshness Badge (green <24h / amber 24–48h / red >48h).
+  **C05** Filter Bar (faceted selects + clear-all; **S01 uses the dedicated `WLFilterBar` redesign
+  in `wl_filter.jsx` instead**) · **C06** Freshness Badge (green <24h / amber 24–48h / red >48h).
 
 ---
 
@@ -282,13 +285,14 @@ design_handoff/
 │       ├── helpers.jsx            formatters · Icon set · badges · C03–C06 · Modal/Field · Toast
 │       ├── modals.jsx             M01–M14 + O01
 │       ├── modal_m08.jsx          M08 Log Activity (redesign; overrides MODALS.M08)
+│       ├── wl_filter.jsx          S01 WLFilterBar redesign (C05 for Worklist) — load before screens_lists
 │       ├── screens_lists.jsx      S01 · S02 · S04
 │       ├── screens_360.jsx        S03 + panels P01–P06
 │       ├── screens_inbox.jsx      S05 · S06 · S07
 │       ├── screens_growth.jsx     S08 · S09 · S10 · S11 · S12 · S13
 │       ├── screens_call.jsx       S14 Call Mode
 │       ├── app.jsx                shell · C01 nav · C02 search · router · harness · Theme · O02
-│       └── crm-extra.css          ⚠ harness + product styles mixed — split on port (§8)
+│       └── crm-extra.css          ⚠ harness + product styles mixed — split on port (§8); incl. `.wlf-*` (S01 filter)
 ├── design_system/            ← Precision DS (the visual contract — link directly)
 │   ├── styles.css                 entry — @imports the three below
 │   ├── colors_and_type.css        tokens + themes + base/reading type  (TOKEN SOURCE OF TRUTH)

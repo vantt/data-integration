@@ -39,6 +39,10 @@ SELECT
     ward,
     address1,
     country,
+    address2,
+    zip,
+    company,
+    address_phone,
 
     -- Financials
     total_expense,
@@ -46,9 +50,25 @@ SELECT
     loyalty_point,
     debt,
 
+    -- B2B / misc scalars
+    assignee_id,
+    tax_number,
+    website,
+    description,
+    default_discount_rate,
+    default_price_list_id,
+
     -- Timestamps
     created_on,
     modified_on,
-    event_timestamp
+    event_timestamp,
+
+    -- JSON arrays (bridge tables read from here; loyalty+social also flow to dim_customers)
+    tags_json,
+    notes_json,
+    contacts_json,
+    social_customers_json,
+    addresses_json,
+    loyalty_customer_json
 
 FROM source_data

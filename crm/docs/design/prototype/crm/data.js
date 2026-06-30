@@ -41,8 +41,8 @@
         has_cogs: true, margin_pct: 34.2, refreshed_at: "2026-06-14T00:15:00Z",
       },
       actions: [
-        { action_id: "aq_1", type: "CALL_NOW", rationale: "Sắp hết hàng yêu thích — gọi ngay", value: 2400000, context: { date: "2026-06-12", order: "ORD-20060812" } },
-        { action_id: "aq_2", type: "REORDER_NUDGE", rationale: "Chu kỳ mua ~30 ngày, đã 28 ngày", value: 900000, context: { date: "2026-05-20", order: "ORD-20051520", discount: "−10%" } },
+        { action_id: "aq_1", type: "CALL_NOW", rationale: "Sắp hết hàng yêu thích — gọi ngay", value: 2400000 },
+        { action_id: "aq_2", type: "REORDER_NUDGE", rationale: "Chu kỳ mua ~30 ngày, đã 28 ngày", value: 900000 },
       ],
     },
     {
@@ -56,7 +56,7 @@
         has_cogs: true, margin_pct: 29.8, refreshed_at: "2026-06-14T00:15:00Z",
       },
       actions: [
-        { action_id: "aq_3", type: "WIN_BACK", rationale: "Chưa mua 92 ngày, nhóm GOLD trước đây", value: 1800000, context: { date: "2026-03-14", order: "ORD-20031412", discount: "−15%" } },
+        { action_id: "aq_3", type: "WIN_BACK", rationale: "Chưa mua 92 ngày, nhóm GOLD trước đây", value: 1800000 },
       ],
     },
     {
@@ -96,8 +96,8 @@
         has_cogs: true, margin_pct: 38.6, refreshed_at: "2026-06-14T00:15:00Z",
       },
       actions: [
-        { action_id: "aq_5", type: "CROSS_SELL", rationale: "Khách sỉ — gợi ý dòng máy hỗ trợ", value: 4200000, context: { date: "2026-06-10", order: "ORD-20061015" } },
-        { action_id: "aq_6", type: "LOYALTY_REWARD", rationale: "21 đơn — đề xuất ưu đãi thân thiết", value: 0, context: { date: "2026-05-04", order: "ORD-20050411" } },
+        { action_id: "aq_5", type: "CROSS_SELL", rationale: "Khách sỉ — gợi ý dòng máy hỗ trợ", value: 4200000 },
+        { action_id: "aq_6", type: "LOYALTY_REWARD", rationale: "21 đơn — đề xuất ưu đãi thân thiết", value: 0 },
       ],
     },
     {

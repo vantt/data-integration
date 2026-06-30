@@ -22,6 +22,7 @@ sys.path.insert(0, os.path.dirname(__file__))
 from adapters.outbound.sqlite.connection import CRMDatabase
 from adapters.outbound.sqlite.party_repository import SQLitePartyRepository
 from adapters.outbound.sqlite.cache_repository import SQLiteCacheRepository
+from adapters.outbound.sqlite.profile_repository import SQLiteProfileRepository
 from application.party_seed_service import PartySeedService
 
 logging.basicConfig(
@@ -49,8 +50,9 @@ def main() -> None:
 
         party_repo = SQLitePartyRepository(db.conn)
         cache_repo = SQLiteCacheRepository(db.conn)
+        profile_repo = SQLiteProfileRepository(db)
 
-        svc = PartySeedService(cache_repo, party_repo)
+        svc = PartySeedService(cache_repo, party_repo, profile_repo)
         n = svc.sync_parties(cache_repo)
         print(f"syncparties: {n} parties upserted")
     except Exception as exc:

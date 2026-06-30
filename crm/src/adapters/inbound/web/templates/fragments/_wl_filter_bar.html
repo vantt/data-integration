@@ -1,155 +1,252 @@
-{# @surface S01 · Worklist filter bar | @kind PARTIAL #}
+{# @surface S01 · Worklist filter bar — WlfTwoRow redesign | @kind PARTIAL #}
 {#
-  Context (from worklist_fragment.html):
-    filters             dict  — {assignee, priority, types:list, q, min_value, product, hide_contacted}
-    available_types     list  — distinct action_type values from UNFILTERED data
-    core_products       list  — [(key, label), …] for Fine Japan 8 core SKUs
-    active_filter_count int   — non-default filter count (for badge)
+  Port of wl_filter.jsx (WlfTwoRow). Two-row sticky layout:
+    Row 1 (always): Search · Ưu tiên · 3 mode toggles · spacer · Lọc nâng cao · Xóa filter
+    Row 2 (adv=1) : Loại · Phân khúc · Hạng KH · Sản phẩm · spacer · Bỏ lọc nâng cao
 
-  Query-param contract (matches screen_worklist._parse_filters):
-    priority        str   — all|high|urgent
-    type            str   — single action_type (empty = all)
-    q               str   — free-text search
-    min_value       int   — 1000000 when checkbox checked; absent/0 = no filter
-    product         str   — core product key (empty = all)
-    hide_contacted  str   — "1" when checked; absent = false
+  Context variables (from screen_worklist._load_worklist_data):
+    filters            dict  — {priority, types:list, q, min_value, product,
+                               hide_contacted, has_script, strategic_tier,
+                               value_group, adv}
+    available_types    list[str]  — distinct action_type values (unfiltered)
+    available_tiers    list[str]  — distinct strategic_tier values (unfiltered)
+    available_value_groups list[str] — value_group values in RFM order
+    core_products      list[(key,label)] — Fine Japan 8 core SKUs
+    active_filter_count int    — non-default filter count (badge on Lọc nâng cao)
 
-  HTMX pattern: one <form id="wl-filter-form"> with display:contents wraps every
-  control. Each control carries hx-get + hx-include="#wl-filter-form" so all
-  filter state is serialised together on any change. No hidden-input bookkeeping.
+  HTMX adv-toggle pattern (no JS required):
+    All controls use hx-include="#wl-filter-form" to carry the full filter state.
+    The form contains hidden inputs for every active toggle so state persists
+    across any filter change.
+    parse_filters uses last-value-wins (getlist) so hx-vals can override hidden
+    form fields for toggle and clear operations.
 
-  NOTE — assignee ("Người nhận") toggle is NOT rendered.
-  Task.assignee_user_id exists in crm_task, but the worklist router has no access
-  to the authenticated user identity (no session/auth middleware surfaces a
-  user_id to requests), so "Của tôi" cannot be resolved. Wire this toggle once
-  auth context is available via the request lifecycle.
+  NOTE — assignee toggle NOT rendered: no auth middleware surfaces a user_id
+  to the request lifecycle yet. Wire once auth context is available.
 #}
 
-{# ── Normalise context ─────────────────────────────────────────────────────── #}
+{# ── Normalise ─────────────────────────────────────────────────────── #}
 {% set filters     = filters     | default({}) %}
 {% set fp          = filters.priority        | default('all') %}
 {% set fq          = filters.q               | default('') %}
 {% set ftypes      = filters.types           | default([]) %}
+{% set ftype_val   = ftypes[0] if ftypes else '' %}
 {% set fmin        = filters.min_value       | default(0) %}
 {% set fprod       = filters.product         | default('') %}
 {% set fhide       = filters.hide_contacted  | default(false) %}
 {% set fscript     = filters.has_script      | default(false) %}
+{% set ftier       = filters.strategic_tier  | default('') %}
+{% set fvg         = filters.value_group     | default('') %}
+{% set fadv        = filters.adv             | default('') %}
 {% set avail       = available_types         | default([]) %}
+{% set avail_tiers = available_tiers         | default([]) %}
+{% set avail_vg    = available_value_groups  | default([]) %}
 {% set prods       = core_products           | default([]) %}
 {% set badge_count = active_filter_count     | default(0) %}
-{% set ftype_val   = ftypes[0] if ftypes else '' %}
 
-{# ── Root container ────────────────────────────────────────────────────────── #}
-<div class="toolbar"
-     id="wl-filter-bar"
-     style="flex-wrap:wrap;gap:var(--sp-3);margin-bottom:var(--sp-3);align-items:center;">
+{# Count of active secondary filters (badge on "Lọc nâng cao" button) #}
+{% set sec_count = (1 if ftype_val else 0) + (1 if ftier else 0) + (1 if fvg else 0) + (1 if fprod else 0) %}
 
-{# Single form — display:contents makes children participate in toolbar flex layout
-   while hx-include="#wl-filter-form" serialises all inputs on any change. #}
+{# ── Root wrapper ────────────────────────────────────────────────────── #}
+<div class="wlf wlf-tworow" id="wl-filter-bar">
+
+{# Single form — display:contents lets children participate in the parent
+   flex layout. hx-include="#wl-filter-form" serialises all inputs on any
+   change so the full filter state travels with every request. #}
 <form id="wl-filter-form" style="display:contents">
 
-  {# ── Priority select ───────────────────────────────────────────────────── #}
-  <div style="display:flex;align-items:center;gap:var(--sp-2)">
-    <label class="caption" for="wl-priority" style="color:var(--fg-tertiary)">Ưu tiên:</label>
-    <select id="wl-priority" name="priority" class="input input--sm"
-            hx-get="/worklist/fragment" hx-target="#worklist-container" hx-swap="outerHTML"
-            hx-trigger="change" hx-include="#wl-filter-form">
-      <option value="all"    {% if fp == 'all'    %}selected{% endif %}>Tất cả</option>
-      <option value="high"   {% if fp == 'high'   %}selected{% endif %}>Cao</option>
-      <option value="urgent" {% if fp == 'urgent' %}selected{% endif %}>Khẩn</option>
-    </select>
-  </div>
+  {# Hidden round-trip state for active toggles and row-2 visibility.
+     These hidden inputs allow other filter changes to preserve toggle state
+     via hx-include. hx-vals on toggle buttons override via last-value-wins. #}
+  {% if fadv %}<input type="hidden" name="adv" value="1">{% endif %}
+  {% if fmin > 0 %}<input type="hidden" name="min_value" value="{{ fmin }}">{% endif %}
+  {% if fhide %}<input type="hidden" name="hide_contacted" value="1">{% endif %}
+  {% if fscript %}<input type="hidden" name="has_script" value="1">{% endif %}
 
-  {# ── Action-type select ────────────────────────────────────────────────── #}
-  {% if avail %}
-  <div style="display:flex;align-items:center;gap:var(--sp-2)">
-    <label class="caption" for="wl-type" style="color:var(--fg-tertiary)">Loại:</label>
-    <select id="wl-type" name="type" class="input input--sm"
-            hx-get="/worklist/fragment" hx-target="#worklist-container" hx-swap="outerHTML"
-            hx-trigger="change" hx-include="#wl-filter-form">
-      <option value="">Tất cả</option>
-      {% for atype in avail %}
-      <option value="{{ atype }}" {% if atype == ftype_val %}selected{% endif %}>
-        {{ atype | replace('_', ' ') | title }}
-      </option>
-      {% endfor %}
-    </select>
-  </div>
-  {% endif %}
+  {# ══ Row 1 — always visible ══════════════════════════════════════════ #}
+  <div class="wlf-bar wlf-row1">
 
-  {# ── Product select ────────────────────────────────────────────────────── #}
-  {% if prods %}
-  <div style="display:flex;align-items:center;gap:var(--sp-2)">
-    <label class="caption" for="wl-product" style="color:var(--fg-tertiary)">Sản phẩm:</label>
-    <select id="wl-product" name="product" class="input input--sm"
-            hx-get="/worklist/fragment" hx-target="#worklist-container" hx-swap="outerHTML"
-            hx-trigger="change" hx-include="#wl-filter-form">
-      <option value="">Tất cả</option>
-      {% for pkey, plabel in prods %}
-      <option value="{{ pkey }}" {% if fprod == pkey %}selected{% endif %}>{{ plabel }}</option>
-      {% endfor %}
-    </select>
-  </div>
-  {% endif %}
-
-  {# ── Search input ──────────────────────────────────────────────────────── #}
-  <div style="display:flex;align-items:center;gap:var(--sp-2)">
-    <label class="caption" for="wl-search" style="color:var(--fg-tertiary)">Tìm:</label>
-    <input id="wl-search" type="search" name="q" value="{{ fq | e }}"
-           placeholder="Tên / SĐT / lý do…"
-           class="input input--sm" style="min-width:160px"
-           hx-get="/worklist/fragment" hx-target="#worklist-container" hx-swap="outerHTML"
-           hx-trigger="keyup changed delay:400ms, search"
-           hx-include="#wl-filter-form">
-  </div>
-
-  {# ── Checkboxes: high-value + hide-contacted ────────────────────────────── #}
-  <div style="display:flex;align-items:center;gap:var(--sp-4)">
-    <label style="display:flex;align-items:center;gap:var(--sp-2);cursor:pointer"
-           title="Chỉ hiện hành động có giá trị từ 1 triệu VND trở lên">
-      <input type="checkbox" name="min_value" value="1000000"
-             {% if fmin > 0 %}checked{% endif %}
+    {# Search ──────────────────────────────────────────────────────────── #}
+    <div class="toolbar__search wlf-search">
+      {% include "icons/search.svg" %}
+      <input type="search" name="q" value="{{ fq | e }}"
+             placeholder="Tìm tên, SĐT, mã KH…"
              hx-get="/worklist/fragment" hx-target="#worklist-container" hx-swap="outerHTML"
-             hx-trigger="change" hx-include="#wl-filter-form">
-      <span class="caption">💰 Giá trị cao</span>
-    </label>
-    <label style="display:flex;align-items:center;gap:var(--sp-2);cursor:pointer"
-           title="Ẩn khách đã liên hệ thành công trong 24h qua">
-      <input type="checkbox" name="hide_contacted" value="1"
-             {% if fhide %}checked{% endif %}
-             hx-get="/worklist/fragment" hx-target="#worklist-container" hx-swap="outerHTML"
-             hx-trigger="change" hx-include="#wl-filter-form">
-      <span class="caption">✅ Ẩn đã liên hệ</span>
-    </label>
-    <label style="display:flex;align-items:center;gap:var(--sp-2);cursor:pointer"
-           title="Chỉ hiện hành động có kịch bản tiếp cận AI">
-      <input type="checkbox" name="has_script" value="1"
-             {% if fscript %}checked{% endif %}
-             hx-get="/worklist/fragment" hx-target="#worklist-container" hx-swap="outerHTML"
-             hx-trigger="change" hx-include="#wl-filter-form">
-      <span class="caption">📋 Có kịch bản</span>
-    </label>
-  </div>
+             hx-trigger="keyup changed delay:400ms, search"
+             hx-include="#wl-filter-form">
+      {% if fq %}
+      <button type="button" class="toolbar__clear" aria-label="Xóa tìm kiếm"
+              hx-get="/worklist/fragment" hx-target="#worklist-container" hx-swap="outerHTML"
+              hx-include="#wl-filter-form"
+              hx-vals='{"q":""}'>✕</button>
+      {% endif %}
+    </div>
 
-  {# ── Spacer ────────────────────────────────────────────────────────────── #}
-  <span style="flex:1"></span>
+    {# Ưu tiên select ──────────────────────────────────────────────────── #}
+    <div class="fsel">
+      <div class="fsel__label">Ưu tiên</div>
+      <div class="fsel__field">
+        <select name="priority"
+                hx-get="/worklist/fragment" hx-target="#worklist-container" hx-swap="outerHTML"
+                hx-trigger="change" hx-include="#wl-filter-form">
+          <option value="all"    {% if fp == 'all'    %}selected{% endif %}>Tất cả</option>
+          <option value="high"   {% if fp == 'high'   %}selected{% endif %}>Cao</option>
+          <option value="urgent" {% if fp == 'urgent' %}selected{% endif %}>Khẩn</option>
+        </select>
+        <span class="fsel__chev">{% include "icons/chevdown.svg" %}</span>
+      </div>
+    </div>
 
-  {# ── Active-filter count badge + clear-all ─────────────────────────────── #}
-  {% if badge_count > 0 %}
-  <div style="display:flex;align-items:center;gap:var(--sp-2)">
-    <span class="badge badge--primary"
-          title="{{ badge_count }} bộ lọc đang bật">
-      {{ badge_count }}
-    </span>
-    <a class="btn btn--ghost btn--sm"
-       hx-get="/worklist/fragment"
-       hx-target="#worklist-container"
-       hx-swap="outerHTML"
-       title="Xóa tất cả bộ lọc">
+    {# Mode toggles ────────────────────────────────────────────────────── #}
+    <div class="wlf-row1__toggles">
+
+      {# Giá trị cao — min_value ≥ 1,000,000 VND #}
+      <button type="button"
+              class="wlf-toggle{% if fmin > 0 %} wlf-toggle--on{% endif %}"
+              aria-pressed="{{ 'true' if fmin > 0 else 'false' }}"
+              title="Chỉ hiện hành động có giá trị từ 1 triệu VND trở lên"
+              hx-get="/worklist/fragment" hx-target="#worklist-container" hx-swap="outerHTML"
+              hx-include="#wl-filter-form"
+              hx-vals='{% if fmin > 0 %}{"min_value":""}{% else %}{"min_value":"1000000"}{% endif %}'>
+        {% include "icons/money.svg" %} Giá trị cao
+      </button>
+
+      {# Ẩn đã liên hệ — removes positive-outcome contacts from last 24h #}
+      <button type="button"
+              class="wlf-toggle{% if fhide %} wlf-toggle--on{% endif %}"
+              aria-pressed="{{ 'true' if fhide else 'false' }}"
+              title="Ẩn khách đã liên hệ thành công trong 24h qua"
+              hx-get="/worklist/fragment" hx-target="#worklist-container" hx-swap="outerHTML"
+              hx-include="#wl-filter-form"
+              hx-vals='{% if fhide %}{"hide_contacted":"0"}{% else %}{"hide_contacted":"1"}{% endif %}'>
+        {% include "icons/check.svg" %} Ẩn đã liên hệ
+      </button>
+
+      {# Có kịch bản — only actions with an AI approach script #}
+      <button type="button"
+              class="wlf-toggle{% if fscript %} wlf-toggle--on{% endif %}"
+              aria-pressed="{{ 'true' if fscript else 'false' }}"
+              title="Chỉ hiện hành động có kịch bản tiếp cận AI"
+              hx-get="/worklist/fragment" hx-target="#worklist-container" hx-swap="outerHTML"
+              hx-include="#wl-filter-form"
+              hx-vals='{% if fscript %}{"has_script":"0"}{% else %}{"has_script":"1"}{% endif %}'>
+        {% include "icons/tasks.svg" %} Có kịch bản
+      </button>
+
+    </div>{# /.wlf-row1__toggles #}
+
+    <span class="wlf-spacer"></span>
+
+    {# Lọc nâng cao toggle — opens/closes row 2 #}
+    <button type="button"
+            class="wlf-advbtn{% if fadv %} wlf-advbtn--on{% endif %}"
+            aria-expanded="{{ 'true' if fadv else 'false' }}"
+            hx-get="/worklist/fragment" hx-target="#worklist-container" hx-swap="outerHTML"
+            hx-include="#wl-filter-form"
+            hx-vals='{% if fadv %}{"adv":"0"}{% else %}{"adv":"1"}{% endif %}'>
+      Lọc nâng cao
+      {% if sec_count > 0 %}<span class="wlf-count">{{ sec_count }}</span>{% endif %}
+      <span class="wlf-trigger__chev" data-open="{{ 'true' if fadv else 'false' }}">
+        {% include "icons/chevdown.svg" %}
+      </span>
+    </button>
+
+    {# Xóa filter — resets all filters and closes row 2 #}
+    {% if badge_count > 0 %}
+    <button type="button" class="wlf-clear"
+            hx-get="/worklist/fragment" hx-target="#worklist-container" hx-swap="outerHTML">
       Xóa filter
-    </a>
-  </div>
+    </button>
+    {% endif %}
+
+  </div>{# /.wlf-row1 #}
+
+  {# ══ Row 2 — advanced filters, collapsible ═══════════════════════════ #}
+  {% if fadv %}
+  <div class="wlf-bar wlf-row2">
+
+    {# Sản phẩm (core product SKUs — always populated from CORE_PRODUCTS) #}
+    <div class="fsel">
+      <div class="fsel__label">Sản phẩm</div>
+      <div class="fsel__field">
+        <select name="product"
+                hx-get="/worklist/fragment" hx-target="#worklist-container" hx-swap="outerHTML"
+                hx-trigger="change" hx-include="#wl-filter-form">
+          <option value="">Tất cả</option>
+          {% for pkey, plabel in prods %}
+          <option value="{{ pkey }}" {% if fprod == pkey %}selected{% endif %}>{{ plabel }}</option>
+          {% endfor %}
+        </select>
+        <span class="fsel__chev">{% include "icons/chevdown.svg" %}</span>
+      </div>
+    </div>
+
+    {# Hạng KH (value_group: VIP, GOLD, SILVER, BRONZE) #}
+    <div class="fsel">
+      <div class="fsel__label">Hạng KH</div>
+      <div class="fsel__field">
+        <select name="value_group"
+                hx-get="/worklist/fragment" hx-target="#worklist-container" hx-swap="outerHTML"
+                hx-trigger="change" hx-include="#wl-filter-form">
+          <option value="">Tất cả</option>
+          {% for vg in avail_vg %}
+          <option value="{{ vg }}" {% if vg == fvg %}selected{% endif %}>{{ vg }}</option>
+          {% endfor %}
+        </select>
+        <span class="fsel__chev">{% include "icons/chevdown.svg" %}</span>
+      </div>
+    </div>
+
+    {# Loại (action_type) #}
+    <div class="fsel">
+      <div class="fsel__label">Loại</div>
+      <div class="fsel__field">
+        <select name="type"
+                hx-get="/worklist/fragment" hx-target="#worklist-container" hx-swap="outerHTML"
+                hx-trigger="change" hx-include="#wl-filter-form">
+          <option value="">Tất cả</option>
+          {% for atype in avail %}
+          <option value="{{ atype }}" {% if atype == ftype_val %}selected{% endif %}>
+            {{ atype | replace('_', ' ') | title }}
+          </option>
+          {% endfor %}
+        </select>
+        <span class="fsel__chev">{% include "icons/chevdown.svg" %}</span>
+      </div>
+    </div>
+
+    {# Phân khúc (strategic_tier from wh_customer_tier) #}
+    <div class="fsel">
+      <div class="fsel__label">Phân khúc</div>
+      <div class="fsel__field">
+        <select name="strategic_tier"
+                hx-get="/worklist/fragment" hx-target="#worklist-container" hx-swap="outerHTML"
+                hx-trigger="change" hx-include="#wl-filter-form">
+          <option value="">Tất cả</option>
+          {% for tier in avail_tiers %}
+          <option value="{{ tier }}" {% if tier == ftier %}selected{% endif %}>
+            {{ tier | replace('_', ' ') | title }}
+          </option>
+          {% endfor %}
+        </select>
+        <span class="fsel__chev">{% include "icons/chevdown.svg" %}</span>
+      </div>
+    </div>
+
+    <span class="wlf-spacer"></span>
+
+    {# Bỏ lọc nâng cao — clears secondary filters and closes row 2 #}
+    {% if sec_count > 0 %}
+    <button type="button" class="wlf-clear"
+            hx-get="/worklist/fragment" hx-target="#worklist-container" hx-swap="outerHTML"
+            hx-include="#wl-filter-form"
+            hx-vals='{"adv":"0","type":"","strategic_tier":"","value_group":"","product":""}'>
+      Bỏ lọc nâng cao
+    </button>
+    {% endif %}
+
+  </div>{# /.wlf-row2 #}
   {% endif %}
 
 </form>
-</div>
+</div>{# /.wlf.wlf-tworow #}

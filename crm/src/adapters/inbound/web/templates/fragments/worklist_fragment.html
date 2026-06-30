@@ -65,6 +65,8 @@
   {# ── Filter bar (assignee/priority + type chips + search + value toggle) ── #}
   {% include "fragments/_wl_filter_bar.html" %}
 
+  <div style="margin-bottom:var(--sp-6)"></div>
+
   {# ── Team Queue — unassigned tasks, shown above Quá Hạn band ── #}
   {% set unassigned_tasks = unassigned_tasks | default([]) %}
   {% if unassigned_tasks %}

@@ -56,16 +56,16 @@ surfaces:
 edges:
   - id: A-S01-001
     from: S01
-    element: task_row
+    element: action_row
     trigger: click
     action: navigate
     target: S03
     payload:
-      party_id: $task.party_id
+      party_id: $action.party_id
     region: task_list
   - id: A-S01-002
     from: S01
-    element: btn_open_customer
+    element: task_row
     trigger: click
     action: navigate
     target: S03
@@ -88,22 +88,14 @@ edges:
     action: open_overlay
     target: M05
     region: topbar
-  - id: A-S01-005
-    from: S01
-    element: filter_assignee
-    trigger: change
-    action: mutate
-    effects:
-      - task_list.reload
-    region: topbar
   - id: A-S01-006
     from: S01
     element: filter_priority
     trigger: change
     action: mutate
     effects:
-      - task_list.reload
-    region: topbar
+      - task_list.reload_with_filters
+    region: filter_bar
   - id: A-S01-007
     from: S01
     element: btn_quick_call
@@ -111,8 +103,7 @@ edges:
     action: open_overlay
     target: M08
     payload:
-      party_id: $task.party_id
-      task_id: $task.id
+      party_id: $row.party_id
       mode: contact_attempt
       channel: phone
     region: task_list
@@ -123,8 +114,7 @@ edges:
     action: open_overlay
     target: M08
     payload:
-      party_id: $task.party_id
-      task_id: $task.id
+      party_id: $row.party_id
       mode: contact_attempt
       channel: zalo
     region: task_list
@@ -135,7 +125,7 @@ edges:
     action: navigate
     target: S14
     payload:
-      party_id: $task.party_id
+      party_id: $action.party_id
     region: task_list
   - id: A-S01-LSN01
     from: S01
@@ -197,7 +187,7 @@ edges:
     action: mutate
     effects:
       - task_list.reload_with_filters
-    region: topbar
+    region: filter_bar
   - id: A-S01-011
     from: S01
     element: btn_script_call
@@ -214,6 +204,95 @@ edges:
     action: mutate
     effects:
       - action_rows.badge_has_script.render
+  - id: A-S01-012
+    from: S01
+    element: filter_product
+    trigger: change
+    action: mutate
+    effects:
+      - task_list.reload_with_filters
+    region: filter_bar
+  - id: A-S01-013
+    from: S01
+    element: filter_hide_contacted
+    trigger: change
+    action: mutate
+    effects:
+      - task_list.reload_with_filters
+    region: filter_bar
+  - id: A-S01-014
+    from: S01
+    element: filter_q
+    trigger: input
+    action: mutate
+    effects:
+      - task_list.reload_with_filters
+    region: filter_bar
+  - id: A-S01-015
+    from: S01
+    element: filter_min_value
+    trigger: change
+    action: mutate
+    effects:
+      - task_list.reload_with_filters
+    region: filter_bar
+  - id: A-S01-021
+    from: S01
+    element: filter_strategic_tier
+    trigger: change
+    action: mutate
+    effects:
+      - task_list.reload_with_filters
+    region: filter_bar
+  - id: A-S01-022
+    from: S01
+    element: filter_value_group
+    trigger: change
+    action: mutate
+    effects:
+      - task_list.reload_with_filters
+    region: filter_bar
+  - id: A-S01-016
+    from: S01
+    element: btn_dismiss_action
+    trigger: click
+    action: mutate
+    effects:
+      - action_row.remove
+    region: task_list
+  - id: A-S01-017
+    from: S01
+    element: btn_snooze_action
+    trigger: click
+    action: mutate
+    effects:
+      - action_row.remove
+    region: task_list
+  - id: A-S01-018
+    from: S01
+    element: btn_cancel_task
+    trigger: click
+    action: mutate
+    effects:
+      - task_row.remove
+    region: task_list
+  - id: A-S01-019
+    from: S01
+    element: btn_reschedule_task
+    trigger: click
+    action: open_overlay
+    target: M05
+    payload:
+      task_id: $task.id
+    region: task_list
+  - id: A-S01-020
+    from: S01
+    element: btn_refresh
+    trigger: click
+    action: mutate
+    effects:
+      - worklist_container.reload
+    region: topbar
   - id: A-S02-001
     from: S02
     element: customer_row
@@ -466,6 +545,14 @@ edges:
     payload:
       party_id: $party.id
     region: sidebar
+  - id: A-S03-018
+    from: S03
+    element: tab_call_cockpit
+    trigger: click
+    action: mutate
+    effects:
+      - main_col.show_panel_call_cockpit
+    region: tab_bar
   - id: A-S03-LSN01
     from: S03
     listens_to: cache.refreshed
@@ -1267,6 +1354,46 @@ edges:
       - insight.is_active.set_false
       - rep_insights_block.reload
     region: rep_insights_block
+  - id: A-P01-005
+    from: P01
+    element: btn_call_now
+    trigger: click
+    guard: tab_goi.not_found_in_dom
+    action: open_overlay
+    target: M08
+    payload:
+      party_id: $party.id
+      mode: log
+      hinh_thuc: call
+    region: action_queue
+  - id: A-P01-006
+    from: P01
+    element: action_card_order_link
+    trigger: click
+    action: navigate
+    target: external:/orders/$act.last_order_code
+    region: action_queue
+  - id: A-P01-007
+    from: P01
+    element: btn_schedule_task
+    trigger: click
+    action: open_overlay
+    target: M05
+    payload:
+      party_id: $party.id
+      source: action_queue
+      source_ref: $act.action_id
+      prefill_priority: $act.priority
+    region: action_queue
+  - id: A-P01-008
+    from: P01
+    element: session_checklist_form
+    trigger: submit
+    action: mutate
+    effects:
+      - checked_actions.dismiss
+      - aq_section.reload
+    region: action_queue
   - id: A-P01-LSN01
     from: P01
     listens_to: cache.refreshed
@@ -1280,22 +1407,6 @@ edges:
     action: mutate
     effects:
       - ui.tooltip.show_refresh_details
-  - id: A-P01-LSN03
-    from: P01
-    listens_to: action_queue.call_mode_requested
-    action: navigate
-    target: S14
-    payload:
-      party_id: $event.party_id
-  - id: A-P01-LSN04
-    from: P01
-    listens_to: action_queue.task_requested
-    action: open_overlay
-    target: M05
-    payload:
-      source: action_queue
-      action_id: $event.action_id
-      party_id: $event.party_id
   - id: A-P02-001
     from: P02
     element: order_row

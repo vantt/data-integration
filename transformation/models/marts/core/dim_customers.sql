@@ -37,10 +37,24 @@ joined_data AS (
         c.ward,
         c.address1,
         c.country,
+        c.address2,
+        c.zip,
+        c.company,
+        c.address_phone,
         c.birth_date,
         c.gender,
         c.customer_group,
         c.loyalty_points,
+        c.status,
+        c.assignee_id,
+        c.tax_number,
+        c.website,
+        c.description,
+        c.default_discount_rate,
+        c.default_price_list_id,
+        c.debt,
+        c.loyalty_customer_json,
+        c.social_customers_json,
         c.created_at,
         c.updated_at as source_updated_at,
         
@@ -148,7 +162,25 @@ SELECT
     ward,
     address1,
     country,
-    
+    address2,
+    zip,
+    company,
+    address_phone,
+
+    -- Sapo account-level attributes (raw from Sapo)
+    status as sapo_status,
+    assignee_id,
+    tax_number,
+    website,
+    description as sapo_description,
+    default_discount_rate,
+    default_price_list_id,
+    debt,
+
+    -- JSON text columns (full objects; use json_extract in Metabase for specific fields)
+    loyalty_customer_json,
+    social_customers_json,
+
     -- customer_type: Commercial relationship type (Manual in Sapo)
     -- New scheme uses TYPE_* group codes (2026-04-19). Legacy groups whose code was
     -- not yet re-tagged still carry old codes/names — match those too so the migration

@@ -73,6 +73,18 @@ CREATE TABLE IF NOT EXISTS wh_customer_base (
   email           TEXT,
   customer_group  TEXT,
   first_order_date TEXT,                 -- YYYY-MM-DD
+  -- Extended profile (added for CRM worklist display + address seeding)
+  province        TEXT,
+  district        TEXT,
+  ward            TEXT,
+  address1        TEXT,
+  address2        TEXT,
+  zip             TEXT,
+  debt            REAL,                  -- VND; AR balance from Sapo
+  birth_date      TEXT,                  -- YYYY-MM-DD
+  gender          TEXT,
+  loyalty_points  INTEGER,
+  sapo_status     TEXT,                  -- Sapo active/inactive flag
   refreshed_at    TEXT NOT NULL DEFAULT (strftime('%Y-%m-%dT%H:%M:%fZ','now'))
 );
 

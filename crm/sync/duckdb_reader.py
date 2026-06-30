@@ -79,6 +79,18 @@ _DIM_CUSTOMERS_BASE_COLS = [
     "first_order_date",
     "source_contact_quality",
     "contact_quality",
+    # Extended profile (Phase 4 — CRM worklist display + address seeding)
+    "province",
+    "district",
+    "ward",
+    "address1",
+    "address2",
+    "zip",
+    "debt",
+    "birth_date",
+    "gender",
+    "loyalty_points",
+    "sapo_status",
 ]
 
 # mart_product_health columns for product_insight
@@ -282,7 +294,13 @@ def fetch_customer_base(conn: "duckdb.DuckDBPyConnection") -> list[dict]:
         "SELECT customer_key, customer_id, customer_code, "
         "full_name AS display_name, phone, email, customer_group, "
         "strftime(first_order_date, '%Y-%m-%d') AS first_order_date, "
-        "source_contact_quality, contact_quality "
+        "source_contact_quality, contact_quality, "
+        "province, district, ward, address1, address2, zip, "
+        "CAST(debt AS DOUBLE) AS debt, "
+        "TRY_CAST(birth_date AS DATE)::VARCHAR AS birth_date, "
+        "CASE WHEN gender IN ('male', 'female') THEN gender ELSE NULL END AS gender, "
+        "loyalty_points, "
+        "sapo_status "
         "FROM main_marts.dim_customers"
     )
     rows = _fetch(conn, sql)

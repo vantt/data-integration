@@ -32,7 +32,7 @@ WITH customers AS (
 SELECT
     -- Surrogate Key (using md5 for stability)
     {{ dbt_utils.generate_surrogate_key(['customer_id']) }} as customer_key,
-    
+
     -- Natural Keys
     customer_id,
     customer_code,
@@ -41,20 +41,40 @@ SELECT
     full_name,
     email,
     phone,
-    
+    status,
+
     birth_date,
     gender,
     customer_group,
     loyalty_points,
-    
-    -- Address
+
+    -- Address (primary address from addresses[0])
     city,
     province,
     district,
     ward,
     address1,
     country,
-    
+    address2,
+    zip,
+    company,
+    address_phone,
+
+    -- B2B / misc scalars
+    assignee_id,
+    tax_number,
+    website,
+    description,
+    default_discount_rate,
+    default_price_list_id,
+
+    -- Financials
+    debt,
+
+    -- JSON text (for dim_customers passthrough to Metabase and CRM)
+    loyalty_customer_json,
+    social_customers_json,
+
     -- Timestamps
     created_at,
     updated_at
@@ -81,6 +101,7 @@ SELECT
     'Unknown' as full_name,
     'Unknown' as email,
     'Unknown' as phone,
+    NULL as status,
     NULL as birth_date,
     'Unknown' as gender,
     'Unknown' as customer_group,
@@ -91,5 +112,18 @@ SELECT
     'Unknown' as ward,
     'Unknown' as address1,
     'Unknown' as country,
+    NULL as address2,
+    NULL as zip,
+    NULL as company,
+    NULL as address_phone,
+    NULL as assignee_id,
+    NULL as tax_number,
+    NULL as website,
+    NULL as description,
+    NULL as default_discount_rate,
+    NULL as default_price_list_id,
+    NULL as debt,
+    NULL as loyalty_customer_json,
+    NULL as social_customers_json,
     NULL as created_at,
     NULL as updated_at

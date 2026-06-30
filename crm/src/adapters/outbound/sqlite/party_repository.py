@@ -25,6 +25,7 @@ from adapters.outbound.sqlite.party_repository_queries import (
     SQL_LIST_ALL_PARTIES,
     SQL_COUNT_PARTIES,
     SQL_UPDATE_PARTY_ADDRESS,
+    SQL_SEED_PARTY_ADDRESS,
     SQL_DEACTIVATE_IDENTITY,
     SQL_INSERT_IDENTITY_FULL,
     SQL_UPDATE_IDENTITY_INFO,
@@ -139,6 +140,24 @@ class SQLitePartyRepository:
              address_note or None, updated_at, party_id),
         )
         self._conn.commit()
+
+    def seed_address(
+        self,
+        party_id: str,
+        address_line: Optional[str],
+        ward: Optional[str],
+        district: Optional[str],
+        province: Optional[str],
+    ) -> None:
+        """Non-destructively seed Sapo address into crm_party.
+
+        Only writes when ALL four address columns are NULL — never overwrites
+        manually entered data (address_source='manual').
+        """
+        self._conn.execute(
+            SQL_SEED_PARTY_ADDRESS,
+            (address_line or None, ward or None, district or None, province or None, party_id),
+        )
 
     def deactivate_identity(self, identity_id: str) -> None:
         """Mark an identity as invalid (contact_status='invalid')."""

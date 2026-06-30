@@ -8,7 +8,7 @@ Harness/Clean-view/Theme rows are **review-only — do not port** (see README §
 
 | ID | Name (vi) | File | Component | Notes |
 |---|---|---|---|---|
-| S01 | Worklist | `prototype/crm/screens_lists.jsx` | `S01_Worklist` | KPI tiles · C05 filter · task list · O02 on hover |
+| S01 | Worklist | `prototype/crm/screens_lists.jsx` | `S01_Worklist` | KPI tiles · **WLFilterBar** (S01 filter redesign, `wl_filter.jsx`) · task list · O02 on hover |
 | S02 | Khách hàng | `prototype/crm/screens_lists.jsx` | `S02_CustomerList` | Segment cards · FTS toolbar · table · pager → S03 |
 | S03 | Hồ sơ 360 | `prototype/crm/screens_360.jsx` | `S03_Customer360` | Hosts P01–P06 (tabs) + right info panel |
 | S04 | Dedup | `prototype/crm/screens_lists.jsx` | `S04_Dedup` | A↔B compare · Merge → M01 (R4) |
@@ -63,7 +63,7 @@ Harness/Clean-view/Theme rows are **review-only — do not port** (see README §
 | C02 | Global Search | `GlobalSearch` · app.jsx | **KEEP** — header FTS dropdown → S03 |
 | C03 | Action Queue Card | `ActionQueueCard` · helpers.jsx | Type chip + rationale + value → M05 |
 | C04 | Tag Chips | `TagChips` · helpers.jsx | Category-colored, editable, +N overflow |
-| C05 | Filter Bar | `FilterBar` / `FilterSelect` · helpers.jsx | Faceted selects + clear-all |
+| C05 | Filter Bar | `FilterBar` / `FilterSelect` · helpers.jsx | Faceted selects + clear-all (S02/S05/S07/S10/S11). **S01 uses the redesigned `WLFilterBar` (`wl_filter.jsx`) instead** — sticky two-row: search + mode toggles, collapsible advanced row, active-filter count pill |
 | C06 | Freshness Badge | `FreshnessBadge` · helpers.jsx | <24h green / 24–48h amber / >48h red |
 
 ## Shell / infrastructure (`prototype/crm/app.jsx`)
@@ -84,7 +84,8 @@ Harness/Clean-view/Theme rows are **review-only — do not port** (see README §
 | `prototype/crm/data.js` | Mock data (`window.DB`) — **REPLACE** with real queries/API |
 | `prototype/crm/registry.js` | `window.REG` surface registry — drives the harness (review-only) |
 | `prototype/crm/helpers.jsx` | Formatters (VND/ICT), `Icon` set, badges, C03–C06, `Modal`/`Field`, `ToastStack` exports |
-| `prototype/crm/crm-extra.css` | ⚠ Harness + product styles **mixed** — split on port (README §8) |
+| `prototype/crm/wl_filter.jsx` | **S01 worklist filter redesign** — exports `WLFilterBar` (host), `WLF_DEFAULTS`, `wlfChips`, `wlfCount` on `window`. Two-row sticky bar; primitives `WlfSearch`/`WlfSelect`/`WlfToggle`/`WlfClear`/`WlfTwoRow`. Loads **before** `screens_lists.jsx`. Styles = `.wlf-*` in `crm-extra.css` |
+| `prototype/crm/crm-extra.css` | ⚠ Harness + product styles **mixed** — split on port (README §8). Includes the `.wlf-*` block (S01 filter redesign) |
 | `design_system/styles.css` | DS entry (@imports the three token/util files) — **link directly** |
 | `design_system/colors_and_type.css` | **Token source of truth** (colors, type, spacing, radii, motion, themes) |
 | `design_system/ui_kits/crm/styles/app.css` | Shell, tables, tabs, KPIs, light theme, accent hooks |

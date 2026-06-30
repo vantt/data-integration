@@ -6,12 +6,23 @@ const { useState: wUseState, useMemo: wUseMemo } = React;
 /* ── S01 — Worklist / Dashboard ─────────────────────────── */
 function S01_Worklist({ nav, openModal, toast, openPreview }) {
   const [doneIds, setDoneIds] = wUseState([]);
-  const [assignee, setAssignee] = wUseState("me");
-  const [prio, setPrio] = wUseState("all");
+  const [filters, setFilters] = wUseState(() => ({ ...WLF_DEFAULTS }));
+
+  const partyOf = (t) => window.DB.partyById(t.party);
+  const actOf = (t, p) => p && p.actions.find((x) => x.action_id === t.source_ref);
 
   let rows = window.DB.tasks.filter((t) => t.status !== "done" && t.status !== "cancelled");
-  if (assignee === "me") rows = rows.filter((t) => t.assignee === window.DB.ME);
-  if (prio !== "all") rows = rows.filter((t) => t.priority === prio);
+  // Demo wiring — a few dims map to sample data so the list reacts;
+  // type / strategic_tier / product are visual-only (no backing data here).
+  if (filters.q.trim()) {
+    const s = filters.q.toLowerCase();
+    rows = rows.filter((t) => { const p = partyOf(t); return p && (p.name.toLowerCase().includes(s) || p.phone.includes(filters.q) || (p.code || "").toLowerCase().includes(s)); });
+  }
+  if (filters.priority === "urgent") rows = rows.filter((t) => t.priority === "P1");
+  else if (filters.priority === "high") rows = rows.filter((t) => t.priority === "P1" || t.priority === "P2");
+  if (filters.value_group) { const g = filters.value_group === "BRONZE" ? "NEW" : filters.value_group; rows = rows.filter((t) => { const p = partyOf(t); return p && p.group === g; }); }
+  if (filters.min_value) rows = rows.filter((t) => { const p = partyOf(t); const a = actOf(t, p); return a && a.value >= 1000000; });
+  if (filters.has_script) rows = rows.filter((t) => window.DB.scriptByParty(t.party));
   rows = rows.sort((a, b) => (a.due < b.due ? -1 : 1));
 
   const totalValue = rows.reduce((s, t) => {
@@ -36,14 +47,7 @@ function S01_Worklist({ nav, openModal, toast, openPreview }) {
         <div className="kpi"><div className="kpi__label">Ưu tiên P1</div><div className="kpi__val">{rows.filter((r) => r.priority === "P1").length}</div></div>
       </div>
 
-      <FilterBar
-        filters={[
-          { field: "assignee", label: "Người nhận", options: [{ value: "me", label: "Của tôi" }, { value: "all", label: "Tất cả" }] },
-          { field: "priority", label: "Ưu tiên", options: [{ value: "all", label: "Tất cả" }, { value: "P1", label: "P1" }, { value: "P2", label: "P2" }, { value: "P3", label: "P3" }, { value: "P4", label: "P4" }] },
-        ]}
-        values={{ assignee, priority: prio }}
-        onChange={(f, v) => (f === "assignee" ? setAssignee(v) : setPrio(v))}
-        onClear={() => { setAssignee("me"); setPrio("all"); }} />
+      <WLFilterBar filters={filters} setFilters={setFilters} />
 
       {allDone ? (
         <EmptyState icon="check" title="Đã xong hết task hôm nay" sub="Tuyệt vời. Duyệt danh sách khách để tìm cơ hội mới." cta={<button className="btn btn--secondary" onClick={() => nav({ screen: "S02" })}>Duyệt khách hàng</button>} />

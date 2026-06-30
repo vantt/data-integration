@@ -84,6 +84,18 @@ def apply_schema(conn: sqlite3.Connection) -> None:
         "ALTER TABLE wh_sku_action_queue ADD COLUMN last_order_code TEXT",
         "ALTER TABLE wh_sku_action_queue ADD COLUMN last_sku_discount_rate REAL",
         "ALTER TABLE wh_sku_action_queue ADD COLUMN last_net_unit_price INTEGER",
+        # Extended customer profile for CRM worklist display + address seeding — added 2026-06-30
+        "ALTER TABLE wh_customer_base ADD COLUMN province TEXT",
+        "ALTER TABLE wh_customer_base ADD COLUMN district TEXT",
+        "ALTER TABLE wh_customer_base ADD COLUMN ward TEXT",
+        "ALTER TABLE wh_customer_base ADD COLUMN address1 TEXT",
+        "ALTER TABLE wh_customer_base ADD COLUMN address2 TEXT",
+        "ALTER TABLE wh_customer_base ADD COLUMN zip TEXT",
+        "ALTER TABLE wh_customer_base ADD COLUMN debt REAL",
+        "ALTER TABLE wh_customer_base ADD COLUMN birth_date TEXT",
+        "ALTER TABLE wh_customer_base ADD COLUMN gender TEXT",
+        "ALTER TABLE wh_customer_base ADD COLUMN loyalty_points INTEGER",
+        "ALTER TABLE wh_customer_base ADD COLUMN sapo_status TEXT",
     ]
     for stmt in _group_a:
         try:

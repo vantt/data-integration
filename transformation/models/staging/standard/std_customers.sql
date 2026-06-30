@@ -22,6 +22,7 @@ SELECT
     full_name,
     email,
     phone_number as phone,
+    status,
 
     -- Address
     city,
@@ -30,18 +31,34 @@ SELECT
     ward,
     address1,
     country,
-    
+    address2,
+    zip,
+    company,
+    address_phone,
+
     -- Attributes
     dob AS birth_date,
     sex AS gender,
     customer_group,
     loyalty_point AS loyalty_points,
 
+    -- B2B / misc scalars
+    assignee_id,
+    tax_number,
+    website,
+    description,
+    default_discount_rate,
+    default_price_list_id,
+
     -- Metrics
     coalesce(total_expense, 0) as total_spend,  -- P1 R1: customer SPEND (src $.total_expense; 'expense' = business cost, wrong term)
     coalesce(orders_count, 0) as order_count,
     debt,
-    
+
+    -- JSON (loyalty + social flow through to dim_customers as text; others are bridge-table-only)
+    loyalty_customer_json,
+    social_customers_json,
+
     -- Timestamps
     try_cast(created_on as TIMESTAMPTZ) as created_at,
     try_cast(modified_on as TIMESTAMPTZ) as updated_at

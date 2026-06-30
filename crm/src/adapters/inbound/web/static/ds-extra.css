@@ -683,3 +683,31 @@
 @media (max-width: 720px) {
   .s14-summary__grid { grid-template-columns: 1fr; }
 }
+
+/* ── S01 Worklist filter bar — WlfTwoRow ──────────────────────────── */
+.wlf { display: flex; flex-direction: column; gap: var(--sp-3); margin-bottom: var(--sp-5); }
+.wlf-bar { display: flex; align-items: center; gap: var(--sp-3); flex-wrap: wrap; position: relative; }
+.wlf-spacer { flex: 1 1 auto; }
+.wlf-search { flex: 0 1 300px; min-width: 190px; max-width: 360px; }
+.wlf-search--grow { flex: 1 1 320px; max-width: none; }
+.wlf-advbtn { display: inline-flex; align-items: center; gap: 7px; cursor: pointer; height: 38px; padding: 0 13px; border: 1px solid var(--border-strong); border-radius: var(--radii-control); background: var(--bg-surface); color: var(--fg-1); font-family: var(--font-body); font-size: 13px; letter-spacing: var(--tracking-body); transition: color var(--dur-fast) var(--ease-fast), border-color var(--dur-fast) var(--ease-fast), background var(--dur-fast) var(--ease-fast); }
+.wlf-advbtn:hover { border-color: var(--accent); color: var(--fg); }
+.wlf-advbtn > svg { color: var(--fg-muted); transition: color var(--dur-fast) var(--ease-fast); }
+.wlf-advbtn--on { border-color: var(--accent); background: color-mix(in srgb, var(--accent) 9%, var(--bg-surface)); color: var(--fg); }
+.wlf-advbtn--on > svg { color: var(--accent); }
+.wlf-trigger__chev { display: inline-flex; color: var(--fg-tertiary); transition: transform var(--dur-fast) var(--ease-fast); }
+.wlf-trigger__chev[data-open="true"] { transform: rotate(180deg); }
+.wlf-count { display: inline-grid; place-items: center; min-width: 18px; height: 18px; padding: 0 5px; border-radius: var(--radii-pill); background: var(--accent); color: var(--on-amber); font-family: var(--font-mono); font-size: 10.5px; font-weight: 600; line-height: 1; }
+.wlf-clear { background: transparent; border: 0; cursor: pointer; color: var(--fg-muted); font-family: var(--font-mono); font-size: 11px; text-transform: uppercase; letter-spacing: var(--tracking-mono); padding: 7px 4px; transition: color var(--dur-fast) var(--ease-fast); }
+.wlf-clear:hover { color: var(--accent); }
+.wlf-toggle { display: inline-flex; align-items: center; gap: 7px; cursor: pointer; height: 34px; padding: 0 12px; border: 1px dashed var(--border-strong); border-radius: var(--radii-control); background: transparent; color: var(--fg-muted); font-family: var(--font-body); font-size: 12.5px; transition: color var(--dur-fast) var(--ease-fast), border-color var(--dur-fast) var(--ease-fast), background var(--dur-fast) var(--ease-fast); }
+.wlf-toggle > svg { color: var(--fg-tertiary); transition: color var(--dur-fast) var(--ease-fast); }
+.wlf-toggle:hover { border-color: var(--fg-muted); color: var(--fg-1); }
+.wlf-toggle--on { border-style: solid; border-color: var(--accent); background: color-mix(in srgb, var(--accent) 10%, var(--bg-surface)); color: var(--fg); }
+.wlf-toggle--on > svg { color: var(--accent); }
+.wlf-row1 { align-items: flex-end; }
+.wlf-row1__toggles { display: flex; gap: var(--sp-2); flex-wrap: wrap; }
+.wlf-row2 { align-items: flex-end; padding: var(--sp-3) var(--sp-4); border: 1px solid var(--border); border-radius: var(--radii-control); background: color-mix(in srgb, var(--bg-surface) 55%, transparent); animation: wlfRow2In var(--dur-settle) var(--ease-settle); }
+@keyframes wlfRow2In { from { opacity: 0; transform: translateY(-4px); } to { opacity: 1; transform: none; } }
+.wlf-row2 .fsel { flex: 0 1 160px; min-width: 130px; }
+@media (max-width: 920px) { .wlf-search { flex: 1 1 100%; max-width: none; } }

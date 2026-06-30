@@ -98,7 +98,9 @@ class SQLiteCacheRepository:
             SELECT ps.customer_id, ps.customer_key, ps.seen_at,
                    COALESCE(ps.source_contact_quality, 'real') AS source_contact_quality,
                    COALESCE(ps.contact_quality, 'real') AS contact_quality,
-                   bc.display_name, bc.phone, bc.email, bc.customer_code
+                   bc.display_name, bc.phone, bc.email, bc.customer_code,
+                   bc.address1, bc.ward, bc.district, bc.province,
+                   bc.birth_date, bc.gender
             FROM cache.wh_party_seed ps
             LEFT JOIN cache.wh_customer_base bc ON bc.customer_id = ps.customer_id
         """
@@ -119,6 +121,12 @@ class SQLiteCacheRepository:
                 phone=row["phone"] or "",
                 email=row["email"] or "",
                 customer_code=row["customer_code"] or "",
+                address1=row["address1"] or "",
+                ward=row["ward"] or "",
+                district=row["district"] or "",
+                province=row["province"] or "",
+                birth_date=row["birth_date"] or "",
+                gender=row["gender"] or "",
             )
             for row in rows
         ]
@@ -144,7 +152,9 @@ class SQLiteCacheRepository:
                    COALESCE(s.status, 'open') AS status,
                    s.snoozed_until,
                    COALESCE(a.top_affinity_product, '') AS top_affinity_product,
-                   COALESCE(a.last_purchased_product, '') AS last_purchased_product
+                   COALESCE(a.last_purchased_product, '') AS last_purchased_product,
+                   COALESCE(ct.strategic_tier, '') AS strategic_tier,
+                   COALESCE(ct.value_group, '') AS value_group
             FROM cache.wh_action_queue a
             LEFT JOIN cache.wh_customer_base bc ON bc.customer_key = a.customer_key
             LEFT JOIN cache.wh_party_seed ps ON ps.customer_key = a.customer_key
@@ -156,6 +166,7 @@ class SQLiteCacheRepository:
                    ON t.source = 'action_queue'
                   AND t.source_ref = a.action_id
                   AND t.status NOT IN ('done', 'cancelled')
+            LEFT JOIN cache.wh_customer_tier ct ON ct.customer_key = a.customer_key
             WHERE COALESCE(s.status, 'open') != 'dismissed'
               AND (COALESCE(s.status, 'open') != 'snoozed'
                    OR s.snoozed_until < date('now', '+7 hours'))  -- snoozed_until is an ICT date; date('now','+7h') = today in ICT
@@ -172,7 +183,9 @@ class SQLiteCacheRepository:
                    COALESCE(s.status, 'open') AS status,
                    s.snoozed_until,
                    COALESCE(sa.product_display_name, '') AS top_affinity_product,
-                   '' AS last_purchased_product
+                   '' AS last_purchased_product,
+                   COALESCE(ct.strategic_tier, '') AS strategic_tier,
+                   COALESCE(ct.value_group, '') AS value_group
             FROM cache.wh_sku_action_queue sa
             LEFT JOIN cache.wh_customer_base bc ON bc.customer_key = sa.customer_key
             LEFT JOIN cache.wh_party_seed ps ON ps.customer_key = sa.customer_key
@@ -184,6 +197,7 @@ class SQLiteCacheRepository:
                    ON t.source = 'action_queue'
                   AND t.source_ref = sa.action_id
                   AND t.status NOT IN ('done', 'cancelled')
+            LEFT JOIN cache.wh_customer_tier ct ON ct.customer_key = sa.customer_key
             WHERE COALESCE(s.status, 'open') != 'dismissed'
               AND (COALESCE(s.status, 'open') != 'snoozed'
                    OR s.snoozed_until < date('now', '+7 hours'))
@@ -217,6 +231,8 @@ class SQLiteCacheRepository:
                 customer_id=row["customer_id"],
                 top_affinity_product=row["top_affinity_product"] or "",
                 last_purchased_product=row["last_purchased_product"] or "",
+                strategic_tier=row["strategic_tier"] or "",
+                value_group=row["value_group"] or "",
             )
             for row in rows
         ]
@@ -355,9 +371,12 @@ class SQLiteCacheRepository:
                    NULL AS last_order_code,
                    NULL AS last_sku_discount_rate,
                    NULL AS last_net_unit_price,
-                   NULL AS estimated_depletion_date
+                   NULL AS estimated_depletion_date,
+                   COALESCE(ct.strategic_tier, '') AS strategic_tier,
+                   COALESCE(ct.value_group, '') AS value_group
             FROM cache.wh_action_queue a
             LEFT JOIN crm_action_state s ON s.action_id = a.action_id
+            LEFT JOIN cache.wh_customer_tier ct ON ct.customer_key = a.customer_key
             WHERE a.customer_key = ?"""
 
         _sku_branch = """
@@ -371,9 +390,12 @@ class SQLiteCacheRepository:
                    sa.last_order_code,
                    sa.last_sku_discount_rate,
                    sa.last_net_unit_price,
-                   sa.estimated_depletion_date
+                   sa.estimated_depletion_date,
+                   COALESCE(ct.strategic_tier, '') AS strategic_tier,
+                   COALESCE(ct.value_group, '') AS value_group
             FROM cache.wh_sku_action_queue sa
             LEFT JOIN crm_action_state s ON s.action_id = sa.action_id
+            LEFT JOIN cache.wh_customer_tier ct ON ct.customer_key = sa.customer_key
             WHERE sa.customer_key = ?"""
 
         full_sql = (
@@ -402,6 +424,8 @@ class SQLiteCacheRepository:
                 last_sku_discount_rate=row["last_sku_discount_rate"],
                 last_net_unit_price=row["last_net_unit_price"],
                 estimated_depletion_date=row["estimated_depletion_date"] or "",
+                strategic_tier=row["strategic_tier"] or "",
+                value_group=row["value_group"] or "",
             )
             for row in rows
         ]

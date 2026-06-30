@@ -60,6 +60,10 @@ class PartyService:
         src_quality: str,
         quality: str,
         customer_code: str = "",
+        address1: str = "",
+        ward: str = "",
+        district: str = "",
+        province: str = "",
     ) -> Party:
         """Ensure a Party exists for the given Sapo customer and attach identities.
 
@@ -130,6 +134,10 @@ class PartyService:
         if dirty:
             party.updated_at = utc_now()
             self._repo.update(party)
+
+        # Step 5: non-destructive address seed (only fills NULL slots)
+        if any([address1, ward, district, province]):
+            self._repo.seed_address(party.party_id, address1 or None, ward or None, district or None, province or None)
 
         return party
 

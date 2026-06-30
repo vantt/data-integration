@@ -78,10 +78,9 @@ function S14_CallMode({ route, nav, openModal, toast }) {
   const [openObj, setOpenObj] = cUseState(null);
   const [objQ, setObjQ] = cUseState("");
   const [copied, setCopied] = cUseState(false);
-  const [quickNote, setQuickNote] = cUseState(""); // ghi chú tạm — chép vào M08 khi ghi nhận kết quả
 
   cUseEffect(() => { // reset per party
-    setChannel("primary"); setDoneTP([]); setOpenObj(null); setObjQ(""); setCopied(false); setQuickNote("");
+    setChannel("primary"); setDoneTP([]); setOpenObj(null); setObjQ(""); setCopied(false);
   }, [partyId]);
 
   const nextParty = queue[(idx + 1) % queue.length];
@@ -138,7 +137,7 @@ function S14_CallMode({ route, nav, openModal, toast }) {
     !objQ.trim() || (o.q + " " + o.a).toLowerCase().includes(objQ.toLowerCase()));
 
   const logOutcome = (kind, label) => {
-    openModal("M08", { party: party.id, hinh_thuc: "call", source: "call_cockpit", outcome_hint: kind, body_prefill: quickNote.trim() });
+    openModal("M08", { party: party.id, hinh_thuc: "call", source: "call_cockpit", outcome_hint: kind });
     toast(`Ghi nhận: ${label}`, "info");
   };
 
@@ -372,11 +371,6 @@ function S14_CallMode({ route, nav, openModal, toast }) {
       {!isStop && (
         <div className="s14-outcome">
           <div className="s14-outcome__inner">
-            <div className="s14-outcome__note">
-              <textarea className="s14-quicknote" value={quickNote}
-                onChange={(e) => setQuickNote(e.target.value)} rows={2}
-                placeholder="Ghi chú tạm — gõ nhanh trong lúc gọi, tự chép vào nội dung khi ghi nhận kết quả…" />
-            </div>
             <div className="s14-outcome__row">
               <div className="s14-outcome__btns">
                 <button className="s14-oc s14-oc--good" onClick={() => logOutcome("answered", "Gọi được")}><Icon name="check" size={14} /> Gọi được</button>

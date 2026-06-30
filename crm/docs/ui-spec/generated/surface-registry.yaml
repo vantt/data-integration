@@ -16,6 +16,8 @@ surfaces:
       - topbar
       - sidebar
       - main
+      - kpi_strip
+      - filter_bar
       - task_list
   S02:
     type: screen
@@ -668,7 +670,6 @@ surfaces:
     platforms:
       - desktop
     hosts:
-      - P01
       - S01
     status: active
     file: components/C03-action-queue-card.md

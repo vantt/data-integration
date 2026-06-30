@@ -146,6 +146,8 @@ class ActionQueueItem:
     last_order_code: str = ""           # order_code aligned with last_purchase_date (same grain)
     last_sku_discount_rate: Optional[float] = None  # 0.0–1.0; None when no discount data
     last_net_unit_price: Optional[int] = None       # VND per base unit (VAT-exclusive, after all discounts)
+    strategic_tier: str = ""   # from wh_customer_tier
+    value_group: str = ""      # VIP|GOLD|SILVER|BRONZE, from wh_customer_tier
     estimated_depletion_date: str = ""  # YYYY-MM-DD when supply runs out (SKU actions only)
 
 

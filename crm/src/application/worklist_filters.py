@@ -17,25 +17,57 @@ def parse_filters(query_params: Mapping) -> dict:
     """Normalize raw query params into a canonical filter dict.
 
     Accepts any string→string mapping (e.g. Starlette QueryParams).
+    Uses last-value-wins for params that support hx-vals override: when the
+    client sends duplicate keys (hidden form field + hx-vals override), the
+    last value in the query string takes precedence.
     """
-    raw_types = query_params.get("type", "")
+    def _last(key: str, default: str = "") -> str:
+        """Return last value for key — supports HTMX hx-vals override pattern."""
+        if hasattr(query_params, "getlist"):
+            vals = [v for v in query_params.getlist(key) if v is not None]
+            return vals[-1] if vals else default
+        return query_params.get(key, default)
+
+    raw_types = _last("type", "")
     types_list = [t.strip() for t in raw_types.split(",") if t.strip()] if raw_types else []
-    raw_min = query_params.get("min_value", "")
+    raw_min = _last("min_value", "")
     try:
         min_value = int(raw_min) if raw_min else 0
     except ValueError:
         min_value = 0
-    product = query_params.get("product", "").strip()
+    product = _last("product", "").strip()
     valid_keys = CORE_PRODUCT_KEYS
+    strategic_tier = _last("strategic_tier", "").strip()
+    value_group = _last("value_group", "").strip()
+
+    # adv controls row-2 visibility. "1" = open, "0" = explicit close, "" = auto.
+    # Auto-open when any secondary filter is active (e.g. bookmark reload).
+    adv_raw = _last("adv", "")
+    sec_active = bool(
+        types_list
+        or (product if product in valid_keys else "")
+        or strategic_tier
+        or value_group
+    )
+    if adv_raw == "1":
+        adv = "1"
+    elif adv_raw == "0":
+        adv = ""  # explicit close wins even when secondary filters are active
+    else:
+        adv = "1" if sec_active else ""
+
     return {
-        "assignee": query_params.get("assignee", "me"),
-        "priority": query_params.get("priority", "all"),
+        "assignee": _last("assignee", "me"),
+        "priority": _last("priority", "all"),
         "types": types_list,        # action_type strings to include (empty = all)
-        "q": query_params.get("q", "").strip(),
+        "q": _last("q", "").strip(),
         "min_value": min_value,
         "product": product if product in valid_keys else "",
-        "hide_contacted": query_params.get("hide_contacted", "") == "1",
-        "has_script": query_params.get("has_script", "") == "1",
+        "hide_contacted": _last("hide_contacted", "") == "1",
+        "has_script": _last("has_script", "") == "1",
+        "strategic_tier": strategic_tier,
+        "value_group": value_group,
+        "adv": adv,                 # row-2 open state: "1" = open, "" = closed
     }
 
 
@@ -47,6 +79,18 @@ def available_action_types(actions: list[ActionQueueItem]) -> list[str]:
     return sorted(
         {a.action_type for a in actions if a.action_type}
     )
+
+
+def available_strategic_tiers(actions: list[ActionQueueItem]) -> list[str]:
+    """Distinct strategic_tier values present in unfiltered data, sorted."""
+    return sorted({a.strategic_tier for a in actions if a.strategic_tier})
+
+
+def available_value_groups(actions: list[ActionQueueItem]) -> list[str]:
+    """Distinct value_group values present in unfiltered data, in RFM order."""
+    order = {v: i for i, v in enumerate(["VIP", "GOLD", "SILVER", "BRONZE"])}
+    present = {a.value_group for a in actions if a.value_group}
+    return sorted(present, key=lambda v: order.get(v, 99))
 
 
 def active_filter_count(filters: dict) -> int:
@@ -69,6 +113,10 @@ def active_filter_count(filters: dict) -> int:
     if filters.get("hide_contacted"):
         count += 1
     if filters.get("has_script"):
+        count += 1
+    if filters.get("strategic_tier"):
+        count += 1
+    if filters.get("value_group"):
         count += 1
     return count
 
@@ -143,5 +191,13 @@ def apply_filters(
     if filters.get("has_script") and script_cids is not None:
         actions = [a for a in actions
                    if a.customer_id in script_cids]
+
+    tier = filters.get("strategic_tier", "")
+    if tier:
+        actions = [a for a in actions if a.strategic_tier == tier]
+
+    vg = filters.get("value_group", "")
+    if vg:
+        actions = [a for a in actions if a.value_group == vg]
 
     return actions, tasks

@@ -38,7 +38,7 @@ protocol only — no direct repo access.
 │    Tasks       │  [ Task mở: N ] [ Hành động AQ: N ] [ Giá trị: Ntr ] [ Khẩn: N ] │
 │    Segments    ├──────────────────────────────────────────────────────────────┤
 │    Chiến dịch  │  FILTER BAR                                                  │
-│    Ads         │  Ưu tiên:[↕] Loại:[↕] Sản phẩm:[↕] Tìm:[________]          │
+│    Ads         │  Ưu tiên:[↕] Loại:[↕] Phân khúc:[↕] Hạng KH:[↕] Sản phẩm:[↕] Tìm:[________]          │
 │    Cài đặt     │  [💰 Giá trị cao] [✅ Ẩn đã liên hệ] [📋 Có kịch bản]      │
 │                ├──────────────────────────────────────────────────────────────┤
 │  [User: NV A]  │  TASK LIST (5 urgency bands, collapsible)                    │
@@ -251,6 +251,18 @@ interactions:
     trigger: change
     action: mutate
     effects: [task_list.reload_with_filters]
+  - id: A-S01-021
+    element: filter_strategic_tier
+    region: filter_bar
+    trigger: change
+    action: mutate
+    effects: [task_list.reload_with_filters]
+  - id: A-S01-022
+    element: filter_value_group
+    region: filter_bar
+    trigger: change
+    action: mutate
+    effects: [task_list.reload_with_filters]
   - id: A-S01-016
     element: btn_dismiss_action
     region: task_list
@@ -290,3 +302,4 @@ interactions:
 - **Filter bar is inline**: Filters HTMX GET `/worklist/fragment` directly (no C05 emit/listen round-trip). LSN06/LSN07 describe the conceptual contract with C05 and are kept for future compatibility.
 - **Last-contact data**: `WorklistQueryService.get_map_for_parties()` is always called (non-optional). Empty dict returned when `last_contact` repo not configured. All rows show the last-contact strip when data is available.
 - **Band 4 / hide_contacted interaction**: mutually exclusive presentation. When `hide_contacted=true`, positive-outcome contacts are filtered out server-side and band 4 stays empty. When `hide_contacted=false` (default), any contact in last 24h (any outcome) moves that action to band 4 so the agent can see what they already tried.
+- **filter_strategic_tier + filter_value_group**: Both derive from `wh_customer_tier` via `LEFT JOIN` in `list_all_action_queue()`. Show only when data present in unfiltered set (`available_tiers` / `available_value_groups` context vars). Actions only; tasks pass through.

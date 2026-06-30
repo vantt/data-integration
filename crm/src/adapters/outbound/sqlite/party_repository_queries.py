@@ -99,6 +99,18 @@ SQL_UPDATE_PARTY_ADDRESS = (
     " WHERE party_id = ?"
 )
 
+# Non-destructive seed from Sapo: only fills NULL address columns; never overwrites manual entries.
+SQL_SEED_PARTY_ADDRESS = (
+    "UPDATE crm_party"
+    " SET address_line = COALESCE(address_line, ?),"
+    "     ward         = COALESCE(ward, ?),"
+    "     district     = COALESCE(district, ?),"
+    "     province     = COALESCE(province, ?),"
+    "     address_source = COALESCE(address_source, 'sapo_sync')"
+    " WHERE party_id = ?"
+    "   AND (address_line IS NULL AND ward IS NULL AND district IS NULL AND province IS NULL)"
+)
+
 SQL_DEACTIVATE_IDENTITY = (
     "UPDATE crm_party_identity SET contact_status = 'invalid' WHERE identity_id = ?"
 )

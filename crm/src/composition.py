@@ -344,7 +344,8 @@ def _make_sync_parties_runner():
             db.apply_migrations()
             party_repo = SQLitePartyRepository(db.conn)
             cache_repo = SQLiteCacheRepository(db.conn)
-            svc = PartySeedService(cache_repo, party_repo)
+            profile_repo = SQLiteProfileRepository(db)
+            svc = PartySeedService(cache_repo, party_repo, profile_repo)
             n = svc.sync_parties(cache_repo)
             log.info("syncparties: %d parties upserted", n)
         finally:

@@ -28,6 +28,8 @@ from application.worklist_filters import (
     active_filter_count,
     apply_filters,
     available_action_types,
+    available_strategic_tiers,
+    available_value_groups,
     parse_filters,
 )
 
@@ -116,6 +118,8 @@ def make_worklist_router(
 
         # Chips derive from unfiltered actions; text filter applied to both task lists
         available_types = available_action_types(all_actions)
+        available_tiers = available_strategic_tiers(all_actions)
+        available_value_groups_list = available_value_groups(all_actions)
         all_actions, my_tasks = apply_filters(all_actions, my_tasks, filters, script_cids)
         # Apply text/priority filter to unassigned queue too
         _, unassigned_tasks = apply_filters([], unassigned_tasks, filters, script_cids)
@@ -215,6 +219,8 @@ def make_worklist_router(
             "active_filter_count": active_filter_count(filters),
             "filters": filters,
             "core_products": CORE_PRODUCTS,
+            "available_tiers": available_tiers,
+            "available_value_groups": available_value_groups_list,
             # script_cids: set[int] used by _wl_row template to badge actions that
             # have an approach script. Empty set when approach_repo is unavailable.
             "script_cids": script_cids if script_cids is not None else set(),

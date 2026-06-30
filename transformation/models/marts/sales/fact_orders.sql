@@ -195,6 +195,8 @@ SELECT
     dos.max_discount_rate,
     dos.primary_discount_type,
     ld.max_line_discount_rate,   -- NEW: item-level max rate; separate from order-level max_discount_rate
+    orders.note,
+    orders.tags,
 
     created_at as ordered_at,
     updated_at,
