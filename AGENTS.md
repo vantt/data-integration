@@ -332,6 +332,32 @@ dbt models may start before ingestion finishes in subset jobs. **Fix**: Manually
 1.  **Check Local Standards First**: When fixing/adding a model, **ALWAYS** compare against a working "Golden Sample" in the same directory. Don't assume `dbt_project.yml` handles everything.
 2.  **Explicit > Implicit**: If unsure if a config is inherited, declare it explicitly.
 
+### E. CRM Date Format Convention (MANDATORY)
+
+Three layers, three formats — never mix them:
+
+| Layer | Format | Example | Where |
+|---|---|---|---|
+| **Display UI** | `dd/mm/yyyy` | `30/06/2026` | All read-only text, `<div>`, `<span>`, `<td>` |
+| **Display UI (with time)** | `dd/mm/yyyy HH:MM ICT` | `30/06/2026 09:00 ICT` | Datetime display — the filter already appends " ICT", do NOT add it again in the template |
+| **Form input value** | `yyyy-mm-dd` | `2026-06-30` | `<input type="date">` and `<input type="datetime-local">` — HTML5 spec requires this |
+| **Data layer / API** | ISO 8601 | `2026-06-30T02:00:00.000Z` | SQLite storage, Python `strftime`, API payloads |
+
+**CRM Jinja filters (use exactly these):**
+
+| Filter | Input | Output | Use for |
+|---|---|---|---|
+| `\| format_date_ict` | ISO UTC string | `dd/mm/yyyy` | Date display |
+| `\| format_datetime_ict` | ISO UTC string | `dd/mm/yyyy HH:MM ICT` | Datetime display |
+| `\| fmt_date_key` | `YYYYMMDD` int | `dd/mm/yyyy` | Date from `date_key` column |
+| `\| format_relative` | ISO UTC string | `"2 giờ trước"` | Relative time |
+
+**Rules:**
+- **NEVER** use `format_date_key` (removed — it returned ISO format for a display div, which was wrong)
+- **NEVER** append ` ICT` in templates after `format_datetime_ict` — the filter already includes it
+- **NEVER** show `yyyy-mm-dd` in display text; it is reserved for `<input type="date">` values only
+- Python server code that pre-fills date inputs MUST use `strftime("%Y-%m-%d")` — see `screen_customer_360_tasks.py:123`
+
 ---
 
 ## Semantic Layer Contract (Project-Wide)

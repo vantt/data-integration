@@ -111,7 +111,7 @@
       <tr>
         <td class="cell-strong mono">
           <a href="/orders/{{ o.order_code }}" class="link">{{ o.order_code }}</a>
-          <div class="muted" style="font-size:11px">{{ o.date_key | format_date_key }}</div>
+          <div class="muted" style="font-size:11px">{{ o.date_key | fmt_date_key }}</div>
         </td>
         <td class="muted">{{ o.channel or "—" }}</td>
         <td><span class="{{ o.status | bdg_cls('order_status') }}" data-tooltip="{{ o.status | bdg_tip('order_status') }}">{{ o.status }}</span></td>

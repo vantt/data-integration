@@ -65,7 +65,7 @@
           {% for m in msgs %}
             <div class="msg {% if m.direction == 'out' %}msg--agent{% else %}msg--customer{% endif %}">
               <div class="msg__bubble">{{ m.body or "" }}</div>
-              <div class="msg__time">{{ m.sent_at | format_datetime_ict }} ICT</div>
+              <div class="msg__time">{{ m.sent_at | format_datetime_ict }}</div>
             </div>
           {% endfor %}
         {% endif %}

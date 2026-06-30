@@ -47,10 +47,6 @@ def make_templates(directory: str) -> Jinja2Templates:
             return ""
         return f"{rate * 100:.0f}%"
 
-    def _format_date_key(dk) -> str:
-        s = str(int(dk))
-        return f"{s[:4]}-{s[4:6]}-{s[6:]}" if len(s) == 8 else s
-
     def _margin_quality_cls(pct) -> str:
         if pct is None:
             return ""
@@ -135,7 +131,6 @@ def make_templates(directory: str) -> Jinja2Templates:
         return _NOTE_TYPE_META.get(note_type or "")
 
     env.filters["fmt_discount_pct"] = _fmt_discount_pct
-    env.filters["format_date_key"] = _format_date_key
     env.filters["margin_quality_cls"] = _margin_quality_cls
     env.filters["confidence_label"]    = _confidence_label
     env.filters["confidence_tone"]     = _confidence_tone
