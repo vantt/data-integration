@@ -10,7 +10,8 @@
 
   {# ── Top bar: back link + title + status + actions ─────────────────────── #}
   <div class="c360-topbar">
-    <a class="c360-back" href="/inbox">← Inbox</a>
+    <a class="c360-back" href="/inbox"
+       onclick="if(history.length>1){event.preventDefault();history.back()}">← Inbox</a>
 
     <div class="c360-id">
       <span class="c360-name">

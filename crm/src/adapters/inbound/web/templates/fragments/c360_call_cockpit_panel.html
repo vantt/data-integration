@@ -25,7 +25,8 @@
     <div class="state__title">Chưa có kịch bản tiếp cận</div>
     <p class="state__sub">Chưa có row <code>cache.wh_approach_script</code> cho khách này. Lô sinh kịch bản đêm chưa phủ khách này.</p>
     <div style="display:flex;flex-wrap:wrap;gap:var(--sp-2);justify-content:center;margin-top:var(--sp-4)">
-      <a href="/customers" class="btn btn--secondary">Quay lại Danh sách</a>
+      <a href="/customers" class="btn btn--secondary"
+         onclick="if(history.length>1){event.preventDefault();history.back()}">Quay lại Danh sách</a>
     </div>
   </div>
 </div>

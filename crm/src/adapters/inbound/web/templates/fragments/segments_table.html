@@ -25,8 +25,7 @@
     <tbody>
       {% for seg in segments %}
       <tr class="is-clickable" id="seg-{{ seg.segment_id }}"
-          hx-get="/segments/{{ seg.segment_id }}"
-          hx-target="body" hx-push-url="true">
+          onclick="location.href='/segments/{{ seg.segment_id }}'">
         <td>
           <span class="cell-strong">{{ seg.name }}</span>
           {% if seg.description %}

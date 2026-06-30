@@ -8,7 +8,8 @@
 
   {# Topbar — A-S03-001 back, A-S03-002 gán NV, A-S03-003 tag, A-S03-011 ghi log, A-S03-012 task #}
   <div class="c360-topbar" style="margin-bottom:var(--sp-5)">
-    <a class="c360-back" href="/customers">
+    <a class="c360-back" href="/customers"
+       onclick="if(history.length>1){event.preventDefault();history.back()}">
       {% include "icons/back.svg" %} Quay lại
     </a>
     <div class="c360-id">

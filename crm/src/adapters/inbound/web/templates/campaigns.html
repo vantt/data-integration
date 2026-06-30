@@ -83,8 +83,7 @@
       <tbody>
         {% for c in campaigns %}
         <tr class="is-clickable"
-            hx-get="/campaigns/{{ c.campaign_id }}"
-            hx-target="body" hx-push-url="true">
+            onclick="location.href='/campaigns/{{ c.campaign_id }}'">
           <td>
             <span class="cell-strong">{{ c.name }}</span>
             {% if c.segment_id %}
@@ -115,7 +114,8 @@
 {% elif view == "detail" %}
 <div class="crm-page page-enter" data-surface="S11">
   <div class="c360-topbar">
-    <a class="c360-back" href="/campaigns">
+    <a class="c360-back" href="/campaigns"
+       onclick="if(history.length>1){event.preventDefault();history.back()}">
       {% include "icons/back.svg" %} Chiến dịch
     </a>
     <div class="c360-id">

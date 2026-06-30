@@ -43,8 +43,7 @@
 {# ── SegmentRowRefreshed HTMX fragment ──────────────────────────────────── #}
 {% elif view == "row_refreshed" %}
 <tr class="is-clickable" id="seg-{{ segment.segment_id }}"
-    hx-get="/segments/{{ segment.segment_id }}"
-    hx-target="body" hx-push-url="true">
+    onclick="location.href='/segments/{{ segment.segment_id }}'">
   <td><span class="cell-strong">{{ segment.name }}</span></td>
   <td>
     {% if segment.is_dynamic %}
@@ -77,7 +76,8 @@
   <form {% if is_new %}hx-post="/segments"{% else %}hx-put="/segments/{{ segment.segment_id }}"{% endif %}
         hx-target="body" hx-push-url="true">
     <div class="c360-topbar">
-      <a class="c360-back" href="/segments">{% include "icons/back.svg" %}Segments</a>
+      <a class="c360-back" href="/segments"
+         onclick="if(history.length>1){event.preventDefault();history.back()}">{% include "icons/back.svg" %}Segments</a>
       <div class="c360-id">
         <input type="text" name="name" class="inp"
                value="{{ segment.name if segment else '' }}"

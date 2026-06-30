@@ -48,8 +48,7 @@
    ════════════════════════════════════════════════════════════ #}
 <div class="wl-row wl-row--action wl-row--b{{ row.band }}"
      id="aq-{{ a.action_id }}"
-     hx-get="/customers/{{ a.party_id }}" hx-target="body" hx-push-url="true"
-     hx-trigger="click[!event.target.closest('button,a,details,summary')]">
+     onclick="if(!event.target.closest('button,a,details,summary')) location.href='/customers/{{ a.party_id }}'">
 
   {# Left gutter: empty spacer to align with task checkbox column #}
   <div class="wl-row__gutter" aria-hidden="true"></div>
