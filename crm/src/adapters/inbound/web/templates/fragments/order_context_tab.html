@@ -97,7 +97,6 @@
   </div>
 
   {# ── Section 2: Timeline (dim_date · dim_time) ── #}
-  {% set _dow = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"] %}
   <div class="tabpanel stack-4">
     <div class="panel-head">
       <span class="panel-title">Timeline</span>
@@ -125,7 +124,7 @@
           <div class="fact">
             <span class="fact__k">Day</span>
             <span class="fact__v">
-              {{ _dow[h.day_of_week] }}
+              {{ h.day_of_week | day_of_week_label }}
               {% if h.is_weekend %}<span class="bdg bdg--warn" style="margin-left:4px">weekend</span>{% endif %}
             </span>
           </div>

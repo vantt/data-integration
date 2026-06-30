@@ -65,7 +65,7 @@
       <span class="badge badge--info" title="Khách này có kịch bản tiếp cận AI">📋 Có kịch bản</span>
       {% endif %}
       {# Neglect badge: shown when action has waited 1–6 days (7+ days → band 3) #}
-      {% if row.neglect_days >= 1 and row.neglect_days <= 6 %}
+      {% if row.should_show_neglect_badge %}
       <span class="wl-neglect-badge" title="Chưa được xử lý trong {{ row.neglect_days }} ngày">
         đã chờ {{ row.neglect_days }} ngày
       </span>

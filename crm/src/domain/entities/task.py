@@ -79,3 +79,7 @@ class Task:
         if self.priority == TASK_PRIORITY_HIGH:
             return "P2"
         return "P3"
+
+    def is_overdue_at(self, now_utc: str) -> bool:
+        """True when due_at is set and earlier than the given UTC ISO-8601 timestamp."""
+        return bool(self.due_at) and bool(now_utc) and self.due_at < now_utc

@@ -49,22 +49,9 @@
         {% set st = (snap.status or "NONE") | upper %}
         {% set abbr = snap.abbreviation %}
 
-        {# Build tooltip parts #}
-        {% set tip_parts = [] %}
-        {% if snap.snapshot_month %}
-          {% set _ = tip_parts.append(snap.snapshot_month[:7]) %}
-        {% endif %}
-        {% set _ = tip_parts.append(st) %}
-        {% if snap.days_since_last_order is not none %}
-          {% set _ = tip_parts.append(snap.days_since_last_order | string ~ "d since order") %}
-        {% endif %}
-        {% if snap.value_group %}
-          {% set _ = tip_parts.append(snap.value_group) %}
-        {% endif %}
-
         <div class="strip-cell"
              data-st="{{ st }}"
-             data-tip="{{ tip_parts | join(' · ') }}"
+             data-tip="{{ snap.tooltip_text }}"
              role="listitem"
              aria-label="{{ st }}{% if snap.is_new %} (acquisition){% endif %}{% if snap.snapshot_month %}, {{ snap.snapshot_month[:7] }}{% endif %}">
           {{- abbr -}}

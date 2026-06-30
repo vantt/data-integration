@@ -121,25 +121,14 @@
         {% if n_shps > 1 %}<span class="ship-count">{{ n_shps }}</span>{% endif %}
       </div>
       {% if n_shps > 0 %}
+      {% set _shp_sum = order.shipment_status_summary %}
       <div class="ship-summary">
-        {# Count per status using namespace trick #}
-        {% set ns = namespace(delivered=0, shipping=0, packed=0, pending=0, cancelled=0, failed=0) %}
-        {% for s in shps %}
-          {% set su = s.status | upper %}
-          {% if su == "DELIVERED" %}{% set ns.delivered = ns.delivered + 1 %}
-          {% elif su == "SHIPPING" %}{% set ns.shipping = ns.shipping + 1 %}
-          {% elif su == "PACKED" %}{% set ns.packed = ns.packed + 1 %}
-          {% elif su == "PENDING" %}{% set ns.pending = ns.pending + 1 %}
-          {% elif su == "CANCELLED" %}{% set ns.cancelled = ns.cancelled + 1 %}
-          {% elif su == "FAILED" %}{% set ns.failed = ns.failed + 1 %}
-          {% endif %}
-        {% endfor %}
-        {% if ns.delivered > 0 %}<span class="ship-summary__seg"><i class="ship-tone-dot ship-tone-dot--good"></i> {{ ns.delivered }} delivered</span>{% endif %}
-        {% if ns.shipping > 0 %}<span class="ship-summary__seg"><i class="ship-tone-dot ship-tone-dot--warn"></i> {{ ns.shipping }} shipping</span>{% endif %}
-        {% if ns.packed > 0 %}<span class="ship-summary__seg"><i class="ship-tone-dot ship-tone-dot--neutral"></i> {{ ns.packed }} packed</span>{% endif %}
-        {% if ns.pending > 0 %}<span class="ship-summary__seg"><i class="ship-tone-dot ship-tone-dot--neutral"></i> {{ ns.pending }} pending</span>{% endif %}
-        {% if ns.cancelled > 0 %}<span class="ship-summary__seg"><i class="ship-tone-dot ship-tone-dot--bad"></i> {{ ns.cancelled }} cancelled</span>{% endif %}
-        {% if ns.failed > 0 %}<span class="ship-summary__seg"><i class="ship-tone-dot ship-tone-dot--bad"></i> {{ ns.failed }} failed</span>{% endif %}
+        {% if _shp_sum.get('delivered', 0) > 0 %}<span class="ship-summary__seg"><i class="ship-tone-dot ship-tone-dot--good"></i> {{ _shp_sum.delivered }} delivered</span>{% endif %}
+        {% if _shp_sum.get('shipping', 0) > 0 %}<span class="ship-summary__seg"><i class="ship-tone-dot ship-tone-dot--warn"></i> {{ _shp_sum.shipping }} shipping</span>{% endif %}
+        {% if _shp_sum.get('packed', 0) > 0 %}<span class="ship-summary__seg"><i class="ship-tone-dot ship-tone-dot--neutral"></i> {{ _shp_sum.packed }} packed</span>{% endif %}
+        {% if _shp_sum.get('pending', 0) > 0 %}<span class="ship-summary__seg"><i class="ship-tone-dot ship-tone-dot--neutral"></i> {{ _shp_sum.pending }} pending</span>{% endif %}
+        {% if _shp_sum.get('cancelled', 0) > 0 %}<span class="ship-summary__seg"><i class="ship-tone-dot ship-tone-dot--bad"></i> {{ _shp_sum.cancelled }} cancelled</span>{% endif %}
+        {% if _shp_sum.get('failed', 0) > 0 %}<span class="ship-summary__seg"><i class="ship-tone-dot ship-tone-dot--bad"></i> {{ _shp_sum.failed }} failed</span>{% endif %}
       </div>
       {% else %}
       <div class="panel-sub">fact_fulfillments · leg-level</div>
@@ -170,18 +159,13 @@
               <span class="ship-stages__err">✕</span>
             </span>
             {% else %}
-            {# Stage tracker: PACKED → SHIPPING → DELIVERED #}
-            {% set stages = ["PACKED", "SHIPPING", "DELIVERED"] %}
-            {% set curr_idx = namespace(v=-1) %}
-            {% for stage in stages %}
-              {% if s.status | upper == stage %}{% set curr_idx.v = loop.index0 %}{% endif %}
-            {% endfor %}
+            {% set _stage_idx = s.progress_stage_index %}
             <span class="ship-stages" title="packed → shipping → delivered" aria-hidden="true">
-              {% for stage in stages %}
-              {% if loop.index0 > 0 %}
-              <span class="ship-stages__bar{% if loop.index0 <= curr_idx.v %} is-on{% endif %}"></span>
+              {% for i in range(3) %}
+              {% if i > 0 %}
+              <span class="ship-stages__bar{% if i <= _stage_idx %} is-on{% endif %}"></span>
               {% endif %}
-              <span class="ship-stages__node{% if loop.index0 <= curr_idx.v %} is-on{% endif %}{% if loop.index0 == curr_idx.v %} is-now{% endif %}"></span>
+              <span class="ship-stages__node{% if i <= _stage_idx %} is-on{% endif %}{% if i == _stage_idx %} is-now{% endif %}"></span>
               {% endfor %}
             </span>
             {% endif %}
@@ -247,12 +231,7 @@
       <p class="ship-empty__sub">No payment entries found for this order.</p>
     </div>
     {% else %}
-    {% set ns2 = namespace(total=0, cod=0) %}
-    {% for p in pmts %}
-      {% set ns2.total = ns2.total + p.amount %}
-      {% if p.payment_method_type | upper == "COD" %}{% set ns2.cod = ns2.cod + p.amount %}{% endif %}
-    {% endfor %}
-    {% set cod_pct = ((ns2.cod / ns2.total * 100) | int) if ns2.total > 0 else 0 %}
+    {% set _pay = order.payment_cod_summary %}
     <div class="tbl-wrap">
       <table class="tbl">
         <thead>
@@ -275,8 +254,8 @@
         </tbody>
         <tfoot>
           <tr>
-            <td colspan="4">Σ paid · COD {{ cod_pct }}%</td>
-            <td class="num cell-strong">{{ ns2.total | fmt_vnd }}</td>
+            <td colspan="4">Σ paid · COD {{ _pay.cod_pct }}%</td>
+            <td class="num cell-strong">{{ _pay.total | fmt_vnd }}</td>
           </tr>
         </tfoot>
       </table>

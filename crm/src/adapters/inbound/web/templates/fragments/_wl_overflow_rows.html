@@ -1,0 +1,26 @@
+{# @surface S01 · Worklist overflow page | @kind PARTIAL
+   Loaded lazily on <details> toggle (first page) or "Xem thêm" button (subsequent pages).
+   Replaces its hx-swap="outerHTML" target div each time.
+
+   Context:
+     rows          list[WorklistRow]
+     party_extras  dict  — {party_id: {preferred_identity, contact_pref_notes, last_contact}}
+     script_cids   set[int] | None
+     has_more      bool
+     remaining     int   — rows after this page
+     next_url      str   — URL for the next page (offset already incremented)
+#}
+{% from "fragments/_wl_row.html" import wl_row %}
+{% for row in rows %}
+{{ wl_row(row, party_extras, script_cids) }}
+{% endfor %}
+{% if has_more %}
+<div class="wl-more">
+  <button class="wl-more__toggle"
+          hx-get="{{ next_url }}"
+          hx-target="closest .wl-more"
+          hx-swap="outerHTML">
+    Xem thêm ({{ remaining }})
+  </button>
+</div>
+{% endif %}

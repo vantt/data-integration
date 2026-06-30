@@ -6,20 +6,6 @@
    (from mart_customer_action_queue via CustomerRef).
    Links to full customer Actions tab for complete context.
 #}
-{% set _action_labels = {
-  "CALL_NOW":         "Gọi điện ngay",
-  "REORDER_NUDGE":    "Nhắc tái mua",
-  "WIN_BACK":         "Win-back",
-  "SECOND_ORDER":     "Đơn hàng 2",
-  "HIGH_CANCEL_RISK": "Rủi ro huỷ"
-} %}
-{% set _action_tone = {
-  "CALL_NOW":         "bad",
-  "REORDER_NUDGE":    "warn",
-  "WIN_BACK":         "warn",
-  "SECOND_ORDER":     "good",
-  "HIGH_CANCEL_RISK": "bad"
-} %}
 
 <div class="tabpanel stack-5">
 
@@ -30,8 +16,8 @@
 
   {% if order.customer and order.customer.customer_action_type %}
   {% set atype = order.customer.customer_action_type | upper %}
-  {% set label = _action_labels.get(atype, atype) %}
-  {% set tone  = _action_tone.get(atype, "neutral") %}
+  {% set label = atype | action_type_label %}
+  {% set tone  = atype | action_tone_cls %}
 
   <div class="scard">
     <div style="display:flex;align-items:center;gap:var(--sp-3);margin-bottom:var(--sp-3)">

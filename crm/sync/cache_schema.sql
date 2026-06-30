@@ -228,3 +228,5 @@ CREATE INDEX IF NOT EXISTS idx_wh_deadstock_target_route_holdout ON wh_deadstock
 CREATE INDEX IF NOT EXISTS idx_wh_deadstock_target_customer_key  ON wh_deadstock_target (customer_key);
 CREATE UNIQUE INDEX IF NOT EXISTS uidx_wh_sku_action_queue_key ON wh_sku_action_queue (customer_key, sku, action_type);
 CREATE INDEX IF NOT EXISTS idx_wh_sku_action_queue_customer ON wh_sku_action_queue (customer_key, priority);
+-- customer_key lookup in list_all_action_queue JOINs (PK is customer_id, not customer_key)
+CREATE INDEX IF NOT EXISTS idx_wh_party_seed_customer_key ON wh_party_seed (customer_key);

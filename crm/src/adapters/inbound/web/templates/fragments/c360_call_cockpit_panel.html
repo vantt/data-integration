@@ -36,8 +36,8 @@
 {% set ap = script.approach %}
 {% set is_stop = (ap.recommended == false) %}
 {% set confidence = script.confidence | default('medium') %}
-{% set conf_label = {'high': 'cao', 'medium': 'vừa', 'low': 'thấp'}.get(confidence, 'vừa') %}
-{% set conf_tone  = {'high': 'good', 'medium': 'warn', 'low': 'bad'}.get(confidence, 'warn') %}
+{% set conf_label = confidence | confidence_label %}
+{% set conf_tone  = confidence | confidence_tone %}
 {% set refreshed_at = meta.refreshed_at | default('') %}
 {% set opp  = script.opportunity %}
 {% set risk = script.risk %}

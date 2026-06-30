@@ -224,7 +224,7 @@
       {% if ins.channel_preference %}
       <span class="bdg">{{ ins.channel_preference }}</span>
       {% endif %}
-      {% if ins.discount_sensitivity == 'HIGH' %}
+      {% if ins.is_high_discount_sensitivity %}
       <span class="bdg bdg--warn">discount sensitive</span>
       {% endif %}
       {% if ins.is_high_cancel_risk %}
@@ -406,21 +406,12 @@
     </div>
     {% if rep_insights %}
     <div class="stack stack-2">
-      {% set type_labels = {
-        'persona': 'Persona',
-        'buying_pattern': 'Hành vi mua',
-        'decision_style': 'Phong cách QĐ',
-        'life_event': 'Sự kiện',
-        'relationship': 'Mối quan hệ',
-        'advocate_signal': 'Advocate',
-      } %}
-      {% set conf_colors = {'high': 'var(--moss-500)', 'medium': 'var(--accent)', 'low': 'var(--fg-tertiary)'} %}
       {% for ri in rep_insights %}
       <div style="display:flex;align-items:flex-start;gap:var(--sp-3);padding:var(--sp-3) 0;border-bottom:1px solid var(--border)">
-        <span class="bdg" style="flex:none;margin-top:1px">{{ type_labels.get(ri.insight_type, ri.insight_type) }}</span>
+        <span class="bdg" style="flex:none;margin-top:1px">{{ ri.insight_type | insight_type_label }}</span>
         <span style="flex:1;font-size:13.5px;color:var(--fg-1);line-height:1.45">{{ ri.body }}</span>
-        <span class="muted" style="font-size:11px;white-space:nowrap;color:{{ conf_colors.get(ri.confidence, 'var(--fg-tertiary)') }}">
-          {{ {'high': 'cao', 'medium': 'tb', 'low': 'thấp'}.get(ri.confidence, ri.confidence) }}
+        <span class="muted" style="font-size:11px;white-space:nowrap;color:{{ ri.confidence | confidence_color }}">
+          {{ ri.confidence | confidence_label }}
         </span>
         {# A-P01-004: edit → M16 with insight_id #}
         <button class="icon-btn icon-btn--sm"

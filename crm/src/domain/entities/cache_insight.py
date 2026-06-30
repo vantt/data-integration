@@ -117,6 +117,10 @@ class CustomerInsight:
     def is_high_cancel_risk(self) -> bool:
         return self.cancel_rate > CANCEL_RISK_THRESHOLD
 
+    @property
+    def is_high_discount_sensitivity(self) -> bool:
+        return self.discount_sensitivity == SENSITIVITY_HIGH
+
 
 @dataclass
 class ActionQueueItem:
@@ -255,6 +259,19 @@ class StatusSnapshot:
         return {"ACTIVE": "A", "AT_RISK": "R", "CHURNED": "C"}.get(
             (self.status or "").upper(), "·"
         )
+
+    @property
+    def tooltip_text(self) -> str:
+        """Pre-built tooltip string for the monthly status strip cell."""
+        parts = []
+        if self.snapshot_month:
+            parts.append(self.snapshot_month[:7])
+        parts.append((self.status or "NONE").upper())
+        if self.days_since_last_order is not None:
+            parts.append(f"{self.days_since_last_order}d since order")
+        if self.value_group:
+            parts.append(self.value_group)
+        return " · ".join(parts)
 
 
 # ---------------------------------------------------------------------------

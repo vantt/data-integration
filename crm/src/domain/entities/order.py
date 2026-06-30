@@ -86,6 +86,12 @@ class OrderFinancial:
     unpriced_sku_count: int = 0
 
     @property
+    def cogs_pct_of_net(self) -> Optional[float]:
+        if not self.net_revenue or self.net_revenue <= 0:
+            return None
+        return self.cogs_amount / self.net_revenue
+
+    @property
     def discount_rate(self) -> Optional[float]:
         if not self.gross_revenue or not self.discount_amount:
             return None
@@ -150,6 +156,16 @@ class Shipment:
     cod_amount: int
     created_at: str     # UTC ISO
     shipped_at: str     # UTC ISO; empty if not shipped
+
+    _STAGE_ORDER = ("PACKED", "SHIPPING", "DELIVERED")
+
+    @property
+    def progress_stage_index(self) -> int:
+        """Index in PACKED→SHIPPING→DELIVERED progression. -1 when status is bad/unknown."""
+        try:
+            return list(self._STAGE_ORDER).index((self.status or "").upper())
+        except ValueError:
+            return -1
 
 
 @dataclass
@@ -302,5 +318,22 @@ class OrderDetail:
             "variance_pct": variance_pct,
             "is_high_variance": variance_pct is not None and abs(variance_pct) > COGS_VARIANCE_WARN_PCT,
         }
+
+    @property
+    def shipment_status_summary(self) -> dict:
+        """Count of shipments per status for the summary strip."""
+        counts: dict[str, int] = {}
+        for s in self.shipments:
+            key = (s.status or "").lower()
+            counts[key] = counts.get(key, 0) + 1
+        return counts
+
+    @property
+    def payment_cod_summary(self) -> dict:
+        """Total payment amount and COD amount + percentage for the payments footer."""
+        total = sum(p.amount for p in self.payments)
+        cod = sum(p.amount for p in self.payments if (p.payment_method_type or "").upper() == "COD")
+        cod_pct = int(cod / total * 100) if total else 0
+        return {"total": total, "cod": cod, "cod_pct": cod_pct}
 
     customer: Optional[CustomerRef] = None  # None when order has no linked customer

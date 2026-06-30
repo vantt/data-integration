@@ -166,3 +166,16 @@ class PartySeed:
     contact_quality: str         # masked|unverified|verified — initial value from warehouse
     customer_code: str = ""
     seen_at: str = ""
+
+
+def partition_identities_by_channel(identities: list) -> dict:
+    """Split a flat identity list into per-channel groups for M08 modal rendering.
+
+    Returns {"call": [...], "zalo": [...], "fb": [...], "email": [...]}
+    where each value is the list of PartyIdentity objects for that channel.
+    """
+    call  = [i for i in identities if i.identity_type in (IDENTITY_TYPE_PHONE, IDENTITY_TYPE_PHONE_SECONDARY)]
+    zalo  = [i for i in identities if i.identity_type in (IDENTITY_TYPE_ZALO, IDENTITY_TYPE_ZALO_UID)]
+    fb    = [i for i in identities if i.identity_type in (IDENTITY_TYPE_FACEBOOK, IDENTITY_TYPE_PSID)]
+    email = [i for i in identities if i.identity_type == IDENTITY_TYPE_EMAIL]
+    return {"call": call, "zalo": zalo, "fb": fb, "email": email}

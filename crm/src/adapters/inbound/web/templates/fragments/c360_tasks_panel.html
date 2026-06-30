@@ -84,12 +84,10 @@
 
     {# Derive display state #}
     {% set is_terminal = t.status in ('done', 'cancelled') %}
-    {% set is_overdue = (not is_terminal) and t.due_at and now_utc and (t.due_at < now_utc) %}
+    {% set is_overdue = (not is_terminal) and t.is_overdue_at(now_utc) %}
     {% set is_auto = t.source == 'action_queue' %}
 
-    {% if t.priority >= 2 %}{% set prio_label = 'P1' %}
-    {% elif t.priority == 1 %}{% set prio_label = 'P2' %}
-    {% else %}{% set prio_label = 'P3' %}{% endif %}
+    {% set prio_label = t.priority_label %}
 
     {# Status indicator color #}
     {% if is_terminal %}{% set ind_cls = 'task-ind task-ind--done' %}

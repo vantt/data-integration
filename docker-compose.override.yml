@@ -3,4 +3,4 @@
 services:
   crm:
     environment:
-      - CRM_DEV_RELOAD=1
+      - CRM_DEV_RELOAD=0

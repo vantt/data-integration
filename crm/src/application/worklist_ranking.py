@@ -63,6 +63,12 @@ class WorklistRow:
     neglect_days: int   # days since pending_since / due_at (for badge display)
     ref_id: str         # action_id or task_id
     payload: Any        # original entity (ActionQueueItem | Task)
+    pending_date: Optional[date] = None  # pre-parsed pending_since; reused by sort keys
+
+    @property
+    def should_show_neglect_badge(self) -> bool:
+        """True for actions waiting 1–6 days; 7+ days are already routed to band 3 (Treo lâu)."""
+        return 1 <= self.neglect_days <= 6
 
 
 # ---------------------------------------------------------------------------
@@ -72,22 +78,23 @@ class WorklistRow:
 def _parse_date(value: Optional[str]) -> Optional[date]:
     """Parse YYYY-MM-DD or ISO datetime string to a date. Returns None on failure.
 
-    Mirrors the multi-format try/except style of _is_cache_stale to handle
-    warehouse strings (YYYY-MM-DD) and task timestamps (ISO-8601 with time).
+    Fast path: if the string is exactly 10 chars (YYYY-MM-DD), parse directly.
+    Warehouse fields (pending_since, snoozed_until, generated_date) always use
+    this format; the slow strptime loop is only reached for task timestamps.
     """
     if not value:
         return None
-    for fmt in ("%Y-%m-%d", "%Y-%m-%dT%H:%M:%S.%fZ", "%Y-%m-%dT%H:%M:%SZ",
+    try:
+        return date.fromisoformat(value[:10])
+    except ValueError:
+        pass
+    for fmt in ("%Y-%m-%dT%H:%M:%S.%fZ", "%Y-%m-%dT%H:%M:%SZ",
                 "%Y-%m-%dT%H:%M:%S", "%Y-%m-%dT%H:%M:%S+00:00"):
         try:
             return datetime.strptime(value[:26], fmt[:len(fmt)]).date()
         except ValueError:
             continue
-    # Fallback: try slicing to first 10 chars (YYYY-MM-DD)
-    try:
-        return date.fromisoformat(value[:10])
-    except ValueError:
-        return None
+    return None
 
 
 # ---------------------------------------------------------------------------
@@ -150,8 +157,7 @@ def _sort_key_b1(row: WorklistRow) -> tuple:
 
 def _sort_key_b2(row: WorklistRow) -> tuple:
     """Band 2: on-track — urgency desc, value desc, then oldest pending first."""
-    ps = _parse_date(getattr(row.payload, "pending_since", None))
-    ps_ord = ps.toordinal() if ps else 99999  # missing pending sorts last
+    ps_ord = row.pending_date.toordinal() if row.pending_date else 99999
     return (-row.urgency, -row.value, ps_ord)
 
 
@@ -220,6 +226,7 @@ def rank_worklist(
             neglect_days=neglect,
             ref_id=str(getattr(a, "action_id", "")),
             payload=a,
+            pending_date=pending,
         ))
 
     for t in tasks:

@@ -197,6 +197,14 @@ def make_worklist_router(
         today = today_ict()
         ranked = rank_worklist(all_actions, all_tasks, today, contacted_party_ids)
 
+        # Screen adapter responsibility: cap band.rows to display_capacity before
+        # passing to the template so the initial render only processes cap rows.
+        # Overflow is loaded lazily via GET /worklist/band/{band_id}/more.
+        # band.count retains the full count for the header badge.
+        for band in ranked["bands"]:
+            cap = band["display_capacity"]
+            band["rows"] = band["rows"][:cap]
+
         return {
             **ranked,
             "party_extras": party_extras,
@@ -324,6 +332,7 @@ def make_worklist_router(
         except Exception as exc:
             log.error("worklist: dismiss action %s: %s", action_id, exc)
             return HTMLResponse("failed", status_code=500)
+        worklist_svc.invalidate_cache()
         # hx-swap="delete" on the client removes the row; return empty body
         return HTMLResponse("", status_code=200)
 
@@ -341,7 +350,80 @@ def make_worklist_router(
         except Exception as exc:
             log.error("worklist: snooze action %s: %s", action_id, exc)
             return HTMLResponse("failed", status_code=500)
+        worklist_svc.invalidate_cache()
         return HTMLResponse("", status_code=200)
+
+    # ── Band overflow: paginated lazy-load beyond display_capacity ───────
+    # Triggered by HTMX on <details> toggle (_wl_bands.html) for the first page,
+    # then by the "Xem thêm" button appended by _wl_overflow_rows.html for
+    # subsequent pages. Page size is fixed at _OVERFLOW_PAGE rows.
+    # Only the 20 rows being rendered are enriched — avoids a full party lookup.
+
+    _OVERFLOW_PAGE = 20
+
+    @router.get("/worklist/band/{band_id}/more", response_class=HTMLResponse)
+    async def handle_band_overflow(request: Request, band_id: int) -> Response:
+        filters = parse_filters(request.query_params)
+        script_cids = _get_script_cids(request)
+
+        try:
+            offset = max(0, int(request.query_params.get("offset", "0")))
+        except ValueError:
+            offset = 0
+
+        # Re-rank — action queue is TTL-cached, no DB hit
+        all_actions = worklist_svc.list_all_action_queue()
+        filtered_actions, _ = apply_filters(all_actions, [], filters, script_cids)
+        full_ranked = rank_worklist(filtered_actions, [], today_ict(), set())
+        full_band = next((b for b in full_ranked["bands"] if b["id"] == band_id), None)
+        if full_band is None:
+            return HTMLResponse("")
+
+        all_rows = full_band["rows"]
+        page_rows = all_rows[offset: offset + _OVERFLOW_PAGE]
+        if not page_rows:
+            return HTMLResponse("")
+
+        next_offset = offset + _OVERFLOW_PAGE
+        has_more = next_offset < len(all_rows)
+        remaining = max(0, len(all_rows) - next_offset)
+
+        # Enrich only parties visible on this page (not the full 4000)
+        page_pids = list({getattr(r.payload, "party_id", None) for r in page_rows} - {None})
+        party_extras: dict = {}
+        if party_contacts is not None:
+            for pid in page_pids:
+                try:
+                    pref = party_contacts.get_preferred_identity(pid)
+                    cp_notes = party_contacts.list_pinned_contact_pref_notes(pid)
+                    party_extras[pid] = {"preferred_identity": pref, "contact_pref_notes": cp_notes}
+                except Exception as exc:
+                    log.warning("overflow: enrich %s: %s", pid, exc)
+        try:
+            lc_map = worklist_svc.get_map_for_parties(page_pids)
+            for pid, lc in lc_map.items():
+                party_extras.setdefault(pid, {"preferred_identity": None, "contact_pref_notes": []})
+                party_extras[pid]["last_contact"] = lc
+        except Exception as exc:
+            log.warning("overflow: last_contact: %s", exc)
+
+        # Build next-page URL: carry filters, update offset
+        qs_parts = [f"{k}={v}" for k, v in request.query_params.items() if k != "offset"]
+        qs_parts.append(f"offset={next_offset}")
+        next_url = f"/worklist/band/{band_id}/more?" + "&".join(qs_parts)
+
+        return templates.TemplateResponse(
+            "fragments/_wl_overflow_rows.html",
+            {
+                "request": request,
+                "rows": page_rows,
+                "party_extras": party_extras,
+                "script_cids": script_cids,
+                "has_more": has_more,
+                "remaining": remaining,
+                "next_url": next_url,
+            },
+        )
 
     return router
 

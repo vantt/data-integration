@@ -10,20 +10,14 @@
 {% set task_title = task_title | default('') %}
 {% set contact_pref_notes = contact_pref_notes | default([]) %}
 {% set identities = identities | default([]) %}
+{% set call_ids  = call_ids  | default([]) %}
+{% set zalo_ids  = zalo_ids  | default([]) %}
+{% set fb_ids    = fb_ids    | default([]) %}
+{% set email_ids = email_ids | default([]) %}
 {% set note_body = note_body | default('') %}
 {% set note_type_val = note_type_val | default('general') %}
 {% set note_pinned = note_pinned | default(False) %}
 {% set note_visibility = note_visibility | default('team') %}
-
-{# Partition identities by channel type #}
-{% set ns = namespace(call_ids=[], zalo_ids=[], fb_ids=[], email_ids=[]) %}
-{% for idn in identities %}
-  {% if idn.identity_type in ('phone', 'phone_secondary') %}{% set ns.call_ids = ns.call_ids + [idn] %}
-  {% elif idn.identity_type == 'zalo' %}{% set ns.zalo_ids = ns.zalo_ids + [idn] %}
-  {% elif idn.identity_type in ('facebook', 'psid') %}{% set ns.fb_ids = ns.fb_ids + [idn] %}
-  {% elif idn.identity_type == 'email' %}{% set ns.email_ids = ns.email_ids + [idn] %}
-  {% endif %}
-{% endfor %}
 
 {% if mode == 'edit_note' %}{% set modal_title = 'Sửa ghi chú' %}{% set save_url = '/customers/' ~ party_id ~ '/notes/' ~ note_id %}
 {% elif mode == 'note_only' %}{% set modal_title = 'Thêm ghi chú' %}{% set save_url = '/customers/' ~ party_id ~ '/notes' %}
@@ -178,10 +172,10 @@
 
         {# Step 2 — KÊNH CỤ THỂ (one section per ht; JS shows active one) #}
         {% for ht_val, head_lbl, chan_lbl, place_lbl, ids in [
-          ('call',  'SỐ ĐIỆN THOẠI',      'số điện thoại',      'Nhập số khác…',             ns.call_ids),
-          ('zalo',  'TÀI KHOẢN ZALO',     'tài khoản Zalo',     'Nhập số/tên Zalo khác…',    ns.zalo_ids),
-          ('fb',    'TÀI KHOẢN FACEBOOK', 'tài khoản Facebook', 'Nhập tên/ID Facebook…',     ns.fb_ids),
-          ('email', 'ĐỊA CHỈ EMAIL',      'email',              'Nhập email khác…',           ns.email_ids),
+          ('call',  'SỐ ĐIỆN THOẠI',      'số điện thoại',      'Nhập số khác…',             call_ids),
+          ('zalo',  'TÀI KHOẢN ZALO',     'tài khoản Zalo',     'Nhập số/tên Zalo khác…',    zalo_ids),
+          ('fb',    'TÀI KHOẢN FACEBOOK', 'tài khoản Facebook', 'Nhập tên/ID Facebook…',     fb_ids),
+          ('email', 'ĐỊA CHỈ EMAIL',      'email',              'Nhập email khác…',           email_ids),
         ] %}
         <div data-chan-sec="{{ ht_val }}"{% if ht_val != 'call' %} style="display:none"{% endif %}>
           <div class="field">

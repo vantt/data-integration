@@ -1,9 +1,9 @@
 {# @surface S01 · Worklist banded collapsible rows | @kind PARTIAL
-   Iterates `bands` (always 4 entries from the ranking output).
-   Bands 0/1/2 expanded by default; Band 3 collapsed — long-pending items
-   shouldn't crowd today's urgent work.
-   Per-band cap: 10 rows visible (Band 3: 5); overflow in a <details> expander
-   so no extra round-trip is needed.
+   Iterates `bands` (always 5 entries from the ranking output).
+   Bands 0/1/2 expanded by default; Bands 3 and 4 collapsed — long-pending/recently-contacted
+   items shouldn't crowd today's urgent work.
+   Per-band cap: 10 rows visible (Band 3: 5); overflow loaded lazily via HTMX on
+   <details> expand — avoids rendering thousands of hidden rows on initial page load.
 
    Context:
      bands         list[dict]  — [{id, label, icon, rows, count, total_value}]
@@ -35,11 +35,9 @@
 {% for band in bands %}
 {% if band.count > 0 %}
 
-{# Band caps: Band 3 (neglected/long-pending) gets a tighter cap of 5
-   so it doesn't overwhelm the view; all other bands cap at 10. #}
+{# band.rows is pre-sliced to display_capacity by the screen adapter;
+   band.count retains the full unsliced count for the overflow check. #}
 {% set cap = band.display_capacity | default(10) %}
-{% set visible_rows = band.rows[:cap] %}
-{% set overflow_rows = band.rows[cap:] %}
 
 {# Bands 0/1/2 are open by default; Bands 3 and 4 collapsed to reduce noise #}
 <details class="wl-band" {% if band.is_expanded | default(true) %}open{% endif %}>
@@ -54,20 +52,22 @@
   </summary>
 
   <div class="wl-list wl-list--b{{ band.id }}">
-    {# Visible rows up to cap #}
-    {% for row in visible_rows %}
+    {% for row in band.rows %}
     {{ wl_row(row, party_extras, script_cids) }}
     {% endfor %}
 
-    {# Overflow rows expand inline — no round-trip needed #}
-    {% if overflow_rows %}
+    {# Overflow: lazy-load on <details> expand — avoids rendering thousands of hidden rows.
+       band.rows is already capped; band.count > cap means there is overflow to fetch. #}
+    {% if band.count > cap %}
     <details class="wl-more">
       <summary class="wl-more__toggle">
-        Xem thêm ({{ overflow_rows | length }})
+        Xem thêm ({{ band.count - cap }})
       </summary>
-      {% for row in overflow_rows %}
-      {{ wl_row(row, party_extras, script_cids) }}
-      {% endfor %}
+      <div id="wl-overflow-band-{{ band.id }}"
+           hx-get="/worklist/band/{{ band.id }}/more?offset={{ cap }}{{ ('&' + request.url.query) if request.url.query else '' }}"
+           hx-trigger="toggle from:closest details once"
+           hx-swap="outerHTML">
+      </div>
     </details>
     {% endif %}
   </div>

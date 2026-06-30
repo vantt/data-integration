@@ -152,7 +152,7 @@
         {{ wf_row("=", "Net revenue", "trừ VAT", f.net_revenue | int | fmt_vnd, total=true) }}
 
         {# COGS with % of net revenue #}
-        {% set cogs_pct = (f.cogs_amount / f.net_revenue) | fmt_pct if f.net_revenue > 0 else "" %}
+        {% set cogs_pct = f.cogs_pct_of_net | fmt_pct if f.cogs_pct_of_net is not none else "" %}
         {{ wf_row("−", "COGS", f.cogs_source_label, f.cogs_amount | int | fmt_vnd, pct=cogs_pct, neg=true) }}
 
         {% if f.promo_goods_cost > 0 %}

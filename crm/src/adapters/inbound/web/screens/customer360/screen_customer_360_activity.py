@@ -13,6 +13,7 @@ from fastapi import APIRouter, Form, Request, Response
 from fastapi.responses import HTMLResponse
 from fastapi.templating import Jinja2Templates
 
+from domain.entities.party import partition_identities_by_channel
 from domain.entities.profile import Note, PartyIdentity
 
 log = logging.getLogger(__name__)
@@ -84,6 +85,7 @@ def register_activity_routes(
                         task_title = getattr(t, "title", "")
                 except Exception as exc:
                     log.warning("m08: get_task %s: %s", task_id, exc)
+        channel_groups = partition_identities_by_channel(party_identities)
         if mode == "edit_note" and note_id:
             try:
                 existing = next(
@@ -105,6 +107,10 @@ def register_activity_routes(
             "task_id": task_id,
             "task_title": task_title,
             "identities": party_identities,
+            "call_ids":   channel_groups["call"],
+            "zalo_ids":   channel_groups["zalo"],
+            "fb_ids":     channel_groups["fb"],
+            "email_ids":  channel_groups["email"],
             "contact_pref_notes": contact_pref_notes,
             "note_body": note_body,
             "note_type_val": note_type_val,

@@ -3,21 +3,14 @@
    Expects: note (Note), is_pinned (bool), party_id (str)
    note.note_type: general|preference|contact_pref|warning|outcome|internal
 #}
-{% set type_labels = {
-  'preference':  ('preference',  'bdg--good',   ''),
-  'contact_pref':('liên lạc',   'bdg--accent',  'color:var(--purple-500,#7c3aed);border-color:color-mix(in srgb,var(--purple-500,#7c3aed) 30%,transparent);background:color-mix(in srgb,var(--purple-500,#7c3aed) 10%,transparent)'),
-  'warning':     ('⚠ cảnh báo', 'bdg--bad',    ''),
-  'outcome':     ('kết quả',    'bdg',          'color:var(--fg-2)'),
-  'internal':    ('nội bộ',     'bdg',          'color:var(--fg-tertiary)'),
-} %}
-{% set type_info = type_labels.get(note.note_type) %}
+{% set type_info = note.note_type | note_type_meta %}
 
 <div class="note-card">
   <div class="note-card__head">
     <div class="note-card__who">
       {% if is_pinned %}<span style="color:var(--accent);margin-right:var(--sp-1)">★</span>{% endif %}
       {% if type_info %}
-      <span class="bdg {{ type_info[1] }}"{% if type_info[2] %} style="{{ type_info[2] }}"{% endif %}>{{ type_info[0] }}</span>
+      <span class="bdg {{ type_info.cls }}"{% if type_info.style %} style="{{ type_info.style }}"{% endif %}>{{ type_info.label }}</span>
       {% endif %}
       {% if note.author_user_id %}<span>{{ user_map.get(note.author_user_id, note.author_user_id) }}</span>{% endif %}
       <span class="note-card__when">· {{ note.created_at | format_ict }} ICT</span>

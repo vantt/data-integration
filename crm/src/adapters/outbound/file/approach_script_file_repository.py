@@ -13,8 +13,11 @@ import json
 import logging
 import os
 import re
+import time
 from datetime import datetime, timezone
 from pathlib import Path
+
+_SCRIPT_IDS_TTL = 60.0  # re-scan at most once per minute
 
 from domain.entities.approach_script import ApproachScript
 
@@ -26,6 +29,8 @@ class FileApproachScriptRepository:
 
     def __init__(self, scripts_dir: str | Path) -> None:
         self._scripts_dir = Path(scripts_dir)
+        self._ids_cache: set[int] | None = None
+        self._ids_cache_ts: float = 0.0
 
     def get_by_customer_id(self, customer_id: int) -> ApproachScript | None:
         """Return ApproachScript for customer_id, or None if file missing/malformed."""
@@ -51,11 +56,15 @@ class FileApproachScriptRepository:
         return ApproachScript.from_json(customer_id, data, refreshed_at)
 
     def list_customer_ids(self) -> set[int]:
-        """Return set of customer_ids with a script file (no cache — auto-reflects new drops).
+        """Return set of customer_ids with a script file, cached for _SCRIPT_IDS_TTL seconds.
 
         Uses os.scandir for efficiency; ignores non-matching filenames silently.
         Pattern: ^(\\d+)\\.json$  — e.g. 603264280.json → 603264280.
         """
+        now = time.monotonic()
+        if self._ids_cache is not None and (now - self._ids_cache_ts) < _SCRIPT_IDS_TTL:
+            return self._ids_cache
+
         _PATTERN = re.compile(r"^(\d+)\.json$")
         result: set[int] = set()
         try:
@@ -68,4 +77,7 @@ class FileApproachScriptRepository:
                         result.add(int(m.group(1)))
         except OSError as exc:
             log.warning("approach_script: scandir failed for dir=%s: %s", self._scripts_dir, exc)
+
+        self._ids_cache = result
+        self._ids_cache_ts = time.monotonic()
         return result
