@@ -18,6 +18,7 @@ environment mirrors Starlette's defaults: a filesystem loader and
 from __future__ import annotations
 
 import os
+from datetime import date
 
 import jinja2
 from fastapi.templating import Jinja2Templates
@@ -34,4 +35,6 @@ def make_templates(directory: str) -> Jinja2Templates:
         autoescape=True,
         auto_reload=dev,
     )
+    # today() callable so it resolves at render time, not at startup
+    env.globals["today"] = lambda: date.today().isoformat()
     return Jinja2Templates(env=env)

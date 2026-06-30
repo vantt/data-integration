@@ -87,6 +87,26 @@ ORDER BY due_at ASC, priority DESC
 LIMIT ?
 """
 
+_LIST_UNASSIGNED_BY_STATUS = """
+SELECT
+  task_id, party_id, title, description, due_at, priority, status,
+  assignee_user_id, source, source_ref, created_by, created_at, updated_at, completed_at
+FROM crm_task
+WHERE assignee_user_id IS NULL AND status = ?
+ORDER BY due_at ASC, priority DESC
+LIMIT ?
+"""
+
+_LIST_UNASSIGNED = """
+SELECT
+  task_id, party_id, title, description, due_at, priority, status,
+  assignee_user_id, source, source_ref, created_by, created_at, updated_at, completed_at
+FROM crm_task
+WHERE assignee_user_id IS NULL
+ORDER BY due_at ASC, priority DESC
+LIMIT ?
+"""
+
 _LIST_BY_PARTY = """
 SELECT
   task_id, party_id, title, description, due_at, priority, status,
@@ -203,6 +223,18 @@ class SQLiteTaskRepository:
         else:
             rows = self._conn.execute(_LIST_ALL, (limit,)).fetchall()
 
+        return [_task_from_row(r) for r in rows]
+
+    def list_by_no_assignee(self, statuses: list[str], limit: int = 100) -> list[Task]:
+        """Return unassigned tasks (assignee_user_id IS NULL) filtered by status list."""
+        rows: list[sqlite3.Row] = []
+        if statuses:
+            for status in statuses:
+                rows += self._conn.execute(
+                    _LIST_UNASSIGNED_BY_STATUS, (status, limit)
+                ).fetchall()
+        else:
+            rows = self._conn.execute(_LIST_UNASSIGNED, (limit,)).fetchall()
         return [_task_from_row(r) for r in rows]
 
     def list_by_party(self, party_id: str, limit: int = 100) -> list[Task]:

@@ -158,7 +158,7 @@ class SQLiteCacheRepository:
                   AND t.status NOT IN ('done', 'cancelled')
             WHERE COALESCE(s.status, 'open') != 'dismissed'
               AND (COALESCE(s.status, 'open') != 'snoozed'
-                   OR s.snoozed_until < date('now', '+7 hours'))
+                   OR s.snoozed_until < date('now', '+7 hours'))  -- snoozed_until is an ICT date; date('now','+7h') = today in ICT
               AND t.task_id IS NULL"""
 
         _sku_branch = """
@@ -229,7 +229,8 @@ class SQLiteCacheRepository:
 
         Method-specific fields (customer_name/party_id/customer_id/top_affinity_product/
         last_purchased_product for list_all_action_queue; last_purchase_date/last_order_code/
-        last_sku_discount_rate for _fetch_actions) are passed by the caller as kwargs.
+        last_sku_discount_rate/last_net_unit_price/estimated_depletion_date for _fetch_actions)
+        are passed by the caller as kwargs.
         """
         return ActionQueueItem(
             action_id=row["action_id"],
@@ -353,7 +354,8 @@ class SQLiteCacheRepository:
                    NULL AS last_purchase_date,
                    NULL AS last_order_code,
                    NULL AS last_sku_discount_rate,
-                   NULL AS last_net_unit_price
+                   NULL AS last_net_unit_price,
+                   NULL AS estimated_depletion_date
             FROM cache.wh_action_queue a
             LEFT JOIN crm_action_state s ON s.action_id = a.action_id
             WHERE a.customer_key = ?"""
@@ -368,7 +370,8 @@ class SQLiteCacheRepository:
                    sa.last_purchase_date,
                    sa.last_order_code,
                    sa.last_sku_discount_rate,
-                   sa.last_net_unit_price
+                   sa.last_net_unit_price,
+                   sa.estimated_depletion_date
             FROM cache.wh_sku_action_queue sa
             LEFT JOIN crm_action_state s ON s.action_id = sa.action_id
             WHERE sa.customer_key = ?"""
@@ -398,6 +401,7 @@ class SQLiteCacheRepository:
                 last_order_code=row["last_order_code"] or "",
                 last_sku_discount_rate=row["last_sku_discount_rate"],
                 last_net_unit_price=row["last_net_unit_price"],
+                estimated_depletion_date=row["estimated_depletion_date"] or "",
             )
             for row in rows
         ]

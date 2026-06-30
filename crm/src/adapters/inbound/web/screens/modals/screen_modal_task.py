@@ -126,6 +126,7 @@ def make_task_modal_router(
 
     @router.post("/customers/{party_id}/tasks", response_class=HTMLResponse)
     async def post_task(
+        request: Request,
         party_id: str,
         title: str = Form(""),
         description: str = Form(""),
@@ -138,6 +139,7 @@ def make_task_modal_router(
         title = title.strip()
         if not title:
             return HTMLResponse("Tiêu đề không được bỏ trống", status_code=400)
+        current_user = getattr(request.state, "current_user", None)
         try:
             task_svc.create_task({
                 "party_id": party_id,
@@ -148,6 +150,7 @@ def make_task_modal_router(
                 "priority": parse_priority(priority),
                 "source": source.strip() or "manual",
                 "source_ref": source_ref.strip() or None,
+                "created_by": current_user.user_id if current_user else None,
             })
         except Exception as exc:
             log.error("post_task %s: %s", party_id, exc)

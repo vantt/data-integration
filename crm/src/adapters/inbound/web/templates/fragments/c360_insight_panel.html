@@ -174,12 +174,46 @@
         </div>
       </div>
       {% endif %}
+      {#
+        Next-purchase selection rule (YYYY-MM-DD string comparison works lexicographically):
+        - Future dates (>= today): pick the earliest (soonest upcoming)
+        - Past dates (< today):   pick the latest (most recent, closest to today)
+        - Prefer any future date over any past date
+        Candidates: predicted_next_purchase_date + all non-dismissed SKU depletion dates.
+      #}
+      {% set np_ns = namespace(best_future=None, best_past=None) %}
+      {% set _today = today() %}
+      {% for act in insight.actions %}
+        {% if act.estimated_depletion_date and act.status != 'dismissed' %}
+          {% if act.estimated_depletion_date >= _today %}
+            {% if np_ns.best_future is none or act.estimated_depletion_date < np_ns.best_future %}
+              {% set np_ns.best_future = act.estimated_depletion_date %}
+            {% endif %}
+          {% else %}
+            {% if np_ns.best_past is none or act.estimated_depletion_date > np_ns.best_past %}
+              {% set np_ns.best_past = act.estimated_depletion_date %}
+            {% endif %}
+          {% endif %}
+        {% endif %}
+      {% endfor %}
+      {% if ins.predicted_next_purchase_date %}
+        {% if ins.predicted_next_purchase_date >= _today %}
+          {% if np_ns.best_future is none or ins.predicted_next_purchase_date < np_ns.best_future %}
+            {% set np_ns.best_future = ins.predicted_next_purchase_date %}
+          {% endif %}
+        {% else %}
+          {% if np_ns.best_past is none or ins.predicted_next_purchase_date > np_ns.best_past %}
+            {% set np_ns.best_past = ins.predicted_next_purchase_date %}
+          {% endif %}
+        {% endif %}
+      {% endif %}
+      {% set _next_purchase_display = np_ns.best_future if np_ns.best_future else np_ns.best_past %}
       <div class="signal-cell">
-        <div class="signal-cell__k" data-tooltip="Dự đoán dựa trên chu kỳ mua lịch sử&#10;của khách hàng này">Next purchase</div>
+        <div class="signal-cell__k" data-tooltip="Dự đoán sớm nhất: chu kỳ mua lịch sử&#10;hoặc ngày hết hàng SKU (lấy ngày gần hơn)">Next purchase</div>
         <div class="signal-cell__v">
           <span class="{{ ins.next_purchase_signal | bdg_cls('purchase_signal') }}" data-tooltip="{{ ins.next_purchase_signal | bdg_tip('purchase_signal') }}">{{ ins.next_purchase_signal }}</span>
-          {% if ins.predicted_next_purchase_date %}
-          <span class="caption" style="color:var(--fg-tertiary);margin-left:var(--sp-2)">{{ ins.predicted_next_purchase_date }}</span>
+          {% if _next_purchase_display %}
+          <span class="caption" style="color:var(--fg-tertiary);margin-left:var(--sp-2)">{{ _next_purchase_display }}</span>
           {% endif %}
         </div>
       </div>
@@ -333,10 +367,10 @@
       </div>
       {# Row 2 — 4 equal cells aligning with 4 columns above #}
       <div class="signal-cell">
-        <div class="signal-cell__k" data-tooltip="Ước tính thô từ LTV ÷ AOV&#10;Xem mục Profitability bên dưới&#10;để có số chính xác theo COGS thực">Gross margin</div>
+        <div class="signal-cell__k" data-tooltip="Biên lợi nhuận gộp TB trên COGS thực&#10;(H010-corrected, từ dim_customers)&#10;Xem Profitability bên dưới để biết thêm">Gross margin</div>
         <div class="signal-cell__v">
-          {% if ins.is_margin_negative is not none and not ins.is_margin_negative %}
-          <span style="color:var(--moss-500);font-weight:600">{{ "%.1f"|format(ins.lifetime_contribution_margin / [ins.avg_order_spend, 1] | max * 100) }}%</span>
+          {% if dim_metrics and dim_metrics.avg_gross_margin_pct is not none %}
+          <span style="color:var(--moss-500);font-weight:600">{{ "%.1f"|format(dim_metrics.avg_gross_margin_pct * 100) }}%</span>
           {% else %}<span class="dash">—</span>{% endif %}
         </div>
       </div>

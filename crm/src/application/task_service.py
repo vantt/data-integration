@@ -140,6 +140,21 @@ class TaskService:
             self._db.commit()
         return task
 
+    def list_unassigned(
+        self,
+        status: Optional[str] = None,
+        limit: int = 100,
+    ) -> list[Task]:
+        """Return open tasks with no assignee (team queue)."""
+        return self._task_repo.list_by_no_assignee(
+            [status] if status else [],
+            limit,
+        )
+
+    def assign_to(self, task_id: str, user_id: str) -> None:
+        """Assign a task to a user (self-assign from team queue)."""
+        self.assign_task(task_id, user_id)
+
     def list_tasks(
         self,
         assignee_id: Optional[str] = None,

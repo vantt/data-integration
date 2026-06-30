@@ -50,10 +50,12 @@ class WorklistSvc(Protocol):
 class TaskQuerier(Protocol):
     def list_tasks(self, assignee_id: str, status: str) -> list[Task]: ...
     def get_task(self, task_id: str) -> Optional[Task]: ...
+    def list_unassigned(self, status: str) -> list[Task]: ...
 
 
 class TaskWriter(Protocol):
     def transition_status(self, task_id: str, status: str) -> None: ...
+    def assign_to(self, task_id: str, user_id: str) -> None: ...
 
 
 class ActionStateWriter(Protocol):
@@ -80,14 +82,16 @@ def make_worklist_router(
     """Return APIRouter wired with all Worklist routes."""
     router = APIRouter()
 
-    def _load_worklist_data(filters: dict, script_cids: set | None = None) -> dict:
+    def _load_worklist_data(
+        filters: dict,
+        current_user_id: str = "",
+        script_cids: set | None = None,
+    ) -> dict:
         """Fetch, filter, rank, and return everything the template needs.
 
-        Filters are applied before ranking so ranking only sees the relevant
-        subset. Filter logic lives in the pure worklist_filters module.
-
-        script_cids: set[int] of customer_ids with an approach script, computed
-        once per request by the route handler from approach_repo.list_customer_ids().
+        current_user_id scopes tasks to "mine" (assigned) + separate team queue
+        (unassigned). When empty (no auth), my_tasks is empty and all open tasks
+        fall into the team queue section.
         """
         try:
             all_actions = worklist_svc.list_all_action_queue()
@@ -95,15 +99,26 @@ def make_worklist_router(
             log.error("worklist: list actions: %s", exc)
             all_actions = []
 
+        # my_tasks: tasks explicitly assigned to the current user → go into ranked bands
         try:
-            all_tasks = tasks.list_tasks("", "open")
+            my_tasks = tasks.list_tasks(current_user_id, "open") if current_user_id else []
         except Exception as exc:
-            log.error("worklist: list tasks: %s", exc)
-            all_tasks = []
+            log.error("worklist: list my tasks: %s", exc)
+            my_tasks = []
 
-        # Chips derive from unfiltered data, then narrow the working set.
+        # unassigned_tasks: team queue — no assignee, visible to all for self-assign
+        try:
+            unassigned_tasks = tasks.list_unassigned("open")
+        except Exception as exc:
+            log.error("worklist: list unassigned tasks: %s", exc)
+            unassigned_tasks = []
+
+        # Chips derive from unfiltered actions; text filter applied to both task lists
         available_types = available_action_types(all_actions)
-        all_actions, all_tasks = apply_filters(all_actions, all_tasks, filters, script_cids)
+        all_actions, my_tasks = apply_filters(all_actions, my_tasks, filters, script_cids)
+        # Apply text/priority filter to unassigned queue too
+        _, unassigned_tasks = apply_filters([], unassigned_tasks, filters, script_cids)
+        all_tasks = my_tasks  # for legacy compat (counts, etc.)
 
         # --- Metadata for freshness footer --------------------------------
         refreshed_at = ""
@@ -197,6 +212,9 @@ def make_worklist_router(
             # Pass raw lists for templates that might still iterate directly.
             "actions": all_actions,
             "tasks": all_tasks,
+            # Team queue: unassigned tasks any user can pick up
+            "unassigned_tasks": unassigned_tasks,
+            "current_user_id": current_user_id,
         }
 
     # ── Full page ─────────────────────────────────────────────────────────────
@@ -212,12 +230,16 @@ def make_worklist_router(
             log.warning("worklist: list_customer_ids failed: %s", exc)
             return set()
 
+    def _current_user_id(request: Request) -> str:
+        user = getattr(request.state, "current_user", None)
+        return user.user_id if user else ""
+
     @router.get("/", response_class=HTMLResponse)
     @router.get("/worklist", response_class=HTMLResponse)
     async def handle_worklist(request: Request) -> Response:
         filters = parse_filters(request.query_params)
         script_cids = _get_script_cids(request)
-        data = _load_worklist_data(filters, script_cids)
+        data = _load_worklist_data(filters, _current_user_id(request), script_cids)
         return templates.TemplateResponse(
             "worklist.html",
             {"request": request, **data, **filters},
@@ -229,7 +251,7 @@ def make_worklist_router(
     async def handle_worklist_fragment(request: Request) -> Response:
         filters = parse_filters(request.query_params)
         script_cids = _get_script_cids(request)
-        data = _load_worklist_data(filters, script_cids)
+        data = _load_worklist_data(filters, _current_user_id(request), script_cids)
         return templates.TemplateResponse(
             "fragments/worklist_fragment.html",
             {"request": request, **data, **filters},
@@ -274,6 +296,21 @@ def make_worklist_router(
         except Exception as exc:
             log.error("worklist: cancel task %s: %s", task_id, exc)
             return HTMLResponse("failed to cancel task", status_code=500)
+        return HTMLResponse("", status_code=200)
+
+    # ── Self-assign from team queue ───────────────────────────────────────
+    # Removes row client-side via hx-swap="delete" after assign succeeds.
+    @router.patch("/tasks/{task_id}/assign-me", response_class=HTMLResponse)
+    async def handle_assign_me(request: Request, task_id: str) -> Response:
+        uid = _current_user_id(request)
+        if not uid:
+            return HTMLResponse("not authenticated", status_code=401)
+        try:
+            task_writer.assign_to(task_id, uid)
+        except Exception as exc:
+            log.error("worklist: assign-me task %s: %s", task_id, exc)
+            return HTMLResponse("failed to assign", status_code=500)
+        # Row disappears from team queue; page refresh picks it up in my tasks
         return HTMLResponse("", status_code=200)
 
     # ── Action lifecycle: dismiss ─────────────────────────────────────────

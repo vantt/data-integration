@@ -68,6 +68,40 @@
   {# ── Banded rows (urgency bands rendered via the wl_row macro) ── #}
   {% include "fragments/_wl_bands.html" %}
 
+  {# ── Team Queue — unassigned tasks any user can pick up ─────── #}
+  {% set unassigned_tasks = unassigned_tasks | default([]) %}
+  {% if unassigned_tasks %}
+  <details class="wl-band" style="margin-top:var(--sp-4)">
+    <summary class="wl-band__header" style="background:var(--bg-secondary)">
+      <span class="wl-band__icon" aria-hidden="true">📥</span>
+      <span class="wl-band__label">Hàng đợi chung</span>
+      <span class="wl-band__count">{{ unassigned_tasks | length }}</span>
+      <span class="wl-band__chevron" aria-hidden="true"></span>
+    </summary>
+    <div class="wl-list">
+      {% for t in unassigned_tasks %}
+      <div class="wl-row wl-row--task" id="queue-task-{{ t.task_id }}">
+        <div class="wl-row__main">
+          <span class="wl-row__title">{{ t.title }}</span>
+          {% if t.due_at %}
+          <span class="caption" style="color:var(--fg-tertiary)">{{ t.due_at[:10] }}</span>
+          {% endif %}
+        </div>
+        {% if current_user_id %}
+        <button
+          class="btn btn--xs btn--secondary"
+          hx-patch="/tasks/{{ t.task_id }}/assign-me"
+          hx-swap="delete"
+          hx-target="#queue-task-{{ t.task_id }}"
+          hx-confirm="Nhận task này về danh sách của bạn?"
+        >Nhận</button>
+        {% endif %}
+      </div>
+      {% endfor %}
+    </div>
+  </details>
+  {% endif %}
+
   {# ── Freshness footer ─────────────────────────────────────── #}
   <div class="row-between" style="padding-top:var(--sp-3);margin-top:var(--sp-2);border-top:1px solid var(--border)">
     {% if is_stale %}

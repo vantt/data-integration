@@ -27,6 +27,10 @@ class TaskRepository(Protocol):
         Empty string assignee_id or empty statuses list means 'any' for that filter."""
         ...
 
+    def list_by_no_assignee(self, statuses: list[str], limit: int = 100) -> list[Task]:
+        """Return unassigned tasks (assignee_user_id IS NULL) filtered by status."""
+        ...
+
     def exists_by_source_ref(self, source: str, source_ref: str) -> bool:
         """Return True when a task with the given source + source_ref already exists.
         Used for idempotency in generate_tasks_from_action_queue."""
