@@ -47,8 +47,7 @@ class CustomerDimMetricsRepository:
         if conn is None:
             return None
         try:
-            # Step 1: resolve dim row — segments + customer_key
-            rel = conn.execute(sql.DIM_BY_CUSTOMER_ID, [customer_id])
+            rel = conn.execute(sql.METRICS_BY_CUSTOMER_ID, [customer_id])
             cols = [d[0] for d in rel.description]
             row = rel.fetchone()
             if row is None:
@@ -58,13 +57,6 @@ class CustomerDimMetricsRepository:
             if not customer_key:
                 return None
 
-            # Step 2: aggregate value metrics
-            rel2 = conn.execute(sql.VALUE_METRICS_BY_CUSTOMER_KEY, [customer_key])
-            cols2 = [d[0] for d in rel2.description]
-            row2 = rel2.fetchone()
-            vm = dict(zip(cols2, row2)) if row2 else {}
-
-            # cohort_month from first_order_date (YYYY-MM-DD → YYYY-MM)
             first_order_date = str(dim.get("first_order_date") or "")
             cohort_month = first_order_date[:7] if first_order_date else ""
 
@@ -76,13 +68,13 @@ class CustomerDimMetricsRepository:
                 geo_region=str(dim.get("geo_region") or ""),
                 customer_type=str(dim.get("customer_type") or ""),
                 cohort_month=cohort_month,
-                total_gross_profit=_opt_float(vm.get("total_gross_profit")),
-                total_cogs=_opt_float(vm.get("total_cogs")),
-                avg_gross_margin_pct=_opt_float(vm.get("avg_gross_margin_pct")),
-                cogs_order_count=_opt_int(vm.get("cogs_order_count")),
-                order_count=_opt_int(vm.get("order_count")),
-                total_return_amount=_opt_float(vm.get("total_return_amount")),
-                return_count=_opt_int(vm.get("return_count")),
+                total_gross_profit=_opt_float(dim.get("total_gross_profit")),
+                total_cogs=_opt_float(dim.get("total_cogs")),
+                avg_gross_margin_pct=_opt_float(dim.get("avg_gross_margin_pct")),
+                cogs_order_count=_opt_int(dim.get("cogs_order_count")),
+                order_count=_opt_int(dim.get("order_count")),
+                total_return_amount=_opt_float(dim.get("total_return_amount")),
+                return_count=_opt_int(dim.get("return_count")),
             )
         finally:
             conn.close()

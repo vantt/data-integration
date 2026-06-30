@@ -5,6 +5,7 @@ Registered by make_customer_360_router() via register_panel_routes().
 """
 from __future__ import annotations
 
+import asyncio
 import logging
 from datetime import datetime, timezone
 from typing import Optional
@@ -64,22 +65,32 @@ def register_panel_routes(
                 except Exception as exc:
                     log.warning("c360 insight panel: resolved_ids %s: %s", party_id, exc)
             dim_metrics: Optional[CustomerDimMetrics] = None
-            if customer_dim_metrics is not None:
-                sapo_id = _sapo_customer_id(ids)
-                if sapo_id:
-                    try:
-                        dim_metrics = customer_dim_metrics.get_by_customer_id(sapo_id)
-                    except Exception as exc:
-                        log.warning("c360 insight panel: dim_metrics %s: %s", party_id, exc)
             snapshots: list = []
             timeline_available = customer_timeline is not None
-            if customer_timeline is not None:
-                sapo_id = _sapo_customer_id(ids)
-                if sapo_id:
-                    try:
-                        snapshots = customer_timeline.get_by_customer_id(sapo_id)
-                    except Exception as exc:
-                        log.warning("c360 insight panel: snapshots %s: %s", party_id, exc)
+            sapo_id = _sapo_customer_id(ids)
+            if sapo_id and (customer_dim_metrics is not None or customer_timeline is not None):
+                # Run both DuckDB reads concurrently — read_only supports parallel readers.
+                coros = []
+                run_dim = customer_dim_metrics is not None
+                run_tl = customer_timeline is not None
+                if run_dim:
+                    coros.append(asyncio.to_thread(customer_dim_metrics.get_by_customer_id, sapo_id))
+                if run_tl:
+                    coros.append(asyncio.to_thread(customer_timeline.get_by_customer_id, sapo_id))
+                results = await asyncio.gather(*coros, return_exceptions=True)
+                idx = 0
+                if run_dim:
+                    r = results[idx]; idx += 1
+                    if isinstance(r, Exception):
+                        log.warning("c360 insight panel: dim_metrics %s: %s", party_id, r)
+                    else:
+                        dim_metrics = r
+                if run_tl:
+                    r = results[idx]
+                    if isinstance(r, Exception):
+                        log.warning("c360 insight panel: snapshots %s: %s", party_id, r)
+                    else:
+                        snapshots = r or []
             return templates.TemplateResponse(
                 "fragments/c360_insight_panel.html",
                 {**ctx, "insight": ins, "rep_insights": rep_ins, "resolved_action_ids": resolved_ids,
