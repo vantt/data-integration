@@ -44,6 +44,7 @@ from adapters.outbound.sqlite.conversation_repository import SQLiteConversationR
 from adapters.outbound.sqlite.segment_repository import SQLiteSegmentRepository
 from adapters.outbound.sqlite.campaign_repository import SQLiteCampaignRepository
 from adapters.outbound.sqlite.app_user_repository import SQLiteAppUserRepository
+from adapters.outbound.sqlite.caching_action_queue_repository import CachingActionQueueRepository
 
 # ── Outbound: DuckDB ──────────────────────────────────────────────────────────
 from adapters.outbound.duckdb.order_repository import DuckDBOrderRepository
@@ -546,7 +547,7 @@ def _register_web_routes(
         app_users=sqlite_repos["app_user"],
     ))
     worklist_svc = WorklistQueryService(
-        action_queue=sqlite_repos["cache"],
+        action_queue=CachingActionQueueRepository(sqlite_repos["cache"]),
         last_contact=sqlite_repos["last_contact"],
     )
     app.include_router(make_worklist_router(

@@ -45,6 +45,7 @@ class WorklistSvc(Protocol):
     """
     def list_all_action_queue(self) -> list[ActionQueueItem]: ...
     def get_map_for_parties(self, party_ids: list[str]) -> dict[str, LastContact]: ...
+    def invalidate_cache(self) -> None: ...
 
 
 class TaskQuerier(Protocol):
@@ -374,7 +375,26 @@ def make_worklist_router(
         # Re-rank — action queue is TTL-cached, no DB hit
         all_actions = worklist_svc.list_all_action_queue()
         filtered_actions, _ = apply_filters(all_actions, [], filters, script_cids)
-        full_ranked = rank_worklist(filtered_actions, [], today_ict(), set())
+
+        contacted_party_ids: set = set()
+        if not filters.get("hide_contacted"):
+            overflow_party_ids = [a.party_id for a in filtered_actions if a.party_id]
+            try:
+                lc_map_overflow = worklist_svc.get_map_for_parties(overflow_party_ids)
+                now_utc_overflow = datetime.now(timezone.utc)
+                for pid, lc in lc_map_overflow.items():
+                    try:
+                        lc_dt = datetime.fromisoformat(
+                            lc.last_contacted_at.replace("Z", "+00:00")
+                        )
+                        if (now_utc_overflow - lc_dt).total_seconds() <= 86400:
+                            contacted_party_ids.add(pid)
+                    except Exception:
+                        pass
+            except Exception as exc:
+                log.warning("overflow: contacted_party_ids fetch: %s", exc)
+
+        full_ranked = rank_worklist(filtered_actions, [], today_ict(), contacted_party_ids)
         full_band = next((b for b in full_ranked["bands"] if b["id"] == band_id), None)
         if full_band is None:
             return HTMLResponse("")
