@@ -29,6 +29,8 @@ def register_panel_routes(
     party_tasks,
     party_insights=None,
     action_task_resolver=None,
+    claimed_action_resolver=None,
+    task_svc=None,
     action_state=None,
     customer_timeline=None,
     customer_orders=None,
@@ -41,61 +43,100 @@ def register_panel_routes(
 ) -> None:
     """Register HTMX panel fragment route on *router*."""
 
+    async def _render_insight_panel_response(request: Request, party_id: str) -> Response:
+        """Render the full insight panel; shared by GET panel + claim/unclaim endpoints."""
+        ctx: dict = {"request": request, "party_id": party_id}
+        _, ids = _load_base(party_id)
+        ins = _load_insight(ids)
+        rep_ins: list = []
+        if party_insights is not None:
+            try:
+                rep_ins = [i for i in party_insights.list_by_party(party_id) if not i.deleted_at]
+            except Exception as exc:
+                log.warning("c360 insight render: rep_ins %s: %s", party_id, exc)
+        resolved_ids: set[str] = set()
+        if action_task_resolver is not None:
+            try:
+                resolved_ids = action_task_resolver.resolved_action_ids(party_id)
+            except Exception as exc:
+                log.warning("c360 insight render: resolved_ids %s: %s", party_id, exc)
+        customer_claim: Optional[dict] = None
+        if claimed_action_resolver is not None:
+            try:
+                customer_claim = claimed_action_resolver.get_customer_claim_info(party_id)
+            except Exception as exc:
+                log.warning("c360 insight render: customer_claim %s: %s", party_id, exc)
+        dim_metrics: Optional[CustomerDimMetrics] = None
+        snapshots: list = []
+        timeline_available = customer_timeline is not None
+        sapo_id = _sapo_customer_id(ids)
+        if sapo_id and (customer_dim_metrics is not None or customer_timeline is not None):
+            coros = []
+            run_dim = customer_dim_metrics is not None
+            run_tl = customer_timeline is not None
+            if run_dim:
+                coros.append(asyncio.to_thread(customer_dim_metrics.get_by_customer_id, sapo_id))
+            if run_tl:
+                coros.append(asyncio.to_thread(customer_timeline.get_by_customer_id, sapo_id))
+            results = await asyncio.gather(*coros, return_exceptions=True)
+            idx = 0
+            if run_dim:
+                r = results[idx]; idx += 1
+                if isinstance(r, Exception):
+                    log.warning("c360 insight render: dim_metrics %s: %s", party_id, r)
+                else:
+                    dim_metrics = r
+            if run_tl:
+                r = results[idx]
+                if isinstance(r, Exception):
+                    log.warning("c360 insight render: snapshots %s: %s", party_id, r)
+                else:
+                    snapshots = r or []
+        return templates.TemplateResponse(
+            "fragments/c360_insight_panel.html",
+            {**ctx, "insight": ins, "rep_insights": rep_ins,
+             "resolved_action_ids": resolved_ids, "customer_claim": customer_claim,
+             "dim_metrics": dim_metrics, "snapshots": snapshots,
+             "timeline_available": timeline_available},
+        )
+
+    @router.patch("/customers/{party_id}/claim", response_class=HTMLResponse)
+    async def handle_c360_claim_customer(
+        request: Request, party_id: str
+    ) -> Response:
+        """Claim all action items for a customer from C360."""
+        uid = getattr(getattr(request.state, "current_user", None), "user_id", "")
+        if not uid:
+            return HTMLResponse("", status_code=401)
+        if task_svc is not None:
+            try:
+                _, ids = _load_base(party_id)
+                ins = _load_insight(ids)
+                actions = ins.actions if ins else []
+                task_svc.claim_customer_actions(party_id, actions, uid)
+            except Exception as exc:
+                log.error("c360: claim customer %s: %s", party_id, exc)
+        return await _render_insight_panel_response(request, party_id)
+
+    @router.patch("/customers/{party_id}/unclaim", response_class=HTMLResponse)
+    async def handle_c360_unclaim_customer(
+        request: Request, party_id: str
+    ) -> Response:
+        """Cancel the per-customer claim task from C360."""
+        if task_svc is not None:
+            try:
+                task_svc.unclaim_customer_actions(party_id)
+            except Exception as exc:
+                log.error("c360: unclaim customer %s: %s", party_id, exc)
+        return await _render_insight_panel_response(request, party_id)
+
     @router.get("/customers/{party_id}/panels/{panel}", response_class=HTMLResponse)
     async def handle_customer_360_panel(
         request: Request, party_id: str, panel: str
     ) -> Response:
         ctx: dict = {"request": request, "party_id": party_id}
         if panel == "insight":
-            _, ids = _load_base(party_id)
-            ins = _load_insight(ids)
-            rep_ins: list[PartyInsight] = []
-            if party_insights is not None:
-                try:
-                    rep_ins = [
-                        i for i in party_insights.list_by_party(party_id)
-                        if not i.deleted_at
-                    ]
-                except Exception as exc:
-                    log.warning("c360 insight panel: rep insights %s: %s", party_id, exc)
-            resolved_ids: set[str] = set()
-            if action_task_resolver is not None:
-                try:
-                    resolved_ids = action_task_resolver.resolved_action_ids(party_id)
-                except Exception as exc:
-                    log.warning("c360 insight panel: resolved_ids %s: %s", party_id, exc)
-            dim_metrics: Optional[CustomerDimMetrics] = None
-            snapshots: list = []
-            timeline_available = customer_timeline is not None
-            sapo_id = _sapo_customer_id(ids)
-            if sapo_id and (customer_dim_metrics is not None or customer_timeline is not None):
-                # Run both DuckDB reads concurrently — read_only supports parallel readers.
-                coros = []
-                run_dim = customer_dim_metrics is not None
-                run_tl = customer_timeline is not None
-                if run_dim:
-                    coros.append(asyncio.to_thread(customer_dim_metrics.get_by_customer_id, sapo_id))
-                if run_tl:
-                    coros.append(asyncio.to_thread(customer_timeline.get_by_customer_id, sapo_id))
-                results = await asyncio.gather(*coros, return_exceptions=True)
-                idx = 0
-                if run_dim:
-                    r = results[idx]; idx += 1
-                    if isinstance(r, Exception):
-                        log.warning("c360 insight panel: dim_metrics %s: %s", party_id, r)
-                    else:
-                        dim_metrics = r
-                if run_tl:
-                    r = results[idx]
-                    if isinstance(r, Exception):
-                        log.warning("c360 insight panel: snapshots %s: %s", party_id, r)
-                    else:
-                        snapshots = r or []
-            return templates.TemplateResponse(
-                "fragments/c360_insight_panel.html",
-                {**ctx, "insight": ins, "rep_insights": rep_ins, "resolved_action_ids": resolved_ids,
-                 "dim_metrics": dim_metrics, "snapshots": snapshots, "timeline_available": timeline_available},
-            )
+            return await _render_insight_panel_response(request, party_id)
         if panel == "orders":
             _, ids = _load_base(party_id)
             ins = _load_insight(ids)
@@ -197,6 +238,14 @@ def register_panel_routes(
                 resolved_ids = action_task_resolver.resolved_action_ids(party_id)
             except Exception as exc:
                 log.warning("c360: dismiss-session resolved_ids %s: %s", party_id, exc)
+        claimed_tasks_ds: dict = {}
+        if claimed_action_resolver is not None and ins is not None and ins.actions:
+            try:
+                claimed_tasks_ds = claimed_action_resolver.get_claimed_tasks_by_action_ids(
+                    [a.action_id for a in ins.actions]
+                )
+            except Exception as exc:
+                log.warning("c360: dismiss-session claimed_tasks %s: %s", party_id, exc)
         rep_ins: list = []
         if party_insights is not None:
             try:
@@ -207,5 +256,6 @@ def register_panel_routes(
             "fragments/c360_insight_panel.html",
             {"request": request, "party_id": party_id, "insight": ins,
              "rep_insights": rep_ins, "resolved_action_ids": resolved_ids,
+             "claimed_tasks": claimed_tasks_ds,
              "dim_metrics": None, "snapshots": [], "timeline_available": False},
         )

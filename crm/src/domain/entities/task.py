@@ -26,8 +26,9 @@ VALID_TASK_STATUSES = [
 # ---------------------------------------------------------------------------
 TASK_SOURCE_MANUAL = "manual"
 TASK_SOURCE_ACTION_QUEUE = "action_queue"
+TASK_SOURCE_ACTION_QUEUE_CLAIM = "action_queue_claim"  # per-customer claim (1 task covers all actions)
 TASK_SOURCE_CAMPAIGN = "campaign"
-VALID_TASK_SOURCES = [TASK_SOURCE_MANUAL, TASK_SOURCE_ACTION_QUEUE, TASK_SOURCE_CAMPAIGN]
+VALID_TASK_SOURCES = [TASK_SOURCE_MANUAL, TASK_SOURCE_ACTION_QUEUE, TASK_SOURCE_ACTION_QUEUE_CLAIM, TASK_SOURCE_CAMPAIGN]
 
 # ---------------------------------------------------------------------------
 # Priority constants (0 = normal, higher = more urgent)

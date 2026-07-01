@@ -66,6 +66,11 @@ class ActionStateWriter(Protocol):
     def snooze(self, action_id: str, until_date: str, user_id: Optional[str]) -> None: ...
 
 
+class TaskClaimWriter(Protocol):
+    def claim_customer_actions(self, party_id: str, actions: list, assignee_id: str) -> tuple: ...
+    def unclaim_customer_actions(self, party_id: str) -> bool: ...
+
+
 class PartyContactReader(Protocol):
     def get_preferred_identity(self, party_id: str) -> Optional[PartyIdentity]: ...
     def list_pinned_contact_pref_notes(self, party_id: str) -> list[Note]: ...
@@ -81,6 +86,7 @@ def make_worklist_router(
     task_writer: TaskWriter,
     action_state: Optional[ActionStateWriter] = None,
     party_contacts: Optional[PartyContactReader] = None,
+    task_claim: Optional[TaskClaimWriter] = None,
 ) -> APIRouter:
     """Return APIRouter wired with all Worklist routes."""
     router = APIRouter()
@@ -260,6 +266,22 @@ def make_worklist_router(
             {"request": request, **data, **filters},
         )
 
+    async def _render_worklist_fragment(request: Request) -> Response:
+        """Return the worklist fragment template; reads filters from form body or query params."""
+        try:
+            form = await request.form()
+            # hx-include sends form data in PATCH body; fall back to query params for GET
+            params = form if form else request.query_params
+        except Exception:
+            params = request.query_params
+        filters = parse_filters(params)
+        script_cids = _get_script_cids(request)
+        data = _load_worklist_data(filters, _current_user_id(request), script_cids)
+        return templates.TemplateResponse(
+            "fragments/worklist_fragment.html",
+            {"request": request, **data, **filters},
+        )
+
     # ── HTMX fragment (refreshable inner container) ───────────────────────────
 
     @router.get("/worklist/fragment", response_class=HTMLResponse)
@@ -342,6 +364,73 @@ def make_worklist_router(
         worklist_svc.invalidate_cache()
         # hx-swap="delete" on the client removes the row; return empty body
         return HTMLResponse("", status_code=200)
+
+    # ── Action lifecycle: claim ("Nhận việc") ────────────────────────────
+    # Creates a task linked to the action item, assigned to the current user.
+    # The AND t.task_id IS NULL filter in cache_repository auto-hides the action
+    # from WorkList once the task exists — no crm_action_state change needed.
+
+    @router.patch("/worklist/actions/{action_id}/claim", response_class=HTMLResponse)
+    async def handle_claim_action(request: Request, action_id: str) -> Response:
+        """Claim ALL action items for the customer this action belongs to.
+
+        One click claims the whole customer — multiple staff calling the same
+        customer would disrupt them, so ownership is per-customer, not per-action.
+        """
+        uid = _current_user_id(request)
+        if not uid:
+            return HTMLResponse("Chưa đăng nhập", status_code=401)
+        if task_claim is None:
+            return HTMLResponse("", status_code=204)
+
+        try:
+            all_actions = worklist_svc.list_all_action_queue()
+        except Exception as exc:
+            log.error("worklist: claim: list_all_action_queue: %s", exc)
+            all_actions = []
+
+        action = next((a for a in all_actions if a.action_id == action_id), None)
+        if action is None:
+            return HTMLResponse("", status_code=200)
+
+        party_id = getattr(action, "party_id", None)
+        if not party_id:
+            notice = (
+                '<div class="wl-claimed-notice" style="padding:10px 14px;'
+                'color:var(--coral-600,#dc2626);font-size:0.875rem">'
+                '⚠ Chưa xác định được khách hàng trong hệ thống</div>'
+            )
+            return HTMLResponse(notice, status_code=200)
+
+        # Collect all action items for this customer (claim covers all of them)
+        customer_actions = [a for a in all_actions if getattr(a, "party_id", None) == party_id]
+
+        try:
+            _task, is_new = task_claim.claim_customer_actions(party_id, customer_actions, uid)
+        except Exception as exc:
+            log.error("worklist: claim customer %s: %s", party_id, exc)
+            return HTMLResponse("Không thể nhận việc", status_code=500)
+
+        try:
+            worklist_svc.invalidate_cache()
+        except Exception as exc:
+            log.warning("worklist: claim: invalidate_cache: %s", exc)
+
+        return await _render_worklist_fragment(request)
+
+    @router.patch("/worklist/customers/{party_id}/unclaim", response_class=HTMLResponse)
+    async def handle_unclaim_customer(request: Request, party_id: str) -> Response:
+        """Cancel the per-customer claim task, returning all their actions to the queue."""
+        if task_claim is not None:
+            try:
+                task_claim.unclaim_customer_actions(party_id)
+            except Exception as exc:
+                log.error("worklist: unclaim customer %s: %s", party_id, exc)
+        try:
+            worklist_svc.invalidate_cache()
+        except Exception as exc:
+            log.warning("worklist: unclaim: invalidate_cache: %s", exc)
+        return await _render_worklist_fragment(request)
 
     # ── Action lifecycle: snooze ──────────────────────────────────────────
 

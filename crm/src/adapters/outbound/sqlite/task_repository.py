@@ -48,6 +48,39 @@ SELECT COUNT(*) FROM crm_task
 WHERE source = ? AND source_ref = ?
 """
 
+_GET_BY_SOURCE_REF = """
+SELECT
+  task_id, party_id, title, description, due_at, priority, status,
+  assignee_user_id, source, source_ref, created_by, created_at, updated_at, completed_at
+FROM crm_task
+WHERE source = ? AND source_ref = ? AND status NOT IN ('done', 'cancelled')
+LIMIT 1
+"""
+
+_GET_CLAIMED_BY_ACTION_IDS = """
+SELECT
+  t.task_id, t.party_id, t.source_ref, t.assignee_user_id,
+  COALESCE(u.full_name, t.assignee_user_id, 'nhân viên') AS assignee_name
+FROM crm_task t
+LEFT JOIN crm_app_user u ON u.user_id = t.assignee_user_id
+WHERE t.source = 'action_queue'
+  AND t.source_ref IN ({placeholders})
+  AND t.status NOT IN ('done', 'cancelled')
+"""
+
+_GET_CUSTOMER_CLAIM = """
+SELECT
+  t.task_id, t.party_id, t.title, t.description, t.due_at, t.priority, t.status,
+  t.assignee_user_id, t.source, t.source_ref, t.created_by, t.created_at, t.updated_at, t.completed_at,
+  COALESCE(u.full_name, t.assignee_user_id, 'nhân viên') AS assignee_name
+FROM crm_task t
+LEFT JOIN crm_app_user u ON u.user_id = t.assignee_user_id
+WHERE t.source = 'action_queue_claim'
+  AND t.party_id = ?
+  AND t.status NOT IN ('done', 'cancelled')
+LIMIT 1
+"""
+
 _LIST_BY_ASSIGNEE_AND_STATUS = """
 SELECT
   task_id, party_id, title, description, due_at, priority, status,
@@ -246,3 +279,46 @@ class SQLiteTaskRepository:
         """Return True when a task with the given source + source_ref already exists."""
         row = self._conn.execute(_EXISTS_BY_SOURCE_REF, (source, source_ref)).fetchone()
         return bool(row[0]) if row is not None else False
+
+    def get_by_source_ref(self, source: str, source_ref: str) -> Optional[Task]:
+        """Return the active task matching source+source_ref, or None if not found / already done."""
+        row = self._conn.execute(_GET_BY_SOURCE_REF, (source, source_ref)).fetchone()
+        return _task_from_row(row) if row is not None else None
+
+    def get_customer_claim(self, party_id: str) -> Optional[Task]:
+        """Return the active per-customer claim task (source='action_queue_claim'), or None."""
+        row = self._conn.execute(_GET_CUSTOMER_CLAIM, (party_id,)).fetchone()
+        if row is None:
+            return None
+        return _task_from_row(row)
+
+    def get_customer_claim_info(self, party_id: str) -> Optional[dict]:
+        """Return {task_id, assignee_user_id, assignee_name} for active customer claim, or None."""
+        row = self._conn.execute(_GET_CUSTOMER_CLAIM, (party_id,)).fetchone()
+        if row is None:
+            return None
+        return {
+            "task_id": row["task_id"],
+            "assignee_user_id": row["assignee_user_id"],
+            "assignee_name": row["assignee_name"],
+        }
+
+    def get_claimed_tasks_by_action_ids(self, action_ids: list) -> dict:
+        """Return {action_id: {task_id, party_id, assignee_user_id, assignee_name}} for active claimed tasks.
+
+        Batch query — one round-trip for all action_ids of a customer.
+        """
+        if not action_ids:
+            return {}
+        placeholders = ",".join("?" * len(action_ids))
+        sql = _GET_CLAIMED_BY_ACTION_IDS.format(placeholders=placeholders)
+        rows = self._conn.execute(sql, action_ids).fetchall()
+        return {
+            row["source_ref"]: {
+                "task_id": row["task_id"],
+                "party_id": row["party_id"],
+                "assignee_user_id": row["assignee_user_id"],
+                "assignee_name": row["assignee_name"],
+            }
+            for row in rows
+        }

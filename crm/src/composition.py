@@ -557,6 +557,7 @@ def _register_web_routes(
         tasks=services["task"],
         task_writer=services["task"],
         action_state=sqlite_repos["action_state"],
+        task_claim=services["task"],
     ))
     customer_list_svc = CustomerListQueryService(
         parties=sqlite_repos["party"],
@@ -585,6 +586,7 @@ def _register_web_routes(
         task_svc=services["task"],
         app_users=sqlite_repos["app_user"],
         approach_repo=sqlite_repos["approach"],
+        claimed_action_resolver=sqlite_repos["task"],
     ))
     app.include_router(make_tasks_board_router(
         templates=templates,

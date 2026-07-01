@@ -163,8 +163,9 @@ class SQLiteCacheRepository:
                   AND pi.identity_value = CAST(ps.customer_id AS TEXT)
             LEFT JOIN crm_action_state s ON s.action_id = a.action_id
             LEFT JOIN crm_task t
-                   ON t.source = 'action_queue'
-                  AND t.source_ref = a.action_id
+                   ON t.source = 'action_queue_claim'
+                  AND t.party_id = pi.party_id
+                  AND pi.party_id IS NOT NULL
                   AND t.status NOT IN ('done', 'cancelled')
             LEFT JOIN cache.wh_customer_tier ct ON ct.customer_key = a.customer_key
             WHERE COALESCE(s.status, 'open') != 'dismissed'
@@ -194,8 +195,9 @@ class SQLiteCacheRepository:
                   AND pi.identity_value = CAST(ps.customer_id AS TEXT)
             LEFT JOIN crm_action_state s ON s.action_id = sa.action_id
             LEFT JOIN crm_task t
-                   ON t.source = 'action_queue'
-                  AND t.source_ref = sa.action_id
+                   ON t.source = 'action_queue_claim'
+                  AND t.party_id = pi.party_id
+                  AND pi.party_id IS NOT NULL
                   AND t.status NOT IN ('done', 'cancelled')
             LEFT JOIN cache.wh_customer_tier ct ON ct.customer_key = sa.customer_key
             WHERE COALESCE(s.status, 'open') != 'dismissed'

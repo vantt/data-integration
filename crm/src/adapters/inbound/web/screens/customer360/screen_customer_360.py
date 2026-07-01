@@ -93,6 +93,11 @@ class ActionTaskResolver(Protocol):
     def resolved_action_ids(self, party_id: str) -> set[str]: ...
 
 
+class ClaimedActionResolver(Protocol):
+    """Returns active per-customer claim task info for C360 display."""
+    def get_customer_claim_info(self, party_id: str) -> Optional[dict]: ...
+
+
 class ActionStateWriter(Protocol):
     """Marks action queue items as dismissed."""
     def dismiss(self, action_id: str, user_id: Optional[str] = None) -> None: ...
@@ -127,6 +132,7 @@ def make_customer_360_router(
     custom_field_defs: Optional[CustomFieldDefReader] = None,
     party_insights: Optional[PartyInsightReader] = None,
     action_task_resolver: Optional[ActionTaskResolver] = None,
+    claimed_action_resolver: Optional[ClaimedActionResolver] = None,
     party_finder: Optional[PartyFinder] = None,
     customer_code_resolver: Optional[CustomerCodeResolver] = None,
     customer_timeline=None,
@@ -262,6 +268,8 @@ def make_customer_360_router(
         party_tasks=party_tasks,
         party_insights=party_insights,
         action_task_resolver=action_task_resolver,
+        claimed_action_resolver=claimed_action_resolver,
+        task_svc=task_svc,
         action_state=action_state,
         customer_timeline=customer_timeline,
         customer_orders=customer_orders,

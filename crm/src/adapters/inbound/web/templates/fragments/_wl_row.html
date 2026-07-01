@@ -110,13 +110,13 @@
   </div>
 
   <div class="wl-row__aside">
-    {# Script "Gọi" button: navigates to S14 call cockpit — action_queue.call_mode_requested #}
-    {% if _has_script and pid %}
-    <a class="btn btn--primary" style="padding:8px 12px"
-       href="/customers/{{ pid }}?tab=call_cockpit"
-       title="Mở kịch bản gọi — S14 Call Cockpit"
-       onclick="event.stopPropagation()">📋 Gọi</a>
-    {% elif pid %}{{ contact_btn(pid, pref_id) }}{% endif %}
+    {# Claim: primary CTA — claims ALL customer actions, reloads entire worklist #}
+    <button class="btn btn--primary" style="padding:8px 12px" type="button"
+            title="Nhận việc — gán tất cả action của khách cho bạn"
+            hx-patch="/worklist/actions/{{ a.action_id }}/claim"
+            hx-target="#worklist-container" hx-swap="outerHTML"
+            hx-include="#wl-filter-form"
+            onclick="event.stopPropagation()">Nhận việc</button>
 
     {# Snooze dropdown — no-JS <details> popover #}
     <details class="wl-snooze" onclick="event.stopPropagation()">
@@ -227,9 +227,17 @@
             hx-target="#task-{{ t.task_id }}" hx-swap="delete"
             title="Hủy task này" onclick="event.stopPropagation()">Dọn</button>
     {% endif %}
+    {# Claim tasks: "Trả việc" reloads entire worklist so actions reappear #}
+    {% if t.source == 'action_queue_claim' and pid %}
+    <button class="btn btn--ghost" style="padding:8px 10px;color:var(--fg-tertiary)"
+            hx-patch="/worklist/customers/{{ pid }}/unclaim"
+            hx-target="#worklist-container" hx-swap="outerHTML"
+            hx-include="#wl-filter-form"
+            title="Trả việc về hàng đợi" onclick="event.stopPropagation()">Trả việc</button>
+    {% endif %}
 
     {% if pid %}
-    <a href="/customers/{{ pid }}" class="btn btn--ghost" style="padding:8px 10px"
+    <a href="/customers/{{ pid }}?tab=tasks" class="btn btn--ghost" style="padding:8px 10px"
        onclick="event.stopPropagation()">Mở hồ sơ {% include "icons/chevron.svg" %}</a>
     {% endif %}
   </div>

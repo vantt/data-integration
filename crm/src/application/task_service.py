@@ -18,6 +18,7 @@ from domain.entities.task import (
     TASK_ALLOWED_TRANSITIONS,
     TASK_SOURCE_MANUAL,
     TASK_SOURCE_ACTION_QUEUE,
+    TASK_SOURCE_ACTION_QUEUE_CLAIM,
 )
 from domain.ports.task_repository import TaskRepository
 from domain.ports.cache_repository import CacheRepository
@@ -154,6 +155,104 @@ class TaskService:
     def assign_to(self, task_id: str, user_id: str) -> None:
         """Assign a task to a user (self-assign from team queue)."""
         self.assign_task(task_id, user_id)
+
+    def claim_customer_actions(self, party_id: str, actions: list, assignee_id: str) -> tuple:
+        """Claim all action items for a customer by creating one per-customer task.
+
+        Returns (task, is_new). is_new=False when already claimed by someone.
+        One call per customer — regardless of how many action items exist.
+        """
+        existing = self._task_repo.get_customer_claim(party_id)
+        if existing is not None:
+            return existing, False
+
+        count = len(actions)
+        customer_name = getattr(actions[0], "customer_name", None) if actions else None
+        title = f"Gọi {customer_name or party_id} · {count} hành động"
+        lines = [f"[{a.action_type}] {(getattr(a, 'rationale_vi', '') or '').strip()}" for a in actions]
+        description = "\n".join(lines) if lines else None
+        priority = max((getattr(a, "priority", 1) for a in actions), default=1)
+
+        now = utc_now()
+        task = Task(
+            task_id=str(uuid.uuid4()),
+            party_id=party_id,
+            title=title,
+            description=description,
+            priority=priority,
+            status=TASK_STATUS_OPEN,
+            source=TASK_SOURCE_ACTION_QUEUE_CLAIM,
+            source_ref=party_id,
+            assignee_user_id=assignee_id,
+            created_at=now,
+            updated_at=now,
+        )
+        self._task_repo.insert(task)
+        if self._db:
+            self._db.commit()
+        return task, True
+
+    def unclaim_customer_actions(self, party_id: str) -> bool:
+        """Cancel the per-customer claim task, returning all actions to the unclaimed queue."""
+        existing = self._task_repo.get_customer_claim(party_id)
+        if existing is None:
+            return False
+        existing.status = TASK_STATUS_CANCELLED
+        existing.completed_at = utc_now()
+        self._task_repo.update(existing)
+        if self._db:
+            self._db.commit()
+        return True
+
+    def unclaim_action_item(self, action_id: str) -> bool:
+        """Cancel the active task for an action item, returning it to the unclaimed queue.
+
+        Returns True when a task was found and cancelled, False when no active task exists.
+        """
+        existing = self._task_repo.get_by_source_ref(TASK_SOURCE_ACTION_QUEUE, action_id)
+        if existing is None:
+            return False
+        existing.status = TASK_STATUS_CANCELLED
+        existing.completed_at = utc_now()
+        self._task_repo.update(existing)
+        if self._db:
+            self._db.commit()
+        return True
+
+    def claim_action_item(
+        self, action_id: str, action, assignee_id: str
+    ) -> tuple:
+        """Claim an action item by creating a task assigned to assignee_id.
+
+        Returns (task, is_new). is_new=False when the action was already claimed.
+        Idempotent: a second claim attempt returns the existing task, not an error.
+        """
+        existing = self._task_repo.get_by_source_ref(TASK_SOURCE_ACTION_QUEUE, action_id)
+        if existing is not None:
+            return existing, False
+
+        rationale = (getattr(action, "rationale_vi", None) or "").strip()
+        label = rationale[:80] if rationale else getattr(action, "customer_key", action_id)
+        title = f"[{action.action_type}] {label}"
+
+        now = utc_now()
+        task = Task(
+            task_id=str(uuid.uuid4()),
+            party_id=getattr(action, "party_id", None),
+            title=title,
+            description=rationale or None,
+            priority=getattr(action, "priority", 1),
+            status=TASK_STATUS_OPEN,
+            source=TASK_SOURCE_ACTION_QUEUE,
+            source_ref=action_id,
+            assignee_user_id=assignee_id,
+            created_at=now,
+            updated_at=now,
+        )
+        self._task_repo.insert(task)
+        if self._db:
+            self._db.commit()
+        return task, True
 
     def list_tasks(
         self,

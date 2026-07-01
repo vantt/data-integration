@@ -15,7 +15,11 @@
 {% set refreshed_at = refreshed_at | default('') %}
 {% set is_stale = is_stale | default(false) %}
 
-<div id="worklist-container">
+<div id="worklist-container"
+     hx-get="/worklist/fragment"
+     hx-trigger="claimSuccess from:body"
+     hx-include="#wl-filter-form"
+     hx-swap="outerHTML">
 
   {# ── KPI strip ────────────────────────────────────────────────────────────
      value_total  = sum of value_at_stake across ALL value-bearing rows.
