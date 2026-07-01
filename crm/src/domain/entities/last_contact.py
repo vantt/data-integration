@@ -37,6 +37,8 @@ class LastContact:
     last_contact_result: str        # enum: answered|no_answer|callback|refused|replied|no_reply|met|not_met|other
     channel: Optional[str] = None   # call|zalo|fb|email|visit|other
     updated_at: str = ""
+    staff_user_id: Optional[str] = None   # FK → crm_app_user.user_id
+    staff_name: Optional[str] = None      # joined from crm_app_user.full_name at read time
 
     @property
     def display_label(self) -> str:

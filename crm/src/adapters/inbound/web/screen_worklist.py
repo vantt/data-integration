@@ -203,6 +203,15 @@ def make_worklist_router(
                 a.party_id for a in all_actions
                 if a.party_id and _lc_age_seconds(a.party_id) <= 86400
             }
+            # Claim tasks whose party was recently contacted also belong in Band 4.
+            # Their actions are hidden from all_actions by the SQL filter, so we
+            # must check my_tasks directly to capture them.
+            contacted_party_ids |= {
+                t.party_id for t in my_tasks
+                if t.party_id
+                and getattr(t, "source", "") == "action_queue_claim"
+                and _lc_age_seconds(t.party_id) <= 86400
+            }
 
         # --- Rank into banded structure ------------------------------------
         today = today_ict()

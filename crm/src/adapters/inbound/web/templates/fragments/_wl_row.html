@@ -16,25 +16,26 @@
 {% set _has_script = script_cids is not none and a.customer_id is not none and a.customer_id in script_cids %}
 
 {# ── Shared quick-contact button ──────────────────────────────────────────── #}
-{% macro contact_btn(party_id, pref_id) %}
+{% macro contact_btn(party_id, pref_id, task_id='') %}
+{% set _task_qs = ('&task_id=' ~ task_id) if task_id else '' %}
   {% if pref_id and pref_id.identity_type in ('phone', 'phone_secondary') %}
   <button class="btn btn--secondary" style="padding:8px 12px"
-          hx-get="/modals/m08?party_id={{ party_id }}&mode=contact_attempt&channel=phone"
+          hx-get="/modals/m08?party_id={{ party_id }}&mode=contact_attempt&channel=phone{{ _task_qs }}"
           hx-target="#modal-root" hx-swap="innerHTML"
           title="Gọi điện" onclick="event.stopPropagation()">📞 Gọi</button>
   {% elif pref_id and pref_id.identity_type == 'zalo' %}
   <button class="btn btn--secondary" style="padding:8px 12px"
-          hx-get="/modals/m08?party_id={{ party_id }}&mode=contact_attempt&channel=zalo"
+          hx-get="/modals/m08?party_id={{ party_id }}&mode=contact_attempt&channel=zalo{{ _task_qs }}"
           hx-target="#modal-root" hx-swap="innerHTML"
           title="Zalo" onclick="event.stopPropagation()">💬 Zalo</button>
   {% elif pref_id and pref_id.identity_type == 'facebook' %}
   <button class="btn btn--secondary" style="padding:8px 12px"
-          hx-get="/modals/m08?party_id={{ party_id }}&mode=contact_attempt&channel=facebook"
+          hx-get="/modals/m08?party_id={{ party_id }}&mode=contact_attempt&channel=facebook{{ _task_qs }}"
           hx-target="#modal-root" hx-swap="innerHTML"
           title="Facebook" onclick="event.stopPropagation()">📘 Facebook</button>
   {% else %}
   <button class="btn btn--secondary" style="padding:8px 12px"
-          hx-get="/modals/m08?party_id={{ party_id }}&mode=contact_attempt"
+          hx-get="/modals/m08?party_id={{ party_id }}&mode=contact_attempt{{ _task_qs }}"
           hx-target="#modal-root" hx-swap="innerHTML"
           onclick="event.stopPropagation()">📞 Gọi</button>
   {% endif %}
@@ -81,7 +82,7 @@
     <div class="wl-row__pref">💬 {{ cpn.body }}</div>
     {% endfor %}
     {% if last_contact %}
-    <div class="wl-lc-strip">
+    <div class="wl-lc-strip{% if row.band == 4 %} wl-lc-strip--b4{% endif %}">
       <span class="wl-lc-badge wl-lc-badge--{{ last_contact.sentiment_class }}">
         {% if last_contact.last_contact_result == 'answered' %}✅
         {% elif last_contact.last_contact_result == 'replied' %}💬
@@ -90,7 +91,9 @@
         {% elif last_contact.last_contact_result == 'callback' %}⏰
         {% elif last_contact.last_contact_result == 'no_answer' %}📵
         {% else %}📞{% endif %}
-        {{ last_contact.last_contacted_at | format_relative }} · {{ last_contact.display_label }}
+        {{ last_contact.display_label }}
+        · {{ last_contact.last_contacted_at | format_relative }}
+        {% if last_contact.staff_name %} · {{ last_contact.staff_name }}{% endif %}
       </span>
       {% if pid %}
       <a href="/customers/{{ pid }}?tab=activities" class="wl-lc-link"
@@ -98,6 +101,7 @@
       {% endif %}
     </div>
     {% endif %}
+    {% if row.band != 4 %}
     <div class="wl-row__meta">
       {% if a.value_at_stake_vnd > 0 %}
       <span class="wl-row__value">{% include "icons/money.svg" %} {{ a.value_at_stake_vnd | fmt_vnd }}</span>
@@ -107,9 +111,12 @@
         {% if row.neglect_days >= 1 %} · {{ row.neglect_days }} ngày{% endif %}
       </span>
     </div>
+    {% endif %}
   </div>
 
   <div class="wl-row__aside">
+    {# Band 4 (Đã liên hệ): no primary CTA, no snooze/dismiss — customer already handled #}
+    {% if row.band != 4 %}
     {# Claim: primary CTA — claims ALL customer actions, reloads entire worklist #}
     <button class="btn btn--primary" style="padding:8px 12px" type="button"
             title="Nhận việc — gán tất cả action của khách cho bạn"
@@ -137,6 +144,7 @@
             hx-patch="/worklist/actions/{{ a.action_id }}/dismiss"
             hx-target="#aq-{{ a.action_id }}" hx-swap="delete"
             onclick="event.stopPropagation()">✕ Bỏ qua</button>
+    {% endif %}
 
     {% if pid %}
     <a href="/customers/{{ pid }}" class="btn btn--ghost" style="padding:8px 10px"
@@ -198,7 +206,9 @@
         {% elif last_contact.last_contact_result == 'callback' %}⏰
         {% elif last_contact.last_contact_result == 'no_answer' %}📵
         {% else %}📞{% endif %}
-        {{ last_contact.last_contacted_at | format_relative }} · {{ last_contact.display_label }}
+        {{ last_contact.display_label }}
+        · {{ last_contact.last_contacted_at | format_relative }}
+        {% if last_contact.staff_name %} · {{ last_contact.staff_name }}{% endif %}
       </span>
       {% if pid %}
       <a href="/customers/{{ pid }}?tab=activities" class="wl-lc-link"
@@ -214,7 +224,13 @@
   </div>
 
   <div class="wl-row__aside">
-    {% if pid %}{{ contact_btn(pid, pref_id) }}{% endif %}
+    {% if pid %}
+      {% if t.source == 'action_queue_claim' %}
+        {{ contact_btn(pid, pref_id, task_id=t.task_id) }}
+      {% else %}
+        {{ contact_btn(pid, pref_id) }}
+      {% endif %}
+    {% endif %}
 
     {# Band 0 (overdue) tasks get reschedule + cancel controls #}
     {% if row.band == 0 %}

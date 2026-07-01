@@ -234,6 +234,10 @@ def rank_worklist(
         us = urgency_score("task", prio)
         due = _parse_date(getattr(t, "due_at", None))
         band = assign_band("task", us, due, None, None, "", today)
+        # Claim tasks: if party was recently contacted, move to Band 4 (mirrors action logic).
+        pid = getattr(t, "party_id", None) or ""
+        if getattr(t, "source", "") == "action_queue_claim" and pid and pid in _contacted:
+            band = 4
         neglect = (today - due).days if due and due < today else 0
         rows.append(WorklistRow(
             kind="task",

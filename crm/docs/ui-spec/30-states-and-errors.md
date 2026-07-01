@@ -177,6 +177,15 @@ Không có row `cache.wh_approach_script` cho `customer_id` → empty state + CT
 `confidence=low` → talk-track hiển thị nhạt + nhãn "độ tin thấp, kiểm chứng".
 (Stale → dùng lại `ST-STALE-CACHE`; loading → `ST-LOADING`.)
 
+### ST-CALL-NO-ACTIONS
+`insight.actions` rỗng → rail "Vì sao gọi" (reason_to_call) hiện caveat "Không có đề xuất — dùng kịch bản".
+
+### ST-CALL-COLLECT-DONE
+Sau khi bấm [+] ở dòng thu thập (collect) → dòng đó swap thành "✓ đã lưu" (client-side, KHÔNG re-render `#s14-panel-root` để bảo toàn trạng thái tick điểm nói / objection).
+
+### ST-CALL-CONSENT-WARN
+`consent_contact='denied'` (R1) → chip đỏ ở alert_row cảnh báo, **nhưng KHÔNG chặn** nút Gọi/Zalo — chỉ cảnh báo, rep tự chịu trách nhiệm (quyết định sản phẩm).
+
 ---
 
 ## Error Conditions

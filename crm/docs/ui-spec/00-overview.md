@@ -44,7 +44,7 @@ Internal Retail CRM · ~10 users · Desktop-first · Python (FastAPI, server-ren
 | M02 | Create Party Modal | S02, M11 |
 | M03 | Tag Management Modal | S03 |
 | M04 | Assign Owner Modal | S03 |
-| M05 | Create / Edit Task Modal | S01, S03, S07, P04 |
+| M05 | Create / Edit Task Modal | S01, S03, S07, P04, S14 |
 | M06 | Custom Fields Edit Modal | S03 |
 | M07 | Create / Edit Campaign Modal | S10, S11 |
 | M08 | Log Activity Modal | S03, S01, S06, S14, P02, P03, P04, P05 |
@@ -54,7 +54,7 @@ Internal Retail CRM · ~10 users · Desktop-first · Python (FastAPI, server-ren
 | M12 | Record Conversion Modal | S11 |
 | M13 | Custom Field Definition Modal | S13 |
 | M14 | Create Tag Modal | S13, M03 |
-| M15 | Edit Contact & Core Info Modal | S03 |
+| M15 | Edit Contact & Core Info Modal | S03, S14 |
 | M16 | Promote / Create Insight Modal | P01, P05 |
 
 ### Overlays

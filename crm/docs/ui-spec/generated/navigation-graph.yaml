@@ -1311,6 +1311,64 @@ edges:
       source: verify_account
       prefill_title: Xác minh loại tài khoản (nghi B2B)
     region: stop_banner
+  - id: A-S14-020
+    from: S14
+    element: btn_collect_channel_add
+    trigger: click
+    action: mutate
+    effects:
+      - collect.channel.add_inline
+      - collect.row.swap_done
+    region: collect
+  - id: A-S14-021
+    from: S14
+    element: btn_collect_core_save
+    trigger: click
+    action: mutate
+    effects:
+      - collect.core_field.save_inline
+      - collect.row.swap_done
+    region: collect
+  - id: A-S14-022
+    from: S14
+    element: btn_collect_open_address
+    trigger: click
+    action: open_overlay
+    target: M15
+    payload:
+      party_id: $party.id
+      tab: address
+    region: collect
+  - id: A-S14-023
+    from: S14
+    element: btn_fix_invalid_contact
+    trigger: click
+    action: open_overlay
+    target: M15
+    payload:
+      party_id: $party.id
+      tab: contacts
+    region: collect
+  - id: A-S14-024
+    from: S14
+    element: btn_reason_schedule
+    trigger: click
+    action: open_overlay
+    target: M05
+    payload:
+      party_id: $party.id
+      source: action_queue
+      source_ref: $action.action_id
+      prefill_title: $action.title
+    region: reason_to_call
+  - id: A-S14-025
+    from: S14
+    element: reason_mentioned_checkbox
+    trigger: click
+    action: mutate
+    effects:
+      - reason.toggle_mentioned
+    region: reason_to_call
   - id: A-S14-LSN01
     from: S14
     listens_to: cache.refreshed

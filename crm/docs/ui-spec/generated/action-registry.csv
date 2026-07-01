@@ -156,6 +156,12 @@ A-S14-008,S14,click,navigate,S01,,topbar
 A-S14-009,S14,click,open_overlay,M08,,outcome_bar
 A-S14-010,S14,click,navigate,S14,,outcome_bar
 A-S14-011,S14,click,open_overlay,M05,,stop_banner
+A-S14-020,S14,click,mutate,,,collect
+A-S14-021,S14,click,mutate,,,collect
+A-S14-022,S14,click,open_overlay,M15,,collect
+A-S14-023,S14,click,open_overlay,M15,,collect
+A-S14-024,S14,click,open_overlay,M05,,reason_to_call
+A-S14-025,S14,click,mutate,,,reason_to_call
 A-S14-LSN01,S14,cache.refreshed,mutate,,,
 A-P01-001,P01,click,mutate,,,signals_block
 A-P01-002,P01,click,open_overlay,M16,,rep_insights_block

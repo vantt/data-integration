@@ -76,16 +76,19 @@ def make_task(
     due_at: str | None = None,
     status: str = "open",
     title: str = "Test task",
+    source: str = "manual",
+    party_id: str | None = None,
 ) -> Task:
     return Task(
         task_id=task_id,
         title=title,
         priority=priority,
         status=status,
-        source="manual",
+        source=source,
         created_at=_TS,
         updated_at=_TS,
         due_at=due_at,
+        party_id=party_id,
     )
 
 
@@ -638,6 +641,66 @@ class TestWorklistRowFields:
         all_rows = [r for band in result["bands"] for r in band["rows"]]
         row = next(r for r in all_rows if r.kind == "action")
         assert row.neglect_days == 5
+
+
+# =============================================================================
+# Band 4 — claim task compatibility with "Đã liên hệ"
+# =============================================================================
+
+class TestRankWorklistBand4ClaimTasks:
+    """Claim tasks (source='action_queue_claim') move to Band 4 when party was recently contacted.
+
+    Mirrors the action Band 4 override: contacted_party_ids drives placement for
+    both actions and claim tasks.
+    """
+
+    def test_claim_task_moves_to_band4_when_party_contacted(self):
+        """Claim task whose party_id is in contacted_party_ids lands in Band 4."""
+        t = make_task("t-claim", source="action_queue_claim", party_id="party-001")
+        result = rank_worklist([], [t], TODAY, contacted_party_ids={"party-001"})
+        band4 = _b(result, 4)
+        assert band4["count"] == 1
+        assert band4["rows"][0].ref_id == "t-claim"
+
+    def test_claim_task_stays_in_band2_when_party_not_contacted(self):
+        """Claim task with no recent contact stays in normal band (Band 2 for no-due-date)."""
+        t = make_task("t-claim", source="action_queue_claim", party_id="party-002")
+        result = rank_worklist([], [t], TODAY, contacted_party_ids=set())
+        band4 = _b(result, 4)
+        band2 = _b(result, 2)
+        assert band4["count"] == 0
+        assert any(r.ref_id == "t-claim" for r in band2["rows"])
+
+    def test_manual_task_does_not_move_to_band4_even_if_party_contacted(self):
+        """Only source='action_queue_claim' triggers Band 4; manual tasks are unaffected."""
+        t = make_task("t-manual", source="manual", party_id="party-003")
+        result = rank_worklist([], [t], TODAY, contacted_party_ids={"party-003"})
+        band4 = _b(result, 4)
+        assert band4["count"] == 0
+
+    def test_claim_task_in_band4_has_kind_task(self):
+        t = make_task("t-claim", source="action_queue_claim", party_id="party-001")
+        result = rank_worklist([], [t], TODAY, contacted_party_ids={"party-001"})
+        band4 = _b(result, 4)
+        assert band4["rows"][0].kind == "task"
+
+    def test_action_and_claim_task_both_in_band4_for_same_party(self):
+        """Action + claim task for the same party both land in Band 4."""
+        a = make_action("a-001")
+        a.party_id = "party-001"
+        t = make_task("t-claim", source="action_queue_claim", party_id="party-001")
+        result = rank_worklist([a], [t], TODAY, contacted_party_ids={"party-001"})
+        band4 = _b(result, 4)
+        kinds = {r.kind for r in band4["rows"]}
+        assert "action" in kinds
+        assert "task" in kinds
+
+    def test_claim_task_no_party_id_not_moved_to_band4(self):
+        """Claim task with no party_id cannot match contacted_party_ids — stays in Band 2."""
+        t = make_task("t-claim", source="action_queue_claim", party_id=None)
+        result = rank_worklist([], [t], TODAY, contacted_party_ids={"party-001"})
+        band4 = _b(result, 4)
+        assert band4["count"] == 0
 
 
 # =============================================================================

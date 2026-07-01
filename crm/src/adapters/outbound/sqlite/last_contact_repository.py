@@ -10,25 +10,34 @@ from adapters.outbound.sqlite.connection import CRMDatabase
 
 _UPSERT = """
 INSERT INTO crm_last_contact (
-  party_id, last_activity_id, last_contacted_at, last_contact_result, channel, updated_at
-) VALUES (?, ?, ?, ?, ?, ?)
+  party_id, last_activity_id, last_contacted_at, last_contact_result, channel, staff_user_id, updated_at
+) VALUES (?, ?, ?, ?, ?, ?, ?)
 ON CONFLICT (party_id) DO UPDATE SET
   last_activity_id    = excluded.last_activity_id,
   last_contacted_at   = excluded.last_contacted_at,
   last_contact_result = excluded.last_contact_result,
   channel             = excluded.channel,
+  staff_user_id       = excluded.staff_user_id,
   updated_at          = excluded.updated_at
 WHERE excluded.last_contacted_at >= crm_last_contact.last_contacted_at
 """
 
 _GET = """
-SELECT party_id, last_activity_id, last_contacted_at, last_contact_result, channel, updated_at
-FROM crm_last_contact WHERE party_id = ?
+SELECT lc.party_id, lc.last_activity_id, lc.last_contacted_at, lc.last_contact_result,
+       lc.channel, lc.staff_user_id, lc.updated_at,
+       au.full_name AS staff_name
+FROM crm_last_contact lc
+LEFT JOIN crm_app_user au ON au.user_id = lc.staff_user_id
+WHERE lc.party_id = ?
 """
 
 _GET_MANY = """
-SELECT party_id, last_activity_id, last_contacted_at, last_contact_result, channel, updated_at
-FROM crm_last_contact WHERE party_id IN ({placeholders})
+SELECT lc.party_id, lc.last_activity_id, lc.last_contacted_at, lc.last_contact_result,
+       lc.channel, lc.staff_user_id, lc.updated_at,
+       au.full_name AS staff_name
+FROM crm_last_contact lc
+LEFT JOIN crm_app_user au ON au.user_id = lc.staff_user_id
+WHERE lc.party_id IN ({placeholders})
 """
 
 
@@ -40,6 +49,8 @@ def _row_to_entity(row: sqlite3.Row) -> LastContact:
         last_contact_result=row["last_contact_result"],
         channel=row["channel"],
         updated_at=row["updated_at"],
+        staff_user_id=row["staff_user_id"],
+        staff_name=row["staff_name"],
     )
 
 
@@ -54,9 +65,10 @@ class SQLiteLastContactRepository:
         contacted_at: str,
         result: str,
         channel: Optional[str] = None,
+        staff_user_id: Optional[str] = None,
     ) -> None:
         now = datetime.now(timezone.utc).isoformat()
-        self._conn.execute(_UPSERT, (party_id, activity_id, contacted_at, result, channel, now))
+        self._conn.execute(_UPSERT, (party_id, activity_id, contacted_at, result, channel, staff_user_id, now))
 
     def get_by_party(self, party_id: str) -> Optional[LastContact]:
         row = self._conn.execute(_GET, (party_id,)).fetchone()

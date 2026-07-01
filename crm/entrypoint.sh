@@ -39,6 +39,7 @@ else
     else
         echo "[entrypoint] WARN: sync_parties failed — crm_party table may be empty" >&2
     fi
+
 fi
 
 # ── Step 4: Start CRM server (foreground) ────────────────────────────────────

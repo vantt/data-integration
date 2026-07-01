@@ -190,6 +190,15 @@ def register_activity_routes(
         except Exception as exc:
             log.error("log activity party %s: %s", party_id, exc)
             return HTMLResponse("Lỗi ghi log hoạt động", status_code=500)
+        # Auto-claim: create a claim task when contact is logged without prior claiming.
+        # Skip when task_id is present — staff is already in the structured task flow.
+        if outcome.strip() and actor_id and task_svc is not None and not task_id.strip():
+            try:
+                party360 = profile.get_party_360(party_id)
+                customer_name = party360.display_name if party360 else ""
+                task_svc.auto_claim_from_contact(party_id, customer_name, actor_id)
+            except Exception as exc:
+                log.warning("m08: auto-claim %s: %s", party_id, exc)
         if save_as_note == "1" and body.strip():
             try:
                 notes.add_note(

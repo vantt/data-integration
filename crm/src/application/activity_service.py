@@ -69,6 +69,7 @@ class ActivityService:
                     contacted_at=activity.occurred_at,
                     result=activity.outcome,
                     channel=activity.channel,
+                    staff_user_id=activity.staff_user_id,
                 )
             except Exception as exc:
                 log.warning("last_contact upsert %s: %s", activity.party_id, exc)

@@ -204,6 +204,36 @@ class TaskService:
             self._db.commit()
         return True
 
+    def auto_claim_from_contact(self, party_id: str, customer_name: str, assignee_id: str) -> tuple:
+        """Create a minimal claim task when contact is logged without prior claiming.
+
+        Called from the activity route when staff contacts a customer without
+        having clicked "Nhận việc" first — ensures ownership is always captured.
+        Returns (task, is_new). is_new=False when a claim task already exists.
+        Idempotent via the (source, source_ref) unique index on crm_task.
+        """
+        existing = self._task_repo.get_customer_claim(party_id)
+        if existing is not None:
+            return existing, False
+
+        now = utc_now()
+        task = Task(
+            task_id=str(uuid.uuid4()),
+            party_id=party_id,
+            title=f"Liên hệ {customer_name or party_id}",
+            priority=0,
+            status=TASK_STATUS_OPEN,
+            source=TASK_SOURCE_ACTION_QUEUE_CLAIM,
+            source_ref=party_id,
+            assignee_user_id=assignee_id,
+            created_at=now,
+            updated_at=now,
+        )
+        self._task_repo.insert(task)
+        if self._db:
+            self._db.commit()
+        return task, True
+
     def unclaim_action_item(self, action_id: str) -> bool:
         """Cancel the active task for an action item, returning it to the unclaimed queue.
 

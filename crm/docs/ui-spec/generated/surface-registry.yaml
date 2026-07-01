@@ -233,11 +233,15 @@ surfaces:
     regions:
       - topbar
       - identity_bar
+      - alert_row
       - strategy_summary
+      - snapshot
       - talk_track
       - talking_points
       - objection_handling
       - guardrails
+      - reason_to_call
+      - collect
       - trust_footer
       - outcome_bar
       - stop_banner
