@@ -309,6 +309,26 @@ def parse_misa_account_ledger(file_path):
             marker_totals.pop(p, None)
             cong_totals.pop(p, None)
 
+    # ── 3c. Business rule: 6422 group — keep parent (6422) only ───────────────
+    # New downloader exports 6422 parent + all 6422* sub-accounts (TH select-all).
+    # Business requirement: only parent-level postings (6422) are needed.
+    # Sub-accounts are granular cost centers that, when summed with the parent,
+    # would double-count (MISA posts costs at different levels independently).
+    # 6421 group is handled by step 3b (parent==Σleaves → parent dropped, leaves kept).
+    # Include zero-row accounts (present in marker_totals but no detail rows)
+    _6422_children = (
+        {r["account"] for r in rows if r["account"].startswith("6422") and r["account"] != "6422"}
+        | {a for a in line_debits if a.startswith("6422") and a != "6422"}
+        | {a for a in marker_totals if a.startswith("6422") and a != "6422"}
+    )
+    if _6422_children:
+        rows = [r for r in rows if r["account"] not in _6422_children]
+        for acct in _6422_children:
+            line_debits.pop(acct, None)
+            marker_totals.pop(acct, None)
+            cong_totals.pop(acct, None)
+        print(f"  6422 sub-accounts dropped (keep parent only): {sorted(_6422_children)}")
+
     # ── 4. Build DataFrame ─────────────────────────────────────────────────────
     if not rows:
         print(f"  WARNING: no detail rows found in {source_file}")

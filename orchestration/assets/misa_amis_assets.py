@@ -1,7 +1,7 @@
-"""Dagster assets for MISA AMIS file-drop ingestion (sales ledger + account ledger).
-
-Writes to ingestion_health via orchestration.ops.ingestion_health on every run.
-Sensor fires one run per file; file_path is passed via MisaFiledropConfig.
+"""Dagster assets for MISA AMIS ingestion:
+  - misa_sales_download_asset: Playwright browser automation downloads weekly sales ledger
+  - misa_sales_file_drop_asset: parses Excel and writes parquet (sensor-triggered)
+  - misa_account_ledger_file_drop_asset: parses account-ledger Excel
 """
 
 import importlib.util
@@ -43,6 +43,30 @@ def _import_from_file(module_name, file_path):
 
 
 # ── Lazy-loaded run modules ────────────────────────────────────────────────────
+# download module — loaded on first use to avoid importing Playwright at startup
+
+_run_download_module = None
+_run_account_ledger_download_module = None
+
+
+def _get_run_download_module():
+    global _run_download_module
+    if _run_download_module is None:
+        _run_download_module = _import_from_file(
+            "run_misa_sales_download",
+            os.path.join(DLT_DIR, "run-misa-sales-download.py"),
+        )
+    return _run_download_module
+
+
+def _get_run_account_ledger_download_module():
+    global _run_account_ledger_download_module
+    if _run_account_ledger_download_module is None:
+        _run_account_ledger_download_module = _import_from_file(
+            "run_misa_account_ledger_download",
+            os.path.join(DLT_DIR, "run-misa-account-ledger-download.py"),
+        )
+    return _run_account_ledger_download_module
 
 _run_module = None
 _run_account_ledger_module = None
@@ -66,6 +90,129 @@ def _get_run_account_ledger_module():
             os.path.join(DLT_DIR, "run-misa-account-ledger-file-drop.py"),
         )
     return _run_account_ledger_module
+
+
+# ── Weekly download asset ─────────────────────────────────────────────────────
+
+@asset(group_name="misa_amis_ingestion", key_prefix=["misa_amis"])
+def misa_sales_download_asset(context):
+    """Download 'Sổ chi tiết bán hàng' Excel from MISA AMIS web portal.
+
+    Runs headless Playwright, selects 'Tuần Trước', exports Excel, and drops
+    the file into the misa-sales-ledger input directory. The file-drop sensor
+    then picks it up and triggers misa_sales_file_drop_asset automatically.
+
+    Scheduled weekly: Monday 07:00 ICT (previous Mon–Sun range).
+    """
+    asset_key_str = "misa_amis/misa_sales_download_asset"
+    started = datetime.now(timezone.utc)
+    context.log.info("Starting MISA sales ledger weekly download...")
+
+    status = "failed"
+    rows_fetched = None
+    file_sha256 = None
+    saved_path = None
+    try:
+        cwd = os.getcwd()
+        try:
+            os.chdir(DLT_DIR)
+            _get_run_download_module().run(argv=[])  # headless=True (default), period=tuan_truoc
+        finally:
+            os.chdir(cwd)
+
+        # Scan the drop zone to get file metadata for Dagster metadata panel
+        drop_files = scan_drop_zone(_MISA_INPUT_DIR)
+        if drop_files:
+            latest = max(drop_files, key=lambda e: e.get("file_mtime") or 0)
+            saved_path = latest.get("path")
+            rows_fetched = latest.get("rows_fetched")
+            file_sha256 = latest.get("file_sha256")
+
+        status = "success"
+        context.log.info(f"MISA download complete: {saved_path}")
+        return Output(
+            saved_path or "OK",
+            metadata={
+                "status": MetadataValue.text("Success"),
+                "saved_path": MetadataValue.text(str(saved_path) if saved_path else "unknown"),
+                "file_sha256": MetadataValue.text(file_sha256 or "unknown"),
+            },
+        )
+    except Exception as exc:
+        context.log.error(f"MISA download error: {exc}")
+        raise
+    finally:
+        try:
+            _record_health(
+                asset_key=asset_key_str,
+                run_id=context.run_id,
+                run_started_at=started,
+                status=status,
+                rows_fetched=rows_fetched,
+                file_sha256=file_sha256,
+                file_mtime=None,
+                metadata={"saved_path": str(saved_path) if saved_path else None},
+            )
+        except Exception as _e:
+            context.log.warning(f"ingestion_health record_run failed: {_e}")
+
+
+@asset(group_name="misa_amis_ingestion", key_prefix=["misa_amis"])
+def misa_account_ledger_download_asset(context):
+    """Download 'Sổ chi tiết tài khoản' Excel (6421 + 6422) from MISA AMIS web portal.
+
+    Runs headless Playwright, selects previous month, accounts 6421+6422,
+    exports Excel, drops So_chi_tiet_6421_6422_YYYYMM.xlsx into the
+    account-ledger input directory. The file-drop sensor picks it up automatically.
+
+    Scheduled monthly: 1st Monday of each month 07:05 ICT — or weekly Monday
+    07:05 if monthly download is needed (schedule set per business requirement).
+    """
+    asset_key_str = "misa_amis/misa_account_ledger_download_asset"
+    started = datetime.now(timezone.utc)
+    context.log.info("Starting MISA account-ledger monthly download...")
+
+    status = "failed"
+    saved_path = None
+    try:
+        cwd = os.getcwd()
+        try:
+            os.chdir(DLT_DIR)
+            _get_run_account_ledger_download_module().run(argv=[])
+        finally:
+            os.chdir(cwd)
+
+        drop_files = scan_drop_zone(_MISA_ACCOUNT_LEDGER_INPUT_DIR)
+        if drop_files:
+            latest = max(drop_files, key=lambda e: e.get("file_mtime") or 0)
+            saved_path = latest.get("path")
+
+        status = "success"
+        context.log.info(f"MISA account-ledger download complete: {saved_path}")
+        return Output(
+            saved_path or "OK",
+            metadata={
+                "status": MetadataValue.text("Success"),
+                "saved_path": MetadataValue.text(str(saved_path) if saved_path else "unknown"),
+            },
+        )
+    except Exception as exc:
+        context.log.error(f"MISA account-ledger download error: {exc}")
+        raise
+    finally:
+        try:
+            _record_health(
+                asset_key=asset_key_str,
+                run_id=context.run_id,
+                run_started_at=started,
+                status=status,
+                rows_fetched=None,
+                file_sha256=None,
+                file_mtime=None,
+                metadata={"saved_path": str(saved_path) if saved_path else None},
+            )
+        except Exception as _e:
+            context.log.warning(f"ingestion_health record_run failed: {_e}")
 
 
 class MisaFiledropConfig(Config):

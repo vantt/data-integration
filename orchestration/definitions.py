@@ -147,6 +147,22 @@ ingest_filedrop_shopee_job = define_asset_job(
     tags=SYNC_TAGS,
 )
 
+# Cadence-based ingest jobs — browser automation, no DuckDB writes, no SYNC_TAGS lock.
+# Add new assets to the matching job; schedules below stay unchanged.
+ingest_weekly_job = define_asset_job(
+    name="ingest_weekly_job",
+    selection=AssetSelection.assets(
+        misa_amis_assets.misa_sales_download_asset,
+    ),
+)
+
+ingest_monthly_job = define_asset_job(
+    name="ingest_monthly_job",
+    selection=AssetSelection.assets(
+        misa_amis_assets.misa_account_ledger_download_asset,
+    ),
+)
+
 # 2.7 MISA sales-ledger file-drop sync job
 _misa_source = AssetSelection.assets(misa_amis_assets.misa_sales_file_drop_asset)
 ingest_filedrop_misa_job = define_asset_job(
@@ -428,6 +444,33 @@ def pipeline_batch_nightly_schedule(context):
     return RunRequest(run_key=None)
 
 
+# Monday 07:00 ICT — runs all assets in ingest_weekly_job (currently: MISA sales ledger).
+# 1st of month 07:00 ICT — runs all assets in ingest_monthly_job (currently: MISA account ledger).
+# To add a new periodic ingest task: add its asset to the matching job above — no new schedule needed.
+@schedule(
+    job=ingest_weekly_job,
+    cron_schedule="0 7 * * 1",
+    execution_timezone="Asia/Ho_Chi_Minh",
+)
+def ingest_weekly_schedule(context):
+    active = _has_active_run(context, "ingest_weekly_job")
+    if active:
+        return SkipReason(f"ingest_weekly: previous run still active ({active[:8]})")
+    return RunRequest(run_key=None)
+
+
+@schedule(
+    job=ingest_monthly_job,
+    cron_schedule="0 7 1 * *",
+    execution_timezone="Asia/Ho_Chi_Minh",
+)
+def ingest_monthly_schedule(context):
+    active = _has_active_run(context, "ingest_monthly_job")
+    if active:
+        return SkipReason(f"ingest_monthly: previous run still active ({active[:8]})")
+    return RunRequest(run_key=None)
+
+
 _ICT = timezone(timedelta(hours=7))  # Asia/Ho_Chi_Minh, no pytz dependency
 
 # Fast path: fires immediately after purge succeeds (normally ~02:35).
@@ -654,6 +697,8 @@ defs = Definitions(
         pipeline_sapo_v2_incremental_job,
         pipeline_sapo_v2_hourly_job,
         ingest_sheets_sync_job,
+        ingest_weekly_job,
+        ingest_monthly_job,
         ingest_filedrop_shopee_job,
         ingest_filedrop_misa_job,
         ingest_filedrop_misa_account_ledger_job,
@@ -678,6 +723,9 @@ defs = Definitions(
         pipeline_sapo_v2_hourly_schedule,
         # transform_*
         pipeline_batch_nightly_schedule,
+        # cadence-based ingest (add assets to jobs above, not new schedules here)
+        ingest_weekly_schedule,
+        ingest_monthly_schedule,
         # health_*
         health_recon_daily_schedule,
         health_kpi_closure_schedule,
