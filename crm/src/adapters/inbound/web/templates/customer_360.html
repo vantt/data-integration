@@ -130,9 +130,18 @@
         {% if ns.primary_phone %}
         <div class="fact"><span class="fact__k">Điện thoại</span><span class="fact__v mono">{{ ns.primary_phone }}</span></div>
         {% endif %}
-        {# Sapo IDs from identities #}
+        {# Sapo IDs from identities — with deep-link back to Sapo admin #}
         {% for ident in identities %}{% if ident.identity_type == 'sapo_customer' %}
-        <div class="fact"><span class="fact__k">Sapo ID</span><span class="fact__v mono">{{ ident.identity_value }}</span></div>
+        <div class="fact">
+          <span class="fact__k">Sapo ID</span>
+          <span class="fact__v mono">{{ ident.identity_value }}
+            <a href="https://fwg.mysapogo.com/admin/customers/{{ ident.identity_value }}"
+               target="_blank" rel="noopener" title="Xem trên Sapo"
+               style="margin-left:3px;vertical-align:middle;line-height:1;display:inline-flex">
+              <img src="/static/sapo-icon-16.png" width="14" height="14" alt="Sapo">
+            </a>
+          </span>
+        </div>
         {% endif %}{% endfor %}
         {% for ident in identities %}{% if ident.identity_type == 'customer_code' %}
         <div class="fact"><span class="fact__k">Sapo Code</span><span class="fact__v mono">{{ ident.identity_value }}</span></div>
