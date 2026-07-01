@@ -23,6 +23,10 @@ class TaskQuerier(Protocol):
     def list_tasks(self, assignee: str, status: str) -> list[Task]: ...
 
 
+class UserQuerier(Protocol):
+    def list_active(self) -> list: ...
+
+
 class TaskWriter(Protocol):
     def transition_status(self, task_id: str, new_status: str) -> None: ...
 
@@ -65,6 +69,7 @@ def make_tasks_board_router(
     task_writer: TaskWriter,
     task_creator: TaskCreator,
     task_generator: Optional[TaskGenerator] = None,
+    user_querier: Optional[UserQuerier] = None,
 ) -> APIRouter:
     """Return APIRouter wired with all Tasks Board routes."""
     router = APIRouter()
@@ -78,6 +83,7 @@ def make_tasks_board_router(
         except Exception as exc:
             log.error("tasks board: list: %s", exc)
             tasks = []
+        users = user_querier.list_active() if user_querier else []
         grouped = _group_by_status(tasks)
         return templates.TemplateResponse(
             "tasks_board.html",
@@ -87,6 +93,7 @@ def make_tasks_board_router(
                 "assignee_filter": assignee,
                 "status_filter": status_filter,
                 "task_status_css": _task_status_css,
+                "users": users,
             },
         )
 

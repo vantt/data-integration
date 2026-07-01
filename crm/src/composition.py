@@ -594,6 +594,7 @@ def _register_web_routes(
         task_writer=services["task"],
         task_creator=services["task"],
         task_generator=services["task"],
+        user_querier=sqlite_repos["app_user"],
     ))
     app.include_router(make_inbox_router(
         templates=templates,

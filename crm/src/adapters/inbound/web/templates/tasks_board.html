@@ -49,6 +49,24 @@
           <span class="fsel__chev">⌄</span>
         </div>
       </div>
+      {% if users %}
+      <div class="fsel">
+        <span class="fsel__label caption">Người phụ trách</span>
+        <div class="fsel__field">
+          <select name="assignee"
+                  hx-get="/tasks"
+                  hx-target="body"
+                  hx-push-url="true"
+                  hx-include="[name='status']">
+            <option value=""{% if assignee_filter == "" %} selected{% endif %}>Tất cả</option>
+            {% for u in users %}
+            <option value="{{ u.user_id }}"{% if assignee_filter == u.user_id %} selected{% endif %}>{{ u.full_name }}</option>
+            {% endfor %}
+          </select>
+          <span class="fsel__chev">⌄</span>
+        </div>
+      </div>
+      {% endif %}
     </div>
   </div>
 
