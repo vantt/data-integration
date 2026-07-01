@@ -162,16 +162,26 @@ class SQLiteCacheRepository:
                    ON pi.identity_type = 'sapo_customer'
                   AND pi.identity_value = CAST(ps.customer_id AS TEXT)
             LEFT JOIN crm_action_state s ON s.action_id = a.action_id
-            LEFT JOIN crm_task t
-                   ON t.source = 'action_queue_claim'
-                  AND t.party_id = pi.party_id
-                  AND pi.party_id IS NOT NULL
-                  AND t.status NOT IN ('done', 'cancelled')
             LEFT JOIN cache.wh_customer_tier ct ON ct.customer_key = a.customer_key
             WHERE COALESCE(s.status, 'open') != 'dismissed'
               AND (COALESCE(s.status, 'open') != 'snoozed'
                    OR s.snoozed_until < date('now', '+7 hours'))  -- snoozed_until is an ICT date; date('now','+7h') = today in ICT
-              AND t.task_id IS NULL"""
+              AND NOT EXISTS (
+                  -- Hide when an active claim task exists, OR when a done/cancelled claim task
+                  -- was created after the last contact (same contact cycle — customer already handled).
+                  SELECT 1 FROM crm_task t
+                  WHERE t.source = 'action_queue_claim'
+                    AND t.party_id = pi.party_id
+                    AND pi.party_id IS NOT NULL
+                    AND (
+                        t.status NOT IN ('done', 'cancelled')
+                        OR EXISTS (
+                            SELECT 1 FROM crm_last_contact lc
+                            WHERE lc.party_id = pi.party_id
+                              AND t.created_at >= datetime(lc.last_contacted_at, '-5 minutes')
+                        )
+                    )
+              )"""
 
         _sku_branch = """
             SELECT sa.action_id, sa.customer_key, sa.action_type, sa.rationale_vi,
@@ -194,16 +204,24 @@ class SQLiteCacheRepository:
                    ON pi.identity_type = 'sapo_customer'
                   AND pi.identity_value = CAST(ps.customer_id AS TEXT)
             LEFT JOIN crm_action_state s ON s.action_id = sa.action_id
-            LEFT JOIN crm_task t
-                   ON t.source = 'action_queue_claim'
-                  AND t.party_id = pi.party_id
-                  AND pi.party_id IS NOT NULL
-                  AND t.status NOT IN ('done', 'cancelled')
             LEFT JOIN cache.wh_customer_tier ct ON ct.customer_key = sa.customer_key
             WHERE COALESCE(s.status, 'open') != 'dismissed'
               AND (COALESCE(s.status, 'open') != 'snoozed'
                    OR s.snoozed_until < date('now', '+7 hours'))
-              AND t.task_id IS NULL"""
+              AND NOT EXISTS (
+                  SELECT 1 FROM crm_task t
+                  WHERE t.source = 'action_queue_claim'
+                    AND t.party_id = pi.party_id
+                    AND pi.party_id IS NOT NULL
+                    AND (
+                        t.status NOT IN ('done', 'cancelled')
+                        OR EXISTS (
+                            SELECT 1 FROM crm_last_contact lc
+                            WHERE lc.party_id = pi.party_id
+                              AND t.created_at >= datetime(lc.last_contacted_at, '-5 minutes')
+                        )
+                    )
+              )"""
 
         full_sql = (
             "SELECT * FROM (" + _customer_branch + " UNION ALL " + _sku_branch + ") ORDER BY priority ASC"
