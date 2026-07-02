@@ -370,7 +370,7 @@
 
       <div class="modal__actions">
         <button type="button" class="btn btn--ghost"
-                hx-get="" hx-target="#modal-root" hx-swap="innerHTML">Hủy</button>
+                onclick="document.getElementById('modal-root').innerHTML=''">Hủy</button>
         <button type="submit" class="btn btn--primary">
           {% if mode in ('edit_note', 'note_only') %}Lưu ghi chú{% else %}Lưu hoạt động{% endif %}
         </button>

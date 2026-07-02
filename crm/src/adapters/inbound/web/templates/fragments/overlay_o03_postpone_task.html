@@ -11,15 +11,12 @@
 {% set prefill_time = due_at_prefill_time | default('') %}
 
 <div class="modal-scrim"
-     hx-get=""
-     hx-target="#modal-root"
-     hx-swap="innerHTML"
-     hx-trigger="click[!event.target.closest('.modal')]">
+     onclick="if(!event.target.closest('.modal')) document.getElementById('modal-root').innerHTML=''">
   <div class="modal modal--sm" role="dialog" aria-modal="true" aria-label="Hoãn task">
 
     <div class="modal__head">
       <div class="modal__title">Hoãn đến:</div>
-      <button class="icon-btn" hx-get="" hx-target="#modal-root" hx-swap="innerHTML" aria-label="Đóng">
+      <button class="icon-btn" onclick="document.getElementById('modal-root').innerHTML=''" aria-label="Đóng">
         <svg class="ico" width="14" height="14" viewBox="0 0 14 14" fill="none"
              stroke="currentColor" stroke-width="1.6" stroke-linecap="round" aria-hidden="true">
           <path d="M2 2l10 10M12 2L2 12"/>
@@ -52,7 +49,7 @@
 
       <div class="modal__actions">
         <button type="button" class="btn btn--ghost"
-                hx-get="" hx-target="#modal-root" hx-swap="innerHTML">Huỷ</button>
+                onclick="document.getElementById('modal-root').innerHTML=''">Huỷ</button>
         <button type="submit" id="o03-confirm" class="btn btn--primary"
                 {% if not prefill_date %}disabled{% endif %}>Xác nhận</button>
       </div>
