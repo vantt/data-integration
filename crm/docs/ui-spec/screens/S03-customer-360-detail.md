@@ -4,11 +4,10 @@ type: screen
 name: "Customer 360 Detail"
 platforms: [desktop]
 hosts: [P01, P02, P03, P04, P05, P06]
-tab_labels: ["Value & Behavior", "Ghi chú", "Đơn hàng", "Timeline", "Tasks", "Chat", "Gọi"]
 status: active
 design_ref: ""
 rules: [R2, R3, R6, R7, R13]
-regions: [topbar, sidebar, main_col, tab_bar]
+regions: [topbar, sidebar, sidebar.warning, sidebar.core_info, sidebar.head_line, sidebar.contact, sidebar.dates, sidebar.tags, main_col, tab_bar]
 ---
 
 # S03 — Customer 360 Detail
@@ -119,6 +118,8 @@ Source: `wh_customer_insight` / `wh_customer_base` (warehouse cache):
 
 ## Interactions
 
+> **A-S03-018 exception:** Tab "Gọi" loads `c360_call_cockpit_panel.html` — an embedded HTML fragment, not a registered panel surface. It remains `action: mutate` until a formal panel surface (P07+) is registered for it. All other tab interactions use `action: show_panel`.
+
 ```yaml crm-contract
 interactions:
   - id: A-S03-001
@@ -145,41 +146,41 @@ interactions:
     element: tab_insight
     region: tab_bar
     trigger: click
-    action: mutate
-    effects: [main_col.show_panel_P01]
+    action: show_panel
+    target: P01
   - id: A-S03-005
     element: tab_orders
     region: tab_bar
     trigger: click
-    action: mutate
-    effects: [main_col.show_panel_P02]
+    action: show_panel
+    target: P02
   - id: A-S03-006
     element: tab_timeline
     region: tab_bar
     trigger: click
-    action: mutate
-    effects: [main_col.show_panel_P03]
+    action: show_panel
+    target: P03
   - id: A-S03-007
     element: tab_tasks
     region: tab_bar
     trigger: click
-    action: mutate
-    effects: [main_col.show_panel_P04]
+    action: show_panel
+    target: P04
   - id: A-S03-008
     element: tab_notes
     region: tab_bar
     trigger: click
-    action: mutate
-    effects: [main_col.show_panel_P05]
+    action: show_panel
+    target: P05
   - id: A-S03-009
     element: tab_chat
     region: tab_bar
     trigger: click
-    action: mutate
-    effects: [main_col.show_panel_P06]
+    action: show_panel
+    target: P06
   - id: A-S03-010
     element: btn_edit_custom_fields
-    region: sidebar
+    region: sidebar.core_info
     trigger: click
     action: open_overlay
     target: M06
@@ -200,35 +201,35 @@ interactions:
     payload: { party_id: "$party.id" }
   - id: A-S03-013
     element: btn_edit_contacts
-    region: sidebar
+    region: sidebar.contact
     trigger: click
     action: open_overlay
     target: M15
     payload: { party_id: "$party.id", tab: "contacts" }
   - id: A-S03-014
     element: btn_edit_address
-    region: sidebar
+    region: sidebar.contact
     trigger: click
     action: open_overlay
     target: M15
     payload: { party_id: "$party.id", tab: "address" }
   - id: A-S03-015
     element: btn_edit_core_info
-    region: sidebar
+    region: sidebar.core_info
     trigger: click
     action: open_overlay
     target: M15
     payload: { party_id: "$party.id", tab: "core" }
   - id: A-S03-016
     element: contact_channel_quick_action
-    region: sidebar
+    region: sidebar.contact
     trigger: click
     action: open_overlay
     target: M08
     payload: { party_id: "$party.id", mode: "contact_attempt", channel: "$channel.type" }
   - id: A-S03-017
     element: btn_edit_tags
-    region: sidebar
+    region: sidebar.tags
     trigger: click
     action: open_overlay
     target: M03

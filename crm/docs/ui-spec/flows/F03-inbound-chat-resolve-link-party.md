@@ -3,7 +3,7 @@ id: F03
 type: flow
 name: "Inbound Chat → Resolve PSID → Link Party"
 platforms: [desktop]
-hosts: []
+hosted_by: []
 status: active
 design_ref: ""
 rules: []

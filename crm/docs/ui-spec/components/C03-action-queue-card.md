@@ -3,7 +3,7 @@ id: C03
 type: component
 name: "Action Queue Card"
 platforms: [desktop]
-hosts: [S01]
+hosted_by: [S01]
 status: active
 design_ref: ""
 rules: [R2]
@@ -28,6 +28,8 @@ Màu card khác nhau theo action_type urgency.
 - `action` (object, required): { action_id, action_type, rationale_vi, value_at_stake_vnd }
 - `party_id` (string, required): để prefill task modal
 - `compact` (bool, optional): compact view cho worklist rows
+
+Note: payload uses bare prop variables (`$party_id`) — these are component-level props passed from the host's loop context, not entity field paths. VR-PAYLOAD-GRAMMAR warns are accepted (see CONVENTION.md §9).
 
 ## States
 

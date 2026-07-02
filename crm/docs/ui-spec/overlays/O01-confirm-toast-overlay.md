@@ -3,7 +3,7 @@ id: O01
 type: overlay
 name: "Confirm / Toast Overlay"
 platforms: [desktop]
-hosts: [S03, S05, S13, P05]
+hosted_by: [S03, S05, S13, P05]
 status: active
 design_ref: ""
 rules: []

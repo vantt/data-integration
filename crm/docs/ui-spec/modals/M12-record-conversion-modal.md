@@ -3,7 +3,7 @@ id: M12
 type: modal
 name: "Record Conversion Modal"
 platforms: [desktop]
-hosts: [S11]
+hosted_by: [S11]
 status: active
 design_ref: ""
 rules: [R11]

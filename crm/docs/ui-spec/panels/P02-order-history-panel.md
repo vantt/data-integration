@@ -3,7 +3,7 @@ id: P02
 type: panel
 name: "Order History Panel"
 platforms: [desktop]
-hosts: [S03]
+hosted_by: [S03]
 status: active
 design_ref: ""
 rules: [R2, R3, R6]

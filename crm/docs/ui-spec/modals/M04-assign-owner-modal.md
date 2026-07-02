@@ -3,7 +3,7 @@ id: M04
 type: modal
 name: "Assign Owner Modal"
 platforms: [desktop]
-hosts: [S03]
+hosted_by: [S03]
 status: active
 design_ref: ""
 rules: []

@@ -3,7 +3,7 @@ id: M01
 type: modal
 name: "Merge Confirm Modal"
 platforms: [desktop]
-hosts: [S04]
+hosted_by: [S04]
 status: active
 design_ref: ""
 rules: [R4, R5, R9]

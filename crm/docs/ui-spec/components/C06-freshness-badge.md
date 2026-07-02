@@ -3,7 +3,7 @@ id: C06
 type: component
 name: "Freshness Badge"
 platforms: [desktop]
-hosts: [S01, S03, S12, P01, P02]
+hosted_by: [S01, S03, S12, P01, P02]
 status: active
 design_ref: ""
 rules: [R2]
@@ -23,6 +23,8 @@ timestamp đầy đủ ICT. Bắt buộc hiển thị tại mọi surface có in
 - `table_name` (string, required): tên bảng cache (cho tooltip label)
 - `refreshed_at` (string, required): UTC ISO-8601 timestamp
 - `display_tz` (string, optional, default "Asia/Ho_Chi_Minh"): timezone for display
+
+Note: payload uses bare prop variables (`$table_name`, `$refreshed_at`) — these are component-level props, not entity field paths. VR-PAYLOAD-GRAMMAR warns are accepted (see CONVENTION.md §9).
 
 ## States
 

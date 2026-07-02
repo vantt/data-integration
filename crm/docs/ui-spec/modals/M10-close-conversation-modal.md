@@ -3,7 +3,7 @@ id: M10
 type: modal
 name: "Close Conversation Modal"
 platforms: [desktop]
-hosts: [S06]
+hosted_by: [S06]
 status: active
 design_ref: ""
 rules: [R6]

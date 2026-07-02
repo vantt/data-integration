@@ -3,7 +3,7 @@ id: SYS
 type: screen
 name: "System Events"
 platforms: [desktop]
-hosts: []
+hosted_by: []
 status: active
 rules: []
 regions: []

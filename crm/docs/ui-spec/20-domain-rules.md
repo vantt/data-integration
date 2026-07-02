@@ -3,7 +3,7 @@ id: DR
 type: screen
 name: "Domain Rules"
 platforms: [desktop]
-hosts: []
+hosted_by: []
 status: active
 rules: []
 regions: []

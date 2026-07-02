@@ -3,7 +3,7 @@ id: M03
 type: modal
 name: "Tag Management Modal"
 platforms: [desktop]
-hosts: [S03, S15]
+hosted_by: [S03, S15]
 status: active
 design_ref: ""
 rules: []

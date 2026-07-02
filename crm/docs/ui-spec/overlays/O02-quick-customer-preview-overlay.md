@@ -3,7 +3,7 @@ id: O02
 type: overlay
 name: "Quick Customer Preview Overlay"
 platforms: [desktop]
-hosts: [S01, S07]
+hosted_by: [S01, S07]
 status: active
 design_ref: ""
 rules: [R2]

@@ -3,7 +3,7 @@ id: M13
 type: modal
 name: "Custom Field Definition Modal"
 platforms: [desktop]
-hosts: [S13]
+hosted_by: [S13]
 status: active
 design_ref: ""
 rules: []

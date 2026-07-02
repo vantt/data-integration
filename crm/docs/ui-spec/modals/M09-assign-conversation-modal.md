@@ -3,7 +3,7 @@ id: M09
 type: modal
 name: "Assign Conversation Modal"
 platforms: [desktop]
-hosts: [S05, S06]
+hosted_by: [S05, S06]
 status: active
 design_ref: ""
 rules: []

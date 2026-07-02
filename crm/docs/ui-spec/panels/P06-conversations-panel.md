@@ -3,7 +3,7 @@ id: P06
 type: panel
 name: "Conversations Panel"
 platforms: [desktop]
-hosts: [S03]
+hosted_by: [S03]
 status: active
 design_ref: ""
 rules: [R6, R12]

@@ -3,7 +3,7 @@ id: M16
 type: modal
 name: "Promote / Create Insight Modal"
 platforms: [desktop]
-hosts: [P01, P05]
+hosted_by: [P01, P05]
 status: active
 design_ref: ""
 rules: []

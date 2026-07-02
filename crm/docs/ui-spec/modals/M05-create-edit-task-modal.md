@@ -3,7 +3,7 @@ id: M05
 type: modal
 name: "Create / Edit Task Modal"
 platforms: [desktop]
-hosts: [S01, S03, S07, P04, S15]
+hosted_by: [S01, S03, S07, P04, S15]
 status: active
 design_ref: ""
 rules: []

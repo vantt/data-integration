@@ -57,6 +57,12 @@ surfaces:
     regions:
       - topbar
       - sidebar
+      - sidebar.warning
+      - sidebar.core_info
+      - sidebar.head_line
+      - sidebar.contact
+      - sidebar.dates
+      - sidebar.tags
       - main_col
       - tab_bar
   S04:
@@ -268,8 +274,7 @@ surfaces:
     name: Value & Behavior Panel
     platforms:
       - desktop
-    hosts:
-      - S03
+    hosts: []
     status: active
     file: panels/P01-insight-panel.md
     rules:
@@ -287,8 +292,7 @@ surfaces:
     name: Order History Panel
     platforms:
       - desktop
-    hosts:
-      - S03
+    hosts: []
     status: active
     file: panels/P02-order-history-panel.md
     rules:
@@ -303,8 +307,7 @@ surfaces:
     name: Activity Timeline Panel
     platforms:
       - desktop
-    hosts:
-      - S03
+    hosts: []
     status: active
     file: panels/P03-activity-timeline-panel.md
     rules:
@@ -317,8 +320,7 @@ surfaces:
     name: Tasks Panel
     platforms:
       - desktop
-    hosts:
-      - S03
+    hosts: []
     status: active
     file: panels/P04-tasks-panel.md
     rules: []
@@ -330,8 +332,7 @@ surfaces:
     name: Notes Panel
     platforms:
       - desktop
-    hosts:
-      - S03
+    hosts: []
     status: active
     file: panels/P05-notes-panel.md
     rules: []
@@ -344,8 +345,7 @@ surfaces:
     name: Conversations Panel
     platforms:
       - desktop
-    hosts:
-      - S03
+    hosts: []
     status: active
     file: panels/P06-conversations-panel.md
     rules:
@@ -359,8 +359,7 @@ surfaces:
     name: Merge Confirm Modal
     platforms:
       - desktop
-    hosts:
-      - S04
+    hosts: []
     status: active
     file: modals/M01-merge-confirm-modal.md
     rules:
@@ -376,8 +375,7 @@ surfaces:
     name: Create Party Modal
     platforms:
       - desktop
-    hosts:
-      - S02
+    hosts: []
     status: active
     file: modals/M02-create-party-modal.md
     rules:
@@ -391,9 +389,7 @@ surfaces:
     name: Tag Management Modal
     platforms:
       - desktop
-    hosts:
-      - S03
-      - S15
+    hosts: []
     status: active
     file: modals/M03-tag-management-modal.md
     rules: []
@@ -406,8 +402,7 @@ surfaces:
     name: Assign Owner Modal
     platforms:
       - desktop
-    hosts:
-      - S03
+    hosts: []
     status: active
     file: modals/M04-assign-owner-modal.md
     rules: []
@@ -420,12 +415,7 @@ surfaces:
     name: Create / Edit Task Modal
     platforms:
       - desktop
-    hosts:
-      - S01
-      - S03
-      - S07
-      - P04
-      - S15
+    hosts: []
     status: active
     file: modals/M05-create-edit-task-modal.md
     rules: []
@@ -438,8 +428,7 @@ surfaces:
     name: Custom Fields Edit Modal
     platforms:
       - desktop
-    hosts:
-      - S03
+    hosts: []
     status: active
     file: modals/M06-custom-fields-edit-modal.md
     rules: []
@@ -452,9 +441,7 @@ surfaces:
     name: Create / Edit Campaign Modal
     platforms:
       - desktop
-    hosts:
-      - S10
-      - S11
+    hosts: []
     status: active
     file: modals/M07-create-edit-campaign-modal.md
     rules:
@@ -468,15 +455,7 @@ surfaces:
     name: Log Activity Modal
     platforms:
       - desktop
-    hosts:
-      - S03
-      - S01
-      - S06
-      - S15
-      - P02
-      - P03
-      - P04
-      - P05
+    hosts: []
     status: active
     file: modals/M08-log-activity-modal.md
     rules:
@@ -491,9 +470,7 @@ surfaces:
     name: Assign Conversation Modal
     platforms:
       - desktop
-    hosts:
-      - S05
-      - S06
+    hosts: []
     status: active
     file: modals/M09-assign-conversation-modal.md
     rules: []
@@ -506,8 +483,7 @@ surfaces:
     name: Close Conversation Modal
     platforms:
       - desktop
-    hosts:
-      - S06
+    hosts: []
     status: active
     file: modals/M10-close-conversation-modal.md
     rules:
@@ -521,8 +497,7 @@ surfaces:
     name: Link Party to Conversation Modal
     platforms:
       - desktop
-    hosts:
-      - S06
+    hosts: []
     status: active
     file: modals/M11-link-party-to-conversation-modal.md
     rules:
@@ -536,8 +511,7 @@ surfaces:
     name: Record Conversion Modal
     platforms:
       - desktop
-    hosts:
-      - S11
+    hosts: []
     status: active
     file: modals/M12-record-conversion-modal.md
     rules:
@@ -551,8 +525,7 @@ surfaces:
     name: Custom Field Definition Modal
     platforms:
       - desktop
-    hosts:
-      - S13
+    hosts: []
     status: active
     file: modals/M13-custom-field-def-modal.md
     rules: []
@@ -565,9 +538,7 @@ surfaces:
     name: Create Tag Modal
     platforms:
       - desktop
-    hosts:
-      - S13
-      - M03
+    hosts: []
     status: active
     file: modals/M14-create-tag-modal.md
     rules: []
@@ -580,9 +551,7 @@ surfaces:
     name: Edit Contact & Core Info Modal
     platforms:
       - desktop
-    hosts:
-      - S03
-      - S15
+    hosts: []
     status: active
     file: modals/M15-edit-contact-core-info-modal.md
     rules:
@@ -598,9 +567,7 @@ surfaces:
     name: Promote / Create Insight Modal
     platforms:
       - desktop
-    hosts:
-      - P01
-      - P05
+    hosts: []
     status: active
     file: modals/M16-promote-insight-modal.md
     rules: []
@@ -613,11 +580,7 @@ surfaces:
     name: Confirm / Toast Overlay
     platforms:
       - desktop
-    hosts:
-      - S03
-      - S05
-      - S13
-      - P05
+    hosts: []
     status: active
     file: overlays/O01-confirm-toast-overlay.md
     rules: []
@@ -629,9 +592,7 @@ surfaces:
     name: Quick Customer Preview Overlay
     platforms:
       - desktop
-    hosts:
-      - S01
-      - S07
+    hosts: []
     status: active
     file: overlays/O02-quick-customer-preview-overlay.md
     rules:
@@ -644,10 +605,7 @@ surfaces:
     name: Postpone Task Overlay
     platforms:
       - desktop
-    hosts:
-      - P04
-      - S07
-      - S15
+    hosts: []
     status: active
     file: overlays/O03-postpone-task-overlay.md
     rules:
@@ -660,20 +618,7 @@ surfaces:
     name: Sidebar Nav
     platforms:
       - desktop
-    hosts:
-      - S01
-      - S02
-      - S03
-      - S04
-      - S05
-      - S06
-      - S07
-      - S08
-      - S09
-      - S10
-      - S11
-      - S12
-      - S13
+    hosts: []
     status: active
     file: components/C01-sidebar-nav.md
     rules: []
@@ -683,9 +628,7 @@ surfaces:
     name: Global Customer Search
     platforms:
       - desktop
-    hosts:
-      - S02
-      - S03
+    hosts: []
     status: active
     file: components/C02-global-customer-search.md
     rules:
@@ -696,8 +639,7 @@ surfaces:
     name: Action Queue Card
     platforms:
       - desktop
-    hosts:
-      - S01
+    hosts: []
     status: active
     file: components/C03-action-queue-card.md
     rules:
@@ -708,10 +650,7 @@ surfaces:
     name: Tag Chips
     platforms:
       - desktop
-    hosts:
-      - S02
-      - S03
-      - S04
+    hosts: []
     status: active
     file: components/C04-tag-chips.md
     rules: []
@@ -721,13 +660,7 @@ surfaces:
     name: Filter Bar
     platforms:
       - desktop
-    hosts:
-      - S01
-      - S02
-      - S05
-      - S07
-      - S10
-      - S11
+    hosts: []
     status: active
     file: components/C05-filter-bar.md
     rules: []
@@ -737,12 +670,7 @@ surfaces:
     name: Freshness Badge
     platforms:
       - desktop
-    hosts:
-      - S01
-      - S03
-      - S12
-      - P01
-      - P02
+    hosts: []
     status: active
     file: components/C06-freshness-badge.md
     rules:

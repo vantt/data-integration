@@ -3,7 +3,7 @@ id: M02
 type: modal
 name: "Create Party Modal"
 platforms: [desktop]
-hosts: [S02]
+hosted_by: [S02]
 status: active
 design_ref: ""
 rules: [R5]

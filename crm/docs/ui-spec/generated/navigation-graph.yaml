@@ -425,49 +425,43 @@ edges:
     from: S03
     element: tab_insight
     trigger: click
-    action: mutate
-    effects:
-      - main_col.show_panel_P01
+    action: show_panel
+    target: P01
     region: tab_bar
   - id: A-S03-005
     from: S03
     element: tab_orders
     trigger: click
-    action: mutate
-    effects:
-      - main_col.show_panel_P02
+    action: show_panel
+    target: P02
     region: tab_bar
   - id: A-S03-006
     from: S03
     element: tab_timeline
     trigger: click
-    action: mutate
-    effects:
-      - main_col.show_panel_P03
+    action: show_panel
+    target: P03
     region: tab_bar
   - id: A-S03-007
     from: S03
     element: tab_tasks
     trigger: click
-    action: mutate
-    effects:
-      - main_col.show_panel_P04
+    action: show_panel
+    target: P04
     region: tab_bar
   - id: A-S03-008
     from: S03
     element: tab_notes
     trigger: click
-    action: mutate
-    effects:
-      - main_col.show_panel_P05
+    action: show_panel
+    target: P05
     region: tab_bar
   - id: A-S03-009
     from: S03
     element: tab_chat
     trigger: click
-    action: mutate
-    effects:
-      - main_col.show_panel_P06
+    action: show_panel
+    target: P06
     region: tab_bar
   - id: A-S03-010
     from: S03
@@ -477,7 +471,7 @@ edges:
     target: M06
     payload:
       party_id: $party.id
-    region: sidebar
+    region: sidebar.core_info
   - id: A-S03-011
     from: S03
     element: btn_log_activity
@@ -505,7 +499,7 @@ edges:
     payload:
       party_id: $party.id
       tab: contacts
-    region: sidebar
+    region: sidebar.contact
   - id: A-S03-014
     from: S03
     element: btn_edit_address
@@ -515,7 +509,7 @@ edges:
     payload:
       party_id: $party.id
       tab: address
-    region: sidebar
+    region: sidebar.contact
   - id: A-S03-015
     from: S03
     element: btn_edit_core_info
@@ -525,7 +519,7 @@ edges:
     payload:
       party_id: $party.id
       tab: core
-    region: sidebar
+    region: sidebar.core_info
   - id: A-S03-016
     from: S03
     element: contact_channel_quick_action
@@ -536,7 +530,7 @@ edges:
       party_id: $party.id
       mode: contact_attempt
       channel: $channel.type
-    region: sidebar
+    region: sidebar.contact
   - id: A-S03-017
     from: S03
     element: btn_edit_tags
@@ -545,7 +539,7 @@ edges:
     target: M03
     payload:
       party_id: $party.id
-    region: sidebar
+    region: sidebar.tags
   - id: A-S03-018
     from: S03
     element: tab_call_cockpit
@@ -2558,7 +2552,7 @@ edges:
     action: emit_event
     event: tag_chips.add_requested
     payload:
-      party_id: $party_id
+      party_id: $party.id
   - id: A-C04-002
     from: C04
     element: tag_chip_remove
@@ -2567,7 +2561,7 @@ edges:
     event: tag_chips.remove_requested
     payload:
       tag_id: $tag.id
-      party_id: $party_id
+      party_id: $party.id
   - id: A-C04-003
     from: C04
     element: tag_chip

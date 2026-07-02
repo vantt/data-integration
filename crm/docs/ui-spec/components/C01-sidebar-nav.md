@@ -3,7 +3,7 @@ id: C01
 type: component
 name: "Sidebar Nav"
 platforms: [desktop]
-hosts: [S01, S02, S03, S04, S05, S06, S07, S08, S09, S10, S11, S12, S13]
+hosted_by: [S01, S02, S03, S04, S05, S06, S07, S08, S09, S10, S11, S12, S13]
 status: active
 design_ref: ""
 rules: []

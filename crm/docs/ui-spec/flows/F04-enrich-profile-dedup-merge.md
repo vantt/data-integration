@@ -3,7 +3,7 @@ id: F04
 type: flow
 name: "Enrich Profile + Dedup Merge"
 platforms: [desktop]
-hosts: []
+hosted_by: []
 status: active
 design_ref: ""
 rules: []

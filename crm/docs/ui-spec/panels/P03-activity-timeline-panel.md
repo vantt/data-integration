@@ -3,7 +3,7 @@ id: P03
 type: panel
 name: "Activity Timeline Panel"
 platforms: [desktop]
-hosts: [S03]
+hosted_by: [S03]
 status: active
 design_ref: ""
 rules: [R6]

@@ -3,7 +3,7 @@ id: C02
 type: component
 name: "Global Customer Search"
 platforms: [desktop]
-hosts: [S02, S03]
+hosted_by: [S02, S03]
 status: active
 design_ref: ""
 rules: [R5]

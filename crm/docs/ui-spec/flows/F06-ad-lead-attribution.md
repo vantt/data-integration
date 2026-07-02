@@ -3,7 +3,7 @@ id: F06
 type: flow
 name: "Ad → Lead → Attribution"
 platforms: [desktop]
-hosts: []
+hosted_by: []
 status: active
 design_ref: ""
 rules: []

@@ -3,7 +3,7 @@ id: F05
 type: flow
 name: "Build Segment → Run Campaign → Measure Conversion"
 platforms: [desktop]
-hosts: []
+hosted_by: []
 status: active
 design_ref: ""
 rules: []

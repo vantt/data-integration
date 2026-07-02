@@ -3,7 +3,7 @@ id: C04
 type: component
 name: "Tag Chips"
 platforms: [desktop]
-hosts: [S02, S03, S04]
+hosted_by: [S02, S03, S04]
 status: active
 design_ref: ""
 rules: []
@@ -38,12 +38,12 @@ emits:
     element: btn_add_tag
     trigger: click
     event: tag_chips.add_requested
-    payload: { party_id: "$party_id" }
+    payload: { party_id: "$party.id" }
   - id: A-C04-002
     element: tag_chip_remove
     trigger: click
     event: tag_chips.remove_requested
-    payload: { tag_id: "$tag.id", party_id: "$party_id" }
+    payload: { tag_id: "$tag.id", party_id: "$party.id" }
   - id: A-C04-003
     element: tag_chip
     trigger: click

@@ -3,7 +3,7 @@ id: M07
 type: modal
 name: "Create / Edit Campaign Modal"
 platforms: [desktop]
-hosts: [S10, S11]
+hosted_by: [S10, S11]
 status: active
 design_ref: ""
 rules: [R1]

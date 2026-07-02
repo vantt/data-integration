@@ -3,7 +3,7 @@ id: C05
 type: component
 name: "Filter Bar"
 platforms: [desktop]
-hosts: [S01, S02, S05, S07, S10, S11]
+hosted_by: [S01, S02, S05, S07, S10, S11]
 status: active
 design_ref: ""
 rules: []
@@ -23,6 +23,8 @@ khi bất kỳ filter thay đổi để host screen reload list. Active filter c
 - `filter_config` (array, required): [{ field, label, type, options? }]
 - `initial_values` (object, optional): prefilled filter values
 - `show_clear_all` (bool, optional): hiện nút "Xóa filter"
+
+Note: payload uses bare prop variable (`$current_filter_values`) — this is a component-level prop representing the current filter state blob, not an entity field path. VR-PAYLOAD-GRAMMAR warn is accepted (see CONVENTION.md §9).
 
 ## States
 

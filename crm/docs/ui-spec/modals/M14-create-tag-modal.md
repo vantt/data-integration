@@ -3,7 +3,7 @@ id: M14
 type: modal
 name: "Create Tag Modal"
 platforms: [desktop]
-hosts: [S13, M03]
+hosted_by: [S13, M03]
 status: active
 design_ref: ""
 rules: []
