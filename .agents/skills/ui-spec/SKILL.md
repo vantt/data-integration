@@ -297,7 +297,7 @@ Ordered steps — do NOT skip step order; cross-file consistency depends on it.
 
 **d. Validate + build** (from repo root) — the validator now catches: VR-TARGET (dangling navigate), VR-HOSTS (bad host ref), VR-LISTEN-ORPHAN (listen to non-existent event), VR-RULE-DRIFT (rules mismatch). Fix every **error** before done; warns are advisory.
 
-> **State refs:** `ST-*` references in prose are now checked by **VR-STATE** (warn) against the `### ST-*` headings in `30-states-and-errors.md` — a typo'd / missing state shows as a warning in `check`. It's a prose scan at warn level, so still eyeball semantic correctness; `ERR-*` ids are not yet cataloged.
+> **State refs:** `ST-*` references in prose are checked by **VR-STATE** (warn) against the `### ST-*` headings in `30-states-and-errors.md`. `ERR-*` references are checked by **VR-ERR** (warn) against the `### ERR-*` headings in the same file. Both are prose scans at warn level; still eyeball semantic correctness.
 
 ---
 
@@ -347,6 +347,7 @@ Which link each validate rule guards. Running validate + build catches everythin
 | modal must return to invoker | modal has ≥1 `return_to_invoker` target | VR-MODAL-EXIT-002 | warn |
 | flow steps resolve | flow `steps[]` + `branches[].action` must be real action IDs | VR-FLOW | **error** |
 | state IDs (`ST-*`) | referenced in prose; registry = `### ST-*` headings in `30-states-and-errors.md` | VR-STATE | warn |
+| error IDs (`ERR-*`) | referenced in prose; registry = `### ERR-*` headings in `30-states-and-errors.md` | VR-ERR | warn |
 | `00-overview.md` index | id + name rows must match frontmatter | VR-OVERVIEW | warn |
 | spec entry point | `spec.config.yaml` `entry_surface` must be a known surface id | VR-ENTRY | **error** |
 | surface id prefix ↔ type | id leading letters must match `surface_id_prefixes[type]` (e.g. screen → S) | VR-PREFIX-TYPE | warn |

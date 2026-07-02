@@ -9,6 +9,13 @@ rules: []
 ---
 # S01 Home
 
+## States
+
+Normal operation: ST-OK.
+Ghost state for VR-STATE test: ST-GHOST is not in the catalog.
+Known error: ERR-KNOWN is cataloged.
+Ghost error for VR-ERR test: ERR-GHOST is not in the catalog.
+
 ## Interactions
 
 ```yaml fx-contract

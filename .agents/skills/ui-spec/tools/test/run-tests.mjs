@@ -105,6 +105,15 @@ assertContains(fix.out, "VR-PREFIX-TYPE",
 assertContains(fix.out, "screens/nested",
   "VR-SUBDIR: screens/nested contains .md files that are NOT scanned");
 
+// VR-STATE / VR-ERR: catalog-backed prose reference checks
+assertContains(fix.out, "ST-GHOST",
+  "VR-STATE fires for ST-GHOST (state referenced in prose but missing from catalog)");
+assertContains(fix.out, "ERR-GHOST",
+  "VR-ERR fires for ERR-GHOST (error referenced in prose but missing from catalog)");
+assert("VR-ERR does NOT flag ERR-KNOWN (id is in catalog — no spurious warning)",
+  !fix.out.includes("ERR-KNOWN"),
+  `expected ERR-KNOWN absent from output; got: ${fix.out.slice(0, 400)}`);
+
 // ---- Suite 2: crm spec must still pass clean ----
 
 console.log("\n=== Suite 2: production crm spec (expect exit 0, 0 warnings) ===");

@@ -343,19 +343,22 @@ for (const it of allInteractions) {
   err(it.file, `listens_to \`${ev}\` (action ${it.id ?? "?"}) is not emitted by any surface and is not an external (dotted) signal — likely a typo or missing emitter`);
 }
 
-// VR-STATE: a surface's prose state references (ST-*) must exist in the 30-states-and-errors.md
-// catalog (its `### ST-*` headings ARE the registry). States are documentation-level → warn, not
-// error. Catalog + references both live in prose, so we scan raw markdown on both ends.
-// The states catalog (e.g. 30-states-and-errors.md) is a cross-cutting prose file that may
-// not be in extractAll()'s list — read it directly from the spec root by name.
+// VR-STATE / VR-ERR: prose state and error references must exist in the 30-states-and-errors.md
+// catalog. `### ST-*` headings are the state registry (VR-STATE); `### ERR-*` headings are the
+// error registry (VR-ERR). Both are documentation-level → warn, not error. Catalog + references
+// both live in prose; scan raw markdown on both ends.
+// The catalog file sits at the spec root (not in extractAll's list) — read it directly by name.
+// Both catalogs share one file read — do not read the file twice.
 const stateCatalog = new Set();
+const errCatalog   = new Set();
 try {
   const catalogName = readdirSync(SPEC_ROOT).find((n) => /states/i.test(n) && n.endsWith(".md"));
   if (catalogName) {
     const raw = readFileSync(join(SPEC_ROOT, catalogName), "utf8");
-    for (const mm of raw.matchAll(/^#{2,4}\s+(ST-[A-Za-z0-9-]+)/gm)) stateCatalog.add(mm[1]);
+    for (const mm of raw.matchAll(/^#{2,4}\s+(ST-[A-Za-z0-9-]+)/gm))  stateCatalog.add(mm[1]);
+    for (const mm of raw.matchAll(/^#{2,4}\s+(ERR-[A-Za-z0-9-]+)/gm)) errCatalog.add(mm[1]);
   }
-} catch { /* catalog unreadable — skip state checks */ }
+} catch { /* catalog unreadable — skip state/error checks */ }
 if (stateCatalog.size) {
   for (const f of files) {
     if (!f.meta?.id || f.meta.id === "states-errors") continue;
@@ -366,7 +369,21 @@ if (stateCatalog.size) {
       const id = mm[0];
       if (stateCatalog.has(id) || flagged.has(id)) continue;
       flagged.add(id);
-      warn(f.file, `references state \`${id}\` not defined in 30-states-and-errors.md catalog (typo or missing state)`);
+      warn(f.file, `references state \`${id}\` not defined in 30-states-and-errors.md catalog (typo or missing state) (VR-STATE)`);
+    }
+  }
+}
+if (errCatalog.size) {
+  for (const f of files) {
+    if (!f.meta?.id || f.meta.id === "states-errors") continue;
+    let raw;
+    try { raw = readFileSync(join(SPEC_ROOT, f.file), "utf8"); } catch { continue; }
+    const flagged = new Set();
+    for (const mm of raw.matchAll(/\bERR-[A-Za-z0-9-]+/g)) {
+      const id = mm[0];
+      if (errCatalog.has(id) || flagged.has(id)) continue;
+      flagged.add(id);
+      warn(f.file, `references error \`${id}\` not defined in 30-states-and-errors.md catalog (typo or missing error) (VR-ERR)`);
     }
   }
 }
