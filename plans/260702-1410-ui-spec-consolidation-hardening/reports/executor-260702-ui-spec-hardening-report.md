@@ -116,3 +116,90 @@ Executor finished with 50 accepted warns — all three families were systematic 
 Docs synced: CONVENTION.md §2 rule 11 + §9 notes (removed phase reference per stable-artifacts rule), SKILL.md propagation table.
 
 Final state: validate exit 0, **0 warnings**; build exit 0; navigation-graph.yaml carries S03→P01..P06 show_panel edges.
+
+---
+
+## Adversarial Audit Round (2026-07-02)
+
+**Audit method:** 16 defects seeded into a fixture spec; validator run against it.  
+**Result:** 13 caught, 3 misses + 1 schema/doc mismatch. Fixes applied below.
+
+### Misses fixed
+
+| Fix | Rule | Severity | Description |
+|---|---|---|---|
+| F1 | VR-SURFACE-DUP | error | Two files declaring the same frontmatter `id` passed silently — `knownSurfaceIds` was a Set with no origin tracking. Added `surfaceFileById` Map; pass-1 now errors naming both files on first collision. |
+| F2 | VR-COMPONENT-NAV | warn | Component interactions with `action: navigate` or `open_overlay` had no rule. Added warn in pass-2 referencing CONVENTION §7 (self-contained control exception preserved as warn-not-error). |
+| F3 | VR-HOSTS-TYPE | error | `hosts[]` existence was checked (VR-HOSTS) but not type. Added: `hosts[]` entry that exists but is not `type: panel` → error referencing CONVENTION §11. crm spec already complies (P01–P06 only). |
+
+### Schema/doc mismatch fixed
+
+| Fix | Location | Description |
+|---|---|---|
+| F4 | both `surface-contract.schema.json` files | CONVENTION §4 example shows `description:` in ruleMapping but schema had `additionalProperties: false` without it. Added `"description": { "type": "string" }` to `ruleMapping.properties`. |
+
+### Other changes
+
+- **F5** — `extract.mjs` line ~15 comment corrected: "Recursively list" → accurate non-recursive description.
+- **Propagation table** — SKILL.md propagation table updated with VR-SURFACE-DUP, VR-HOSTS-TYPE, VR-COMPONENT-NAV rows.
+
+### Regression test harness added
+
+`.agents/skills/ui-spec/tools/test/` created:
+- `fixture-spec/` — 7 surface files + config + post-F4 schema covering all 11 expected findings
+- `run-tests.mjs` — spawns validate.mjs against fixture (assert exit 1 + 14 substrings) then against crm spec (assert exit 0 + "0 warning"); paths resolved via `import.meta.url`
+- `package.json` scripts: added `"test": "node test/run-tests.mjs"`
+
+**Test run:** 16/16 assertions passed. validate crm exit 0, 0 warnings. build exit 0.
+
+---
+
+## Latent-Issues Round (2026-07-02)
+
+Deep review of tooling; 14 fixes applied. No crm spec data changes required — all new rules were already satisfied by the existing crm spec, or the rules fire only on fixture-seeded defects.
+
+### Validator (`validate.mjs`)
+
+| Fix | Rule | Severity | Description |
+|---|---|---|---|
+| 1 | VR-SUBDIR | warn | Surface dirs are non-recursive by design; subdirs containing `.md` files are silently ignored. Added pass-2 scan of each configured surface dir: warns if any subdir contains `.md` files. Added `statSync` + `surfaceDirs` to imports. |
+| 2 | VR-ENTRY | error | `config.entry_surface` (spec.config.yaml) was never validated. Added pass-2 check: errors if set and not a known surface id. |
+| 3 | VR-PREFIX-TYPE | warn | No rule enforced that a surface's ID prefix matches its configured type prefix (e.g. `P02` with `type: screen` slipped through). Added pass-2 check over `surfaceTypeById` using `surface_id_prefixes` map. |
+| 4 | VR-HOSTS-BIDIR (reverse) | warn | Existing check only validated child→parent direction (panel's `hosted_by` lists a screen that includes it). Added reverse: if a screen's `hosts[]` includes a panel, that panel's `hosted_by` must include the screen. |
+| 5 | BARE_TOKEN_RE | — | Old pattern `/"\$([a-z_]+)"/g` missed camelCase tokens (`$partyId`) and tokens with digits (`$party2`). New: `/"\$([A-Za-z_][A-Za-z0-9_]*)"/g`. |
+| 6 | VR-MODAL-EXIT attribution | — | `err`/`warn` were called with bare surface id (e.g. `M01`) instead of file path, inconsistent with all other rules. Fixed to use `surfaceFileById.get(mid) ?? mid`. |
+
+### Build (`build.mjs`)
+
+| Fix | Description |
+|---|---|
+| 7 | `extractAll()` broken files were silently dropped (`.filter(f => f.contract)`). Now: if any file has `errors.length > 0`, print each error and exit 1 before writing artifacts. |
+| 8 | `action-registry.csv` was missing the `element` column (SKILL.md documents it but the CSV lacked it). Added as 3rd column after `from`. Rebuilt crm spec CSV. |
+
+### Rename (`rename.mjs`)
+
+| Fix | Description |
+|---|---|
+| 9 | `spec.config.yaml` at the spec root (contains `entry_surface`, `contract_tag`, etc.) was not scanned for token occurrences. Added explicit scan + apply before the `.md` walk loop, included in report counts. |
+
+### Docs (`SKILL.md`)
+
+| Fix | Description |
+|---|---|
+| 10 | `coverage-report.md` description said "surface coverage, flow coverage, rule coverage" — only flow coverage (flows → steps → missing action refs) is actually generated. Fixed in the `build` command section. |
+| 11 | Propagation table: added VR-ENTRY, VR-PREFIX-TYPE, VR-SUBDIR rows; updated VR-HOSTS-BIDIR row to note both directions are checked. |
+
+### Repo hygiene
+
+| Fix | Description |
+|---|---|
+| 12 | `crm/docs/ui-spec/generated/wireframe-v2.html` was git-tracked (regenerable display artifact). `git rm --cached` applied; `crm/docs/ui-spec/generated/.gitignore` created ignoring `wireframe.html` and `wireframe-v2.html`. The 4 data artifacts remain tracked. |
+
+### Test harness (`tools/test/`)
+
+| Fix | Description |
+|---|---|
+| 13 | Extended fixture + `run-tests.mjs`: new fixture files `S02-caller.md` (reverse VR-HOSTS-BIDIR), `P02-mistyped.md` (VR-PREFIX-TYPE), `screens/nested/ghost.md` (VR-SUBDIR); updated `spec.config.yaml` (`entry_surface: S77`, VR-ENTRY); updated `S01-home.md` (duplicate `go_btn` element for VR-ELEMENT-UNIQUE, bare `$orderId` for VR-PAYLOAD-GRAMMAR). Added 8 new assertions covering VR-REGION-PARENT, VR-EFFECT-SURFACE, VR-HOSTS-BIDIR reverse, VR-ELEMENT-UNIQUE, VR-PAYLOAD-GRAMMAR, VR-ENTRY, VR-PREFIX-TYPE, VR-SUBDIR. |
+| 14 | Schema-sync assertion (Suite 3): deep-equals `.agents/skills/ui-spec/templates/schema/surface-contract.schema.json` against `crm/docs/ui-spec/schema/surface-contract.schema.json` — fails if they diverge. |
+
+**Final results:** `validate --root crm/docs/ui-spec` → exit 0, 0 warnings. `build --root crm/docs/ui-spec` → exit 0. `npm test` → 25/25 passed (was 16).
