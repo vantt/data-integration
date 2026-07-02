@@ -3,7 +3,7 @@ id: {ID}
 type: component
 name: "{NAME}"
 platforms: [desktop, mobile]
-hosts: []        # surfaces that use this component
+hosted_by: []    # surfaces that use this component
 status: active
 design_ref: ""
 rules: []

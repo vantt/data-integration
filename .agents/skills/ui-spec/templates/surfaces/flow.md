@@ -3,7 +3,7 @@ id: {ID}
 type: flow
 name: "{NAME}"
 platforms: [desktop, mobile]
-hosts: []
+hosted_by: []
 status: active
 design_ref: ""
 rules: []

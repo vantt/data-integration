@@ -6,7 +6,7 @@ import { readFileSync, existsSync, readdirSync } from "node:fs";
 import { join } from "node:path";
 import Ajv from "ajv";
 import { extractAll, SPEC_ROOT } from "./extract.mjs";
-import { schemaPath } from "./config.mjs";
+import { schemaPath, config } from "./config.mjs";
 
 // Surface ID pattern: one or two uppercase letters + digits (e.g. S01, M2, P10, OV3)
 const SURFACE_ID_RE = /^[A-Z]{1,2}\d+$/;
@@ -38,6 +38,9 @@ const ruleMappings      = [];          // { id, surfaces[], file }
 const surfaceRulesDeclared = new Map();// surfaceId -> Set(ruleId)
 const surfaceRegions    = new Map();   // surfaceId -> string[] (from frontmatter regions[])
 
+// surfaceTypeById is built in pass-1 for use by pass-2 rules (VR-SHOW-PANEL, VR-HOSTS-BIDIR)
+const surfaceTypeById = new Map();
+
 for (const f of files) {
   // Extractor-level errors (missing/duplicate block, yaml parse)
   for (const e of f.errors) err(f.file, e);
@@ -52,6 +55,7 @@ for (const f of files) {
   // VR-FILE-ID: frontmatter id must match filename prefix for surface files
   if (m.id && SURFACE_ID_RE.test(m.id)) {
     knownSurfaceIds.add(m.id);
+    surfaceTypeById.set(m.id, m.type);
     if (!f.fileBase.startsWith(m.id + "-")) {
       err(f.file, `frontmatter id \`${m.id}\` does not match filename \`${f.fileBase}\``);
     }
@@ -94,6 +98,18 @@ for (const it of allInteractions) {
   }
 }
 
+// VR-ELEMENT-UNIQUE: warn if same element name appears >1 time in same surface+region
+const elementSeen = new Map(); // `${surfaceId}::${region}::${element}` -> first actionId
+for (const it of allInteractions) {
+  if (!it.element || !it.surfaceId) continue;
+  const key = `${it.surfaceId}::${it.region ?? ""}::${it.element}`;
+  if (elementSeen.has(key)) {
+    warn(it.file, `element \`${it.element}\` in ${it.surfaceId}${it.region ? "/" + it.region : ""} appears in multiple interactions (action ${it.id ?? "?"}); first seen at ${elementSeen.get(key)}`);
+  } else {
+    elementSeen.set(key, it.id ?? "?");
+  }
+}
+
 // VR-ID-PREFIX: action ID prefix must match its surface (e.g. A-S01 lives in S01)
 for (const it of allInteractions) {
   if (!it.id || !it.surfaceId) continue;
@@ -117,15 +133,16 @@ for (const it of allInteractions) {
   }
 }
 
-// VR-MODAL-EXIT: modals must have close_overlay action + return_to_invoker target
+// VR-MODAL-EXIT: modals must have a valid exit action + return_to_invoker target
 const modalIds = [...knownSurfaceIds].filter((s) => {
   const f = files.find((f) => f.meta?.id === s);
-  return f?.meta?.type === "modal" || s.startsWith("M");
+  return f?.meta?.type === "modal";
 });
 for (const mid of modalIds) {
   const acts = allInteractions.filter((i) => i.surfaceId === mid);
-  if (!acts.some((a) => a.action === "close_overlay")) {
-    err(mid, `modal ${mid} has no close_overlay/submit exit (VR-MODAL-EXIT-001)`);
+  const hasExit = acts.some((a) => a.action === "close_overlay" || a.action === "submit");
+  if (!hasExit) {
+    err(mid, `modal ${mid} has no close_overlay or submit exit action (VR-MODAL-EXIT-001)`);
   }
   if (!acts.some((a) => a.target === "return_to_invoker")) {
     warn(mid, `modal ${mid} has no return_to_invoker exit (VR-MODAL-EXIT-002)`);
@@ -153,12 +170,93 @@ for (const it of allInteractions) {
   }
 }
 
+// VR-REGION-PARENT: if regions[] contains a dotted path (e.g. sidebar.core_info),
+// warn if the parent segment (e.g. sidebar) is not also declared in regions[].
+for (const [surfaceId, regions] of surfaceRegions) {
+  for (const r of regions) {
+    const dotIdx = r.indexOf(".");
+    if (dotIdx === -1) continue;
+    const parent = r.slice(0, dotIdx);
+    if (!regions.includes(parent)) {
+      warn(surfaceId, `region \`${r}\` declared but parent segment \`${parent}\` not in regions[] (add it for layout reference)`);
+    }
+  }
+}
+
+// VR-SHOW-PANEL: show_panel target must be a known surface with type=panel
+for (const it of allInteractions) {
+  if (it.action !== "show_panel") continue;
+  const t = String(it.target ?? "");
+  if (!knownSurfaceIds.has(t)) {
+    err(it.file, `show_panel target \`${t}\` (action ${it.id ?? "?"}) is not a known surface`);
+  } else if (surfaceTypeById.get(t) !== "panel") {
+    err(it.file, `show_panel target \`${t}\` (action ${it.id ?? "?"}) must be type=panel`);
+  }
+}
+
+// VR-EFFECT-SURFACE: effect tokens starting with a surface-like prefix must reference known surfaces
+const EFFECT_SURFACE_RE = /^([A-Z]{1,2}\d+)\./;
+for (const it of allInteractions) {
+  for (const eff of it.effects ?? []) {
+    const m = String(eff).match(EFFECT_SURFACE_RE);
+    if (m && !knownSurfaceIds.has(m[1])) {
+      warn(it.file, `effect \`${eff}\` (action ${it.id ?? "?"}) references unknown surface \`${m[1]}\``);
+    }
+  }
+}
+
+// VR-HOSTED-BY: hosted_by[] entries must reference known surfaces
+for (const f of files) {
+  if (!Array.isArray(f.meta?.hosted_by)) continue;
+  for (const h of f.meta.hosted_by) {
+    if (!knownSurfaceIds.has(h)) {
+      err(f.file, `hosted_by[] references \`${h}\` — not a known surface`);
+    }
+  }
+}
+
+// VR-HOSTS-BIDIR: if X.hosted_by lists Y, then Y.hosts must include X.
+// Scope: panels only. Screens curate `hosts:` as their permanently-embedded panels;
+// component placement is tracked one-way via the component's own `hosted_by`.
+// Modals/overlays/flows are opened via open_overlay, not hosted.
+const hostsByFile  = new Map(); // surfaceId -> hosts[]
+const hostedByFile = new Map(); // surfaceId -> hosted_by[]
+const fileById     = new Map(); // surfaceId -> file path (for warn attribution)
+for (const f of files) {
+  if (!f.meta?.id) continue;
+  fileById.set(f.meta.id, f.file);
+  if (Array.isArray(f.meta.hosts))     hostsByFile.set(f.meta.id, f.meta.hosts);
+  if (Array.isArray(f.meta.hosted_by)) hostedByFile.set(f.meta.id, f.meta.hosted_by);
+}
+for (const [childId, parents] of hostedByFile) {
+  if (surfaceTypeById.get(childId) !== "panel") continue;
+  for (const parentId of parents) {
+    const parentHosts = hostsByFile.get(parentId) ?? [];
+    if (!parentHosts.includes(childId)) {
+      warn(fileById.get(childId) ?? childId, `bidirectional hosting gap: ${childId}.hosted_by lists ${parentId} but ${parentId}.hosts does not include ${childId} (VR-HOSTS-BIDIR)`);
+    }
+  }
+}
+
+// VR-PAYLOAD-GRAMMAR: payload tokens should follow $entity.field or $event.field convention.
+// Exception: component emits may use bare $<prop> tokens — inside a component the data context
+// is its own props, not a domain entity, so bare prop references are the documented pattern.
+const BARE_TOKEN_RE = /"\$([a-z_]+)"/g;
+for (const it of allInteractions) {
+  if (!it.payload) continue;
+  if (it.type === "component" && it.action === "emit_event") continue; // bare prop tokens are legitimate here
+  const payloadStr = JSON.stringify(it.payload);
+  for (const m of payloadStr.matchAll(BARE_TOKEN_RE)) {
+    warn(it.file, `payload token \`$${m[1]}\` (action ${it.id ?? "?"}) is a bare variable — prefer $entity.field or $event.field (VR-PAYLOAD-GRAMMAR)`);
+  }
+}
+
 // VR-EMIT-LISTEN: emitted event has no listener (informational warning)
 for (const ev of emittedEvents) {
   if (!listenedEvents.has(ev)) warn("graph", `emitted event \`${ev}\` has no listener (listens_to)`);
 }
 
-// VR-HOSTS: frontmatter hosts[] must reference known surfaces (a component's host screens)
+// VR-HOSTS: frontmatter hosts[] must reference known surfaces (a screen's embedded panels)
 for (const f of files) {
   if (!Array.isArray(f.meta?.hosts)) continue;
   for (const h of f.meta.hosts) {
@@ -215,8 +313,12 @@ try {
   if (ovName && surfaceNameById.size) {
     const raw = readFileSync(join(SPEC_ROOT, ovName), "utf8");
     const inOverview = new Set();
+    // Only rows whose ID prefix is a configured surface prefix are surface-index rows —
+    // other tables in the overview (e.g. domain rules R1..R14) share the |ID|Name| shape.
+    const surfacePrefixes = new Set(Object.values(config.surface_id_prefixes ?? {}));
     for (const mm of raw.matchAll(/^\|\s*([A-Z]{1,2}\d+)\s*\|\s*([^|]+?)\s*\|/gm)) {
       const id = mm[1], name = mm[2].trim();
+      if (surfacePrefixes.size && !surfacePrefixes.has(id.match(/^[A-Z]{1,2}/)[0])) continue;
       inOverview.add(id);
       if (!surfaceNameById.has(id)) { warn(ovName, `index lists \`${id}\` which is not a known surface`); continue; }
       const fmName = surfaceNameById.get(id);

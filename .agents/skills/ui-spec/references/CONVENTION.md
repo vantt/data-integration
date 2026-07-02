@@ -15,7 +15,8 @@ id: S05
 type: screen            # screen | panel | modal | overlay | component | flow
 name: Product List
 platforms: [desktop, mobile]   # desktop | mobile | all
-hosts: []               # panel/region IDs hosted by this surface (screens only)
+hosts: []               # screens only — surfaces THIS screen embeds (panels, components)
+hosted_by: []           # non-screens — surfaces that embed THIS surface
 regions: [header, list, sidebar]  # named layout regions (optional; enables region validation)
 status: active          # active | future
 design_ref: "designs/s05.png"
@@ -68,6 +69,7 @@ interactions:
 8. Modals must have ≥1 `close_overlay`/submit exit and ≥1 cancel/close → `return_to_invoker`.
 9. Flow files: **no new interactions**. Use `yaml {project}-contract` with `flow:` key only (see §3).
 10. **`region` field** (optional): if present on an interaction, must match a value in the surface frontmatter `regions[]` array. If `regions` is not declared in frontmatter, `region` field is ignored by validator.
+11. **`hosts:` is valid only on screens** and lists the panels permanently embedded in this screen. All other surface types use `hosted_by:` to list their container screens (one-way for components). Bidirectional consistency is validated by VR-HOSTS-BIDIR (warn, panel type only).
 
 ---
 
@@ -125,6 +127,34 @@ flow:
     - { when: "validation fails", action: A-M03-003 }
 ```
 
+**Tab switching (show_panel):**
+```yaml crm-contract
+interactions:
+  - id: A-S03-004
+    element: tab_insight
+    region: tab_bar
+    trigger: click
+    action: show_panel
+    target: P01          # must be type=panel; validated by VR-SHOW-PANEL
+```
+`show_panel` makes a panel visible within the current screen's layout. It is captured as a *display edge* in `navigation-graph.yaml` (not a navigation edge). Target must be a registered panel (`type: panel`). Effects array is dropped when migrating from `mutate + effects: [main_col.show_panel_Pxx]`.
+
+---
+
+## 3.5 Promotion rules — when a layout block becomes a surface type
+
+| Pattern | Promote to | Why |
+|---|---|---|
+| Pure layout block, appears on exactly 1 surface, no own state, no events | dotted region (e.g. `sidebar.core_info`) | No reuse; region string is sufficient identity |
+| Reused on ≥2 surfaces **OR** emits events **OR** carries own local state | component (`Cxx`) | Coupling via event model; hosts need `listens_to` |
+| Navigation target **OR** independently shown/hidden lazy content (e.g. tab panel) | panel (`Pxx`) | Distinct lifecycle; shown via `show_panel` action |
+| Standalone route with own URL / deep-link | screen (`Sxx`) | Navigated via `action: navigate` |
+
+**Dotted region convention:** hierarchical regions expressed as `parent.child` snake_case paths. The parent segment must also appear in `regions[]` as a layout anchor. Example:
+- `regions: [topbar, sidebar, sidebar.warning, sidebar.core_info, sidebar.contact, sidebar.dates, sidebar.tags, main_col, tab_bar]`
+- Interaction: `region: sidebar.core_info`
+- VR-REGION-PARENT warns if `sidebar.core_info` is in `regions[]` but `sidebar` is not.
+
 ---
 
 ## 4. Domain rules cross-cutting
@@ -148,9 +178,11 @@ rules:
 | Regular surface | `A-{SURFACE}-{001,002,...}` | `A-S05-001` |
 | Canvas / drawing surface | `A-CV-{001,...}` | `A-CV-003` |
 | System / async events | `A-SYS-{001,...}` | `A-SYS-001` |
-| Listener (listen action) | `A-{SURFACE}-LSN-{01,...}` | `A-S05-LSN-01` |
+| Listener (listen action) | `A-{SURFACE}-LSN{01,...}` | `A-S05-LSN01` |
 
 IDs are auto-generated sequentially by convention. Manual assignment is allowed. **IDs once assigned are never reused** — gaps are permitted.
+
+> Both `A-S03-LSN-01` and `A-S03-LSN01` are accepted by the schema regex. Prefer no-hyphen form (`LSN01`) for new authors — it matches existing crm spec usage.
 
 ---
 
@@ -170,12 +202,16 @@ IDs are auto-generated sequentially by convention. Manual assignment is allowed.
 Source of truth = `.md` files. `generated/` is derived output — run `build`, do not edit by hand, safe to gitignore.
 
 ```bash
-cd docs/ui-spec/tools
-npm install
-npm run validate   # gate: dup IDs, missing targets, modal missing exit, rule drift...
-npm run build      # generate artifacts
-npm run check      # validate && build
+# From repo root (canonical — no vendor copy needed):
+npm install --prefix .agents/skills/ui-spec/tools   # one-time
+node .agents/skills/ui-spec/tools/validate.mjs --root crm/docs/ui-spec
+node .agents/skills/ui-spec/tools/build.mjs   --root crm/docs/ui-spec
+# combined:
+node .agents/skills/ui-spec/tools/validate.mjs --root crm/docs/ui-spec && \
+  node .agents/skills/ui-spec/tools/build.mjs --root crm/docs/ui-spec
 ```
+
+`init` scaffolds the spec directory without copying tools. Pass `--vendor` only when the spec is exported to a repo with no access to `.agents/skills/ui-spec/`.
 
 ---
 
@@ -210,3 +246,17 @@ surface_id_prefixes:
 entry_surface: S01
 platforms: [desktop, mobile]
 ```
+
+---
+
+## 9. Payload variable grammar
+
+| Context | Pattern | Example |
+|---|---|---|
+| Data entity field | `$<entity>.<field>` | `$party.id`, `$task.due_at` |
+| Listener event field | `$event.<field>` (inside `listens_to` interactions only) | `$event.party_id` |
+| Component prop (bare) | `$<prop_name>` (single word, no dot, in component `emits` blocks only) | `$current_filter_values` in C05 emits |
+
+Validator rule VR-PAYLOAD-GRAMMAR warns on bare `$<word>` tokens found in payload objects, **except inside component `emits`** — there the data context is the component's own props, so bare prop tokens are the documented pattern and are not flagged. If a bare token actually mirrors an entity field (e.g. `$party_id` for `$party.id`), prefer the entity form. Declare every bare prop in the component's Props/API section.
+
+> **VR-HOSTS-BIDIR note:** `hosts:` on screens lists only permanently-embedded **panels**. Component placement is tracked one-way via the component's own `hosted_by:` — screens do not mirror it. VR-HOSTS-BIDIR therefore warns for `panel` type only; components, modals, and overlays are exempt (modals/overlays are opened via `open_overlay`, not embedded).

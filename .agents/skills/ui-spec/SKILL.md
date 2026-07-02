@@ -10,6 +10,8 @@ metadata:
 
 # ui-spec skill
 
+> **Source of truth:** this directory (`.agents/skills/ui-spec/`) owns all ui-spec instructions, references, templates, and compiler tools — edit here, nowhere else. `.claude/skills/ui-spec/` is a thin discovery wrapper for Claude Code. Each spec root (e.g. `crm/docs/ui-spec/`) carries only `schema/` — tool invocations are centralized (see Commands section).
+
 > Core insight: **Prose for humans, structured YAML contract for machines, compiler as trust gate.**
 > Each surface file = free-form Markdown + one fenced `yaml {project}-contract` block. Compiler ignores prose; only parses frontmatter + contract block. Drift is impossible by construction.
 
@@ -29,17 +31,18 @@ Read a PRD and produce a complete UI spec from scratch.
 6. Run `build` → generate artifacts (`surface-registry.yaml`, `navigation-graph.yaml`, `action-registry.csv`, `coverage-report.md`)
 
 ### `init <project-name> [--output docs/ui-spec]`
-Scaffold empty spec structure with config, schema, templates, and tools directory.
+Scaffold empty spec structure with config, schema, and templates directory.
 
 Creates:
 ```
 docs/ui-spec/
 ├── spec.config.yaml          # project name, contract tag, surface ID prefixes
 ├── schema/surface-contract.schema.json
-├── tools/                    # extract.mjs, validate.mjs, build.mjs (Node ≥18)
 ├── templates/                # surface type templates
 └── generated/                # build output (gitignore-able)
 ```
+
+Default: does **not** copy tools. Use `--vendor` flag only when exporting a spec to a repo that has no access to `.agents/skills/ui-spec/tools/`.
 
 ### `check [surface-id]`
 Run `validate` + `build`. If `surface-id` provided, validate that single surface in context.
@@ -221,7 +224,11 @@ After parallel pass, run `validate` to catch any remaining cross-agent wiring ga
 
 ## Authoring & propagation workflows
 
-Three modes an LLM agent will encounter. Run `npm run check` (= validate + build) as the final step of every mode.
+Three modes an LLM agent will encounter. Run validate + build (from repo root) as the final step of every mode:
+```bash
+node .agents/skills/ui-spec/tools/validate.mjs --root <spec-root>
+node .agents/skills/ui-spec/tools/build.mjs --root <spec-root>
+```
 
 ---
 
@@ -241,15 +248,20 @@ Ordered steps — do NOT skip step order; cross-file consistency depends on it.
    - Set `navigate`/`open_overlay` `target:` to real surface IDs
    - Set component `emits[].event` names; set host screen `listens_to:` to match
    - Set `rules:` frontmatter to match `20-domain-rules.md` `surfaces[]` entries (bidirectional)
-   - Set `hosts:` frontmatter on components pointing to their host screen IDs
+   - Set `hosted_by:` frontmatter on panels/components pointing to their host screen IDs; set `hosts:` on screens listing their embedded panels
 5. **Wire flows**: author `flows/Fxx-*.md` referencing real action IDs from Pass 2.
-6. **Run `npm run check`** (= validate + build) from `docs/ui-spec/tools/`. Fix every error:
+6. **Run validate + build** from repo root. Fix every error:
+   ```bash
+   node .agents/skills/ui-spec/tools/validate.mjs --root <spec-root>
+   node .agents/skills/ui-spec/tools/build.mjs --root <spec-root>
+   ```
+   Where `<spec-root>` = path from repo root (e.g. `crm/docs/ui-spec`). Errors:
    - Dangling targets → VR-TARGET
    - Bad hosts → VR-HOSTS
    - Listen-orphans → VR-LISTEN-ORPHAN
    - Rule drift → VR-RULE-DRIFT
    - Modal missing exit → VR-MODAL-EXIT-001
-7. **Eyeball**: `npm run interpret` (v1 wireframe) or `npm run interpret:wf` (v2, region-box layout) to confirm navigation graph makes sense.
+7. **Eyeball**: `node .agents/skills/ui-spec/tools/interpret.mjs --root <spec-root>` (v1 wireframe) or `node .agents/skills/ui-spec/tools/interpret-wireframe.mjs --root <spec-root>` (v2, region-box layout) to confirm navigation graph makes sense.
 
 > **Multi-agent note:** for > 40 surfaces split by *domain* (one screen + its hosted components + its modals per agent). Never split by surface type. After parallel pass, run validate to catch cross-agent wiring gaps. See "Multi-agent orchestration" section.
 
@@ -265,7 +277,7 @@ Ordered steps — do NOT skip step order; cross-file consistency depends on it.
 | `<SurfaceId>` (surface ID literal) | whole spec tree (`screens/`, `panels/`, `modals/`, `flows/`) | all files referencing this surface |
 | action IDs of this surface (e.g. `A-S05-*`) | `generated/action-registry.csv` or grep spec tree | flow `steps`/`branches` using those action IDs |
 | emitted event names (from this surface's `emits` block) | grep spec tree for `listens_to:` | host screens that will break if event renamed |
-| `hosts: [<SurfaceId>]` | `generated/surface-registry.yaml` | components listing this screen as host |
+| `hosted_by: [<SurfaceId>]` | `generated/surface-registry.yaml` | panels/components listing this screen as host |
 
 **b. Apply the change** to the target surface file.
 
@@ -278,12 +290,12 @@ Ordered steps — do NOT skip step order; cross-file consistency depends on it.
 | Rename/remove emitted event | Update `listens_to:` in every host screen that consumed it; update `15-system-events.md` if it was declared there |
 | Add/remove `rules:` frontmatter entry | Sync `20-domain-rules.md` `surfaces[]` for that rule (bidirectional) |
 | Add/remove `regions:` | Fix any interaction `region:` fields on this surface that now mismatch |
-| Rename/remove surface from `hosts:` | Update dependent components' `hosts:` frontmatter |
+| Rename/remove surface from `hosts:` | Update dependent panels'/components' `hosted_by:` frontmatter |
 | Split surface into two new IDs | Old ID must be replaced everywhere; update `00-overview.md`; re-wire flows |
 
-> **Rename tool:** for a pure rename (surface ID, action ID, or event name) run `npm run rename <old> <new>` (dry-run; add `--apply` to write) — it word-boundary-replaces every reference across the spec (including `A-<id>-*` action prefixes) and renames the file. Then `npm run check`.
+> **Rename tool:** for a pure rename (surface ID, action ID, or event name) run `node .agents/skills/ui-spec/tools/rename.mjs --root <spec-root> <old> <new>` (dry-run; add `--apply` to write) — it word-boundary-replaces every reference across the spec (including `A-<id>-*` action prefixes) and renames the file. Then validate + build.
 
-**d. `npm run check`** — the validator now catches: VR-TARGET (dangling navigate), VR-HOSTS (bad host ref), VR-LISTEN-ORPHAN (listen to non-existent event), VR-RULE-DRIFT (rules mismatch). Fix every **error** before done; warns are advisory.
+**d. Validate + build** (from repo root) — the validator now catches: VR-TARGET (dangling navigate), VR-HOSTS (bad host ref), VR-LISTEN-ORPHAN (listen to non-existent event), VR-RULE-DRIFT (rules mismatch). Fix every **error** before done; warns are advisory.
 
 > **State refs:** `ST-*` references in prose are now checked by **VR-STATE** (warn) against the `### ST-*` headings in `30-states-and-errors.md` — a typo'd / missing state shows as a warning in `check`. It's a prose scan at warn level, so still eyeball semantic correctness; `ERR-*` ids are not yet cataloged.
 
@@ -298,26 +310,29 @@ Ordered steps — do NOT skip step order; cross-file consistency depends on it.
    - ☐ `00-overview.md` — add a row to the surface index table **AND a path to the directory tree** (both live in this file)
    - ☐ `15-system-events.md` — if the new surface needs a new backend/SSE event, declare it here (dotted name convention)
    - ☐ `20-domain-rules.md` — if a NEW domain rule is needed: add rule + add surface ID to `surfaces[]`; also add the rule ID to the surface's `rules:` frontmatter (bidirectional)
-   - ☐ **Does this new screen RENDER an existing component?** (sidebar, filter bar, …) → add THIS surface's ID to that component's `hosts:` frontmatter, and add the component's emitted-event `listens_to:` interactions here if it should react (else VR-HOSTS / VR-LISTEN-ORPHAN)
+   - ☐ **Does this new screen RENDER an existing component?** (sidebar, filter bar, …) → add THIS surface's ID to that component's `hosted_by:` frontmatter, and add the component's emitted-event `listens_to:` interactions here if it should react (else VR-HOSTED-BY / VR-LISTEN-ORPHAN)
    - ☐ Host screens' `listens_to` — if this NEW surface IS a component that emits an event: add `listens_to: <event>` to every host screen that should react
    - ☐ Flow files — if an existing flow now passes through this surface: add a step referencing the new action ID
    - ☐ Make it reachable — add a `navigate`/`open_overlay` (`target: <newId>`) from a real source surface. NOTE: components can't `navigate` (CONVENTION §2) — for sidebar/menu links wire it as component `emit_event` → a host screen `listens_to` that navigates, or put a direct navigate on a screen.
-   - ☐ If this new surface is a panel/component: set its own `hosts: [<HostScreenId>]` frontmatter pointing at the screen(s) that render it
+   - ☐ If this new surface is a panel/component: set its own `hosted_by: [<HostScreenId>]` frontmatter pointing at the screen(s) that render it (screens additionally list embedded panels in their `hosts:`)
    - ☐ Verify every `target:` you declared IN this surface points at an existing surface
 
-4. **`npm run check`** — fix every error before done (VR-TARGET / VR-HOSTS / VR-LISTEN-ORPHAN / VR-RULE-DRIFT).
+4. **Validate + build** (from repo root) — fix every error before done (VR-TARGET / VR-HOSTS / VR-LISTEN-ORPHAN / VR-RULE-DRIFT).
 
 ---
 
 ### Propagation model reference
 
-Which link each validate rule guards. `npm run check` catches everything in this table except the prose-only rows.
+Which link each validate rule guards. Running validate + build catches everything in this table except the prose-only rows.
 
 | Link | How expressed in spec | Validator rule | Severity |
 |---|---|---|---|
 | surface → surface (navigate) | interaction `action: navigate`, `target: <SurfaceId>` | VR-TARGET | **error** |
 | surface → surface (overlay) | interaction `action: open_overlay`, `target: <SurfaceId>` | VR-TARGET | **error** |
-| component → host screen | component frontmatter `hosts: [Sxx]` | VR-HOSTS | **error** |
+| panel show/hide (tab switch) | `action: show_panel`, `target: Pxx` | VR-SHOW-PANEL | **error** |
+| screen → embedded panels | screen frontmatter `hosts: [Pxx]` | VR-HOSTS | **error** |
+| panel/component → host screen | surface frontmatter `hosted_by: [Sxx]` | VR-HOSTED-BY | **error** |
+| bidirectional hosting consistency | X.hosted_by lists Y ↔ Y.hosts lists X (panel only) | VR-HOSTS-BIDIR | warn |
 | component emits → screen listens | component `emits[].event` ↔ screen `listens_to:` | VR-LISTEN-ORPHAN | **error** |
 | external/system signal | `listens_to:` a dotted name (e.g. `upload.done`) — declared in `15-system-events.md` | exempt from VR-LISTEN-ORPHAN (dotted = backend SSE) | — |
 | emitted event with no listener | `emits[].event` or `emit_event` with no `listens_to` anywhere | VR-EMIT-LISTEN | warn |

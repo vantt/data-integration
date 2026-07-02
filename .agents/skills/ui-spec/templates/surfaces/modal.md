@@ -3,7 +3,7 @@ id: {ID}
 type: modal
 name: "{NAME}"
 platforms: [desktop, mobile]
-hosts: []        # screens that can open this modal
+hosted_by: []    # screens that can open this modal
 status: active
 design_ref: ""
 rules: []

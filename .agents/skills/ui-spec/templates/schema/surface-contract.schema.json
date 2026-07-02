@@ -42,7 +42,7 @@
     },
     "action": {
       "type": "string",
-      "enum": ["navigate", "open_overlay", "close_overlay", "mutate", "emit_event", "external", "system_event"]
+      "enum": ["navigate", "open_overlay", "close_overlay", "mutate", "emit_event", "external", "system_event", "show_panel"]
     },
     "interaction": {
       "type": "object",
@@ -62,8 +62,8 @@
       },
       "allOf": [
         {
-          "comment": "navigate/open_overlay require a target",
-          "if": { "properties": { "action": { "enum": ["navigate", "open_overlay"] } }, "required": ["action"] },
+          "comment": "navigate/open_overlay/show_panel require a target",
+          "if": { "properties": { "action": { "enum": ["navigate", "open_overlay", "show_panel"] } }, "required": ["action"] },
           "then": { "required": ["target"] }
         },
         {

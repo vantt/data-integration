@@ -3,7 +3,7 @@ id: {ID}
 type: overlay
 name: "{NAME}"
 platforms: [desktop]
-hosts: []        # surfaces that trigger this overlay
+hosted_by: []    # surfaces that trigger this overlay
 status: active
 design_ref: ""
 rules: []

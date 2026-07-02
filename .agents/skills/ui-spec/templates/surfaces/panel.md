@@ -3,7 +3,7 @@ id: {ID}
 type: panel
 name: "{NAME}"
 platforms: [desktop]
-hosts: []        # screens that embed this panel
+hosted_by: []    # screens that embed this panel
 status: active
 design_ref: ""
 rules: []
