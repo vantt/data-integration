@@ -14,8 +14,11 @@ from fastapi import APIRouter, Request, Response
 from fastapi.responses import HTMLResponse
 from fastapi.templating import Jinja2Templates
 
+from application.geography import geo_region
+from application.reason_rail import assemble_reason_rail
 from domain.entities.cache_insight import CustomerDimMetrics
 from domain.entities.profile import PartyIdentity, PartyInsight
+from domain.entities.task import TASK_KIND_CONTACT, TASK_STATUS_OPEN, TASK_STATUS_DOING
 
 log = logging.getLogger(__name__)
 
@@ -193,17 +196,18 @@ def register_panel_routes(
                 {**ctx, "notes": note_list, "type_filter": type_filter, "user_map": notes_user_map},
             )
         if panel == "call_cockpit":
-            # Approach-script panel (S14 cockpit embedded in S03).
-            # approach_repo is wired explicitly via make_customer_360_router (not app.state).
-            _, ids = _load_base(party_id)
+            # ── S14 v2: enriched cockpit context (phase-04) ─────────────────
+            # approach_repo wired via make_customer_360_router (not app.state).
+            party, ids = _load_base(party_id)
             customer_id = _sapo_customer_id(ids)
+            ins = _load_insight(ids)
+
             script_dict = None
             meta_dict = None
             if customer_id and approach_repo is not None:
                 try:
                     scr = approach_repo.get_by_customer_id(customer_id)
-                    # Only render a script that carries the approach block; an
-                    # approach-less dict would raise UndefinedError in the template.
+                    # Only render a script that carries the approach block.
                     if scr is not None and isinstance(scr.data, dict) and "approach" in scr.data:
                         script_dict = scr.data
                         meta_dict = {"recommended": scr.recommended,
@@ -211,9 +215,63 @@ def register_panel_routes(
                                      "refreshed_at": scr.refreshed_at}
                 except Exception as exc:
                     log.warning("c360 call_cockpit: load script %s: %s", party_id, exc)
+
+            # Warning notes
+            warning_notes: list = []
+            if notes is not None:
+                try:
+                    all_notes = notes.list_notes(party_id)
+                    warning_notes = [
+                        n for n in all_notes
+                        if not n.deleted_at and n.note_type == "warning"
+                    ]
+                except Exception as exc:
+                    log.warning("c360 call_cockpit: warning_notes %s: %s", party_id, exc)
+
+            # Resolved action_ids
+            resolved_ids: set = set()
+            if action_task_resolver is not None:
+                try:
+                    resolved_ids = action_task_resolver.resolved_action_ids(party_id)
+                except Exception as exc:
+                    log.warning("c360 call_cockpit: resolved_ids %s: %s", party_id, exc)
+
+            # Contact tasks for reason rail (open + doing)
+            contact_tasks: list = []
+            if party_tasks is not None:
+                try:
+                    all_tasks = party_tasks.list_by_party(party_id)
+                    contact_tasks = [
+                        t for t in all_tasks
+                        if getattr(t, "task_kind", None) == TASK_KIND_CONTACT
+                        and getattr(t, "status", None) in (TASK_STATUS_OPEN, TASK_STATUS_DOING)
+                    ]
+                except Exception as exc:
+                    log.warning("c360 call_cockpit: contact_tasks %s: %s", party_id, exc)
+
+            rail_primary, rail_secondary = assemble_reason_rail(
+                insight=ins,
+                contact_tasks=contact_tasks,
+                resolved_action_ids=resolved_ids,
+            )
+
+            geo = geo_region(getattr(party, "province", None)) if party else ""
+
             return templates.TemplateResponse(
                 "fragments/c360_call_cockpit_panel.html",
-                {**ctx, "script": script_dict, "meta": meta_dict},
+                {
+                    **ctx,
+                    "party": party,
+                    "identities": ids,
+                    "insight": ins,
+                    "warning_notes": warning_notes,
+                    "resolved_action_ids": resolved_ids,
+                    "geo_region": geo,
+                    "script": script_dict,
+                    "meta": meta_dict,
+                    "rail_primary": rail_primary,
+                    "rail_secondary": rail_secondary,
+                },
             )
         return HTMLResponse("panel not found", status_code=404)
 

@@ -16,6 +16,11 @@ from fastapi.templating import Jinja2Templates
 from domain.entities.party import partition_identities_by_channel
 from domain.entities.profile import Note, PartyIdentity
 
+from adapters.inbound.web.screens.customer360.outcome_resolve_helpers import (
+    parse_id_list as _parse_id_list,
+    bulk_resolve as _bulk_resolve,
+)
+
 log = logging.getLogger(__name__)
 
 _ICT = timezone(timedelta(hours=7))
@@ -45,6 +50,7 @@ def register_activity_routes(
     activity_log,
     task_svc=None,
     app_users=None,
+    action_state=None,
 ) -> None:
     """Register M08 modal (GET x2) and activity log POST route on *router*."""
 
@@ -165,6 +171,8 @@ def register_activity_routes(
         schedule_followup_at: str = Form(default=""),
         task_id: str = Form(default=""),
         complete_task: str = Form(default=""),
+        resolve_action_ids: str = Form(default=""),
+        resolve_task_ids: str = Form(default=""),
     ) -> Response:
         current_user = getattr(request.state, "current_user", None)
         actor_id: Optional[str] = current_user.user_id if current_user else None
@@ -229,4 +237,72 @@ def register_activity_routes(
                 task_svc.transition_status(task_id.strip(), "done")
             except Exception as exc:
                 log.warning("m08: complete_task %s: %s", task_id, exc)
+        # Outcome bulk-resolve: dismiss action_ids + complete task_ids from cockpit outcome bar.
+        # skip_task_id prevents double-resolution when the same task_id already completed above.
+        bulk_action_ids = _parse_id_list(resolve_action_ids)
+        bulk_task_ids = _parse_id_list(resolve_task_ids)
+        if bulk_action_ids or bulk_task_ids:
+            _bulk_resolve(
+                action_ids=bulk_action_ids,
+                task_ids=bulk_task_ids,
+                action_state=action_state,
+                task_svc=task_svc,
+                skip_task_id=task_id.strip() if complete_task == "1" else "",
+                actor_id=actor_id or "",
+            )
         return HTMLResponse(content="", headers={"HX-Redirect": f"/customers/{party_id}?tab=timeline"})
+
+    # ── A-S14-026: Async-resolve (Zalo / email without a call) ───────────────
+
+    @router.post("/customers/{party_id}/reason/resolve-async", response_class=HTMLResponse)
+    async def handle_resolve_async(
+        request: Request,
+        party_id: str,
+        channel: str = Form(default=""),
+        action_id: str = Form(default=""),
+        task_id: str = Form(default=""),
+        note: str = Form(default=""),
+    ) -> Response:
+        """Log an async outbound contact (Zalo/email) and resolve the given rail item.
+
+        Endpoint: POST /customers/{party_id}/reason/resolve-async
+        Form fields:
+          channel   — "zalo" | "email" (required; determines activity_type)
+          action_id — optional; if set → dismiss via action_state
+          task_id   — optional; if set → transition_status(tid, 'done')
+          note      — optional free-text note logged in the activity body
+
+        Returns 204 (no content) — HTMX should target the specific rail item and
+        swap it out; the cockpit panel is NOT re-rendered to preserve call state.
+        """
+        current_user = getattr(request.state, "current_user", None)
+        actor_id: Optional[str] = current_user.user_id if current_user else None
+
+        ch = channel.strip().lower()
+        _CH_TO_TYPE = {"zalo": "chat", "email": "email"}
+        act_type = _CH_TO_TYPE.get(ch, "other")
+
+        act_data: dict = {
+            "party_id": party_id,
+            "activity_type": act_type,
+            "direction": "out",
+            "channel": ch or None,
+            "outcome": "async_sent",
+            "body": note.strip() or None,
+            "staff_user_id": actor_id,
+        }
+        try:
+            activity_log.log_activity(act_data)
+        except Exception as exc:
+            log.error("resolve_async: log activity %s: %s", party_id, exc)
+            return HTMLResponse("Lỗi ghi log", status_code=500)
+
+        _bulk_resolve(
+            action_ids=_parse_id_list(action_id),
+            task_ids=_parse_id_list(task_id),
+            action_state=action_state,
+            task_svc=task_svc,
+            actor_id=actor_id or "",
+        )
+
+        return Response(status_code=204)

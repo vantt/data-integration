@@ -31,6 +31,7 @@ from adapters.inbound.web.screens.customer360.screen_customer_360_panels import 
 from adapters.inbound.web.screens.customer360.screen_customer_360_activity import register_activity_routes
 from adapters.inbound.web.screens.customer360.screen_customer_360_notes import register_note_routes
 from adapters.inbound.web.screens.customer360.screen_customer_360_tasks import register_task_routes
+from adapters.inbound.web.screens.customer360.screen_call_cockpit import register_call_cockpit_route
 
 log = logging.getLogger(__name__)
 
@@ -288,6 +289,7 @@ def make_customer_360_router(
         activity_log=activity_log,
         task_svc=task_svc,
         app_users=app_users,
+        action_state=action_state,
     )
     register_note_routes(
         router, templates,
@@ -299,6 +301,16 @@ def make_customer_360_router(
         party_tasks=party_tasks,
         task_svc=task_svc,
         app_users=app_users,
+    )
+    register_call_cockpit_route(
+        router, templates,
+        _load_base=_load_base,
+        _load_insight=_load_insight,
+        _sapo_customer_id=_sapo_customer_id,
+        notes=notes,
+        party_tasks=party_tasks,
+        approach_repo=approach_repo,
+        action_task_resolver=action_task_resolver,
     )
 
     return router

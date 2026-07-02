@@ -18,16 +18,22 @@ from adapters.outbound.sqlite.connection import CRMDatabase
 _INSERT = """
 INSERT INTO crm_task (
   task_id, party_id, title, description, due_at, priority, status,
-  assignee_user_id, source, source_ref, created_by, created_at, updated_at, completed_at
-) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+  assignee_user_id, source, source_ref, created_by, created_at, updated_at, completed_at,
+  task_kind, channel
+) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
 """
 
 _GET_BY_ID = """
 SELECT
-  task_id, party_id, title, description, due_at, priority, status,
-  assignee_user_id, source, source_ref, created_by, created_at, updated_at, completed_at
-FROM crm_task
-WHERE task_id = ?
+  t.task_id, t.party_id, t.title, t.description, t.due_at, t.priority, t.status,
+  t.assignee_user_id, t.source, t.source_ref, t.created_by, t.created_at, t.updated_at, t.completed_at,
+  t.task_kind, t.channel,
+  p.display_name AS party_name,
+  u.full_name AS assignee_name
+FROM crm_task t
+LEFT JOIN crm_party p ON p.party_id = t.party_id
+LEFT JOIN crm_app_user u ON u.user_id = t.assignee_user_id
+WHERE t.task_id = ?
 """
 
 _UPDATE = """
@@ -39,7 +45,9 @@ SET
   status           = ?,
   assignee_user_id = ?,
   due_at           = ?,
-  completed_at     = ?
+  completed_at     = ?,
+  task_kind        = ?,
+  channel          = ?
 WHERE task_id = ?
 """
 
@@ -50,10 +58,15 @@ WHERE source = ? AND source_ref = ?
 
 _GET_BY_SOURCE_REF = """
 SELECT
-  task_id, party_id, title, description, due_at, priority, status,
-  assignee_user_id, source, source_ref, created_by, created_at, updated_at, completed_at
-FROM crm_task
-WHERE source = ? AND source_ref = ? AND status NOT IN ('done', 'cancelled')
+  t.task_id, t.party_id, t.title, t.description, t.due_at, t.priority, t.status,
+  t.assignee_user_id, t.source, t.source_ref, t.created_by, t.created_at, t.updated_at, t.completed_at,
+  t.task_kind, t.channel,
+  p.display_name AS party_name,
+  u.full_name AS assignee_name
+FROM crm_task t
+LEFT JOIN crm_party p ON p.party_id = t.party_id
+LEFT JOIN crm_app_user u ON u.user_id = t.assignee_user_id
+WHERE t.source = ? AND t.source_ref = ? AND t.status NOT IN ('done', 'cancelled')
 LIMIT 1
 """
 
@@ -72,8 +85,11 @@ _GET_CUSTOMER_CLAIM = """
 SELECT
   t.task_id, t.party_id, t.title, t.description, t.due_at, t.priority, t.status,
   t.assignee_user_id, t.source, t.source_ref, t.created_by, t.created_at, t.updated_at, t.completed_at,
+  t.task_kind, t.channel,
+  p.display_name AS party_name,
   COALESCE(u.full_name, t.assignee_user_id, 'nhân viên') AS assignee_name
 FROM crm_task t
+LEFT JOIN crm_party p ON p.party_id = t.party_id
 LEFT JOIN crm_app_user u ON u.user_id = t.assignee_user_id
 WHERE t.source = 'action_queue_claim'
   AND t.party_id = ?
@@ -83,70 +99,105 @@ LIMIT 1
 
 _LIST_BY_ASSIGNEE_AND_STATUS = """
 SELECT
-  task_id, party_id, title, description, due_at, priority, status,
-  assignee_user_id, source, source_ref, created_by, created_at, updated_at, completed_at
-FROM crm_task
-WHERE assignee_user_id = ? AND status = ?
-ORDER BY due_at ASC, priority DESC
+  t.task_id, t.party_id, t.title, t.description, t.due_at, t.priority, t.status,
+  t.assignee_user_id, t.source, t.source_ref, t.created_by, t.created_at, t.updated_at, t.completed_at,
+  t.task_kind, t.channel,
+  p.display_name AS party_name,
+  u.full_name AS assignee_name
+FROM crm_task t
+LEFT JOIN crm_party p ON p.party_id = t.party_id
+LEFT JOIN crm_app_user u ON u.user_id = t.assignee_user_id
+WHERE t.assignee_user_id = ? AND t.status = ?
+ORDER BY t.due_at ASC, t.priority DESC
 LIMIT ?
 """
 
 _LIST_BY_ASSIGNEE = """
 SELECT
-  task_id, party_id, title, description, due_at, priority, status,
-  assignee_user_id, source, source_ref, created_by, created_at, updated_at, completed_at
-FROM crm_task
-WHERE assignee_user_id = ?
-ORDER BY due_at ASC, priority DESC
+  t.task_id, t.party_id, t.title, t.description, t.due_at, t.priority, t.status,
+  t.assignee_user_id, t.source, t.source_ref, t.created_by, t.created_at, t.updated_at, t.completed_at,
+  t.task_kind, t.channel,
+  p.display_name AS party_name,
+  u.full_name AS assignee_name
+FROM crm_task t
+LEFT JOIN crm_party p ON p.party_id = t.party_id
+LEFT JOIN crm_app_user u ON u.user_id = t.assignee_user_id
+WHERE t.assignee_user_id = ?
+ORDER BY t.due_at ASC, t.priority DESC
 LIMIT ?
 """
 
 _LIST_BY_STATUS = """
 SELECT
-  task_id, party_id, title, description, due_at, priority, status,
-  assignee_user_id, source, source_ref, created_by, created_at, updated_at, completed_at
-FROM crm_task
-WHERE status = ?
-ORDER BY due_at ASC, priority DESC
+  t.task_id, t.party_id, t.title, t.description, t.due_at, t.priority, t.status,
+  t.assignee_user_id, t.source, t.source_ref, t.created_by, t.created_at, t.updated_at, t.completed_at,
+  t.task_kind, t.channel,
+  p.display_name AS party_name,
+  u.full_name AS assignee_name
+FROM crm_task t
+LEFT JOIN crm_party p ON p.party_id = t.party_id
+LEFT JOIN crm_app_user u ON u.user_id = t.assignee_user_id
+WHERE t.status = ?
+ORDER BY t.due_at ASC, t.priority DESC
 LIMIT ?
 """
 
 _LIST_ALL = """
 SELECT
-  task_id, party_id, title, description, due_at, priority, status,
-  assignee_user_id, source, source_ref, created_by, created_at, updated_at, completed_at
-FROM crm_task
-ORDER BY due_at ASC, priority DESC
+  t.task_id, t.party_id, t.title, t.description, t.due_at, t.priority, t.status,
+  t.assignee_user_id, t.source, t.source_ref, t.created_by, t.created_at, t.updated_at, t.completed_at,
+  t.task_kind, t.channel,
+  p.display_name AS party_name,
+  u.full_name AS assignee_name
+FROM crm_task t
+LEFT JOIN crm_party p ON p.party_id = t.party_id
+LEFT JOIN crm_app_user u ON u.user_id = t.assignee_user_id
+ORDER BY t.due_at ASC, t.priority DESC
 LIMIT ?
 """
 
 _LIST_UNASSIGNED_BY_STATUS = """
 SELECT
-  task_id, party_id, title, description, due_at, priority, status,
-  assignee_user_id, source, source_ref, created_by, created_at, updated_at, completed_at
-FROM crm_task
-WHERE assignee_user_id IS NULL AND status = ?
-ORDER BY due_at ASC, priority DESC
+  t.task_id, t.party_id, t.title, t.description, t.due_at, t.priority, t.status,
+  t.assignee_user_id, t.source, t.source_ref, t.created_by, t.created_at, t.updated_at, t.completed_at,
+  t.task_kind, t.channel,
+  p.display_name AS party_name,
+  u.full_name AS assignee_name
+FROM crm_task t
+LEFT JOIN crm_party p ON p.party_id = t.party_id
+LEFT JOIN crm_app_user u ON u.user_id = t.assignee_user_id
+WHERE t.assignee_user_id IS NULL AND t.status = ?
+ORDER BY t.due_at ASC, t.priority DESC
 LIMIT ?
 """
 
 _LIST_UNASSIGNED = """
 SELECT
-  task_id, party_id, title, description, due_at, priority, status,
-  assignee_user_id, source, source_ref, created_by, created_at, updated_at, completed_at
-FROM crm_task
-WHERE assignee_user_id IS NULL
-ORDER BY due_at ASC, priority DESC
+  t.task_id, t.party_id, t.title, t.description, t.due_at, t.priority, t.status,
+  t.assignee_user_id, t.source, t.source_ref, t.created_by, t.created_at, t.updated_at, t.completed_at,
+  t.task_kind, t.channel,
+  p.display_name AS party_name,
+  u.full_name AS assignee_name
+FROM crm_task t
+LEFT JOIN crm_party p ON p.party_id = t.party_id
+LEFT JOIN crm_app_user u ON u.user_id = t.assignee_user_id
+WHERE t.assignee_user_id IS NULL
+ORDER BY t.due_at ASC, t.priority DESC
 LIMIT ?
 """
 
 _LIST_BY_PARTY = """
 SELECT
-  task_id, party_id, title, description, due_at, priority, status,
-  assignee_user_id, source, source_ref, created_by, created_at, updated_at, completed_at
-FROM crm_task
-WHERE party_id = ?
-ORDER BY due_at ASC, priority DESC
+  t.task_id, t.party_id, t.title, t.description, t.due_at, t.priority, t.status,
+  t.assignee_user_id, t.source, t.source_ref, t.created_by, t.created_at, t.updated_at, t.completed_at,
+  t.task_kind, t.channel,
+  p.display_name AS party_name,
+  u.full_name AS assignee_name
+FROM crm_task t
+LEFT JOIN crm_party p ON p.party_id = t.party_id
+LEFT JOIN crm_app_user u ON u.user_id = t.assignee_user_id
+WHERE t.party_id = ?
+ORDER BY t.due_at ASC, t.priority DESC
 LIMIT ?
 """
 
@@ -156,6 +207,7 @@ LIMIT ?
 # ---------------------------------------------------------------------------
 
 def _task_from_row(row: sqlite3.Row) -> Task:
+    keys = row.keys()
     return Task(
         task_id=row["task_id"],
         title=row["title"],
@@ -171,6 +223,10 @@ def _task_from_row(row: sqlite3.Row) -> Task:
         source_ref=row["source_ref"],
         created_by=row["created_by"],
         completed_at=row["completed_at"],
+        task_kind=row["task_kind"] if "task_kind" in keys else "contact",
+        channel=row["channel"] if "channel" in keys else None,
+        party_name=row["party_name"] if "party_name" in keys else None,
+        assignee_name=row["assignee_name"] if "assignee_name" in keys else None,
     )
 
 
@@ -204,6 +260,8 @@ class SQLiteTaskRepository:
             task.created_at,
             task.updated_at,
             task.completed_at,
+            task.task_kind,
+            task.channel,
         ))
         return task
 
@@ -222,6 +280,8 @@ class SQLiteTaskRepository:
             task.assignee_user_id,
             task.due_at,
             task.completed_at,
+            task.task_kind,
+            task.channel,
             task.task_id,
         ))
 

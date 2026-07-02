@@ -119,6 +119,7 @@ from adapters.inbound.web.screens.hug.screen_hug_mint import make_hug_mint_route
 from adapters.inbound.web.screens.hug.screen_hug_review import make_hug_review_router
 from adapters.inbound.web.screens.hug.screen_hug_campaign import make_hug_campaign_router
 from adapters.inbound.web.screens.hug.screen_hug_voucher_attribution import make_hug_voucher_attribution_router
+from adapters.inbound.web.screens.screen_task_detail import make_task_detail_router
 
 # ── Hug — local token-provisioning master (separate Python-owned hug.db) ──────
 from hug import db as hug_db
@@ -587,6 +588,7 @@ def _register_web_routes(
         app_users=sqlite_repos["app_user"],
         approach_repo=sqlite_repos["approach"],
         claimed_action_resolver=sqlite_repos["task"],
+        action_state=sqlite_repos["action_state"],
     ))
     app.include_router(make_tasks_board_router(
         templates=templates,
@@ -627,6 +629,15 @@ def _register_web_routes(
         parties_svc=sqlite_repos["party"],
         settings_svc=_profile_cf_tag,
         app_users_svc=sqlite_repos["app_user"],
+    ))
+    app.include_router(make_task_detail_router(
+        templates=templates,
+        task_repo=sqlite_repos["task"],
+        profile=services["profile"],
+        identities=sqlite_repos["party"],
+        insight=sqlite_repos["cache"],
+        activities=services["activity"],
+        task_svc=services["task"],
     ))
 
 

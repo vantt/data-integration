@@ -71,6 +71,7 @@ def make_contact_modal_router(
 
     @router.post("/customers/{party_id}/contact", response_class=HTMLResponse)
     async def post_contact(
+        request: Request,
         party_id: str,
         action: str = Form("add_channel"),
         add_identity_type: str = Form("phone_secondary"),
@@ -81,6 +82,7 @@ def make_contact_modal_router(
         edit_display_label: str = Form(""),
         edit_contact_status: str = Form("active"),
         edit_is_preferred: str = Form("0"),
+        inline: str = Form("0"),
     ) -> Response:
         try:
             if action == "add_channel":
@@ -113,6 +115,14 @@ def make_contact_modal_router(
         except Exception as exc:
             log.error("post_contact %s: %s", party_id, exc)
             return HTMLResponse(f"Lỗi lưu kênh liên lạc: {exc}", status_code=500)
+        # §4 inline collect: return a one-row fragment instead of redirect
+        if inline == "1":
+            return templates.TemplateResponse(
+                "fragments/_s14_collect_row.html",
+                {"request": request, "party_id": party_id,
+                 "field": add_identity_type, "value": add_identity_value.strip(),
+                 "done": True},
+            )
         return redirect_to_customer(party_id)
 
     @router.post("/customers/{party_id}/consent", response_class=HTMLResponse)
@@ -166,12 +176,14 @@ def make_contact_modal_router(
 
     @router.post("/customers/{party_id}/core", response_class=HTMLResponse)
     async def post_core(
+        request: Request,
         party_id: str,
         display_name: str = Form(""),
         primary_email: str = Form(""),
         birthday: str = Form(""),
         gender: str = Form(""),
         consent_contact: str = Form("na"),
+        inline: str = Form("0"),
     ) -> Response:
         display_name = display_name.strip()
         if not display_name:
@@ -192,6 +204,14 @@ def make_contact_modal_router(
         except Exception as exc:
             log.error("post_core %s: %s", party_id, exc)
             return HTMLResponse(f"Lỗi lưu thông tin: {exc}", status_code=500)
+        # §4 inline collect: return a one-row fragment instead of redirect
+        if inline == "1":
+            return templates.TemplateResponse(
+                "fragments/_s14_collect_row.html",
+                {"request": request, "party_id": party_id,
+                 "field": "core", "value": display_name.strip(),
+                 "done": True},
+            )
         return redirect_to_customer(party_id)
 
     return router

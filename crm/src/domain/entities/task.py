@@ -22,6 +22,14 @@ VALID_TASK_STATUSES = [
 ]
 
 # ---------------------------------------------------------------------------
+# Kind constants
+# ---------------------------------------------------------------------------
+TASK_KIND_CONTACT = "contact"    # outreach to a customer
+TASK_KIND_INTERNAL = "internal"  # internal/admin work (e.g. verify_account)
+TASK_KIND_GENERIC = "generic"    # no customer party (manual, no party_id)
+VALID_TASK_KINDS = [TASK_KIND_CONTACT, TASK_KIND_INTERNAL, TASK_KIND_GENERIC]
+
+# ---------------------------------------------------------------------------
 # Source constants
 # ---------------------------------------------------------------------------
 TASK_SOURCE_MANUAL = "manual"
@@ -72,6 +80,11 @@ class Task:
     source_ref: Optional[str] = None        # action_id or campaign_id (idempotency key)
     created_by: Optional[str] = None        # FK → crm_app_user nullable
     completed_at: Optional[str] = None      # UTC ISO-8601 nullable
+    task_kind: str = "contact"              # contact|internal|generic (set by migration/derive)
+    channel: Optional[str] = None          # reserved: phone|zalo|messenger|email|store
+    # Denormalised display fields — populated by list queries via LEFT JOIN
+    party_name: Optional[str] = None        # crm_party.display_name
+    assignee_name: Optional[str] = None     # crm_app_user.full_name
 
     @property
     def priority_label(self) -> str:

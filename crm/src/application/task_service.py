@@ -22,6 +22,7 @@ from domain.entities.task import (
 )
 from domain.ports.task_repository import TaskRepository
 from domain.ports.cache_repository import CacheRepository
+from application.task_kind import derive_task_kind
 
 if TYPE_CHECKING:
     from adapters.outbound.sqlite.connection import CRMDatabase
@@ -53,21 +54,38 @@ class TaskService:
         if not title:
             raise ValueError("title is required")
 
+        source = task_data.get("source") or TASK_SOURCE_MANUAL
+        source_ref = task_data.get("source_ref")
+        party_id = task_data.get("party_id")
+
+        # Derive task_kind unless the caller supplies an explicit value.
+        explicit_kind = task_data.get("task_kind") or ""
+        if explicit_kind:
+            task_kind = explicit_kind
+        else:
+            task_kind, _ = derive_task_kind(
+                source=source,
+                source_ref=source_ref,
+                party_id=party_id,
+                action_type=task_data.get("action_type"),
+            )
+
         now = utc_now()
         task = Task(
             task_id=task_data.get("task_id") or str(uuid.uuid4()),
             title=title,
             priority=task_data.get("priority", 0),
             status=task_data.get("status") or TASK_STATUS_OPEN,
-            source=task_data.get("source") or TASK_SOURCE_MANUAL,
+            source=source,
             created_at=now,
             updated_at=now,
-            party_id=task_data.get("party_id"),
+            party_id=party_id,
             description=task_data.get("description"),
             due_at=task_data.get("due_at"),
             assignee_user_id=task_data.get("assignee_user_id"),
-            source_ref=task_data.get("source_ref"),
+            source_ref=source_ref,
             created_by=task_data.get("created_by"),
+            task_kind=task_kind,
         )
         self._task_repo.insert(task)
         if self._db:
@@ -186,6 +204,7 @@ class TaskService:
             assignee_user_id=assignee_id,
             created_at=now,
             updated_at=now,
+            task_kind="contact",  # claim always means outreach to a customer
         )
         self._task_repo.insert(task)
         if self._db:
@@ -228,6 +247,7 @@ class TaskService:
             assignee_user_id=assignee_id,
             created_at=now,
             updated_at=now,
+            task_kind="contact",  # auto-claim from contact activity → outreach
         )
         self._task_repo.insert(task)
         if self._db:
@@ -265,10 +285,19 @@ class TaskService:
         label = rationale[:80] if rationale else getattr(action, "customer_key", action_id)
         title = f"[{action.action_type}] {label}"
 
+        action_party_id = getattr(action, "party_id", None)
+        action_type = getattr(action, "action_type", None)
+        kind, _ = derive_task_kind(
+            source=TASK_SOURCE_ACTION_QUEUE,
+            source_ref=action_id,
+            party_id=action_party_id,
+            action_type=action_type,
+        )
+
         now = utc_now()
         task = Task(
             task_id=str(uuid.uuid4()),
-            party_id=getattr(action, "party_id", None),
+            party_id=action_party_id,
             title=title,
             description=rationale or None,
             priority=getattr(action, "priority", 1),
@@ -278,6 +307,7 @@ class TaskService:
             assignee_user_id=assignee_id,
             created_at=now,
             updated_at=now,
+            task_kind=kind,
         )
         self._task_repo.insert(task)
         if self._db:
@@ -353,6 +383,13 @@ class TaskService:
             label = action.customer_key
         title = f"[{action.action_type}] {label}"
 
+        kind, _ = derive_task_kind(
+            source=TASK_SOURCE_ACTION_QUEUE,
+            source_ref=action.action_id,
+            party_id=party_id,
+            action_type=action.action_type,
+        )
+
         now = utc_now()
         source_ref = action.action_id
         task = Task(
@@ -367,6 +404,7 @@ class TaskService:
             assignee_user_id=assignee_id,
             created_at=now,
             updated_at=now,
+            task_kind=kind,
         )
         self._task_repo.insert(task)
         if self._db:

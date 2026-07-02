@@ -22,7 +22,8 @@ from adapters.inbound.web.screens.modals.screen_modal_shared import (
     parse_priority,
     redirect_to_customer,
 )
-from domain.entities.task import Task
+from application.task_kind import derive_task_kind
+from domain.entities.task import Task, VALID_TASK_KINDS
 
 log = logging.getLogger(__name__)
 
@@ -79,6 +80,17 @@ def make_task_modal_router(
             due_date_val = task.due_at[:10]
             if len(task.due_at) > 10:
                 due_time_val = task.due_at[11:16]
+        # Derive task_kind for pre-filling the modal selector.
+        # When editing an existing task, use its persisted kind (always confident).
+        if task:
+            modal_task_kind = task.task_kind
+            task_kind_confident = True
+        else:
+            modal_task_kind, task_kind_confident = derive_task_kind(
+                source=source,
+                source_ref=source_ref or None,
+                party_id=party_id or None,
+            )
         return templates.TemplateResponse(
             "fragments/modal_m05_create_task.html",
             {
@@ -93,6 +105,8 @@ def make_task_modal_router(
                 "prio_code": prio_code,
                 "due_date_val": due_date_val,
                 "due_time_val": due_time_val,
+                "task_kind": modal_task_kind,
+                "task_kind_confident": task_kind_confident,
             },
         )
 
@@ -135,11 +149,22 @@ def make_task_modal_router(
         priority: str = Form("P3"),
         source: str = Form("manual"),
         source_ref: str = Form(""),
+        task_kind: str = Form(""),
     ) -> Response:
         title = title.strip()
         if not title:
             return HTMLResponse("Tiêu đề không được bỏ trống", status_code=400)
         current_user = getattr(request.state, "current_user", None)
+        # Resolve task_kind: honour explicit form value; derive when absent/empty.
+        resolved_source = source.strip() or "manual"
+        resolved_source_ref = source_ref.strip() or None
+        resolved_kind = task_kind.strip()
+        if not resolved_kind or resolved_kind not in VALID_TASK_KINDS:
+            resolved_kind, _ = derive_task_kind(
+                source=resolved_source,
+                source_ref=resolved_source_ref,
+                party_id=party_id or None,
+            )
         try:
             task_svc.create_task({
                 "party_id": party_id,
@@ -148,9 +173,10 @@ def make_task_modal_router(
                 "due_at": due_at.strip() or None,
                 "assignee_user_id": assignee_user_id.strip() or None,
                 "priority": parse_priority(priority),
-                "source": source.strip() or "manual",
-                "source_ref": source_ref.strip() or None,
+                "source": resolved_source,
+                "source_ref": resolved_source_ref,
                 "created_by": current_user.user_id if current_user else None,
+                "task_kind": resolved_kind,
             })
         except Exception as exc:
             log.error("post_task %s: %s", party_id, exc)
