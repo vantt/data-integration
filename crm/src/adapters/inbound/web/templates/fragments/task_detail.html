@@ -1,0 +1,467 @@
+{# @surface S15 · Task Detail | @source crm/docs/ui-spec/screens/S15-task-detail.md | @kind SCREEN #}
+{#
+  Context:
+    task               — Task (task_id, title, status, task_kind, source, source_ref, party_id, due_at, assignee_name, priority_label, description)
+    party              — Party360 | None
+    identities         — list[PartyIdentity]
+    insight            — CacheInsight | None
+    provenance_action  — ActionQueueItem | None
+    attempt_log        — list[Activity]  filtered by task_id
+    claim_actions      — list[ActionQueueItem]
+    allowed_transitions— list[str]
+    body_kind          — str: contact | internal | generic
+  R6: all dates display ICT
+#}
+
+{% set _kind_tone = {'contact': 'amber', 'internal': 'moss', 'generic': 'default'} %}
+{% set _kind_label = {'contact': 'Liên hệ', 'internal': 'Nội bộ', 'generic': 'Chung'} %}
+{% set _status_label = {'open': 'Đang mở', 'doing': 'Đang làm', 'done': 'Hoàn thành', 'cancelled': 'Đã huỷ'} %}
+{% set _lifecycle = ['open', 'doing', 'done'] %}
+{% set _read_only = task.status in ('done', 'cancelled') %}
+{% set _kind = task.task_kind %}
+{% set _tone = _kind_tone.get(_kind, 'default') %}
+
+<div class="crm-page page-enter s15-page task-detail-stub"
+     data-surface="S15"
+     data-task-id="{{ task.task_id }}"
+     data-body-kind="{{ body_kind }}">
+
+  {# ── HEADER ── #}
+  <div class="s15-head">
+    <a class="c360-back" href="/tasks">
+      <svg width="14" height="14" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.3" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M10 3L4 8l6 5"/></svg>
+      Tasks
+    </a>
+    <div class="s15-head__main">
+      <div class="s15-head__titlerow">
+        <h1 class="s15-title">{{ task.title }}</h1>
+        {% if _tone == 'amber' %}
+        <span class="s15-kind s15-kind--amber">
+          <svg width="11" height="11" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.3" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3.5 2.5c.5 1 1.5 2.5 2 3.5-.5.5-1.5 1-1.5 2 0 1.5 3.5 5 5 5 1 0 1.5-1 2-1.5 1 .5 2.5 1.5 3.5 2-.5 1.5-2 2.5-3.5 2.5-3.5 0-9.5-6-9.5-9.5 0-1.5 1-3 2-2.5z"/></svg>
+          {{ _kind_label.get(_kind, 'Chung') }}
+        </span>
+        {% elif _tone == 'moss' %}
+        <span class="s15-kind s15-kind--moss">
+          <svg width="11" height="11" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.3" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="8" cy="8" r="2"/><circle cx="8" cy="8" r="5.4"/><path d="M8 1.4v1.2M8 13.4v1.2M14.6 8h-1.2M2.6 8H1.4"/></svg>
+          {{ _kind_label.get(_kind, 'Chung') }}
+        </span>
+        {% else %}
+        <span class="s15-kind">
+          <svg width="11" height="11" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.3" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3.5 2.5h7l3 3v8h-10z"/><path d="M10 2.5V6h3.5"/><path d="M5.5 9h5M5.5 11.5h3"/></svg>
+          {{ _kind_label.get(_kind, 'Chung') }}
+        </span>
+        {% endif %}
+        {% if task.priority_label %}
+        <span class="prio prio--{{ task.priority_label }}">{{ task.priority_label }}</span>
+        {% endif %}
+        {# Overdue flag: server may supply task.is_overdue; if not, skip — backend computes this #}
+        {% if task.status not in ('done', 'cancelled') and task.is_overdue_flag %}
+        <span class="s15-overdue">
+          <svg width="11" height="11" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.3" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M8 2L1.5 13h13L8 2z"/><path d="M8 6v3.5M8 11.5v.5"/></svg>
+          Quá hạn
+        </span>
+        {% endif %}
+      </div>
+      <div class="s15-head__meta">
+        {# Status chip — use Bdg tone equivalent (inline class) #}
+        {% if task.status == 'done' %}
+        <span class="badge badge--success s15-meta__item">{{ _status_label.get(task.status, task.status) }}</span>
+        {% elif task.status == 'doing' %}
+        <span class="badge badge--warn s15-meta__item">{{ _status_label.get(task.status, task.status) }}</span>
+        {% elif task.status == 'cancelled' %}
+        <span class="badge badge--danger s15-meta__item">{{ _status_label.get(task.status, task.status) }}</span>
+        {% else %}
+        <span class="badge s15-meta__item">{{ _status_label.get(task.status, task.status) }}</span>
+        {% endif %}
+        {% if task.due_at %}
+        <span class="s15-meta__item">
+          <svg width="12" height="12" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.3" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="8" cy="8" r="5.5"/><path d="M8 5.5V8l2 2"/></svg>
+          Đến hạn: <b>{{ task.due_at | format_ict }}</b>
+        </span>
+        {% endif %}
+        {% if task.assignee_name %}
+        <span class="s15-meta__item">
+          <svg width="12" height="12" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.3" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="8" cy="5.5" r="2.6"/><path d="M3.2 13.2c.5-2.6 2.4-4 4.8-4s4.3 1.4 4.8 4"/></svg>
+          {{ task.assignee_name }}
+        </span>
+        {% endif %}
+        {% if party %}
+        <a class="s15-meta__party" href="/customers/{{ task.party_id }}">
+          {{ party.display_name }}
+          <svg width="11" height="11" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.3" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M7 3H3v10h10V9M9 3h4v4M13 3L8 8"/></svg>
+        </a>
+        {% endif %}
+      </div>
+    </div>
+  </div>
+
+  {# ── STATUS BANNERS ── #}
+  {% if task.status == 'done' %}
+  <div class="s15-banner s15-banner--done">
+    <svg width="14" height="14" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.3" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 8l3.5 3.5L13 5"/></svg>
+    Task đã hoàn thành — chỉ đọc. Nhật ký vẫn hiển thị bên dưới.
+    <form method="post" action="/tasks/{{ task.task_id }}/status" style="display:inline">
+      <input type="hidden" name="new_status" value="open">
+      <button type="submit" class="s15-banner__link">Mở lại</button>
+    </form>
+  </div>
+  {% elif task.status == 'cancelled' %}
+  <div class="s15-banner s15-banner--cancel">
+    <svg width="14" height="14" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.3" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 4l8 8M12 4l-8 8"/></svg>
+    Task đã huỷ.
+    <form method="post" action="/tasks/{{ task.task_id }}/status" style="display:inline">
+      <input type="hidden" name="new_status" value="open">
+      <button type="submit" class="s15-banner__link">Mở lại</button>
+    </form>
+  </div>
+  {% endif %}
+
+  {# ── LIFECYCLE RAIL ── #}
+  <div class="s15-lifebar">
+    {% if task.status == 'cancelled' %}
+    <div class="s15-life s15-life--cancelled">
+      {% for s in _lifecycle %}
+      {% if not loop.first %}<span class="s15-life__bar"></span>{% endif %}
+      <span class="s15-step s15-step--muted">{{ _status_label.get(s, s) }}</span>
+      {% endfor %}
+      <span class="s15-life__bar"></span>
+      <span class="s15-step s15-step--cancel">
+        <svg width="11" height="11" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.3" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 4l8 8M12 4l-8 8"/></svg>
+        Đã huỷ
+      </span>
+    </div>
+    {% else %}
+    {% set _cur_idx = _lifecycle.index(task.status) if task.status in _lifecycle else 0 %}
+    <div class="s15-life">
+      {% for s in _lifecycle %}
+      {% set _i = loop.index0 %}
+      {% if not loop.first %}
+        {% if _i <= _cur_idx %}
+        <span class="s15-life__bar s15-life__bar--on"></span>
+        {% else %}
+        <span class="s15-life__bar"></span>
+        {% endif %}
+      {% endif %}
+      {% if _i < _cur_idx %}
+      <span class="s15-step s15-step--past">
+        <span class="s15-step__dot"><svg width="11" height="11" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.3" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 8l3.5 3.5L13 5"/></svg></span>
+        {{ _status_label.get(s, s) }}
+      </span>
+      {% elif _i == _cur_idx %}
+      <span class="s15-step s15-step--cur">
+        <span class="s15-step__dot"></span>
+        {{ _status_label.get(s, s) }}
+      </span>
+      {% else %}
+      <span class="s15-step s15-step--future">
+        <span class="s15-step__dot"></span>
+        {{ _status_label.get(s, s) }}
+      </span>
+      {% endif %}
+      {% endfor %}
+    </div>
+    {% endif %}
+
+    {# Action buttons — hidden when read-only #}
+    {% if not _read_only %}
+    <div class="s15-life__acts">
+      {% if 'doing' in allowed_transitions %}
+      <form method="post" action="/tasks/{{ task.task_id }}/status" style="display:inline"
+            hx-post="/tasks/{{ task.task_id }}/status"
+            hx-vals='{"new_status": "doing"}'
+            hx-target="body" hx-swap="none"
+            hx-on::after-request="window.location.reload()">
+        <input type="hidden" name="new_status" value="doing">
+        <button type="submit" class="btn btn--secondary" style="padding:8px 12px">
+          <svg width="13" height="13" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.3" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9.5 2L4 9h5l-2.5 5 8-7.5H9.5z"/></svg>
+          Bắt đầu
+        </button>
+      </form>
+      {% endif %}
+      {% if 'done' in allowed_transitions %}
+      <form method="post" action="/tasks/{{ task.task_id }}/status" style="display:inline"
+            hx-post="/tasks/{{ task.task_id }}/status"
+            hx-vals='{"new_status": "done"}'
+            hx-target="body" hx-swap="none"
+            hx-on::after-request="window.location.reload()">
+        <input type="hidden" name="new_status" value="done">
+        <button type="submit" class="btn btn--primary" style="padding:8px 12px">
+          <svg width="13" height="13" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.3" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 8l3.5 3.5L13 5"/></svg>
+          Hoàn thành
+        </button>
+      </form>
+      {% endif %}
+      <button class="btn btn--ghost" style="padding:8px 12px"
+              hx-get="/modals/m05?task_id={{ task.task_id }}&party_id={{ task.party_id or '' }}"
+              hx-target="#modal-root" hx-swap="innerHTML">
+        <svg width="13" height="13" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.3" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M11.5 2.5l2 2-9 9L2 14l.5-2.5 9-9z"/></svg>
+        Sửa
+      </button>
+      <button class="btn btn--ghost" style="padding:8px 12px"
+              hx-get="/modals/o03?task_id={{ task.task_id }}&party_id={{ task.party_id or '' }}&due_at={{ task.due_at or '' | urlencode }}"
+              hx-target="#modal-root" hx-swap="innerHTML">
+        <svg width="13" height="13" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.3" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="8" cy="8" r="5.5"/><path d="M8 5.5V8l2 2"/></svg>
+        Hoãn
+      </button>
+      {% if 'cancelled' in allowed_transitions %}
+      <form method="post" action="/tasks/{{ task.task_id }}/status" style="display:inline"
+            hx-post="/tasks/{{ task.task_id }}/status"
+            hx-vals='{"new_status": "cancelled"}'
+            hx-target="body" hx-swap="none"
+            hx-on::after-request="window.location.reload()">
+        <input type="hidden" name="new_status" value="cancelled">
+        <button type="submit" class="btn btn--ghost s15-cancel" style="padding:8px 12px">
+          <svg width="13" height="13" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.3" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 4l8 8M12 4l-8 8"/></svg>
+          Huỷ
+        </button>
+      </form>
+      {% endif %}
+    </div>
+    {% endif %}
+  </div>
+
+  {# ── BODY ── #}
+  <div class="s15-body">
+
+    {# ── body_kind = contact ── #}
+    {% if body_kind == 'contact' %}
+
+      {# PROVENANCE — show if provenance_action or claim_actions #}
+      {% if provenance_action or claim_actions %}
+      <div class="s15-section">
+        <div class="s15-section__head">
+          <svg width="13" height="13" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.3" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9.5 2L4 9h5l-2.5 5 8-7.5H9.5z"/></svg>
+          Xuất xứ &amp; lý do
+        </div>
+        <div class="s15-prov">
+          <div class="s15-prov__row">
+            <span class="s15-prov__k">Nguồn</span>
+            <span class="s15-prov__v">
+              {% if task.source == 'action_queue_claim' %}action_queue (gộp claim)
+              {% elif task.source == 'action_queue' %}action_queue
+              {% else %}thủ công{% endif %}
+              {% if task.source_ref %}<span class="mono s15-prov__ref"> · {{ task.source_ref }}</span>{% endif %}
+            </span>
+          </div>
+          {% if provenance_action and provenance_action.rationale_vi %}
+          <div class="s15-prov__row">
+            <span class="s15-prov__k">Lý do</span>
+            <span class="s15-prov__v s15-prov__v--em">"{{ provenance_action.rationale_vi }}"</span>
+          </div>
+          {% endif %}
+          {% if provenance_action and provenance_action.value_at_stake_vnd %}
+          <div class="s15-prov__row">
+            <span class="s15-prov__k">Giá trị ước tính</span>
+            <span class="s15-prov__v mono s15-prov__v--val">{{ provenance_action.value_at_stake_vnd | fmt_vnd }}</span>
+          </div>
+          {% endif %}
+        </div>
+
+        {# Claim actions rollup #}
+        {% if claim_actions %}
+        <div class="s15-claim">
+          <div class="s15-claim__label">{{ claim_actions | length }} action được gộp — xử lý tất cả trong một phiên gọi</div>
+          {% for ca in claim_actions %}
+          <div class="s15-claim__row">
+            <span class="tkind-tag tkind-tag--contact">{{ ca.action_type }}</span>
+            <span class="s15-claim__why">{{ ca.rationale_vi }}</span>
+            {% if ca.value_at_stake_vnd %}
+            <span class="s15-claim__val mono">{{ ca.value_at_stake_vnd | fmt_vnd }}</span>
+            {% endif %}
+          </div>
+          {% endfor %}
+        </div>
+        {% endif %}
+      </div>
+      {% endif %}
+
+      {# KHÁCH HÀNG + launch #}
+      {% if party %}
+      <div class="s15-section">
+        <div class="s15-section__head">
+          <svg width="13" height="13" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.3" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="8" cy="5.5" r="2.6"/><path d="M3.2 13.2c.5-2.6 2.4-4 4.8-4s4.3 1.4 4.8 4"/></svg>
+          Khách hàng
+        </div>
+        <div class="s15-cust">
+          <span class="s15-cust__avatar">{{ party.display_name[-1] | upper if party.display_name else '?' }}</span>
+          <div class="s15-cust__main">
+            <div class="s15-cust__row">
+              <span class="s15-cust__name">{{ party.display_name }}</span>
+            </div>
+            <div class="s15-cust__meta mono">
+              {% if party.province %}<span>{{ party.province }}</span><span class="s15-cust__sep">·</span>{% endif %}
+              <span>ID: {{ task.party_id }}</span>
+            </div>
+          </div>
+          <a class="btn btn--ghost" href="/customers/{{ task.party_id }}" style="padding:8px 12px">
+            360
+            <svg width="12" height="12" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.3" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M6 4l4 4-4 4"/></svg>
+          </a>
+        </div>
+
+        <div class="s15-launch">
+          <a class="btn btn--primary s15-launch__btn" href="/customers/{{ task.party_id }}/call?task_id={{ task.task_id }}">
+            <svg width="15" height="15" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.3" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3.5 2.5c.5 1 1.5 2.5 2 3.5-.5.5-1.5 1-1.5 2 0 1.5 3.5 5 5 5 1 0 1.5-1 2-1.5 1 .5 2.5 1.5 3.5 2-.5 1.5-2 2.5-3.5 2.5-3.5 0-9.5-6-9.5-9.5 0-1.5 1-3 2-2.5z"/></svg>
+            Vào phiên gọi
+          </a>
+          <div class="s15-launch__note">
+            Mở phiên gọi <b>chung của khách</b> — xử lý trong một phiên. Outcome đồng bộ lại <span class="mono">task.status</span>.
+          </div>
+        </div>
+      </div>
+      {% endif %}
+
+      {# LỊCH SỬ THỬ LIÊN LẠC #}
+      <div class="s15-section">
+        <div class="s15-section__head">
+          <svg width="13" height="13" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.3" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="8" cy="8" r="5.5"/><path d="M8 5.5V8l2 2"/></svg>
+          Lịch sử thử liên lạc
+        </div>
+        {% if attempt_log %}
+        <div class="s15-attempts">
+          {% for att in attempt_log %}
+          <div class="s15-attempt">
+            <span class="s15-attempt__icon">
+              {% if att.activity_type in ('zalo', 'chat') %}
+              <svg width="13" height="13" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.3" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M2 4.5L8 8.5l6-4"/><rect x="2" y="3" width="12" height="10" rx="1.5"/></svg>
+              {% elif att.activity_type == 'email' %}
+              <svg width="13" height="13" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.3" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3.5 2.5h7l3 3v8h-10z"/><path d="M10 2.5V6h3.5"/></svg>
+              {% else %}
+              <svg width="13" height="13" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.3" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3.5 2.5c.5 1 1.5 2.5 2 3.5-.5.5-1.5 1-1.5 2 0 1.5 3.5 5 5 5 1 0 1.5-1 2-1.5 1 .5 2.5 1.5 3.5 2-.5 1.5-2 2.5-3.5 2.5-3.5 0-9.5-6-9.5-9.5 0-1.5 1-3 2-2.5z"/></svg>
+              {% endif %}
+            </span>
+            <span class="s15-attempt__time mono">{{ att.occurred_at | format_datetime_ict }}</span>
+            <span class="s15-attempt__ch">{{ att.activity_type | title }}</span>
+            <span class="s15-attempt__result">{{ att.outcome or '—' }}</span>
+          </div>
+          {% endfor %}
+        </div>
+        {% else %}
+        <div class="s15-log-empty">Chưa có lần thử liên lạc nào cho task này.</div>
+        {% endif %}
+      </div>
+
+    {# ── body_kind = internal ── #}
+    {% elif body_kind == 'internal' %}
+
+      {% if party %}
+      <div class="s15-section">
+        <div class="s15-section__head">
+          <svg width="13" height="13" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.3" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="8" cy="5.5" r="2.6"/><path d="M3.2 13.2c.5-2.6 2.4-4 4.8-4s4.3 1.4 4.8 4"/></svg>
+          Facts khách (tối thiểu)
+        </div>
+        <div class="s15-cust">
+          <span class="s15-cust__avatar">{{ party.display_name[-1] | upper if party.display_name else '?' }}</span>
+          <div class="s15-cust__main">
+            <div class="s15-cust__row">
+              <span class="s15-cust__name">{{ party.display_name }}</span>
+            </div>
+            <div class="s15-cust__meta mono">
+              {% if party.province %}<span>{{ party.province }}</span>{% endif %}
+            </div>
+          </div>
+        </div>
+        <div class="s15-tools">
+          <a class="btn btn--secondary" href="/customers/{{ task.party_id }}" style="padding:8px 12px">
+            <svg width="13" height="13" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.3" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M7 3H3v10h10V9M9 3h4v4M13 3L8 8"/></svg>
+            Xem 360
+          </a>
+          <button class="btn btn--secondary" style="padding:8px 12px"
+                  hx-get="/modals/m15?party_id={{ task.party_id }}&tab=core"
+                  hx-target="#modal-root" hx-swap="innerHTML">
+            <svg width="13" height="13" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.3" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M11.5 2.5l2 2-9 9L2 14l.5-2.5 9-9z"/></svg>
+            Sửa thông tin
+          </button>
+          <button class="btn btn--secondary" style="padding:8px 12px"
+                  hx-get="/modals/m03?party_id={{ task.party_id }}"
+                  hx-target="#modal-root" hx-swap="innerHTML">
+            <svg width="13" height="13" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.3" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M2 8.5V3h5.5l5.5 5.5-5.5 5.5L2 8.5z"/><circle cx="5.5" cy="6.5" r="1" fill="currentColor" stroke="none"/></svg>
+            Thêm tag
+          </button>
+        </div>
+      </div>
+      {% endif %}
+
+      {% if task.description %}
+      <div class="s15-section">
+        <div class="s15-section__head">
+          <svg width="13" height="13" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.3" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3.5 2.5h7l3 3v8h-10z"/><path d="M10 2.5V6h3.5"/><path d="M5.5 9h5M5.5 11.5h3"/></svg>
+          Mô tả
+        </div>
+        <p class="s15-desc">{{ task.description }}</p>
+      </div>
+      {% endif %}
+
+      <div class="s15-section">
+        <div class="s15-section__head">
+          <svg width="13" height="13" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.3" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M11.5 2.5l2 2-9 9L2 14l.5-2.5 9-9z"/></svg>
+          Ghi chú nội bộ
+        </div>
+        <textarea class="inp inp--area s15-notes" placeholder="Ghi chú xử lý…"{% if _read_only %} disabled{% endif %}></textarea>
+      </div>
+
+    {# ── body_kind = generic ── #}
+    {% elif body_kind == 'generic' %}
+
+      {% if task.description %}
+      <div class="s15-section">
+        <div class="s15-section__head">
+          <svg width="13" height="13" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.3" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3.5 2.5h7l3 3v8h-10z"/><path d="M10 2.5V6h3.5"/><path d="M5.5 9h5M5.5 11.5h3"/></svg>
+          Mô tả
+        </div>
+        <p class="s15-desc">{{ task.description }}</p>
+      </div>
+      {% endif %}
+
+      <div class="s15-section">
+        <div class="s15-section__head">
+          <svg width="13" height="13" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.3" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M11.5 2.5l2 2-9 9L2 14l.5-2.5 9-9z"/></svg>
+          Ghi chú
+        </div>
+        <textarea class="inp inp--area s15-notes" placeholder="Ghi chú…"{% if _read_only %} disabled{% endif %}></textarea>
+      </div>
+
+    {% endif %}
+
+    {# ── ACTIVITY LOG ── #}
+    <div class="s15-section">
+      <div class="s15-section__head">
+        <svg width="13" height="13" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.3" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="8" cy="8" r="5.5"/><path d="M8 5.5V8l2 2"/></svg>
+        Nhật ký hoạt động
+      </div>
+      {% if attempt_log %}
+      <div class="s15-timeline">
+        {% for entry in attempt_log %}
+        <div class="s15-tl-row">
+          <span class="s15-tl-dot s15-tl-dot--attempt"></span>
+          <div class="s15-tl-main">
+            <div class="s15-tl-top">
+              <span class="s15-tl-kind">{{ entry.activity_type | upper }}</span>
+              <span class="s15-tl-time mono">{{ entry.occurred_at | format_datetime_ict }} ICT</span>
+            </div>
+            <div class="s15-tl-text">{{ entry.outcome or '—' }}</div>
+          </div>
+        </div>
+        {% endfor %}
+      </div>
+      {% else %}
+      <div class="s15-log-empty">Chưa có hoạt động nào gắn task này. Log qua M08 sẽ mang <span class="mono">task_id</span> và hiện ở đây.</div>
+      {% endif %}
+    </div>
+
+  </div>{# .s15-body #}
+
+  {# ── STICKY CLOSE BAR ── #}
+  {% if not _read_only %}
+  <div class="s15-closebar">
+    <input class="s15-closebar__note" type="text" placeholder="Ghi chú nhanh khi đóng task…" aria-label="Ghi chú khi đóng">
+    <button class="btn btn--primary"
+            hx-get="/modals/m08?party_id={{ task.party_id or '' }}&mode=log&task_id={{ task.task_id }}"
+            hx-target="#modal-root" hx-swap="innerHTML">
+      <svg width="14" height="14" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.3" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 8l3.5 3.5L13 5"/></svg>
+      Ghi log &amp; hoàn thành
+    </button>
+  </div>
+  {% endif %}
+
+</div>{# .s15-page #}

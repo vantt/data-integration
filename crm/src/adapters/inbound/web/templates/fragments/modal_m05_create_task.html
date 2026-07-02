@@ -80,6 +80,34 @@
           </div>
         </label>
 
+        {# ── Loại việc (task_kind) — auto-set+hidden when confident; shown when uncertain ── #}
+        {% if not task_kind_confident %}
+        <label class="field">
+          <span class="field__label">Loại việc</span>
+          <div class="inp-sel">
+            <select name="task_kind">
+              <option value="contact"{% if task_kind == 'contact' %} selected{% endif %}>Liên hệ</option>
+              <option value="internal"{% if task_kind == 'internal' %} selected{% endif %}>Nội bộ</option>
+              <option value="generic"{% if task_kind == 'generic' %} selected{% endif %}>Chung</option>
+            </select>
+            <span class="inp-sel__chev" aria-hidden="true">
+              <svg width="11" height="11" viewBox="0 0 12 12" fill="none"
+                   stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round">
+                <path d="M2 4l4 4 4-4"/>
+              </svg>
+            </span>
+          </div>
+        </label>
+        {% else %}
+        {# Confident: auto-set silently, show disclosure note #}
+        <input type="hidden" name="task_kind" value="{{ task_kind }}">
+        <div class="m05-kind-auto">
+          <span class="m05-kind-auto__k">Loại</span>
+          <b>{% if task_kind == 'contact' %}Liên hệ{% elif task_kind == 'internal' %}Nội bộ{% else %}Chung{% endif %}</b>
+          <span class="m05-kind-auto__why"> — tự xác định từ nguồn</span>
+        </div>
+        {% endif %}
+
         {# ── Due date * + Giờ ── #}
         {# hidden due_at field; JS combines date+time before submit #}
         <input type="hidden" name="due_at" id="m05-due-at">

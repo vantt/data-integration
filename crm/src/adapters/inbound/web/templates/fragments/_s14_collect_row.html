@@ -1,0 +1,14 @@
+{# @surface S14 · Inline Collect Row | STUB — final markup via ui-port step
+   Context contract (§4 S14-implementation-notes):
+     party_id : str
+     field    : str  — identity_type or "core"
+     value    : str  — the collected value
+     done     : bool — True when write succeeded
+   INVARIANT: this fragment targets only its own row inside #s14-collect-root.
+              NEVER re-renders #s14-panel-root.
+#}
+<div class="s14-collect-row s14-collect-row--done" data-field="{{ field }}">
+  <span class="s14-collect-row__tick" aria-label="Đã lưu">✓</span>
+  <span class="s14-collect-row__field">{{ field }}</span>
+  <span class="s14-collect-row__value">{{ value }}</span>
+</div>

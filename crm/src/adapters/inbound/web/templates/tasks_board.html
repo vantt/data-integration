@@ -108,9 +108,16 @@
                       <span class="auto-tag">AUTO</span>
                     {% endif %}
                     <span class="bdg {{ task_status_css(t.status) }}">{{ t.status }}</span>
+                    {% if t.task_kind %}
+                    <span class="tkind-tag tkind-tag--{{ t.task_kind }}">
+                      {% if t.task_kind == 'contact' %}Liên hệ{% elif t.task_kind == 'internal' %}Nội bộ{% else %}Chung{% endif %}
+                    </span>
+                    {% endif %}
                   </div>
 
-                  <div class="tcard__title">{{ t.title }}</div>
+                  <div class="tcard__title">
+                    <a href="/tasks/{{ t.task_id }}" class="ghost-link">{{ t.title }}</a>
+                  </div>
 
                   {% if t.description %}
                     <div class="tcard__meta">{{ t.description[:60] }}{% if t.description|length > 60 %}…{% endif %}</div>
@@ -119,13 +126,19 @@
                   <div class="tcard__meta">
                     {% if t.party_id %}
                       <a href="/customers/{{ t.party_id }}" class="ghost-link">
-                        👤 Hồ sơ
+                        👤 {{ t.party_name or t.party_id }}
                       </a>
                     {% endif %}
                     {% if t.due_at %}
                       <span>🕐 {{ t.due_at | format_datetime_ict }}</span>
                     {% endif %}
                   </div>
+
+                  {% if t.assignee_name %}
+                  <div class="tcard__meta">
+                    <span>👷 {{ t.assignee_name }}</span>
+                  </div>
+                  {% endif %}
 
                   <div class="tcard__meta">
                     {% if t.status not in ("done", "cancelled") %}

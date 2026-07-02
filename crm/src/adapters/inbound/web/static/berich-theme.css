@@ -1,0 +1,129 @@
+/* ============================================================
+   beRich Design System — ported into the CRM as a selectable theme.
+   "Prosperity in jewel tones": warm ivory paper, jade (lộc) +
+   antique gold (wealth), 5 gemstone accents, soft warm shadows.
+
+   Mechanism: remaps beRich's foundation onto the Precision token
+   NAMES the CRM already consumes (--ink-* ramp, --accent, semantic
+   colors, radii, shadow, vignette). The fg/bg/border aliases in
+   :root reference the ink ramp via var(), so re-pointing the ramp
+   cascades automatically — same trick the light / finance themes use.
+
+   Two base themes:  html[data-theme="berich"]      — ivory light
+                     html[data-theme="berich-dark"] — warm obsidian
+   Gemstone accents:  html[data-accent="jade|gold|sapphire|topaz|
+                      amethyst|garnet"]  (theme-agnostic)
+   ============================================================ */
+
+/* ── beRich LIGHT — ivory paper ─────────────────────────────── */
+html[data-theme="berich"] {
+  /* ink ramp re-pointed (deepest → page → … → text).
+     Aliases (--fg, --bg-*, --border*) inherit from these. */
+  --ink-000: #14110E;  /* modal scrim base (dark ink)            */
+  --ink-050: #F7F3EA;  /* page  · ivory                          */
+  --ink-100: #FFFFFF;  /* card  · white                          */
+  --ink-150: #FCFAF4;  /* raised · paper                         */
+  --ink-200: #E6DFD0;  /* hairline border                        */
+  --ink-300: #D6CCB8;  /* strong border                          */
+  --ink-400: #B9B1A4;  /* disabled fg                            */
+  --ink-500: #8A8275;  /* tertiary text  (--fg-3)                */
+  --ink-600: #5E574C;  /* secondary text (--fg-2)                */
+  --ink-700: #463F35;
+  --ink-800: #322C23;
+  --ink-900: #211C16;  /* primary text   (--fg)                  */
+
+  /* primary action = jade (structural). Gold stays a seasoning. */
+  --amber-500: #0E6F52;  --amber-hi: #13A06E;  --amber-lo: #0A3B2C;
+  --amber-bg:  #E1F2EA;                       /* jade chip tint   */
+  --accent:       #0E6F52;
+  --accent-hover: #13A06E;
+  --accent-press: #0A3B2C;
+  --on-amber:     #FFFFFF;
+  --on-accent:    #FFFFFF;
+  --border-amber: #0E6F52;
+
+  /* semantic / value direction — reuse the jewels */
+  --moss-500: #13A06E;  --moss-bg: #E1F2EA;   /* success · gain   */
+  --coral-500:#C23B4B;  --coral-bg:#FAE3E5;   /* danger  · loss   */
+  --honey-500:#C8A04D;                        /* warning · gold   */
+  --success: var(--moss-500);
+  --danger:  var(--coral-500);
+  --warning: var(--honey-500);
+  --gain:  #13A06E;  --gain-bg: #E1F2EA;
+  --loss:  #C23B4B;  --loss-bg: #FAE3E5;
+
+  /* type — Spectral display · Be Vietnam Pro body · Plex Mono */
+  --font-display: 'Spectral', Georgia, 'Times New Roman', serif;
+  --font-body:    'Be Vietnam Pro', system-ui, -apple-system, 'Segoe UI', sans-serif;
+  --font-mono:    'IBM Plex Mono', ui-monospace, 'SF Mono', Menlo, monospace;
+
+  /* radii — softer than Precision */
+  --radii-hairline: 4px;
+  --radii-control:  8px;
+  --radii-soft:     12px;
+
+  /* signature: warm gold CTA glow + faint gold vignette */
+  --shadow-cta-hover: 0 8px 24px rgba(14,111,82,0.18), 0 0 0 1px var(--accent-hover);
+  --bg-vignette: radial-gradient(ellipse at 70% -10%,
+                  rgba(200,160,77,0.07), transparent 60%);
+}
+html[data-theme="berich"] body { background: var(--bg-page); }
+html[data-theme="berich"] ::selection { background: rgba(19,160,110,0.18); color: var(--ink-900); }
+
+/* ── beRich DARK — warm obsidian workbench ──────────────────── */
+html[data-theme="berich-dark"] {
+  --ink-000: #100D0A;
+  --ink-050: #14110E;  /* page  · obsidian                       */
+  --ink-100: #1E1A15;  /* card                                   */
+  --ink-150: #26211A;  /* raised                                 */
+  --ink-200: #322B22;  /* hairline                               */
+  --ink-300: #463D30;  /* strong border                          */
+  --ink-400: #6A604F;  /* disabled fg                            */
+  --ink-500: #8A8071;  /* tertiary text                          */
+  --ink-600: #BEB4A2;  /* secondary text                         */
+  --ink-700: #D7CDBA;
+  --ink-800: #E8E0D1;
+  --ink-900: #F2EDE2;  /* primary text · warm off-white          */
+
+  /* on dark, jade reads brighter as the action color */
+  --amber-500: #13A06E;  --amber-hi: #3CBC8C;  --amber-lo: #0E6F52;
+  --amber-bg:  rgba(19,160,110,0.16);
+  --accent:       #13A06E;
+  --accent-hover: #3CBC8C;
+  --accent-press: #0E6F52;
+  --on-amber:     #0A1A13;
+  --on-accent:    #0A1A13;
+  --border-amber: #13A06E;
+
+  --moss-500: #13A06E;  --moss-bg: rgba(19,160,110,0.16);
+  --coral-500:#E0697A;  --coral-bg:rgba(194,59,75,0.18);
+  --honey-500:#DDBA6A;
+  --success: var(--moss-500);
+  --danger:  var(--coral-500);
+  --warning: var(--honey-500);
+  --gain:  #3CBC8C;  --gain-bg: rgba(19,160,110,0.16);
+  --loss:  #E0697A;  --loss-bg: rgba(194,59,75,0.18);
+
+  --font-display: 'Spectral', Georgia, 'Times New Roman', serif;
+  --font-body:    'Be Vietnam Pro', system-ui, -apple-system, 'Segoe UI', sans-serif;
+  --font-mono:    'IBM Plex Mono', ui-monospace, 'SF Mono', Menlo, monospace;
+
+  --radii-hairline: 4px;
+  --radii-control:  8px;
+  --radii-soft:     12px;
+
+  --shadow-cta-hover: 0 8px 24px rgba(19,160,110,0.24), 0 0 0 1px var(--accent-hover);
+  --bg-vignette: radial-gradient(ellipse at 70% -10%,
+                  rgba(200,160,77,0.06), transparent 60%);
+}
+html[data-theme="berich-dark"] body { background: var(--bg-page); }
+html[data-theme="berich-dark"] ::selection { background: rgba(60,188,140,0.22); color: var(--ink-900); }
+
+/* ── Gemstone accents (theme-agnostic; override --accent) ───────
+   "jade" carries empty attr in JS → no data-accent → the theme's
+   built-in jade default applies. The rest set data-accent. */
+html[data-accent="gold"]     { --accent:#B88A2E; --accent-hover:#C8A04D; --accent-press:#9A7322; --on-amber:#FFFFFF; --on-accent:#FFFFFF; --border-amber:#B88A2E; }
+html[data-accent="sapphire"] { --accent:#2563C9; --accent-hover:#4A82E0; --accent-press:#1B4DA0; --on-amber:#FFFFFF; --on-accent:#FFFFFF; --border-amber:#2563C9; }
+html[data-accent="topaz"]    { --accent:#C2691F; --accent-hover:#D97A34; --accent-press:#9E520F; --on-amber:#FFFFFF; --on-accent:#FFFFFF; --border-amber:#C2691F; }
+html[data-accent="amethyst"] { --accent:#7C5CD6; --accent-hover:#9479E2; --accent-press:#5E40B0; --on-amber:#FFFFFF; --on-accent:#FFFFFF; --border-amber:#7C5CD6; }
+html[data-accent="garnet"]   { --accent:#C23B4B; --accent-hover:#D55A68; --accent-press:#9E2B3A; --on-amber:#FFFFFF; --on-accent:#FFFFFF; --border-amber:#C23B4B; }

@@ -1,0 +1,20 @@
+{# @surface S15 · Task Detail (full-page wrapper)
+   @source crm/docs/ui-spec/screens/S15-task-detail.md | @kind FULL-PAGE
+   ────────────────────────────────────────────────────────────────────────────
+   /tasks/{task_id} is always a full navigation (from S07 card, P04 row, S01
+   row, or a direct link) — never an HTMX partial. This page provides the
+   <head>/CSS chrome (layout.html) and embeds the ported S15 fragment.
+   Context contract = screen_task_detail.py (task, party, identities, insight,
+   provenance_action, attempt_log, claim_actions, allowed_transitions, body_kind).
+#}
+{% extends "layout.html" %}
+
+{% block title %}{{ task.title if task else "Task" }}{% endblock %}
+{% block crumb_title %}{{ task.title if task else "Task" }}{% endblock %}
+
+{% block content %}
+{% include "fragments/task_detail.html" %}
+
+{# Modal root for M05 / M08 / O03 / M15 / M03 dialogs launched from the lifecycle rail + tool CTAs #}
+<div id="modal-root" role="region" aria-live="polite"></div>
+{% endblock %}

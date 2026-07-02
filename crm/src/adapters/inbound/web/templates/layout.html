@@ -17,7 +17,10 @@
   <link rel="stylesheet" href="/static/ds-app.css">
   <link rel="stylesheet" href="/static/ds-crm.css">
   <link rel="stylesheet" href="/static/ds-extra.css">
+  <link rel="stylesheet" href="/static/ds-s15.css">
   <link rel="stylesheet" href="/static/app.css">
+  <!-- beRich alternate theme (jade+gold jewel palette; activates via data-theme="berich|berich-dark") -->
+  <link rel="stylesheet" href="/static/berich-theme.css">
   <script src="/static/htmx.min.js"></script>
   {% block head_extra %}{% endblock %}
 </head>
@@ -187,6 +190,14 @@
             <button class="theme-sw" data-ts-theme="finance" type="button">
               <span class="theme-sw__chip" style="background:#eef0fb;border-color:#c8ccec;"></span>
               <span class="theme-sw__name">Tài chính</span>
+            </button>
+            <button class="theme-sw" data-ts-theme="berich" type="button">
+              <span class="theme-sw__chip" style="background:#F7F3EA;border-color:#0E6F52;"></span>
+              <span class="theme-sw__name">beRich</span>
+            </button>
+            <button class="theme-sw" data-ts-theme="berich-dark" type="button">
+              <span class="theme-sw__chip" style="background:#14110E;border-color:#13A06E;"></span>
+              <span class="theme-sw__name">beRich Dark</span>
             </button>
           </div>
         </div>

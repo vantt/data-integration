@@ -109,10 +109,17 @@
       </span>
 
       <div class="wl-row__main">
-        {# Line 1: AUTO badge · title · priority · assignee #}
+        {# Line 1: AUTO badge · kind tag · title · priority · assignee #}
         <div class="wl-row__top">
           {% if is_auto %}<span class="auto-tag">AUTO</span>{% endif %}
-          <span class="wl-row__name{% if is_terminal %} muted{% endif %}" style="cursor:default">{{ t.title }}</span>
+          {% if t.task_kind %}
+          <span class="tkind-tag tkind-tag--{{ t.task_kind }}">
+            {% if t.task_kind == 'contact' %}Liên hệ{% elif t.task_kind == 'internal' %}Nội bộ{% else %}Chung{% endif %}
+          </span>
+          {% endif %}
+          <a class="wl-row__name{% if is_terminal %} muted{% endif %}"
+             href="/tasks/{{ t.task_id }}"
+             onclick="event.stopPropagation()">{{ t.title }}</a>
           {% if t.priority > 0 %}
           <span class="prio prio--{{ prio_label }}" style="margin-left:auto">{{ prio_label }}</span>
           {% endif %}

@@ -178,11 +178,17 @@
   <div class="wl-row__main">
     <div class="wl-row__top">
       <span class="prio prio--{{ prio_label }}">{{ prio_label }}</span>
-      {% if pid %}
-      <a class="wl-row__name" href="/customers/{{ pid }}"
+      {% if t.task_kind %}
+      <span class="tkind-tag tkind-tag--{{ t.task_kind }}">
+        {% if t.task_kind == 'contact' %}Liên hệ{% elif t.task_kind == 'internal' %}Nội bộ{% else %}Chung{% endif %}
+      </span>
+      {% endif %}
+      <a class="wl-row__name" href="/tasks/{{ t.task_id }}"
          onclick="event.stopPropagation()">{{ t.title }}</a>
-      {% else %}
-      <span class="wl-row__name">{{ t.title }}</span>
+      {% if pid %}
+      <span class="muted" style="font-size:11px">
+        · <a href="/customers/{{ pid }}" onclick="event.stopPropagation()" style="color:inherit">{{ a.customer_name or pid }}</a>
+      </span>
       {% endif %}
       {# Neglect badge for overdue tasks: days overdue (row.neglect_days) #}
       {% if row.band == 0 and row.neglect_days >= 1 %}
