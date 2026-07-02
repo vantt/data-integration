@@ -1,0 +1,5 @@
+# Regenerable wireframe display artifacts — not part of the freshness gate.
+# The 4 data artifacts (surface-registry.yaml, navigation-graph.yaml,
+# action-registry.csv, coverage-report.md) remain tracked.
+wireframe.html
+wireframe-v2.html
