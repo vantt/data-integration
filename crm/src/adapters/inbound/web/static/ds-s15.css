@@ -134,6 +134,7 @@
 .s15-link { display: inline-flex; align-items: center; gap: 7px; font-size: 13.5px; color: var(--accent); text-decoration: none; }
 .s15-link:hover { text-decoration: underline; }
 .s15-notes { min-height: 76px; }
+.s15-desc { margin: 0; font-size: 13px; line-height: 1.55; color: var(--fg-1); white-space: pre-wrap; }
 
 /* activity timeline */
 .s15-timeline { display: flex; flex-direction: column; gap: 0; }
