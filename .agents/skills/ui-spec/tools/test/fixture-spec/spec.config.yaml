@@ -1,0 +1,8 @@
+project: fx
+contract_tag: fx-contract
+surface_id_prefixes: { screen: S, panel: P, modal: M, overlay: O, component: C, flow: F }
+entry_surface: S77
+platforms: [desktop]
+surface_dirs: [screens, panels, modals, components, flows]
+cross_cutting: [20-domain-rules.md]
+schema_path: schema/surface-contract.schema.json

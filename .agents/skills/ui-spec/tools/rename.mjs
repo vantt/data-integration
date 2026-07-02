@@ -53,6 +53,19 @@ let totalHits = 0, filesChanged = 0, filesRenamed = 0;
 
 console.log(`${apply ? "APPLY" : "DRY RUN"} — rename \`${oldTok}\` -> \`${newTok}\`  (spec: ${specRoot})\n`);
 
+// Also scan spec.config.yaml at the spec root (entry_surface etc. may reference the old token)
+const configFile = join(specRoot, "spec.config.yaml");
+try {
+  const cfgContent = readFileSync(configFile, "utf8");
+  const cfgHits = (cfgContent.match(tokenRe) || []).length;
+  if (cfgHits > 0) {
+    console.log(`  spec.config.yaml: ${cfgHits} occurrence(s)`);
+    totalHits += cfgHits;
+    filesChanged++;
+    if (apply) writeFileSync(configFile, cfgContent.replace(tokenRe, newTok), "utf8");
+  }
+} catch { /* config file missing or unreadable — skip */ }
+
 for (const p of files) {
   const content = readFileSync(p, "utf8");
   const hits = (content.match(tokenRe) || []).length;

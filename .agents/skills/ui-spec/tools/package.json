@@ -5,6 +5,7 @@
   "type": "module",
   "description": "Compiler pipeline for ui-spec: extract, validate, build",
   "scripts": {
+    "test": "node test/run-tests.mjs",
     "validate": "node validate.mjs",
     "build": "node build.mjs",
     "check": "node validate.mjs && node build.mjs",

@@ -57,7 +57,7 @@ Generate artifacts from validated source files:
 - `generated/surface-registry.yaml` — all surfaces with metadata
 - `generated/navigation-graph.yaml` — navigate edges between surfaces
 - `generated/action-registry.csv` — all action IDs, elements, triggers, targets
-- `generated/coverage-report.md` — surface coverage, flow coverage, rule coverage
+- `generated/coverage-report.md` — flow coverage: flows → steps → missing action refs
 
 ### `add-surface <type> <id> <name>`
 Add a new surface file from the appropriate template.
@@ -331,8 +331,11 @@ Which link each validate rule guards. Running validate + build catches everythin
 | surface → surface (overlay) | interaction `action: open_overlay`, `target: <SurfaceId>` | VR-TARGET | **error** |
 | panel show/hide (tab switch) | `action: show_panel`, `target: Pxx` | VR-SHOW-PANEL | **error** |
 | screen → embedded panels | screen frontmatter `hosts: [Pxx]` | VR-HOSTS | **error** |
+| hosts[] entry must be type=panel | `hosts:` entry that exists but is not `type: panel` | VR-HOSTS-TYPE | **error** |
+| unique surface id per file | same frontmatter `id:` in two files | VR-SURFACE-DUP | **error** |
+| component navigation restriction | component interaction `action: navigate` or `open_overlay` (CONVENTION §7) | VR-COMPONENT-NAV | warn |
 | panel/component → host screen | surface frontmatter `hosted_by: [Sxx]` | VR-HOSTED-BY | **error** |
-| bidirectional hosting consistency | X.hosted_by lists Y ↔ Y.hosts lists X (panel only) | VR-HOSTS-BIDIR | warn |
+| bidirectional hosting consistency | X.hosted_by lists Y ↔ Y.hosts lists X (panel only) — checked in both directions | VR-HOSTS-BIDIR | warn |
 | component emits → screen listens | component `emits[].event` ↔ screen `listens_to:` | VR-LISTEN-ORPHAN | **error** |
 | external/system signal | `listens_to:` a dotted name (e.g. `upload.done`) — declared in `15-system-events.md` | exempt from VR-LISTEN-ORPHAN (dotted = backend SSE) | — |
 | emitted event with no listener | `emits[].event` or `emit_event` with no `listens_to` anywhere | VR-EMIT-LISTEN | warn |
@@ -345,6 +348,9 @@ Which link each validate rule guards. Running validate + build catches everythin
 | flow steps resolve | flow `steps[]` + `branches[].action` must be real action IDs | VR-FLOW | **error** |
 | state IDs (`ST-*`) | referenced in prose; registry = `### ST-*` headings in `30-states-and-errors.md` | VR-STATE | warn |
 | `00-overview.md` index | id + name rows must match frontmatter | VR-OVERVIEW | warn |
+| spec entry point | `spec.config.yaml` `entry_surface` must be a known surface id | VR-ENTRY | **error** |
+| surface id prefix ↔ type | id leading letters must match `surface_id_prefixes[type]` (e.g. screen → S) | VR-PREFIX-TYPE | warn |
+| surface dir no subdirs | surface dirs are non-recursive; .md files in subdirs are NOT scanned | VR-SUBDIR | warn |
 
 ---
 

@@ -2,11 +2,11 @@
 // Run before build. All structural/cross-file rules live here.
 // Supports: --root <spec-root> CLI arg (forwarded to config.mjs).
 
-import { readFileSync, existsSync, readdirSync } from "node:fs";
+import { readFileSync, existsSync, readdirSync, statSync } from "node:fs";
 import { join } from "node:path";
 import Ajv from "ajv";
 import { extractAll, SPEC_ROOT } from "./extract.mjs";
-import { schemaPath, config } from "./config.mjs";
+import { schemaPath, config, surfaceDirs } from "./config.mjs";
 
 // Surface ID pattern: one or two uppercase letters + digits (e.g. S01, M2, P10, OV3)
 const SURFACE_ID_RE = /^[A-Z]{1,2}\d+$/;
@@ -30,6 +30,7 @@ const files = extractAll();
 
 // ---- Pass 1: per-file structural + schema ----
 const knownSurfaceIds   = new Set();
+const surfaceFileById   = new Map();   // surfaceId -> first declaring file (VR-SURFACE-DUP)
 const actionIndex       = new Map();   // actionId -> file
 const allInteractions   = [];          // flat list with file/surfaceId context
 const emittedEvents     = new Set();
@@ -53,7 +54,13 @@ for (const f of files) {
   if (!m.name) err(f.file, "frontmatter missing `name`");
 
   // VR-FILE-ID: frontmatter id must match filename prefix for surface files
+  // VR-SURFACE-DUP: same surface id declared in two or more files -> error naming both
   if (m.id && SURFACE_ID_RE.test(m.id)) {
+    if (knownSurfaceIds.has(m.id)) {
+      err(f.file, `duplicate surface id \`${m.id}\` — also declared in ${surfaceFileById.get(m.id)} (VR-SURFACE-DUP)`);
+    } else {
+      surfaceFileById.set(m.id, f.file);
+    }
     knownSurfaceIds.add(m.id);
     surfaceTypeById.set(m.id, m.type);
     if (!f.fileBase.startsWith(m.id + "-")) {
@@ -87,6 +94,42 @@ for (const f of files) {
 }
 
 // ---- Pass 2: cross-file rules ----
+
+// VR-SUBDIR: surface dirs must not contain subdirectories that themselves have .md files —
+// those files are NOT scanned by listSpecFiles (which is non-recursive by design).
+for (const dir of surfaceDirs) {
+  const abs = join(SPEC_ROOT, dir);
+  let entries = [];
+  try { entries = readdirSync(abs); } catch { continue; }
+  for (const e of entries) {
+    const sub = join(abs, e);
+    let st;
+    try { st = statSync(sub); } catch { continue; }
+    if (!st.isDirectory()) continue;
+    let subEntries = [];
+    try { subEntries = readdirSync(sub); } catch { continue; }
+    if (subEntries.some((f) => f.endsWith(".md"))) {
+      warn(`${dir}/${e}`, `contains .md files that are NOT scanned (spec files must sit directly in the surface dir)`);
+    }
+  }
+}
+
+// VR-ENTRY: config.entry_surface (spec.config.yaml), when set, must be a known surface id
+if (config.entry_surface && !knownSurfaceIds.has(config.entry_surface)) {
+  err("spec.config.yaml", `entry_surface \`${config.entry_surface}\` is not a known surface id (VR-ENTRY)`);
+}
+
+// VR-PREFIX-TYPE: a surface's id prefix (leading uppercase letters) must match
+// config.surface_id_prefixes[type] when that mapping exists. Skip types without a mapping.
+const prefixTypeMap = config.surface_id_prefixes ?? {};
+for (const [sid, stype] of surfaceTypeById) {
+  const expectedPrefix = prefixTypeMap[stype];
+  if (!expectedPrefix) continue; // no mapping for this type (e.g. rules, system_events) — skip
+  const actualPrefix = sid.match(/^[A-Z]+/)?.[0] ?? "";
+  if (actualPrefix !== expectedPrefix) {
+    warn(surfaceFileById.get(sid) ?? sid, `surface \`${sid}\` has type=${stype} (expected id prefix \`${expectedPrefix}\`) but id prefix is \`${actualPrefix}\` (VR-PREFIX-TYPE)`);
+  }
+}
 
 // VR-ID-UNIQUE: action IDs must be globally unique
 for (const it of allInteractions) {
@@ -140,12 +183,13 @@ const modalIds = [...knownSurfaceIds].filter((s) => {
 });
 for (const mid of modalIds) {
   const acts = allInteractions.filter((i) => i.surfaceId === mid);
+  const modalFile = surfaceFileById.get(mid) ?? mid; // use file path for attribution, not bare surface id
   const hasExit = acts.some((a) => a.action === "close_overlay" || a.action === "submit");
   if (!hasExit) {
-    err(mid, `modal ${mid} has no close_overlay or submit exit action (VR-MODAL-EXIT-001)`);
+    err(modalFile, `modal ${mid} has no close_overlay or submit exit action (VR-MODAL-EXIT-001)`);
   }
   if (!acts.some((a) => a.target === "return_to_invoker")) {
-    warn(mid, `modal ${mid} has no return_to_invoker exit (VR-MODAL-EXIT-002)`);
+    warn(modalFile, `modal ${mid} has no return_to_invoker exit (VR-MODAL-EXIT-002)`);
   }
 }
 
@@ -194,6 +238,14 @@ for (const it of allInteractions) {
   }
 }
 
+// VR-COMPONENT-NAV: components should only emit_event; navigate/open_overlay allowed only for
+// "genuinely self-contained controls" (CONVENTION §7). Warn (not error) to allow documented exceptions.
+for (const it of allInteractions) {
+  if (it.type !== "component") continue;
+  if (it.action !== "navigate" && it.action !== "open_overlay") continue;
+  warn(it.file, `component \`${it.surfaceId}\` uses \`${it.action}\` — components should emit_event and let the host navigate; \`navigate\`/\`open_overlay\` allowed only for self-contained controls (CONVENTION §7, VR-COMPONENT-NAV)`);
+}
+
 // VR-EFFECT-SURFACE: effect tokens starting with a surface-like prefix must reference known surfaces
 const EFFECT_SURFACE_RE = /^([A-Z]{1,2}\d+)\./;
 for (const it of allInteractions) {
@@ -237,11 +289,23 @@ for (const [childId, parents] of hostedByFile) {
     }
   }
 }
+// VR-HOSTS-BIDIR (reverse): if a screen's hosts[] includes a panel Pxx,
+// then Pxx.hosted_by must also list that screen (panel side must acknowledge host).
+for (const [parentId, hostedList] of hostsByFile) {
+  for (const childId of hostedList) {
+    if (surfaceTypeById.get(childId) !== "panel") continue;
+    const childHostedBy = hostedByFile.get(childId) ?? [];
+    if (!childHostedBy.includes(parentId)) {
+      warn(fileById.get(parentId) ?? parentId, `bidirectional hosting gap: ${parentId}.hosts includes ${childId} but ${childId}.hosted_by does not include ${parentId} (VR-HOSTS-BIDIR)`);
+    }
+  }
+}
 
 // VR-PAYLOAD-GRAMMAR: payload tokens should follow $entity.field or $event.field convention.
 // Exception: component emits may use bare $<prop> tokens — inside a component the data context
 // is its own props, not a domain entity, so bare prop references are the documented pattern.
-const BARE_TOKEN_RE = /"\$([a-z_]+)"/g;
+// Regex covers lowercase, camelCase, and tokens with digits (e.g. $partyId, $party2).
+const BARE_TOKEN_RE = /"\$([A-Za-z_][A-Za-z0-9_]*)"/g;
 for (const it of allInteractions) {
   if (!it.payload) continue;
   if (it.type === "component" && it.action === "emit_event") continue; // bare prop tokens are legitimate here
@@ -257,10 +321,15 @@ for (const ev of emittedEvents) {
 }
 
 // VR-HOSTS: frontmatter hosts[] must reference known surfaces (a screen's embedded panels)
+// VR-HOSTS-TYPE: each hosts[] entry must be type=panel — screens may only embed panels (CONVENTION §11)
 for (const f of files) {
   if (!Array.isArray(f.meta?.hosts)) continue;
   for (const h of f.meta.hosts) {
-    if (!knownSurfaceIds.has(h)) err(f.file, `hosts[] references \`${h}\` — not a known surface (typo or missing screen)`);
+    if (!knownSurfaceIds.has(h)) {
+      err(f.file, `hosts[] references \`${h}\` — not a known surface (typo or missing screen)`);
+    } else if (surfaceTypeById.get(h) !== "panel") {
+      err(f.file, `hosts[] entry \`${h}\` is type=${surfaceTypeById.get(h)}, not panel — screens may only host panels (CONVENTION §11, VR-HOSTS-TYPE)`);
+    }
   }
 }
 

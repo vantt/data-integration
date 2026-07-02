@@ -12,7 +12,7 @@ import { SPEC_ROOT, contractTag, surfaceDirs, crossCutting } from "./config.mjs"
 
 const md = new MarkdownIt();
 
-/** Recursively list *.md files in configured surface dirs + cross-cutting files. */
+/** List *.md files directly in each configured surface dir (non-recursive), plus cross-cutting files. */
 export function listSpecFiles() {
   const files = [];
 
