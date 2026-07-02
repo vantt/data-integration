@@ -46,6 +46,7 @@ class ActivityReader(Protocol):
 class TaskTransitioner(Protocol):
     def transition_status(self, task_id: str, new_status: str) -> object: ...
     def get_task(self, task_id: str) -> Optional[Task]: ...
+    def update_task(self, task_id: str, data: dict) -> object: ...
 
 
 # ── Router factory ────────────────────────────────────────────────────────────
@@ -156,6 +157,29 @@ def make_task_detail_router(
                 "body_kind": body_kind,
             },
         )
+
+    @router.post("/tasks/{task_id}/description", response_class=HTMLResponse)
+    async def handle_task_description(
+        request: Request,
+        task_id: str,
+        body: str = Form(default=""),
+    ) -> Response:
+        """Auto-save ghi chú / description từ S15 textarea (HTMX hx-trigger=change)."""
+        task = task_repo.get_by_id(task_id)
+        if task is None:
+            return HTMLResponse("Không tìm thấy task", status_code=404)
+
+        allowed = TASK_ALLOWED_TRANSITIONS.get(task.status, [])
+        if not allowed and task.status not in ("todo", "doing"):
+            return HTMLResponse("", status_code=204)
+
+        try:
+            task_svc.update_task(task_id, {"description": body.strip() or None})
+        except Exception as exc:
+            log.error("s15: update description %s: %s", task_id, exc)
+            return HTMLResponse("Lỗi lưu ghi chú", status_code=500)
+
+        return HTMLResponse(content="", status_code=204)
 
     @router.post("/tasks/{task_id}/status", response_class=HTMLResponse)
     async def handle_task_status(

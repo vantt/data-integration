@@ -26,6 +26,7 @@
 {% block content %}
 {# ── Topbar: back/next chrome, mode badge ────────────────────────────────── #}
 <div class="s14-topbar">
+<div class="s14-topbar__inner">
   <div class="s14-topbar__start">
     {# Return target: "Quay lại task" when entered from S15; else "Worklist" #}
     {% if return_target %}
@@ -67,6 +68,7 @@
     </a>
     {% endif %}
   </div>
+</div>{# /.s14-topbar__inner #}
 </div>
 
 {# ── Cockpit panel (identity bar + alert row + left/right panes + outcome bar) #}
