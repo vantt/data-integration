@@ -14,6 +14,7 @@ surfaces:
   - S12
   - S13
   - S14
+  - S15
   - P01
   - P02
   - P03
@@ -68,9 +69,9 @@ edges:
     element: task_row
     trigger: click
     action: navigate
-    target: S03
+    target: S15
     payload:
-      party_id: $task.party_id
+      task_id: $task.id
     region: task_list
   - id: A-S01-003
     from: S01
@@ -803,9 +804,9 @@ edges:
     element: task_card
     trigger: click
     action: navigate
-    target: S03
+    target: S15
     payload:
-      party_id: $task.party_id
+      task_id: $task.id
     region: board
   - id: A-S07-003
     from: S07
@@ -1369,6 +1370,15 @@ edges:
     effects:
       - reason.toggle_mentioned
     region: reason_to_call
+  - id: A-S14-026
+    from: S14
+    element: btn_reason_resolve_async
+    trigger: click
+    action: mutate
+    effects:
+      - reason.resolve_via_async_channel
+      - activity_log.append_async_attempt
+    region: reason_to_call
   - id: A-S14-LSN01
     from: S14
     listens_to: cache.refreshed
@@ -1376,6 +1386,98 @@ edges:
     effects:
       - script.reload
       - freshness_bar.update
+  - id: A-S15-001
+    from: S15
+    element: btn_start
+    trigger: click
+    action: mutate
+    effects:
+      - task.status.set_doing
+    region: lifecycle
+  - id: A-S15-002
+    from: S15
+    element: btn_edit
+    trigger: click
+    action: open_overlay
+    target: M05
+    payload:
+      task_id: $task.id
+    region: lifecycle
+  - id: A-S15-003
+    from: S15
+    element: btn_postpone
+    trigger: click
+    action: open_overlay
+    target: O03
+    payload:
+      task_id: $task.id
+      due_at: $task.due_at
+    region: lifecycle
+  - id: A-S15-004
+    from: S15
+    element: btn_cancel
+    trigger: click
+    guard: task.status != 'done'
+    action: mutate
+    effects:
+      - task.status.set_cancelled
+    region: lifecycle
+  - id: A-S15-005
+    from: S15
+    element: btn_log_outcome
+    trigger: click
+    action: open_overlay
+    target: M08
+    payload:
+      party_id: $task.party_id
+      task_id: $task.id
+      mode: log
+    region: close_bar
+  - id: A-S15-006
+    from: S15
+    element: btn_join_call_session
+    trigger: click
+    action: navigate
+    target: S14
+    payload:
+      party_id: $task.party_id
+    region: body_contact
+  - id: A-S15-007
+    from: S15
+    element: btn_view_360
+    trigger: click
+    action: navigate
+    target: S03
+    payload:
+      party_id: $task.party_id
+    region: header
+  - id: A-S15-008
+    from: S15
+    element: internal_checklist_item
+    trigger: click
+    action: mutate
+    effects:
+      - checklist.toggle
+    region: body_internal
+  - id: A-S15-009
+    from: S15
+    element: btn_tool_edit_contact
+    trigger: click
+    action: open_overlay
+    target: M15
+    payload:
+      party_id: $task.party_id
+      tab: core
+    region: body_internal
+  - id: A-S15-010
+    from: S15
+    element: btn_tool_add_tag
+    trigger: click
+    action: open_overlay
+    target: M03
+    payload:
+      party_id: $task.party_id
+    region: body_internal
   - id: A-P01-001
     from: P01
     element: affinity_product_link
@@ -1580,6 +1682,15 @@ edges:
     effects:
       - task_list.reload
     region: toolbar
+  - id: A-P04-008
+    from: P04
+    element: task_row
+    trigger: click
+    action: navigate
+    target: S15
+    payload:
+      task_id: $task.id
+    region: task_list
   - id: A-P05-001
     from: P05
     element: btn_add_note
@@ -1819,6 +1930,15 @@ edges:
     effects:
       - form.due_at.validate
       - ui.warn_if_past
+    region: body
+  - id: A-M05-005
+    from: M05
+    element: task_kind_select
+    trigger: change
+    action: mutate
+    effects:
+      - form.task_kind.set
+      - body.reveal_if_uncertain
     region: body
   - id: A-M06-001
     from: M06

@@ -25,6 +25,7 @@
     S12: { type: "screen", name: "Ads Tracking", vi: "Ads", icon: "ads", rules: ["R2", "R6"] },
     S13: { type: "screen", name: "Settings", vi: "Cài đặt", icon: "settings", rules: [] },
     S14: { type: "screen", name: "Call Mode / Strategy Cockpit", vi: "Chế độ gọi", icon: "phone", rules: ["R1", "R2", "R6", "R14"] },
+    S15: { type: "screen", name: "Task Detail", vi: "Chi tiết task", icon: "tasks", rules: ["R6"] },
     // panels (hosted in S03)
     P01: { type: "panel", name: "Insight Panel", vi: "Insight", hosts: ["S03"] },
     P02: { type: "panel", name: "Order History Panel", vi: "Đơn hàng", hosts: ["S03"] },
@@ -37,7 +38,7 @@
     M02: { type: "modal", name: "Create Party", hosts: ["S02"] },
     M03: { type: "modal", name: "Tag Management", hosts: ["S03"] },
     M04: { type: "modal", name: "Assign Owner", hosts: ["S03"] },
-    M05: { type: "modal", name: "Create / Edit Task", hosts: ["S01", "S03", "S07", "P04"] },
+    M05: { type: "modal", name: "Create / Edit Task", hosts: ["S01", "S03", "S07", "P04", "S15"] },
     M06: { type: "modal", name: "Custom Fields Edit", hosts: ["S03"] },
     M07: { type: "modal", name: "Create / Edit Campaign", hosts: ["S10", "S11"] },
     M08: { type: "modal", name: "Log Activity", hosts: ["S03", "S06", "P02", "P03", "P05"] },
@@ -50,6 +51,7 @@
     // overlays
     O01: { type: "overlay", name: "Confirm / Toast", hosts: ["S03", "S05", "S13", "P05"] },
     O02: { type: "overlay", name: "Quick Customer Preview", hosts: ["S01", "S07"] },
+    O03: { type: "overlay", name: "Postpone Task", hosts: ["P04", "S07", "S15"] },
     // components
     C01: { type: "component", name: "Sidebar Nav", hosts: ["S01"] },
     C02: { type: "component", name: "Global Customer Search", hosts: ["S02", "S03"] },
@@ -63,7 +65,7 @@
   // Each group draws its members straight from the registry ids.
   const GROUPS = [
     { key: "onboarding", label: "Onboarding", items: [] },
-    { key: "workspace", label: "Workspace", items: ["S01", "S02", "S03", "S14", "S05", "S06", "S07"] },
+    { key: "workspace", label: "Workspace", items: ["S01", "S02", "S03", "S14", "S05", "S06", "S07", "S15"] },
     { key: "secondary", label: "Secondary views", subs: [
       { label: "Màn hình", items: ["S04", "S08", "S09", "S10", "S11", "S12"] },
       { label: "Panels · Customer 360", items: ["P01", "P02", "P03", "P04", "P05", "P06"] },
@@ -71,7 +73,7 @@
     { key: "settings", label: "Settings", items: ["S13"] },
     { key: "mobile", label: "Mobile PWA", items: [] },
     { key: "modals", label: "Modals", items: ["M01", "M02", "M03", "M04", "M05", "M06", "M07", "M08", "M09", "M10", "M11", "M12", "M13", "M14"] },
-    { key: "overlays", label: "Overlays", items: ["O01", "O02"] },
+    { key: "overlays", label: "Overlays", items: ["O01", "O02", "O03"] },
     { key: "components", label: "Components", items: ["C01", "C02", "C03", "C04", "C05", "C06"] },
   ];
 
@@ -94,6 +96,7 @@
     S12: { kind: "screen", route: { screen: "S12" } },
     S13: { kind: "screen", route: { screen: "S13" } },
     S14: { kind: "screen", route: { screen: "S14", party: "p_001" } },
+    S15: { kind: "screen", route: { screen: "S15", task: "tk_1" } },
     // panels → S03, open that tab
     P01: { kind: "panel", route: { screen: "S03", party: "p_001", tab: "P01" } },
     P02: { kind: "panel", route: { screen: "S03", party: "p_001", tab: "P02" } },
@@ -119,6 +122,7 @@
     // overlays
     O01: { kind: "modal", route: { screen: "S03", party: "p_001" }, type: "O01", ctx: () => ({ confirm_type: "delete_note" }) },
     O02: { kind: "preview", route: { screen: "S01" }, party: "p_001" },
+    O03: { kind: "modal", route: { screen: "S15", task: "tk_1" }, type: "O03", ctx: () => ({ task: "tk_1" }) },
     // components → navigate to a host screen that shows the component
     C01: { kind: "comp", route: { screen: "S01" }, where: "Worklist" },
     C02: { kind: "comp", route: { screen: "S02" }, where: "Khách hàng" },

@@ -63,7 +63,7 @@ function S01_Worklist({ nav, openModal, toast, openPreview }) {
             return (
               <div key={t.id} className={"wl-row" + (done ? " wl-row--done" : "")}>
                 <button className={"wl-check" + (done ? " wl-check--on" : "")} onClick={() => toggle(t.id)} aria-label="done">{done && <Icon name="check" size={13} />}</button>
-                <div className="wl-row__main" onClick={() => p && nav({ screen: "S03", party: p.id })}>
+                <div className="wl-row__main" onClick={() => nav({ screen: "S15", task: t.id })}>
                   <div className="wl-row__top">
                     {m && <Chip tone={m.tone}>{m.label}</Chip>}
                     {t.source === "action_queue" && !m && <span className="auto-tag">AUTO</span>}

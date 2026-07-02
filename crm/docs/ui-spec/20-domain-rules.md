@@ -115,7 +115,7 @@ rules:
     surfaces: [S02, S04, M01, M02]
   - id: R6
     name: ICT Display Convention
-    surfaces: [S01, S03, S05, S06, S11, S12, S14]
+    surfaces: [S01, S03, S05, S06, S11, S12, S14, S15]
   - id: R7
     name: realized_margin_pct Only
     surfaces: [P01, S03]

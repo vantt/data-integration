@@ -3,7 +3,7 @@ id: O03
 type: overlay
 name: "Postpone Task Overlay"
 platforms: [desktop]
-hosts: [P04, S07]
+hosts: [P04, S07, S15]
 status: active
 design_ref: ""
 rules: [R6]

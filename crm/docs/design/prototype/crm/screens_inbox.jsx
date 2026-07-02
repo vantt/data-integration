@@ -206,7 +206,7 @@ function S07_Tasks({ nav, openModal, toast, openPreview }) {
                         <div className="tcard__top">
                           {t.source === "action_queue" && <span className="auto-tag">AUTO</span>}
                           <span className={"prio prio--" + t.priority}>{t.priority}</span>
-                          <span className="tcard__title" onClick={() => p && nav({ screen: "S03", party: p.id })}>{t.title}</span>
+                          <span className="tcard__title" onClick={() => nav({ screen: "S15", task: t.id })}>{t.title}</span>
                         </div>
                         {p && <div className="tcard__meta"><span className="conv-row__name" style={{ fontSize: 12, cursor: "pointer" }} onClick={(e) => openPreview && openPreview(p.id, e.currentTarget.getBoundingClientRect())}>{p.name}</span></div>}
                         <div className="tcard__meta">
@@ -232,11 +232,12 @@ function S07_Tasks({ nav, openModal, toast, openPreview }) {
               <div key={t.id} className={"wl-row" + (isDone ? " wl-row--done" : "")} style={{ gridTemplateColumns: "auto 1fr auto" }}>
                 <button className={"wl-check" + (isDone ? " wl-check--on" : "")} onClick={() => move(t.id, isDone ? "open" : "done")}>{isDone && <Icon name="check" size={13} />}</button>
                 <div className="wl-row__main">
-                  <div className="wl-row__top">{t.source === "action_queue" && <span className="auto-tag">AUTO</span>}<span className="wl-row__name" onClick={() => p && nav({ screen: "S03", party: p.id })}>{t.title}</span></div>
+                  <div className="wl-row__top">{t.source === "action_queue" && <span className="auto-tag">AUTO</span>}<span className="wl-row__name" onClick={() => nav({ screen: "S15", task: t.id })}>{t.title}</span></div>
                   <div className="wl-row__meta">
                     {p && <span className="muted" style={{ fontSize: 12 }}>{p.name}</span>}
                     <span className="wl-row__due"><Icon name="clock" size={11} /> {fmtDate(t.due)}</span>
                     <span className={"prio prio--" + t.priority}>{t.priority}</span>
+                    <span className={"tkind-tag tkind-tag--" + t.task_kind}>{t.task_kind}</span>
                     <Bdg dot tone={t.status === "done" ? "good" : t.status === "doing" ? "warn" : ""}>{t.status}</Bdg>
                   </div>
                 </div>

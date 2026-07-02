@@ -3,7 +3,7 @@ id: M08
 type: modal
 name: "Log Activity Modal"
 platforms: [desktop]
-hosts: [S03, S01, S06, P02, P03, P04, P05]
+hosts: [S03, S01, S06, S15, P02, P03, P04, P05]
 status: active
 design_ref: ""
 rules: [R6]

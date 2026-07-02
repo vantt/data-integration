@@ -165,6 +165,32 @@ Toast confirmation after saving custom field / tag / user changes.
 
 ---
 
+## S15 — Task Detail States
+
+### ST-TASK-LOADING
+Task data fetch in-flight. Skeleton displayed; all lifecycle buttons disabled.
+
+### ST-TASK-CONTACT
+`task_kind=contact`. Body shows provenance, customer identity, contact-attempt history,
+and "Vào phiên gọi" CTA (A-S15-006 → S14). Internal checklist / tool CTAs hidden.
+
+### ST-TASK-INTERNAL
+`task_kind=internal`. Body shows minimal customer facts, checklist items, tool CTAs
+(edit contact, add tag). Customer party block visible; "Vào phiên gọi" CTA hidden.
+
+### ST-TASK-GENERIC
+`task_kind=generic` or `party_id=null`. Body shows description, checklist, links, notes.
+No customer block rendered.
+
+### ST-TASK-DONE
+`task.status=done`. Full read-only view. Lifecycle action buttons (start/cancel/postpone)
+hidden. Activity log and outcome summary remain visible.
+
+### ST-TASK-CANCELLED
+`task.status=cancelled`. Read-only banner "Task đã huỷ". Only "Mở lại" (reopen) CTA shown.
+
+---
+
 ## S14 — Call Mode / Strategy Cockpit States
 
 ### ST-CALL-NO-SCRIPT

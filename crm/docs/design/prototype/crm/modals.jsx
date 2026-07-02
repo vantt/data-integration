@@ -119,15 +119,28 @@ function M04({ ctx, close, toast }) {
 }
 
 /* ── M05 Create / Edit Task ─────────────────────────────── */
+const M05_KIND_LABEL = { contact: "Liên hệ", internal: "Nội bộ", generic: "Chung" };
 function M05({ ctx, close, toast }) {
   const editing = !!ctx.task;
   const t = editing ? window.DB.tasks.find((x) => x.id === ctx.task) : null;
-  const prefill = ctx.action ? ctx.action.rationale : (t ? t.title : "");
+  const prefill = ctx.prefill_title || (ctx.action ? ctx.action.rationale : (t ? t.title : ""));
   const [title, setTitle] = mUseState(prefill);
   const [due, setDue] = mUseState(t ? "2026-06-20" : "2026-06-15");
   const [prio, setPrio] = mUseState(t ? t.priority : "P2");
   const party = window.DB.partyById(ctx.party || (t && t.party));
   const past = new Date(due) < new Date("2026-06-14");
+
+  // task_kind — auto-prefill; hide the field when the machine is CERTAIN,
+  // show the selector only when ambiguous (manual + party). No render-time
+  // fallback: derivation mirrors the data migration.
+  const src = ctx.source || (t && t.source);
+  let derivedKind = "generic", certain = true, why = "không gắn khách";
+  if (ctx.action || src === "action_queue" || src === "action_queue_claim") { derivedKind = "contact"; why = "từ action_queue outreach"; }
+  else if (src === "verify_account" || src === "internal") { derivedKind = "internal"; why = "nguồn nội bộ"; }
+  else if (!party) { derivedKind = "generic"; why = "không gắn khách"; }
+  else { derivedKind = (t && t.task_kind) || "contact"; certain = false; }
+  const [kind, setKind] = mUseState(derivedKind);
+
   return (
     <Modal title={editing ? "Sửa task" : "Tạo task mới"} sub={ctx.source === "action_queue" ? "Prefill từ action_queue" : null} onClose={close}
       actions={<><CancelBtn onClick={close} /><Btn kind="primary" disabled={!title.trim()} onClick={() => { toast(editing ? "Đã cập nhật task" : "Đã tạo task"); close(); }}>Lưu task</Btn></>}>
@@ -136,6 +149,15 @@ function M05({ ctx, close, toast }) {
         <option value="">— (không gắn)</option>
         {window.DB.parties.map((p) => <option key={p.id} value={p.id}>{p.name}</option>)}
       </Select></Field>
+      {certain ? (
+        <div className="m05-kind-auto"><span className="m05-kind-auto__k">Loại việc</span> <b>{M05_KIND_LABEL[derivedKind]}</b> <span className="m05-kind-auto__why">· tự nhận ({why}) — ẩn field</span></div>
+      ) : (
+        <Field label="Loại việc" hint="Máy đoán từ ngữ cảnh — chỉnh nếu chưa đúng"><Select value={kind} onChange={(e) => setKind(e.target.value)}>
+          <option value="contact">Liên hệ — launch phiên gọi</option>
+          <option value="internal">Nội bộ — checklist + tool</option>
+          <option value="generic">Chung — không có block khách</option>
+        </Select></Field>
+      )}
       <div className="field-row">
         <Field label="Due date" required error={past ? "⚠ Quá khứ — vẫn cho phép lưu" : null}><TextInput type="date" value={due} onChange={(e) => setDue(e.target.value)} className="inp inp--mono" /></Field>
         <Field label="Giờ"><TextInput type="time" defaultValue="10:00" className="inp inp--mono" /></Field>

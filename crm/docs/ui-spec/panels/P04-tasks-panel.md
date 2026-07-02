@@ -123,3 +123,10 @@ interactions:
     trigger: change
     action: mutate
     effects: [task_list.reload]
+  - id: A-P04-008
+    element: task_row
+    region: task_list
+    trigger: click
+    action: navigate
+    target: S15
+    payload: { task_id: "$task.id" }

@@ -24,6 +24,7 @@ Internal Retail CRM · ~10 users · Desktop-first · Python (FastAPI, server-ren
 | S12 | Ads Tracking | M6 | Manager |
 | S13 | Settings | — | Admin, Manager |
 | S14 | Call Mode / Strategy Cockpit | M4 | Sales Rep |
+| S15 | Task Detail | M4 | Sales Rep, All |
 
 ### Panels (hosted inside S03)
 
@@ -42,19 +43,19 @@ Internal Retail CRM · ~10 users · Desktop-first · Python (FastAPI, server-ren
 |---|---|---|
 | M01 | Merge Confirm Modal | S04 |
 | M02 | Create Party Modal | S02, M11 |
-| M03 | Tag Management Modal | S03 |
+| M03 | Tag Management Modal | S03, S15 |
 | M04 | Assign Owner Modal | S03 |
-| M05 | Create / Edit Task Modal | S01, S03, S07, P04, S14 |
+| M05 | Create / Edit Task Modal | S01, S03, S07, P04, S14, S15 |
 | M06 | Custom Fields Edit Modal | S03 |
 | M07 | Create / Edit Campaign Modal | S10, S11 |
-| M08 | Log Activity Modal | S03, S01, S06, S14, P02, P03, P04, P05 |
+| M08 | Log Activity Modal | S03, S01, S06, S14, S15, P02, P03, P04, P05 |
 | M09 | Assign Conversation Modal | S05, S06 |
 | M10 | Close Conversation Modal | S06 |
 | M11 | Link Party to Conversation Modal | S06 |
 | M12 | Record Conversion Modal | S11 |
 | M13 | Custom Field Definition Modal | S13 |
 | M14 | Create Tag Modal | S13, M03 |
-| M15 | Edit Contact & Core Info Modal | S03, S14 |
+| M15 | Edit Contact & Core Info Modal | S03, S14, S15 |
 | M16 | Promote / Create Insight Modal | P01, P05 |
 
 ### Overlays
@@ -63,7 +64,7 @@ Internal Retail CRM · ~10 users · Desktop-first · Python (FastAPI, server-ren
 |---|---|---|
 | O01 | Confirm / Toast Overlay | S03, S05, S13, P05 |
 | O02 | Quick Customer Preview Overlay | S01, S07 |
-| O03 | Postpone Task Overlay | P04, S07 |
+| O03 | Postpone Task Overlay | P04, S07, S15 |
 
 ### Components
 
@@ -117,7 +118,8 @@ crm/docs/ui-spec/
 │   ├── S11-campaign-detail-targets.md
 │   ├── S12-ads-tracking.md
 │   ├── S13-settings.md
-│   └── S14-call-mode-cockpit.md
+│   ├── S14-call-mode-cockpit.md
+│   └── S15-task-detail.md
 ├── panels/
 │   ├── P01-insight-panel.md
 │   ├── P02-order-history-panel.md
@@ -173,7 +175,7 @@ crm/docs/ui-spec/
 | R3 | Value-Link No-FK | S03, P02, S11 |
 | R4 | Merge Reversibility | S04, M01 |
 | R5 | Phone E.164 Normalization | S02, S04, M01, M02 |
-| R6 | ICT Display Convention | S01, S03, S05, S06, S11, S12, S14 |
+| R6 | ICT Display Convention | S01, S03, S05, S06, S11, S12, S14, S15 |
 | R7 | realized_margin_pct Only | P01, S03 |
 | R8 | Idempotent Task Generation | S01, S07 |
 | R9 | Dedup Fuzzy → Candidate Queue | S04, M01 |

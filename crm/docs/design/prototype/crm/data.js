@@ -34,9 +34,13 @@
       id: "p_001", code: "CUS-7781", name: "Nguyễn Văn A", phone: "+84901234567",
       email: null, sapo: "SP-12345", group: "GOLD", status: "active", owner: "u_nva",
       consent: true, last_order: "2026-06-12", tags: ["t_vip", "t_repeat", "t_sens"],
+      zalo: null, phone2: "+84903000035", phone2_status: "invalid", cancel_risk: 0.32,
       custom: { da_nhay_cam: true, nguon_kh: "Facebook", ngay_sinh: "1990-04-22" },
+      // engagement rollup — REFERENCE ONLY (frequency-cap is a later phase);
+      // S14 reads last_contacted_at for the "liên hệ X ngày" alert chip.
+      engagement: { last_contacted_at: "2026-06-13T03:32:00Z", last_response_at: "2026-06-13T03:40:00Z", contact_attempts: 4, response_count: 3, responsiveness: "high" },
       insight: {
-        recency_days: 28, frequency: 8, monetary: 18400000, ltv: 18400000,
+        recency_days: 28, frequency: 8, monetary: 18400000, ltv: 18400000, cycle_days: 30,
         next_signal: "IMMINENT", discount_sens: "LOW", affinity: "Sữa rửa mặt gentle",
         has_cogs: true, margin_pct: 34.2, refreshed_at: "2026-06-14T00:15:00Z",
       },
@@ -49,9 +53,10 @@
       id: "p_002", code: "CUS-7782", name: "Trần Thị B", phone: "+84912345678",
       email: "tranb@example.com", sapo: "SP-12346", group: "VIP", status: "at_risk", owner: "u_nvb",
       consent: true, last_order: "2026-03-14", tags: ["t_vip", "t_gift"],
+      zalo: "tranb.zl", phone2: null, phone2_status: null, cancel_risk: 0.08,
       custom: { nguon_kh: "Zalo" },
       insight: {
-        recency_days: 92, frequency: 12, monetary: 31200000, ltv: 31200000,
+        recency_days: 92, frequency: 12, monetary: 31200000, ltv: 31200000, cycle_days: 26,
         next_signal: "WANING", discount_sens: "MEDIUM", affinity: "Serum dưỡng ẩm",
         has_cogs: true, margin_pct: 29.8, refreshed_at: "2026-06-14T00:15:00Z",
       },
@@ -89,9 +94,10 @@
       id: "p_005", code: "CUS-7795", name: "Hoàng Minh E", phone: "+84934567890",
       email: null, sapo: "SP-12455", group: "GOLD", status: "active", owner: "u_nvb",
       consent: true, last_order: "2026-06-10", tags: ["t_vip", "t_whole"],
+      zalo: null, phone2: null, phone2_status: null, cancel_risk: 0.05,
       custom: { nguon_kh: "Facebook", ghi_chu: "Mua sỉ cho spa" },
       insight: {
-        recency_days: 4, frequency: 21, monetary: 54800000, ltv: 54800000,
+        recency_days: 4, frequency: 21, monetary: 54800000, ltv: 54800000, cycle_days: 18,
         next_signal: "IMMINENT", discount_sens: "LOW", affinity: "Combo spa chuyên nghiệp",
         has_cogs: true, margin_pct: 38.6, refreshed_at: "2026-06-14T00:15:00Z",
       },
@@ -144,9 +150,10 @@
       id: "p_009", code: "CUS-7820", name: "Ngô Văn I", phone: "+84978901234",
       email: null, sapo: "SP-12544", group: "SILVER", status: "at_risk", owner: "u_nva",
       consent: false, last_order: "2026-04-01", tags: ["t_price"],
+      zalo: null, phone2: null, phone2_status: null, cancel_risk: 0.18,
       custom: {},
       insight: {
-        recency_days: 74, frequency: 4, monetary: 5100000, ltv: 5100000,
+        recency_days: 74, frequency: 4, monetary: 5100000, ltv: 5100000, cycle_days: 40,
         next_signal: "WANING", discount_sens: "HIGH", affinity: "Sữa tắm",
         has_cogs: true, margin_pct: 20.7, refreshed_at: "2026-06-14T00:15:00Z",
       },
@@ -220,18 +227,101 @@
 
   // ── Tasks (crm_task) ────────────────────────────────────
   // status: open / doing / done / cancelled ; priority P1..P4
+  // task_kind (contact | internal | generic) is NOT hand-set here — it is
+  // derived once by a data migration (deriveTaskKind, below) from
+  // source/source_ref/party, so render never falls back at draw-time (S15).
+  // Extra bodies:
+  //   attempts[]  — contact-attempt log (task_kind=contact)
+  //   checklist[] — steps (internal/generic)
+  //   links[]     — reference links (generic)
+  //   description — free text (generic/internal)
+  //   claim_action_ids[] — set when source=action_queue_claim (rolls up N actions)
+  //   log[]       — task-scoped activity entries (M08 logs carrying task_id)
   const tasks = [
-    { id: "tk_1", title: "Gọi ngay — sắp hết hàng yêu thích", party: "p_001", due: "2026-06-14T03:00:00Z", priority: "P1", assignee: "u_nva", status: "open", source: "action_queue", source_ref: "aq_1", note: "" },
-    { id: "tk_2", title: "Win-back GOLD — chưa mua 92 ngày", party: "p_002", due: "2026-06-14T03:00:00Z", priority: "P2", assignee: "u_nvb", status: "open", source: "action_queue", source_ref: "aq_3", note: "" },
-    { id: "tk_3", title: "Follow-up sau cuộc gọi", party: "p_001", due: "2026-06-20T03:00:00Z", priority: "P2", assignee: "u_nva", status: "open", source: "manual", source_ref: null, note: "Sau khi khách xác nhận đặt." },
-    { id: "tk_4", title: "Gửi catalogue mới", party: "p_004", due: "2026-06-25T03:00:00Z", priority: "P3", assignee: "u_nva", status: "open", source: "manual", source_ref: null, note: "" },
-    { id: "tk_5", title: "Follow-up A — combo cao cấp", party: "p_002", due: "2026-06-15T03:00:00Z", priority: "P2", assignee: "u_nvb", status: "doing", source: "manual", source_ref: null, note: "" },
-    { id: "tk_6", title: "Gợi ý dòng máy cho khách sỉ", party: "p_005", due: "2026-06-16T03:00:00Z", priority: "P2", assignee: "u_nvb", status: "doing", source: "action_queue", source_ref: "aq_5", note: "" },
-    { id: "tk_7", title: "Gọi giới thiệu SP X", party: "p_008", due: "2026-06-12T03:00:00Z", priority: "P3", assignee: "u_nvb", status: "done", source: "manual", source_ref: null, completed_at: "2026-06-12T08:00:00Z", note: "" },
-    { id: "tk_8", title: "Gọi T. B nhắc lịch", party: "p_002", due: "2026-06-11T03:00:00Z", priority: "P3", assignee: "u_nvb", status: "done", source: "manual", source_ref: null, completed_at: "2026-06-11T09:30:00Z", note: "" },
-    { id: "tk_9", title: "Nhắc đơn set quà giới hạn", party: "p_010", due: "2026-06-18T03:00:00Z", priority: "P2", assignee: "u_nvb", status: "open", source: "action_queue", source_ref: "aq_9", note: "" },
-    { id: "tk_10", title: "Xác nhận địa chỉ giao spa", party: "p_005", due: "2026-06-19T03:00:00Z", priority: "P4", assignee: "u_nva", status: "open", source: "manual", source_ref: null, note: "" },
+    { id: "tk_1", title: "Gọi ngay — sắp hết hàng yêu thích", party: "p_001", due: "2026-06-14T03:00:00Z", priority: "P1", assignee: "u_nva", status: "open", source: "action_queue", source_ref: "aq_1", note: "",
+      attempts: [], log: [] },
+    { id: "tk_2", title: "Win-back GOLD — chưa mua 92 ngày", party: "p_002", due: "2026-06-14T03:00:00Z", priority: "P2", assignee: "u_nvb", status: "open", source: "action_queue", source_ref: "aq_3", note: "",
+      attempts: [
+        { at: "2026-06-12T03:30:00Z", channel: "call", result: "Không bắt máy" },
+        { at: "2026-06-13T07:00:00Z", channel: "zalo", result: "Đã gửi tin — chưa phản hồi" },
+      ], log: [
+        { at: "2026-06-12T03:30:00Z", user: "u_nvb", kind: "attempt", text: "Gọi lần 1 — không bắt máy, để lại lời nhắn." },
+        { at: "2026-06-13T07:00:00Z", user: "u_nvb", kind: "attempt", text: "Nhắn Zalo nhắc lịch, chờ phản hồi." },
+      ] },
+    { id: "tk_3", title: "Follow-up sau cuộc gọi", party: "p_001", due: "2026-06-20T03:00:00Z", priority: "P2", assignee: "u_nva", status: "open", source: "manual", source_ref: null, note: "Sau khi khách xác nhận đặt.",
+      attempts: [
+        { at: "2026-06-13T03:32:00Z", channel: "call", result: "Đã trao đổi — khách hẹn đặt tuần tới" },
+      ], log: [
+        { at: "2026-06-13T03:32:00Z", user: "u_nva", kind: "attempt", text: "Khách xác nhận sẽ đặt tuần tới, gợi ý SP mới dòng gentle." },
+      ] },
+    { id: "tk_4", title: "Gửi catalogue dòng mới cho khách", party: "p_004", due: "2026-06-25T03:00:00Z", priority: "P3", assignee: "u_nva", status: "open", source: "manual", source_ref: null,
+      description: "Chuẩn bị và gửi catalogue dòng sản phẩm mới qua email cho khách nhạy giá — kèm bảng giá ưu đãi khách quen.",
+      checklist: [
+        { text: "Tra cứu lịch sử đơn hàng gần nhất", done: true },
+        { text: "Chọn dòng sản phẩm phù hợp affinity", done: false },
+        { text: "Gửi catalogue + bảng giá qua email", done: false },
+      ], note: "", log: [] },
+    { id: "tk_5", title: "Follow-up A — combo cao cấp", party: "p_002", due: "2026-06-15T03:00:00Z", priority: "P2", assignee: "u_nvb", status: "doing", source: "manual", source_ref: null, note: "",
+      attempts: [], log: [] },
+    { id: "tk_6", title: "Xử lý cơ hội khách sỉ (gộp)", party: "p_005", due: "2026-06-16T03:00:00Z", priority: "P2", assignee: "u_nvb", status: "doing", source: "action_queue_claim", source_ref: null, claim_action_ids: ["aq_5", "aq_6"], note: "",
+      attempts: [], log: [
+        { at: "2026-06-13T02:00:00Z", user: "u_nvb", kind: "system", text: "Claim 2 action của khách vào 1 task để xử lý trong một phiên gọi." },
+      ] },
+    { id: "tk_7", title: "Gọi giới thiệu SP X", party: "p_008", due: "2026-06-12T03:00:00Z", priority: "P3", assignee: "u_nvb", status: "done", source: "manual", source_ref: null, completed_at: "2026-06-12T08:00:00Z", note: "",
+      attempts: [{ at: "2026-06-12T07:50:00Z", channel: "call", result: "Gọi được — khách quan tâm toner" }],
+      log: [{ at: "2026-06-12T08:00:00Z", user: "u_nvb", kind: "outcome", text: "Gọi được. Khách quan tâm toner cấp ẩm, sẽ cân nhắc." }] },
+    { id: "tk_8", title: "Gọi T. B nhắc lịch", party: "p_002", due: "2026-06-11T03:00:00Z", priority: "P3", assignee: "u_nvb", status: "done", source: "manual", source_ref: null, completed_at: "2026-06-11T09:30:00Z", note: "",
+      attempts: [], log: [] },
+    { id: "tk_9", title: "Nhắc đơn set quà giới hạn", party: "p_010", due: "2026-06-18T03:00:00Z", priority: "P2", assignee: "u_nvb", status: "open", source: "action_queue", source_ref: "aq_9", note: "",
+      attempts: [], log: [] },
+    { id: "tk_10", title: "Xác nhận địa chỉ giao spa", party: "p_005", due: "2026-06-19T03:00:00Z", priority: "P4", assignee: "u_nva", status: "open", source: "manual", source_ref: null,
+      description: "Xác nhận địa chỉ giao hàng mới cho spa của khách trước đơn kế tiếp.",
+      checklist: [
+        { text: "Gọi xác nhận địa chỉ giao mới", done: false },
+        { text: "Cập nhật địa chỉ trên hồ sơ (M15)", done: false },
+        { text: "Ghi chú giờ nhận hàng thuận tiện", done: false },
+      ], note: "", log: [] },
+    // internal task from S14 STOP (verify_account) — migration → internal
+    { id: "tk_11", title: "Xác minh loại tài khoản (nghi B2B)", party: "p_006", due: "2026-06-17T03:00:00Z", priority: "P2", assignee: "u_nva", status: "open", source: "verify_account", source_ref: null,
+      description: "Tên hiển thị nghi là tổ chức/sàn bị gán nhầm nhóm RETAIL, kèm margin mâu thuẫn. Xác minh trước khi cho vào luồng bán lẻ.",
+      checklist: [
+        { text: "Đối chiếu tên hiển thị với hồ sơ tổ chức", done: false },
+        { text: "Kiểm tra mâu thuẫn margin (avg contribution âm)", done: false },
+        { text: "Gán lại nhóm tài khoản hoặc đánh dấu loại trừ", done: false },
+      ], note: "", log: [] },
+    // generic task (no party) — migration → generic
+    { id: "tk_12", title: "Cập nhật bảng giá Q3 trên hệ thống", party: null, due: "2026-06-16T03:00:00Z", priority: "P3", assignee: "u_nva", status: "open", source: "manual", source_ref: null,
+      description: "Cập nhật bảng giá Q3 mới nhận từ kế toán lên Sapo và thông báo cho đội sale.",
+      checklist: [
+        { text: "Thu thập bảng giá Q3 từ kế toán", done: true },
+        { text: "Upload lên Sapo", done: false },
+        { text: "Thông báo đội sale qua group", done: false },
+      ],
+      links: [
+        { label: "Bảng giá Q3 (Google Sheet)", url: "https://drive.google.com/..." },
+      ], note: "", log: [] },
   ];
+
+  // ── Data migration: backfill task_kind ──────────────────
+  // Derive from source/source_ref/party (R: consistent at source, not at
+  // render). Outreach action types → contact; verify/internal source →
+  // internal; no party → generic; manual with party → keyword heuristic.
+  const OUTREACH_ACTIONS = ["CALL_NOW", "REORDER_NUDGE", "WIN_BACK", "UPSELL", "CROSS_SELL", "SECOND_ORDER", "HIGH_CANCEL_RISK", "LOYALTY_REWARD"];
+  const INTERNAL_SOURCES = ["verify_account", "internal", "system"];
+  const CONTACT_TITLE_HINT = /(gọi|liên hệ|follow[- ]?up|nhắc|win[- ]?back|hẹn|chăm sóc)/i;
+  function deriveTaskKind(t) {
+    if (!t.party) return "generic";
+    if (INTERNAL_SOURCES.includes(t.source)) return "internal";
+    if (t.source === "action_queue_claim") return "contact";
+    if (t.source === "action_queue") {
+      const act = (parties.find((p) => p.id === t.party)?.actions || []).find((a) => a.action_id === t.source_ref);
+      if (act && !OUTREACH_ACTIONS.includes(act.type)) return "internal";
+      return "contact";
+    }
+    // manual + party: contact if the title reads like outreach, else internal
+    return CONTACT_TITLE_HINT.test(t.title || "") ? "contact" : "internal";
+  }
+  tasks.forEach((t) => { t.task_kind = deriveTaskKind(t); });
 
   // ── Conversations (crm_conversation) ────────────────────
   // status: open / pending / closed
@@ -539,6 +629,9 @@
     // lookups
     userById: (id) => users.find((u) => u.id === id) || null,
     partyById: (id) => parties.find((p) => p.id === id) || null,
+    taskById: (id) => tasks.find((t) => t.id === id) || null,
+    // open/doing CONTACT tasks for a party — drives S14 reason rail rollup
+    contactTasksForParty: (id) => tasks.filter((t) => t.party === id && t.task_kind === "contact" && (t.status === "open" || t.status === "doing")),
     tagById: (id) => tags.find((t) => t.id === id) || null,
     segById: (id) => segments.find((s) => s.id === id) || null,
     campaignById: (id) => campaigns.find((c) => c.id === id) || null,

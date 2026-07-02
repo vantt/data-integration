@@ -3,7 +3,7 @@ id: M15
 type: modal
 name: "Edit Contact & Core Info Modal"
 platforms: [desktop]
-hosts: [S03]
+hosts: [S03, S15]
 status: active
 design_ref: ""
 rules: [R5, R13]

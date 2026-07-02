@@ -245,6 +245,24 @@ surfaces:
       - trust_footer
       - outcome_bar
       - stop_banner
+  S15:
+    type: screen
+    name: Task Detail
+    platforms:
+      - desktop
+    hosts: []
+    status: active
+    file: screens/S15-task-detail.md
+    rules:
+      - R6
+    regions:
+      - header
+      - lifecycle
+      - body_contact
+      - body_internal
+      - body_generic
+      - activity_log
+      - close_bar
   P01:
     type: panel
     name: Value & Behavior Panel
@@ -375,6 +393,7 @@ surfaces:
       - desktop
     hosts:
       - S03
+      - S15
     status: active
     file: modals/M03-tag-management-modal.md
     rules: []
@@ -406,6 +425,7 @@ surfaces:
       - S03
       - S07
       - P04
+      - S15
     status: active
     file: modals/M05-create-edit-task-modal.md
     rules: []
@@ -452,6 +472,7 @@ surfaces:
       - S03
       - S01
       - S06
+      - S15
       - P02
       - P03
       - P04
@@ -561,6 +582,7 @@ surfaces:
       - desktop
     hosts:
       - S03
+      - S15
     status: active
     file: modals/M15-edit-contact-core-info-modal.md
     rules:
@@ -625,6 +647,7 @@ surfaces:
     hosts:
       - P04
       - S07
+      - S15
     status: active
     file: overlays/O03-postpone-task-overlay.md
     rules:

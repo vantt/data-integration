@@ -1,6 +1,6 @@
 id,from,trigger,action,target,guard,region
 A-S01-001,S01,click,navigate,S03,,task_list
-A-S01-002,S01,click,navigate,S03,,task_list
+A-S01-002,S01,click,navigate,S15,,task_list
 A-S01-003,S01,click,mutate,,,task_list
 A-S01-004,S01,click,open_overlay,M05,,topbar
 A-S01-006,S01,change,mutate,,,filter_bar
@@ -93,7 +93,7 @@ A-S06-006,S06,click,navigate,S03,,customer_sidebar
 A-S06-LSN01,S06,chat.message.received,mutate,,,
 A-S06-LSN02,S06,conversation.assigned,mutate,,,
 A-S07-001,S07,click,open_overlay,M05,,topbar
-A-S07-002,S07,click,navigate,S03,,board
+A-S07-002,S07,click,navigate,S15,,board
 A-S07-003,S07,click,mutate,,,board
 A-S07-004,S07,drag_drop,mutate,,,board
 A-S07-005,S07,change,mutate,,,topbar
@@ -162,7 +162,18 @@ A-S14-022,S14,click,open_overlay,M15,,collect
 A-S14-023,S14,click,open_overlay,M15,,collect
 A-S14-024,S14,click,open_overlay,M05,,reason_to_call
 A-S14-025,S14,click,mutate,,,reason_to_call
+A-S14-026,S14,click,mutate,,,reason_to_call
 A-S14-LSN01,S14,cache.refreshed,mutate,,,
+A-S15-001,S15,click,mutate,,,lifecycle
+A-S15-002,S15,click,open_overlay,M05,,lifecycle
+A-S15-003,S15,click,open_overlay,O03,,lifecycle
+A-S15-004,S15,click,mutate,,task.status != 'done',lifecycle
+A-S15-005,S15,click,open_overlay,M08,,close_bar
+A-S15-006,S15,click,navigate,S14,,body_contact
+A-S15-007,S15,click,navigate,S03,,header
+A-S15-008,S15,click,mutate,,,body_internal
+A-S15-009,S15,click,open_overlay,M15,,body_internal
+A-S15-010,S15,click,open_overlay,M03,,body_internal
 A-P01-001,P01,click,mutate,,,signals_block
 A-P01-002,P01,click,open_overlay,M16,,rep_insights_block
 A-P01-003,P01,click,open_overlay,M16,,rep_insights_block
@@ -185,6 +196,7 @@ A-P04-004,P04,click,open_overlay,M05,,task_list
 A-P04-005,P04,click,open_overlay,O03,task.status != 'done' && task.status != 'cancelled',task_list
 A-P04-006,P04,click,mutate,,task.status != 'done',task_list
 A-P04-007,P04,change,mutate,,,toolbar
+A-P04-008,P04,click,navigate,S15,,task_list
 A-P05-001,P05,click,open_overlay,M08,,toolbar
 A-P05-002,P05,click,open_overlay,M08,,notes_list
 A-P05-003,P05,click,open_overlay,O01,,notes_list
@@ -213,6 +225,7 @@ A-M05-001,M05,click,close_overlay,return_to_invoker,,header
 A-M05-002,M05,click,close_overlay,return_to_invoker,,actions
 A-M05-003,M05,click,mutate,,form.title != '' && form.due_at != null,actions
 A-M05-004,M05,blur,mutate,,,body
+A-M05-005,M05,change,mutate,,,body
 A-M06-001,M06,click,close_overlay,return_to_invoker,,header
 A-M06-002,M06,click,close_overlay,return_to_invoker,,actions
 A-M06-003,M06,click,mutate,,form.requiredFields.allValid,actions

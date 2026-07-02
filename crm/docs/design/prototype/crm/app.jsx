@@ -12,7 +12,10 @@ const THEMES = [
 { id: "dark", label: "Precision", attr: "", sw: "#15151a" },
 { id: "slate", label: "Than chì", attr: "slate", sw: "#12161d" },
 { id: "light", label: "Sáng ấm", attr: "light", sw: "#faf7f0" },
-{ id: "finance", label: "Tài chính", attr: "finance", sw: "#eef0fb" }];
+{ id: "finance", label: "Tài chính", attr: "finance", sw: "#eef0fb" },
+// beRich Design System — selecting these auto-binds the beRich font + jade accent
+{ id: "berich", label: "beRich", attr: "berich", sw: "#F7F3EA", font: "berich", accent: "jade" },
+{ id: "berich-dark", label: "beRich Tối", attr: "berich-dark", sw: "#14110E", font: "berich", accent: "jade" }];
 
 const ACCENTS = [
 { id: "amber", label: "Hổ phách", attr: "", sw: "#e8a341" },
@@ -20,16 +23,25 @@ const ACCENTS = [
 { id: "honey", label: "Mật ong", attr: "honey", sw: "#d4a548" },
 { id: "indigo", label: "Chàm", attr: "indigo", sw: "#7c83f0" },
 { id: "teal", label: "Ngọc", attr: "teal", sw: "#4bb3a7" },
-{ id: "coral", label: "San hô", attr: "coral", sw: "#e0746c" }];
+{ id: "coral", label: "San hô", attr: "coral", sw: "#e0746c" },
+// beRich gemstone accents — "jade" has empty attr so it falls back to the
+// beRich theme's built-in jade default (jade-700 light / jade-500 dark).
+{ id: "jade", label: "Ngọc lục", attr: "", sw: "#13A06E" },
+{ id: "gold", label: "Vàng cổ", attr: "gold", sw: "#C8A04D" },
+{ id: "sapphire", label: "Lam ngọc", attr: "sapphire", sw: "#2563C9" },
+{ id: "topaz", label: "Hoàng ngọc", attr: "topaz", sw: "#D97A34" },
+{ id: "amethyst", label: "Tử ngọc", attr: "amethyst", sw: "#7C5CD6" },
+{ id: "garnet", label: "Hồng lựu", attr: "garnet", sw: "#C23B4B" }];
 
 const FONTS = [
 { id: "editorial", label: "Editorial", display: "'Newsreader', Georgia, serif", body: "'Geist', system-ui, sans-serif", mono: "'Geist Mono', monospace" },
 { id: "precision", label: "Precision", display: "'Fraunces', Georgia, serif", body: "'Geist', system-ui, sans-serif", mono: "'Geist Mono', monospace" },
 { id: "grotesk", label: "Grotesk", display: "'Space Grotesk', sans-serif", body: "'Geist', system-ui, sans-serif", mono: "'Geist Mono', monospace" },
 { id: "plex", label: "Plex", display: "'IBM Plex Serif', serif", body: "'IBM Plex Sans', sans-serif", mono: "'IBM Plex Mono', monospace" },
-{ id: "source", label: "Source", display: "'Source Sans 3', sans-serif", body: "'Source Sans 3', system-ui, sans-serif", mono: "'JetBrains Mono', monospace" }];
+{ id: "source", label: "Source", display: "'Source Sans 3', sans-serif", body: "'Source Sans 3', system-ui, sans-serif", mono: "'JetBrains Mono', monospace" },
+{ id: "berich", label: "beRich", display: "'Spectral', Georgia, serif", body: "'Be Vietnam Pro', system-ui, sans-serif", mono: "'IBM Plex Mono', monospace" }];
 
-const DEFAULT_TWEAKS = { theme: "dark", accent: "amber", font: "editorial", density: "comfortable", numfont: "mono" };
+const DEFAULT_TWEAKS = { theme: "berich", accent: "jade", font: "berich", density: "comfortable", numfont: "mono" };
 
 function loadTweaks() {
   try {return { ...DEFAULT_TWEAKS, ...JSON.parse(localStorage.getItem("crm_tweaks") || "{}") };} catch (e) {return { ...DEFAULT_TWEAKS };}
@@ -106,7 +118,7 @@ const NAV = [
   { id: "S13", icon: "settings", label: "Cài đặt" }]
 }];
 
-const SCREEN_OF_TAB = { S03: "S02", S06: "S05", S09: "S08", S11: "S10" };
+const SCREEN_OF_TAB = { S03: "S02", S06: "S05", S09: "S08", S11: "S10", S15: "S07" };
 function Sidebar({ route, nav }) {
   const inbox = window.DB.conversations.filter((c) => c.unread > 0).reduce((s, c) => s + c.unread, 0);
   const dedup = window.DB.dedup.filter((d) => d.status === "pending").length;
@@ -306,7 +318,7 @@ function ThemePanel({ tweaks, setTweaks, open, setOpen }) {
         <div className="tweaks-sec__label">Bảng màu nền</div>
         <div className="theme-swatches">
           {THEMES.map((t) =>
-          <button key={t.id} className={"theme-sw" + (tweaks.theme === t.id ? " theme-sw--on" : "")} onClick={() => set("theme", t.id)}>
+          <button key={t.id} className={"theme-sw" + (tweaks.theme === t.id ? " theme-sw--on" : "")} onClick={() => setTweaks((tw) => ({ ...tw, theme: t.id, ...(t.font ? { font: t.font } : {}), ...(t.accent ? { accent: t.accent } : {}) }))}>
               <span className="theme-sw__chip" style={{ background: t.sw }} />
               <span className="theme-sw__name">{t.label}</span>
             </button>
@@ -413,7 +425,7 @@ function CleanNav({ sid, idx, total, onPrev, onNext, onExit, hidden }) {
 /* ── Root App ───────────────────────────────────────────── */
 const SCREEN_TITLE = {
   S01: "Worklist", S02: "Khách hàng", S03: "Hồ sơ 360", S04: "Dedup", S05: "Inbox", S06: "Hội thoại",
-  S07: "Tasks", S08: "Segments", S09: "Segment Builder", S10: "Chiến dịch", S11: "Chiến dịch", S12: "Ads", S13: "Cài đặt", S14: "Chế độ gọi"
+  S07: "Tasks", S08: "Segments", S09: "Segment Builder", S10: "Chiến dịch", S11: "Chiến dịch", S12: "Ads", S13: "Cài đặt", S14: "Chế độ gọi", S15: "Task"
 };
 function loadRoute() {
   try {const r = JSON.parse(localStorage.getItem("crm_route") || "null");return r && r.screen ? r : { screen: "S01" };} catch (e) {return { screen: "S01" };}
@@ -498,10 +510,10 @@ function App() {
     S01: window.S01_Worklist, S02: window.S02_CustomerList, S03: window.S03_Customer360, S04: window.S04_Dedup,
     S05: window.S05_Inbox, S06: window.S06_Conversation, S07: window.S07_Tasks, S08: window.S08_Segments,
     S09: window.S09_Builder, S10: window.S10_Campaigns, S11: window.S11_Campaign, S12: window.S12_Ads, S13: window.S13_Settings,
-    S14: window.S14_CallMode
+    S14: window.S14_CallMode, S15: window.S15_TaskDetail
   };
   const ScreenComp = SCREENS[route.screen] || window.S01_Worklist;
-  const screenKey = [route.screen, route.party, route.tab, route.conversation, route.campaign, route.segment].filter(Boolean).join("·");
+  const screenKey = [route.screen, route.party, route.tab, route.conversation, route.campaign, route.segment, route.task].filter(Boolean).join("·");
   const openId = modals.length ? modals[modals.length - 1].type : preview ? "O02" : null;
   const enterClean = () => {setCleanIdx(currentSurfaceIdx(route, openId));setClean(true);};
 

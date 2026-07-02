@@ -58,8 +58,8 @@ interactions:
     region: board
     trigger: click
     action: navigate
-    target: S03
-    payload: { party_id: "$task.party_id" }
+    target: S15
+    payload: { task_id: "$task.id" }
   - id: A-S07-003
     element: task_checkbox
     region: board

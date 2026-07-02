@@ -98,7 +98,7 @@ function S03_Customer360({ route, nav, openModal, toast }) {
             {tab === "P01" && <P01_Insight party={party} openModal={openModal} nav={nav} />}
             {tab === "P02" && <P02_Orders party={party} openModal={openModal} />}
             {tab === "P03" && <P03_Timeline party={party} openModal={openModal} nav={nav} />}
-            {tab === "P04" && <P04_Tasks party={party} openModal={openModal} toast={toast} />}
+            {tab === "P04" && <P04_Tasks party={party} openModal={openModal} toast={toast} nav={nav} />}
             {tab === "P05" && <P05_Notes party={party} openModal={openModal} />}
             {tab === "P06" && <P06_Convs party={party} nav={nav} />}
           </div>
@@ -232,7 +232,7 @@ function P03_Timeline({ party, openModal, nav }) {
 }
 
 /* ── P04 Tasks ──────────────────────────────────────────── */
-function P04_Tasks({ party, openModal, toast }) {
+function P04_Tasks({ party, openModal, toast, nav }) {
   const [done, setDone] = dUseState([]);
   const [filter, setFilter] = dUseState("open");
   let tasks = window.DB.tasks.filter((t) => t.party === party.id);
@@ -255,10 +255,11 @@ function P04_Tasks({ party, openModal, toast }) {
               <div key={t.id} className={"wl-row" + (isDone ? " wl-row--done" : "")} style={{ gridTemplateColumns: "auto 1fr auto" }}>
                 <button className={"wl-check" + (isDone ? " wl-check--on" : "")} onClick={() => { setDone((d) => d.includes(t.id) ? d.filter((x) => x !== t.id) : [...d, t.id]); if (!isDone) toast("Đã hoàn thành task"); }}>{isDone && <Icon name="check" size={13} />}</button>
                 <div className="wl-row__main">
-                  <div className="wl-row__top">{t.source === "action_queue" && <span className="auto-tag">AUTO</span>}<span className="wl-row__name" style={{ cursor: "default" }}>{t.title}</span></div>
+                  <div className="wl-row__top">{t.source === "action_queue" && <span className="auto-tag">AUTO</span>}<span className="wl-row__name" onClick={() => nav && nav({ screen: "S15", task: t.id })}>{t.title}</span></div>
                   <div className="wl-row__meta">
                     <span className="wl-row__due"><Icon name="clock" size={11} /> {isDone && t.completed_at ? "Done: " + fmtDate(t.completed_at) : "Due: " + fmtDate(t.due)}</span>
                     <span className={"prio prio--" + t.priority}>{t.priority}</span>
+                    <span className={"tkind-tag tkind-tag--" + t.task_kind}>{t.task_kind}</span>
                     <span className="muted" style={{ fontSize: 11 }}>{window.DB.userById(t.assignee).short}</span>
                   </div>
                 </div>

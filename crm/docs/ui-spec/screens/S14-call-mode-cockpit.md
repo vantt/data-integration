@@ -21,6 +21,7 @@ Phân vùng không gian tách bạch **"vì sao gọi"** (RIGHT rail — action 
 **Hai host, một component:** lõi cockpit (`#s14-panel-root`) dùng chung cho cả:
 - **Embedded** — tab "Gọi" trong S03 (`/customers/{id}/panels/call_cockpit`). Khi tab active, sidebar tĩnh của S03 bị ẩn (CSS `:has(#s14-panel-root)`) để cockpit chiếm full-width.
 - **Full-screen** — route riêng `/customers/{id}/call`, vào từ S01 Worklist (nút "Vào chế độ gọi"). Thêm chrome topbar: `[← Worklist]` · queue counter `#n/N` · `[Khách kế →]`.
+- **Từ Task Detail (S15)** — contact-task bấm "Vào phiên gọi" (A-S15-006) mở phiên gọi customer-grained này với **task context**: reason của task đó được ghim làm PRIMARY; sau khi log outcome, quay lại S15 (chrome "Khách kế →" đổi thành "Quay lại task"). Cockpit vẫn là 1 phiên/khách, không phải 1 phiên/task.
 
 Khi `recommended=false` (nghi B2B gán nhầm / margin mâu thuẫn / chết-sâu margin âm) → **STOP state** (R14): ẩn talk-track + rail, chỉ chừa identity + alert + CTA xác minh tài khoản.
 
@@ -29,10 +30,10 @@ Khi `recommended=false` (nghi B2B gán nhầm / margin mâu thuẫn / chết-sâ
 Panel nạp (tất cả **cache SQLite, rẻ**): `party` (Party360), `identities` (crm_party_identity), `insight` (CacheInsight — RFM + action queue), `warning_notes`, `resolved_action_ids`, `script` (wh_approach_script), `meta`.
 
 - **Kịch bản** (LEFT + guardrails): `cache.wh_approach_script` — profile_read, value_assessment, opportunity, risk, approach{opening_message, fallback_message, talking_points[], cross_sell[], objection_handling[], do_not[], timing}, confidence, data_gaps, recommended. Pilot: JSON tĩnh cho tới khi batch ghi cache. Freshness: `refreshed_at` (R6 — ICT).
-- **Vì sao gọi** (reason_to_call): `insight.actions` (ActionQueueItem: action_type, rationale_vi, value_at_stake_vnd, last_order_code, last_purchase_date, estimated_depletion_date) + `resolved_action_ids`. Read-context — claim/dismiss vẫn thuộc P01 (không rebuild ở cockpit).
+- **Vì sao gọi** (reason_to_call): `insight.actions` (ActionQueueItem: action_type, rationale_vi, value_at_stake_vnd, last_order_code, last_purchase_date, estimated_depletion_date) + `resolved_action_ids` + **open/doing CONTACT-TASKS** (`crm_task` kind=contact, party_id=current). Rail tổ chức thành 1 lý do PRIMARY (call trigger chín muồi nhất) + SECONDARY "tranh thủ nếu thuận" (sắp xếp theo ripeness). Read-context — claim/dismiss vẫn thuộc P01 (không rebuild ở cockpit). Outcome bar resolve NHIỀU task_id/action_id cùng lúc (bulk); item nào backed bởi contact-task thì outcome **cập nhật luôn `task.status`** (đồng bộ với S15 — một nguồn sự thật).
 - **Snapshot** (cache-first, DuckDB-fallback): dùng `insight.insight` (LTV `lifetime_contribution_margin`, AOV `avg_order_spend`, số đơn, chu kỳ `avg_days_between_orders`, recency). Nếu `insight` thiếu (None) → fallback `dim_metrics` (olap.duckdb, on-demand) để không rỗng. KHÔNG bê RFM grid / discount buckets / profitability — đó là P01.
 - **Identity/kênh** (identity_bar + collect): `crm_party_identity` — kênh `is_preferred`, `contact_status` (active/invalid/unreachable), `display_label`.
-- **Cảnh giác** (alert_row): `script.risk` + signals (`customer_status`, `is_high_cancel_risk`, `is_high_discount_sensitivity`, `is_margin_negative`) + `contact_status='invalid'` + `party.consent_contact` + `warning_notes`.
+- **Cảnh giác** (alert_row): `script.risk` + signals (`customer_status`, `is_high_cancel_risk`, `is_high_discount_sensitivity`, `is_margin_negative`) + `contact_status='invalid'` + `party.consent_contact` + `warning_notes` + chip **"liên hệ gần nhất X ngày"** (contact recency từ rollup activity log: `last_contacted_at`, `last_response_at`, `contact_attempts`, `response_count`, `responsiveness`). Engagement meta dùng cho chọn kênh; lưu trữ là impl phase riêng.
 - **Thu thập còn thiếu** (collect): suy ra từ `identities` (thiếu zalo / email / số phụ) + `party.birthday|gender` trống + `script.data_gaps[]`. Inline write tái dùng M15 endpoints (`POST /customers/{id}/contact|core` với `inline=1` → trả fragment 1 dòng, KHÔNG re-render panel). Địa chỉ (nhiều field) → mở M15 tab=address thay vì inline.
 
 ## Layout
@@ -43,14 +44,19 @@ Panel nạp (tất cả **cache SQLite, rẻ**): `party` (Party360), `identities
 ┌ IDENTITY BAR ───────────────────────────────────────────────────────────┐
 │ Hoàng Thức [GOLD][active] ·Miền Trung   ☎0983***35 [📞Gọi][💬Zalo] [360] │
 ├ ⚠ CẦN LƯU Ý (alert_row) ────────────────────────────────────────────────┤
-│ [sắp churn 11d] [cancel 32%] [SĐT phụ invalid] [consent: OK]             │
+│ [sắp churn 11d] [cancel 32%] [SĐT phụ invalid] [liên hệ 3 ngày trước]   │
 ├──────────────────────────────────────┬──────────────────────────────────┤
 │ LEFT — NÓI GÌ (hot path)             │ RIGHT — VÌ SAO & BỐI CẢNH        │
 │ ┌ Talk-track [📞Gọi][💬Zalo] ─────┐  │ ▸ VÌ SAO GỌI (reason_to_call)    │
-│ │ "Dạ em chào anh Thức…"  [📋Copy]│  │  ┌ REORDER · GT~1.2tr    [☐đã nói]│
-│ └──────────────────────────────────┘  │  │ Quá chu kỳ 11d · Shark…    │ │
-│ ⏱ Gọi 1-2 ngày, giờ hành chính        │  │ #DH2093 · 24/5   [⏱Đặt lịch]│ │
-│ ĐIỂM NÓI (tick khi đã nói)   2/3      │  └────────────────────────────┘ │
+│ │ "Dạ em chào anh Thức…"  [📋Copy]│  │  ★ PRIMARY (call trigger)         │
+│ └──────────────────────────────────┘  │  ┌ REORDER · GT~1.2tr    [☐đã nói]│
+│ ⏱ Gọi 1-2 ngày, giờ hành chính        │  │ Quá chu kỳ 11d · Shark…    │ │
+│ ĐIỂM NÓI (tick khi đã nói)   2/3      │  │ #DH2093 · 24/5 [⏱Đặt lịch][✉]│ │
+│                                       │  └────────────────────────────┘ │
+│                                       │  ▾ SECONDARY "tranh thủ nếu thuận"│
+│                                       │  ┌ WIN_BACK · GT~0.8tr  [☐đã nói]│
+│                                       │  │ Chưa mua 45d         [✉Zalo]  │ │
+│                                       │  └────────────────────────────┘ │
 │  ☑ Nhắc chu kỳ  ☑ Ưu đãi  ☐ Combo    │ ▸ SNAPSHOT                       │
 │  Gợi thêm: [Omega3] [Vitamin D]       │  LTV 8.2tr·3 đơn·45d·gần 11d    │
 │ XỬ LÝ TỪ CHỐI  [🔍 khách vừa nói gì?] │  Chân dung: khách lẻ 3 đơn…     │
@@ -92,6 +98,10 @@ Panel nạp (tất cả **cache SQLite, rẻ**): `party` (Party360), `identities
 - **ST-CALL-COLLECT-DONE**: sau khi bấm [+] ở dòng thu thập → dòng đó swap "✓ đã lưu" (client, không re-render panel).
 - **ST-CALL-CONSENT-WARN** (R1): `consent_contact='denied'` → chip đỏ ở alert_row **nhưng KHÔNG chặn** nút Gọi/Zalo (chỉ cảnh báo; rep tự chịu trách nhiệm — quyết định sản phẩm, nới nhẹ R14 gating trên kênh gọi).
 - Stale → dùng `ST-STALE-CACHE`; loading → `ST-LOADING`.
+
+**Outcome bar (bulk resolve):** A-S14-009 (btn_log_outcome → M08) resolve được NHIỀU task_id/action_id cùng lúc — M08 payload nhận danh sách khi có nhiều context items trong phiên.
+
+**Async resolve (low-stakes items):** A-S14-026 cho phép resolve rail item thấp stakes qua Zalo/email trực tiếp từ rail (tái dùng channel toggle) mà không cần mở cuộc gọi.
 
 ## Interactions
 
@@ -207,6 +217,12 @@ interactions:
     trigger: click
     action: mutate
     effects: [reason.toggle_mentioned]
+  - id: A-S14-026
+    element: btn_reason_resolve_async
+    region: reason_to_call
+    trigger: click
+    action: mutate
+    effects: [reason.resolve_via_async_channel, activity_log.append_async_attempt]
   - id: A-S14-LSN01
     listens_to: cache.refreshed
     action: mutate

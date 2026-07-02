@@ -3,7 +3,7 @@ id: M05
 type: modal
 name: "Create / Edit Task Modal"
 platforms: [desktop]
-hosts: [S01, S03, S07, P04]
+hosts: [S01, S03, S07, P04, S15]
 status: active
 design_ref: ""
 rules: []
@@ -15,8 +15,18 @@ regions: [header, body, actions]
 ## Purpose
 
 Tạo mới hoặc chỉnh sửa `crm_task`. Dùng từ Worklist (S01), Customer 360 (S03), Tasks Board (S07),
-Tasks Panel (P04). Khi mở từ action_queue (qua P01), prefill title/rationale từ action item.
-Task có title, due_at, priority (P1–P4), assignee, party link (optional), status.
+Tasks Panel (P04), Task Detail (S15). Khi mở từ action_queue (qua P01), prefill title/rationale từ action item.
+Task có title, due_at, priority (P1–P4), assignee, party link (optional), status, **task_kind**.
+
+### task_kind — auto-prefill, ẩn khi chắc chắn (progressive disclosure)
+`task_kind` (contact | internal | generic) quyết định S15 render body nào. Nguyên tắc: **hệ thống tự
+suy + prefill**, chỉ hiện selector khi KHÔNG chắc:
+- Tạo từ action_queue outreach (CALL_NOW / REORDER_* / WIN_BACK / UPSELL / CROSS_SELL / SECOND_ORDER /
+  HIGH_CANCEL_RISK) → **contact**, độ tin cao → auto-set + **ẩn field**.
+- Tạo từ nguồn nội bộ (vd `source=verify_account` từ S14 STOP) → **internal**, auto-set + ẩn.
+- Không có party_id → **generic**, auto-set + ẩn.
+- Manual mơ hồ (có party, không rõ ý định) → **hiện selector** với giá trị đoán tốt nhất làm mặc định.
+Field không bao giờ bắt NV chọn khi máy đã chắc — giảm ma sát, đảm bảo dữ liệu nhất quán.
 
 ## Layout
 
@@ -26,6 +36,8 @@ Task có title, due_at, priority (P1–P4), assignee, party link (optional), sta
 ├───────────────────────────────────────────────────┤
 │  Tiêu đề *   [Follow-up sau cuộc gọi________]    │
 │  Khách hàng  [Nguyễn Văn A ▼] (optional)         │
+│  Loại việc   [Liên hệ ▼]  ← chỉ hiện khi máy   │
+│              không chắc; auto-set+ẩn khi chắc    │
 │  Due date *  [20/06/2026]   Giờ [10:00]          │
 │  Priority    [P2 — Cao ▼]                        │
 │  Giao cho    [NV A ▼]                            │
@@ -70,3 +82,9 @@ interactions:
     trigger: blur
     action: mutate
     effects: [form.due_at.validate, ui.warn_if_past]
+  - id: A-M05-005
+    element: task_kind_select
+    region: body
+    trigger: change
+    action: mutate
+    effects: [form.task_kind.set, body.reveal_if_uncertain]

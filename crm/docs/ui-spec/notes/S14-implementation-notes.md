@@ -1,6 +1,7 @@
 # S14 Call Cockpit v2 — Implementation Notes (codegen handoff)
 
-> Companion to `screens/S14-call-mode-cockpit.md` (contract = source of truth). This doc pins the **code-level HOW** the ui-spec intentionally omits, so codegen reuses the existing codebase instead of reinventing. Not a spec artifact — do not feed to the ui-spec compiler.
+> Lives in `notes/` (outside the ui-spec `surface_dirs`) so the compiler never scans it — it is NOT a surface.
+> Companion to `../screens/S14-call-mode-cockpit.md` (contract = source of truth). This doc pins the **code-level HOW** the ui-spec intentionally omits, so codegen reuses the existing codebase instead of reinventing. Not a spec artifact — do not feed to the ui-spec compiler.
 
 ## Scope
 
@@ -114,8 +115,88 @@ Talking-point ticks, objection accordion, reason "đã nói", channel toggle are
 | A-S14-025 | reason "đã nói" tick | client JS toggle (mirror `s14ToggleTP`) |
 | A-S14-001..011 | (existing) | unchanged — keep current handlers/JS |
 
-## 11. Out of scope / confirm
+## 11. Outcome bulk-resolve + async-resolve contract (Phase 04)
+
+### Outcome bulk-resolve — extended `handle_log_activity`
+
+**Endpoint:** `POST /customers/{party_id}/log-activity`  
+**Module:** `screen_customer_360_activity.py` → `register_activity_routes()`
+
+Two new optional form fields added alongside the existing fields:
+
+| Field | Type | Default | Description |
+|---|---|---|---|
+| `resolve_action_ids` | `str` | `""` | Comma-separated `action_id` values to dismiss via `action_state.dismiss()` |
+| `resolve_task_ids` | `str` | `""` | Comma-separated `task_id` values to transition to `"done"` via `task_svc.transition_status()` |
+
+**Behaviour:**
+- Runs after the existing activity log write, auto-claim, save-as-note, schedule-followup, and single `complete_task=1` steps.
+- Each id resolved independently; a failure on one never aborts the others (logged at WARNING).
+- `skip_task_id` guard: if `complete_task=1` and `task_id` is set, that same `task_id` is excluded from the bulk `resolve_task_ids` loop to prevent double-transition.
+- `action_state` must now be wired into `register_activity_routes()` (added as `action_state=` kwarg); `composition.py` passes `sqlite_repos["action_state"]`.
+- Response unchanged: `HX-Redirect` to `/customers/{party_id}?tab=timeline`.
+
+**Cockpit outcome bar binding** (for ui-port):
+```html
+<form hx-post="/customers/{{ party_id }}/log-activity" ...>
+  <!-- existing fields … -->
+  <input type="hidden" name="resolve_action_ids" value="{{ rail_primary.action_id or '' }}">
+  <input type="hidden" name="resolve_task_ids"   value="{{ rail_primary.task_id or '' }}">
+</form>
+```
+
+---
+
+### Async-resolve (A-S14-026) — new endpoint
+
+**Endpoint:** `POST /customers/{party_id}/reason/resolve-async`  
+**Module:** `screen_customer_360_activity.py` → `register_activity_routes()` (same module, same deps)
+
+**Purpose:** Resolve a rail item via an async channel (Zalo/email) WITHOUT logging a call.
+
+| Form field | Type | Default | Description |
+|---|---|---|---|
+| `channel` | `str` | `""` | `"zalo"` or `"email"` — determines `activity_type` (chat/email) |
+| `action_id` | `str` | `""` | Optional; single id to dismiss via `action_state.dismiss()` |
+| `task_id` | `str` | `""` | Optional; single id to transition to `"done"` |
+| `note` | `str` | `""` | Optional free-text logged as activity body |
+
+**Behaviour:**
+- Logs an outbound activity: `direction="out"`, `outcome="async_sent"`, `activity_type` derived from `channel`.
+- Calls `bulk_resolve(action_ids, task_ids, …)` — same helper as bulk-resolve above.
+- Returns **204 No Content** — HTMX target should be the specific rail item (`hx-swap="outerHTML"`). The cockpit panel (`#s14-panel-root`) is NOT re-rendered (preserves call state per §9 invariant).
+
+**Rail item binding** (for ui-port):
+```html
+<button hx-post="/customers/{{ party_id }}/reason/resolve-async"
+        hx-vals='{"channel": "zalo",
+                  "action_id": "{{ item.action_id or '' }}",
+                  "task_id":   "{{ item.task_id or '' }}"}'
+        hx-target="#rail-item-{{ item.action_id or item.task_id }}"
+        hx-swap="outerHTML">
+  Gửi Zalo
+</button>
+```
+
+---
+
+### Helper module
+
+Pure-logic helpers (no FastAPI dep) live in:  
+`crm/src/adapters/inbound/web/screens/customer360/outcome_resolve_helpers.py`  
+— `parse_id_list(raw: str) → list[str]`  
+— `bulk_resolve(action_ids, task_ids, action_state, task_svc, skip_task_id="", actor_id="") → None`
+
+Unit tests: `crm/src/tests/test_outcome_bulk_resolve.py` (23 tests, pure-logic, no FastAPI).
+
+## 12. Out of scope / confirm
 
 - R1 relax (consent warn-not-block) is a product decision — see `ST-CALL-CONSENT-WARN`. If policy hardens later, gate call/zalo buttons here.
 - Queue navigation (#n/N, next) only in full-screen; embedded tab omits topbar.
 - No new DB migration, no new entity — pure re-composition + 2 endpoint tweaks + 1 route.
+
+## Interactions
+
+```yaml crm-contract
+interactions: []
+```
