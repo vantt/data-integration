@@ -62,6 +62,9 @@ def run(argv=None):
                             help="Delete saved cookies and force re-login")
     arg_parser.add_argument("--timeout",       type=int, default=300,
                             help="Seconds to wait for download (default 300)")
+    arg_parser.add_argument("--account",       type=str,
+                            default=downloader.DEFAULT_ACCOUNT,
+                            help="Account prefix to download (default: 642 → all 6421*/6422*)")
     args = arg_parser.parse_args(argv)
 
     if args.clear_cookies:
@@ -77,6 +80,7 @@ def run(argv=None):
     output   = Path(OUTPUT_DIR)
     start_d, end_d = downloader.period_date_range(PERIOD)
     print(f"MISA account-ledger download: period={PERIOD}  {start_d} → {end_d}")
+    print(f"Account prefix: {args.account}")
     print(f"Output dir: {output}")
     print(f"Headless:   {headless}")
 
@@ -88,6 +92,7 @@ def run(argv=None):
         headless        = headless,
         period          = PERIOD,
         timeout_seconds = args.timeout,
+        account         = args.account,
     )
 
     print(f"\nDownload complete: {saved_path}")

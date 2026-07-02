@@ -1,18 +1,18 @@
 """MISA AMIS — Playwright automation for downloading Sổ chi tiết tài khoản Excel.
 
-Downloads accounts 6421 (all sub-accounts) and 6422 (parent only) for
-previous month, then drops the file into the account-ledger input directory.
+Downloads all sub-accounts for a given account prefix (e.g. '642' covers 6421* + 6422*)
+for the previous month, then drops the file into the account-ledger input directory.
 
 Flow:
   1. Load shared cookies (same session as sales-ledger downloader)
   2. Navigate to GLAccountLedger report page
   3. Handle session-conflict dialog if present
   4. Click 'Chọn tham số' → set period dates (1st–last day of previous month)
-  5. Search '6421' → click TH checkbox (select all sub-accounts)
-  6. Search '6422' → click TH checkbox (select parent account)
-  7. Click 'Xem báo cáo'
-  8. Export Excel → Đồng ý → Tải tệp → save file
-  9. Rename with period suffix, persist cookies
+  5. Search account prefix → click '.row-check-all' checkbox ('Chọn tất cả tài khoản')
+     — this selects ALL matching accounts including deeply nested sub-accounts
+  6. Click 'Xem báo cáo'
+  7. Export Excel → Đồng ý → Tải tệp → save file
+  8. Rename So_chi_tiet_{account}_{YYYYMM}.xlsx, persist cookies
 """
 import json
 import time
@@ -54,10 +54,9 @@ _click_download_queue_icon = _sales._click_download_queue_icon
 
 REPORT_URL = "https://actapp.misa.vn/app/RP/ReportList/RPDynamicViewer/GLAccountLedger"
 
-# Accounts to select:
-#   6421 → all sub-accounts (use TH select-all after filtering)
-#   6422 → parent account only (use TH select-all after filtering; only parent shows)
-ACCOUNTS = ["6421", "6422"]
+# Default account prefix — "642" captures all 6421* and 6422* sub-accounts.
+# Override via download_account_ledger(account=...) or Dagster asset config.
+DEFAULT_ACCOUNT = "642"
 
 
 # ── Form helpers ───────────────────────────────────────────────────────────────
@@ -86,54 +85,49 @@ def _set_dates_for_period(page, period: str) -> None:
             print(f"    [warn] date[{i}] failed: {e}")
 
 
-def _select_accounts(page, accounts: list[str]) -> None:
-    """For each account code, search in the account filter and click TH header checkbox.
+def _select_account_prefix(page, account: str) -> None:
+    """Search for account prefix and click 'Chọn tất cả tài khoản' (.row-check-all).
 
-    The TH checkbox (next to 'Số Tài Khoản' column) selects ALL visible rows,
-    which after filtering equals all sub-accounts for the searched code.
+    Unlike the TH header checkbox (which only selects visible paginated rows),
+    the .row-check-all checkbox selects ALL accounts matching the search —
+    including deeply nested sub-accounts not visible in the current list view.
     """
     search_selector = "input[placeholder='Nhập từ khóa tìm kiếm']"
+    print(f"    selecting account prefix: {account}")
+    try:
+        inp = page.locator(search_selector).first
+        inp.click(timeout=5000)
+        inp.press("Control+A")
+        inp.fill(account, timeout=3000)
+        time.sleep(1.5)  # wait for list to filter
 
-    for code in accounts:
-        print(f"    selecting account: {code}")
-        try:
-            # Clear + type search term
-            inp = page.locator(search_selector).first
-            inp.click(timeout=5000)
-            inp.press("Control+A")
-            inp.fill(code, timeout=3000)
-            time.sleep(1.5)  # wait for table to filter
+        _screenshot(page, f"acct_{account}_filtered")
 
-            _screenshot(page, f"acct_{code}_filtered")
-
-            # Click the checkbox in the TH (header row) — selects all visible rows
-            clicked = page.evaluate("""() => {
-                // Find first visible checkbox inside a th element
+        # Click the 'Chọn tất cả tài khoản' checkbox inside .row-check-all —
+        # this selects every account matching the search, not just the visible page.
+        clicked = page.evaluate("""() => {
+            const row = document.querySelector('.row-check-all');
+            if (row) {
+                const cb = row.querySelector('input[type="checkbox"]');
+                if (cb) { cb.click(); return 'row-check-all:' + (cb.className || '').slice(0, 40); }
+            }
+            return null;
+        }""")
+        if clicked:
+            print(f"      clicked 'Chọn tất cả tài khoản' ({clicked})")
+        else:
+            print(f"      [warn] .row-check-all checkbox not found — falling back to TH checkbox")
+            # Fallback: TH header checkbox (selects visible rows only)
+            page.evaluate("""() => {
                 for (const th of document.querySelectorAll('th')) {
                     const cb = th.querySelector('input[type="checkbox"]');
-                    if (cb && cb.offsetParent !== null) {
-                        cb.click();
-                        return 'th-checkbox:' + (cb.className || '').slice(0, 40);
-                    }
+                    if (cb && cb.offsetParent !== null) { cb.click(); return; }
                 }
-                // Fallback: any checkbox in thead
-                for (const cb of document.querySelectorAll('thead input[type="checkbox"]')) {
-                    if (cb.offsetParent !== null) {
-                        cb.click();
-                        return 'thead-checkbox:' + (cb.className || '').slice(0, 40);
-                    }
-                }
-                return null;
             }""")
-            if clicked:
-                print(f"      clicked select-all ({clicked})")
-            else:
-                print(f"      [warn] TH checkbox not found for {code}")
+        time.sleep(0.5)
 
-            time.sleep(0.5)
-
-        except Exception as e:
-            print(f"    [warn] account selection failed for {code}: {e}")
+    except Exception as e:
+        print(f"    [warn] account selection failed for {account}: {e}")
 
 
 def _trigger_excel_export(page) -> None:
@@ -193,7 +187,8 @@ def _trigger_excel_export(page) -> None:
 # ── Main download flow ─────────────────────────────────────────────────────────
 
 def _run_download_flow(page, period: str, timeout_seconds: int,
-                       downloaded: list, output_dir=None) -> None:
+                       downloaded: list, output_dir=None,
+                       account: str = DEFAULT_ACCOUNT) -> None:
     """Execute the full UI flow inside an authenticated browser context."""
     print("  [misa-al] Navigating to account ledger page...")
     try:
@@ -234,9 +229,9 @@ def _run_download_flow(page, period: str, timeout_seconds: int,
     _set_dates_for_period(page, period)
     time.sleep(0.5)
 
-    # Step 3: Select accounts via search + TH checkbox
-    print("  [misa-al] Selecting accounts...")
-    _select_accounts(page, ACCOUNTS)
+    # Step 3: Select all accounts under prefix via .row-check-all
+    print(f"  [misa-al] Selecting all accounts under prefix '{account}'...")
+    _select_account_prefix(page, account)
     _screenshot(page, "accounts_selected")
 
     # Step 4: View report
@@ -291,8 +286,13 @@ def download_account_ledger(
     headless: bool = True,
     period: str = "thang_truoc",
     timeout_seconds: int = 300,
+    account: str = DEFAULT_ACCOUNT,
 ) -> Path:
     """Download account-ledger Excel and return the renamed output path.
+
+    Args:
+        account: Account prefix to search and select (e.g. '642' for all 6421*/6422*).
+                 Uses .row-check-all to select ALL matching accounts including sub-accounts.
 
     Uses shared MISA cookies. Re-logs in headed mode if cookies are absent/expired.
     """
@@ -323,7 +323,7 @@ def download_account_ledger(
         context.on("page", lambda new_page: new_page.on("download", on_download))
 
         try:
-            _run_download_flow(page, period, timeout_seconds, downloaded, output_dir)
+            _run_download_flow(page, period, timeout_seconds, downloaded, output_dir, account)
         except Exception as e:
             ts = datetime.now().strftime("%Y%m%dT%H%M%S")
             err_path = Path(tempfile.gettempdir()) / f"misa_al_error_{ts}.png"
@@ -340,11 +340,11 @@ def download_account_ledger(
     if not downloaded:
         raise RuntimeError("No file downloaded — check MISA session or report flow.")
 
-    # Rename to fixed stem + YYYYMM suffix: So_chi_tiet_6421_6422_202606.xlsx
+    # Rename: So_chi_tiet_{account}_{YYYYMM}.xlsx
     raw_path = downloaded[0]
     start_d, _ = period_date_range(period)
     yyyymm = start_d.strftime("%Y%m")
-    final  = raw_path.parent / f"So_chi_tiet_6421_6422_{yyyymm}.xlsx"
+    final  = raw_path.parent / f"So_chi_tiet_{account}_{yyyymm}.xlsx"
     if final.exists():
         final.unlink()
     raw_path.rename(final)

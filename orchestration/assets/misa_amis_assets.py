@@ -157,20 +157,24 @@ def misa_sales_download_asset(context):
             context.log.warning(f"ingestion_health record_run failed: {_e}")
 
 
+class MisaAccountLedgerDownloadConfig(Config):
+    account: str = "642"  # prefix: "642" → all 6421*/6422* sub-accounts
+
+
 @asset(group_name="misa_amis_ingestion", key_prefix=["misa_amis"])
-def misa_account_ledger_download_asset(context):
-    """Download 'Sổ chi tiết tài khoản' Excel (6421 + 6422) from MISA AMIS web portal.
+def misa_account_ledger_download_asset(context, config: MisaAccountLedgerDownloadConfig):
+    """Download 'Sổ chi tiết tài khoản' Excel from MISA AMIS web portal.
 
-    Runs headless Playwright, selects previous month, accounts 6421+6422,
-    exports Excel, drops So_chi_tiet_6421_6422_YYYYMM.xlsx into the
-    account-ledger input directory. The file-drop sensor picks it up automatically.
+    Searches account prefix (default '642' → all 6421*/6422*), selects ALL
+    matching sub-accounts via 'Chọn tất cả tài khoản' (.row-check-all),
+    exports So_chi_tiet_{account}_{YYYYMM}.xlsx into the account-ledger
+    input directory. The file-drop sensor picks it up automatically.
 
-    Scheduled monthly: 1st Monday of each month 07:05 ICT — or weekly Monday
-    07:05 if monthly download is needed (schedule set per business requirement).
+    Scheduled monthly: 1st of each month 07:00 ICT.
     """
     asset_key_str = "misa_amis/misa_account_ledger_download_asset"
     started = datetime.now(timezone.utc)
-    context.log.info("Starting MISA account-ledger monthly download...")
+    context.log.info(f"Starting MISA account-ledger download (account={config.account})...")
 
     status = "failed"
     saved_path = None
@@ -178,7 +182,7 @@ def misa_account_ledger_download_asset(context):
         cwd = os.getcwd()
         try:
             os.chdir(DLT_DIR)
-            _get_run_account_ledger_download_module().run(argv=[])
+            _get_run_account_ledger_download_module().run(argv=["--account", config.account])
         finally:
             os.chdir(cwd)
 
@@ -193,6 +197,7 @@ def misa_account_ledger_download_asset(context):
             saved_path or "OK",
             metadata={
                 "status": MetadataValue.text("Success"),
+                "account": MetadataValue.text(config.account),
                 "saved_path": MetadataValue.text(str(saved_path) if saved_path else "unknown"),
             },
         )
