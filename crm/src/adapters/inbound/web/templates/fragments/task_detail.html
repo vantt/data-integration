@@ -311,7 +311,19 @@
       </div>
       {% endif %}
 
-      {# Lịch sử liên lạc hiển thị chung ở "Nhật ký hoạt động" bên dưới — không lặp ở đây #}
+      <div class="s15-section">
+        <div class="s15-section__head">
+          <svg width="13" height="13" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.3" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M11.5 2.5l2 2-9 9L2 14l.5-2.5 9-9z"/></svg>
+          Mô tả
+        </div>
+        <textarea class="inp inp--area s15-notes"
+                  name="body"
+                  hx-post="/tasks/{{ task.task_id }}/description"
+                  hx-trigger="change delay:800ms"
+                  hx-swap="none"
+                  placeholder="Mô tả task này…"
+                  {% if _read_only %} disabled{% endif %}>{{ task.description or '' }}</textarea>
+      </div>
 
     {# ── body_kind = internal ── #}
     {% elif body_kind == 'internal' %}
@@ -357,14 +369,14 @@
       <div class="s15-section">
         <div class="s15-section__head">
           <svg width="13" height="13" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.3" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M11.5 2.5l2 2-9 9L2 14l.5-2.5 9-9z"/></svg>
-          Ghi chú nội bộ
+          Mô tả
         </div>
         <textarea class="inp inp--area s15-notes"
                   name="body"
                   hx-post="/tasks/{{ task.task_id }}/description"
                   hx-trigger="change delay:800ms"
                   hx-swap="none"
-                  placeholder="Ghi chú xử lý…"
+                  placeholder="Mô tả task này…"
                   {% if _read_only %} disabled{% endif %}>{{ task.description or '' }}</textarea>
       </div>
 
@@ -374,14 +386,14 @@
       <div class="s15-section">
         <div class="s15-section__head">
           <svg width="13" height="13" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.3" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M11.5 2.5l2 2-9 9L2 14l.5-2.5 9-9z"/></svg>
-          Ghi chú
+          Mô tả
         </div>
         <textarea class="inp inp--area s15-notes"
                   name="body"
                   hx-post="/tasks/{{ task.task_id }}/description"
                   hx-trigger="change delay:800ms"
                   hx-swap="none"
-                  placeholder="Ghi chú…"
+                  placeholder="Mô tả task này…"
                   {% if _read_only %} disabled{% endif %}>{{ task.description or '' }}</textarea>
       </div>
 
