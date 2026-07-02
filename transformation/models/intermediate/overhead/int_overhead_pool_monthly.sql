@@ -31,8 +31,18 @@ WITH ledger AS (
         account,
         account_group,
         period_month,
-        net_cost
+        net_cost,
+        -- Classification join key:
+        --   6421*: join per leaf account (pool allocation needs sub-account breakdown)
+        --   6422*: join at account_group level — gsheet maps '6422' as a whole because
+        --          we only care about the 6422 total, not individual sub-accounts.
+        --          All 6422* leaves roll up to the single '6422' classification row.
+        CASE WHEN account_group = '6422' THEN account_group ELSE account END AS classification_key
     FROM {{ ref('std_misa_account_ledger') }}
+    -- Early filter: only overhead accounts flow into this model.
+    -- Other account prefixes (111*, 131*, 331* for cashflow etc.) are consumed
+    -- by their own downstream intermediate models, not this one.
+    WHERE account_group IN ('6421', '6422')
 ),
 
 classification AS (
@@ -49,10 +59,11 @@ classification AS (
 ),
 
 -- Effective-dated join: each ledger month joined to the classification row active in that month.
--- A single account may have multiple classification rows in SCD2 — the date predicate ensures
--- exactly one matching row per (account, period_month) as long as ranges don't overlap.
--- Overlapping ranges in the source sheet would cause double-counting here (a data quality issue
--- caught by assert_overhead_accounts_classified, not suppressed here — fail loudly).
+-- Join key is classification_key (not account directly) so that:
+--   - 6421* leaf accounts match their individual gsheet rows
+--   - 6422* leaves all match the single '6422' gsheet row (group-level classification)
+-- Overlapping SCD2 ranges in the source sheet cause double-counting — caught by
+-- assert_overhead_accounts_classified, not suppressed here — fail loudly.
 ledger_classified AS (
     SELECT
         m.account,
@@ -63,7 +74,7 @@ ledger_classified AS (
         c.base_metric
     FROM ledger m
     INNER JOIN classification c
-        ON  m.account = c.account
+        ON  m.classification_key = c.account
         AND m.period_month >= c.effective_from
         AND (c.effective_to IS NULL OR m.period_month <= c.effective_to)
 )

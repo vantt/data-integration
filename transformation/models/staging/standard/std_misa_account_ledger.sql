@@ -10,8 +10,9 @@
 -- Grain:   1 row per (account, period_month) — monthly rollup per leaf account
 -- PK:      (account, period_month) — natural key; idempotent last-write-wins on re-export
 --
--- Overhead pool source (6421/6422); 642-promo & traceable accounts dropped LATER via
--- classification gsheet (phase-04). This model is a faithful rollup — no treatment applied here.
+-- Wide model: contains ALL downloaded account prefixes (6421*, 6422*, and future cashflow
+-- accounts 111*, 131*, 331*, etc.). No filtering here — each downstream intermediate model
+-- selects the accounts relevant to its domain (overhead, cashflow, revenue, etc.).
 --
 -- Net cost rule (§5 design doc):
 --   net_cost = debit − credit_excl_911
