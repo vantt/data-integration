@@ -34,14 +34,27 @@ Deliver "hoạch định dòng tiền" (cash budget planner):
 
 ```
 Google Sheet (finance nhập đầu mỗi tháng, ~15-20 phút)
-  ├── Tab "Gợi ý"  ← script pre-fill từ rolling avg 3 tháng actual (read-only)
-  └── Tab "Budget" ← finance điều chỉnh + confirm
-      Cấu trúc Option C (matrix):
-        Cột: Tuần TT | T7 Gợi ý | T7 Budget | T8 Gợi ý | T8 Budget | ...
-        Dòng: cashflow_line × direction (mỗi dòng có payment_week cố định)
-        item_type: 'recurring' | 'one_off' | 'reserve'  ← xem phần Khoản không thường xuyên
+  ├── Tab BUDGET_ITEMS  ← entry point duy nhất cho tất cả budget items
+  │     Cấu trúc Option C (matrix):
+  │       Cột trái: cashflow_line | direction | payment_week | item_type | item_label | item_target | target_month
+  │       Cột tháng: [Gợi ý T7] [Budget T7] [Gợi ý T8] [Budget T8] ...
+  │         Gợi ý = script auto-fill (read-only, màu xám):
+  │           recurring → rolling avg 3 tháng actual
+  │           reserve   → gap_còn_lại / months_until_target
+  │           one_off   → 0 trừ tháng target_month
+  │       Sections: THU / CHI THƯỜNG XUYÊN / CHI ĐẶC BIỆT (reserve + one_off)
+  │
+  └── Tab ALLOCATION_POLICY  ← quarterly config, finance review 1 lần/quý
+        Schema: priority | bucket | rule_type | value | effective_from | effective_to
+        rule_type: fill_to_target | from_plan | fixed | pct_remaining | remainder
+        Versioned: thêm effective_to khi đổi policy, thêm dòng mới — không xóa dòng cũ
+
           ↓ script pull (weekly or on-demand)
+          ↓   BUDGET_ITEMS → seed_cashflow_budget.csv   (merge với historical rows)
+          ↓   ALLOCATION_POLICY → seed_cash_allocation_policy.csv (append-only)
+
 transformation/seeds/seed_cashflow_budget.csv
+transformation/seeds/seed_cash_allocation_policy.csv
   → dbt seed --select seed_cashflow_budget
     → fact_cashflow_budget.sql  [đơn giản, 1 source, không cần priority ranking]
         ┐
@@ -145,75 +158,36 @@ Backfill T1–T6 2026 khi finance cung cấp số budget lịch sử (enables cl
     location="{{ get_rolling_location() }}"
 ) }}
 
--- =================================================================================================
--- FACT: CASHFLOW BUDGET
--- =================================================================================================
--- Grain: 1 row per (cashflow_line, period_month, direction, budget_source).
--- Source: seed_cashflow_budget (budget_source='csv') now.
---
--- SWAP POINT (phase-05): Uncomment the UNION block below to add MISA budget rows.
---   Priority: misa=1 wins over csv=2 per grain. Reports filter source_priority_rank=1.
---   Zero schema changes required downstream (mart_cashflow_budget_vs_actual,
---   mart_cashflow_forecast) when MISA rows are activated.
--- =================================================================================================
-
-WITH csv_budget AS (
-    SELECT
-        cashflow_line,
-        CAST(period_month AS DATE)        AS period_month,
-        direction,
-        CAST(planned_amount AS DOUBLE)    AS planned_amount,
-        budget_source,
-        notes
-    FROM {{ ref('seed_cashflow_budget') }}
-    WHERE cashflow_line IS NOT NULL
-      AND period_month IS NOT NULL
-      AND direction IN ('inflow', 'outflow')
-      AND planned_amount >= 0
-
-    -- ── PHASE-05 UNION POINT ───────────────────────────────────────────
-    -- UNION ALL
-    -- SELECT
-    --     cashflow_line,
-    --     CAST(period_month AS DATE),
-    --     direction,
-    --     CAST(planned_amount AS DOUBLE),
-    --     'misa'   AS budget_source,
-    --     NULL     AS notes
-    -- FROM {{ ref('stg_misa_budget') }}
-    -- ──────────────────────────────────────────────────────────────────
-),
-
--- Priority dedup: misa wins over csv for same grain (phase-05 ready)
-ranked AS (
-    SELECT
-        *,
-        ROW_NUMBER() OVER (
-            PARTITION BY cashflow_line, period_month, direction
-            ORDER BY
-                CASE budget_source WHEN 'misa' THEN 1 WHEN 'csv' THEN 2 ELSE 3 END
-        ) AS source_priority_rank
-    FROM csv_budget
-)
+-- Grain: 1 row per (cashflow_line, period_month, direction, item_type, item_label).
+-- Source: seed_cashflow_budget — generated from Google Sheet tab BUDGET_ITEMS.
+-- Single source by design (phase-05 dropped). No priority ranking needed.
 
 SELECT
     {{ dbt_utils.generate_surrogate_key([
         'cashflow_line',
         'CAST(period_month AS VARCHAR)',
         'direction',
-        'budget_source'
-    ]) }}                                 AS cashflow_budget_key,
+        'COALESCE(item_label, cashflow_line)'
+    ]) }}                                   AS cashflow_budget_key,
 
     cashflow_line,
-    period_month,
+    CAST(period_month AS DATE)              AS period_month,
     direction,
-    CAST(planned_amount AS BIGINT)        AS planned_amount,
-    budget_source,
-    source_priority_rank,
+    CAST(planned_amount AS BIGINT)          AS planned_amount,
+    payment_week,
+    item_type,
+    item_label,
+    CAST(item_target AS BIGINT)             AS item_target,
+    CAST(target_month AS DATE)              AS target_month,
     notes,
-    current_timestamp                     AS loaded_at
+    current_timestamp                       AS loaded_at
 
-FROM ranked
+FROM {{ ref('seed_cashflow_budget') }}
+WHERE cashflow_line IS NOT NULL
+  AND period_month IS NOT NULL
+  AND direction IN ('inflow', 'outflow')
+  AND planned_amount >= 0
+  AND item_type IN ('recurring', 'one_off', 'reserve')
 ```
 
 ### 4. `transformation/models/marts/finance/mart_cashflow_budget_vs_actual.sql`
@@ -348,8 +322,7 @@ future_budget AS (
                  ELSE 0 END)                                                     AS planned_net_flow
     FROM {{ ref('fact_cashflow_budget') }} b
     CROSS JOIN anchor a
-    WHERE b.source_priority_rank = 1
-      AND b.period_month > a.anchor_month
+    WHERE b.period_month > a.anchor_month
       AND b.cashflow_line NOT IN ('Chuyển nội bộ tiền', 'Khác')
     GROUP BY 1
 ),
@@ -404,38 +377,60 @@ where:
 
 ### 6. `docs/analytics-handbook/blueprints/metabase/finance_cashflow_budget.md`
 
-Blueprint adds to (or extends) the phase-03 cashflow dashboard. Four cards:
+Blueprint adds to (or extends) the phase-03 cashflow dashboard. **8 cards** — 2 sections:
+
+**Section A: Budget vs Actual (operational)**
 
 | Card | Type | Source mart | Key columns |
 |------|------|-------------|-------------|
-| A — Budget vs Actual by Line | Grouped bar (planned / actual) | `mart_cashflow_budget_vs_actual` | cashflow_line, period_month, planned_amount, actual_amount |
-| B — Variance Table | Table w/ conditional formatting | `mart_cashflow_budget_vs_actual` | variance_amount, variance_pct, attainment_pct |
-| C — Cash Balance Forecast | Dual-series line (actual + projected) | `mart_cashflow_forecast` | period_month, actual_balance, projected_balance, row_type |
-| D — Scorecard | 4-cell scorecard | `mart_cashflow_budget_vs_actual` | Σ planned, Σ actual, Σ variance, latest projected_balance |
+| A1 — Scorecard tháng hiện tại | 4-cell scorecard | `mart_cashflow_budget_vs_actual` | Σ planned, Σ actual, Σ variance, attainment_pct |
+| A2 — Budget vs Actual by Line | Grouped bar (planned / actual) | `mart_cashflow_budget_vs_actual` | cashflow_line, period_month, planned_amount, actual_amount |
+| A3 — Variance Table | Table w/ conditional formatting | `mart_cashflow_budget_vs_actual` | cashflow_line, variance_amount, variance_pct, attainment_pct |
+| A4 — Cash Balance Forecast | Dual-series line (actual solid + projected dashed) | `mart_cashflow_forecast` | period_month, actual_balance, projected_balance, row_type |
 
-All SQL templates: `FROM main_marts.<mart>` (schema-qualified — required for field filters).
-Field filters required: `period_month` (date, field_id after sync), `cashflow_line` (string =, field_id after sync).
+**Section B: Reserve & Allocation (capital planning)**
+
+| Card | Type | Source mart | Key columns |
+|------|------|-------------|-------------|
+| B1 — Free Cash Scorecard | Scalar metric | `mart_cash_surplus_allocation` | free_cash (closing_balance − Σ reserve gap) |
+| B2 — Reserve Status | Table: progress bar per item | `mart_cashflow_reserve_status` | item_label, accumulated_plan, item_target, pct_done, gap_remaining, required_monthly_adj, target_month |
+| B3 — Allocation Waterfall History | Stacked bar per tháng | `mart_cash_surplus_allocation` | period_month, bucket, allocated_amount |
+| B4 — Policy Change Log | Simple table | `dim_cash_allocation_policy` | bucket, rule_type, value, effective_from, effective_to |
+
+**SQL notes (áp dụng cho tất cả cards):**
+- `FROM main_marts.<mart>` — schema-qualified bắt buộc (field filter requirement)
+- Field filters cần record field_id sau sync: `period_month` và `cashflow_line` (Section A); `item_label` (B2)
+- B4 không cần filter — table nhỏ, hiển thị toàn bộ lịch sử policy
 
 ---
 
 ## Implementation Steps (Ordered)
 
-### Step 1 — Seed file + properties.yml
-- Create `transformation/seeds/seed_cashflow_budget.csv` with placeholder rows above.
-- Append seed entry to `transformation/seeds/properties.yml`.
-- **Verify**: copy cashflow_line strings verbatim from `dim_gl_account.sql` L42–60 (no typos).
+### Step 1 — Seed files + properties.yml
+- Generate `transformation/seeds/seed_cashflow_budget.csv` từ Google Sheet tab `BUDGET_ITEMS` (hoặc dùng placeholder rows ở trên cho lần đầu).
+- Create `transformation/seeds/seed_cash_allocation_policy.csv` với current policy rows + `effective_from`/`effective_to`.
+- Append cả 2 seed entries vào `transformation/seeds/properties.yml`.
+- **Verify**: cashflow_line strings copy verbatim từ `dim_gl_account.sql` L42–60.
 
-### Step 2 — Create three dbt models
+### Step 2 — Create dbt models (6 models)
+
+**Core budget:**
 - `transformation/models/marts/finance/fact_cashflow_budget.sql`
 - `transformation/models/marts/finance/mart_cashflow_budget_vs_actual.sql`
 - `transformation/models/marts/finance/mart_cashflow_forecast.sql`
-- No new macros — uses existing `dbt_utils.generate_surrogate_key` + `get_rolling_location()`.
+
+**Reserve & allocation (materialization = `table`):**
+- `transformation/models/marts/finance/mart_cashflow_reserve_status.sql`
+- `transformation/models/marts/finance/mart_cash_surplus_allocation.sql`
+- `transformation/models/marts/finance/dim_cash_allocation_policy.sql` (thin wrapper over seed, with effective-date join helper)
+
+No new macros — uses existing `dbt_utils.generate_surrogate_key` + `get_rolling_location()`.
 
 ### Step 3 — Build
 ```bash
 # Run inside dbt container
-dbt seed --select seed_cashflow_budget
-dbt build --select seed_cashflow_budget fact_cashflow_budget mart_cashflow_budget_vs_actual mart_cashflow_forecast
+dbt seed --select seed_cashflow_budget seed_cash_allocation_policy
+dbt build --select seed_cashflow_budget+ seed_cash_allocation_policy+
 ```
 Expect 0 errors. Run validation queries (Step 7) before proceeding.
 
@@ -451,13 +446,14 @@ docker compose stop metabase
 python scripts/provisioning/bootstrap_serving_views.py
 docker compose start metabase
 ```
-Exposes `main_marts.fact_cashflow_budget`, `main_marts.mart_cashflow_budget_vs_actual`, `main_marts.mart_cashflow_forecast`.
+Exposes: `fact_cashflow_budget`, `mart_cashflow_budget_vs_actual`, `mart_cashflow_forecast`, `mart_cashflow_reserve_status`, `mart_cash_surplus_allocation`, `dim_cash_allocation_policy`.
 
 ### Step 6 — Sync Metabase schema + get field_ids
 Admin → Databases → Sync database schema now. Record field_ids for:
-- `main_marts.mart_cashflow_budget_vs_actual.period_month`
-- `main_marts.mart_cashflow_budget_vs_actual.cashflow_line`
+- `main_marts.mart_cashflow_budget_vs_actual.period_month` (Section A filter)
+- `main_marts.mart_cashflow_budget_vs_actual.cashflow_line` (Section A filter)
 - `main_marts.mart_cashflow_forecast.period_month`
+- `main_marts.mart_cashflow_reserve_status.item_label` (B2 filter)
 
 ### Step 7 — Validation (before blueprint deploy)
 
@@ -506,6 +502,8 @@ GROUP BY 1;
 | DuckDB write lock during bootstrap | Known | Medium | Stop Metabase before bootstrap (memory: DuckDB always read_only). |
 | Manifest not reloaded after new nodes | Known | High — Dagster can't schedule | Step 4 mandatory. Memory: new dbt node needs manifest reload. |
 | Google Sheet format sai khi finance edit | Medium | Medium | Script validate columns + data types trước khi generate CSV; reject với thông báo lỗi rõ ràng. |
+| ALLOCATION_POLICY có gap/overlap effective dates | Medium | High — bucket bị bỏ qua hoặc double-allocate im lặng | Script validate: với mỗi bucket, `effective_from[n+1] = effective_to[n] + 1 day`; reject nếu sai. |
+| `mart_cash_surplus_allocation` dùng incremental | Low | High — past months frozen với policy cũ | Materialization phải là `table`. Không dùng `incremental` cho mart này. |
 | item_type='reserve' không đủ planned_amount trong tháng nhắm đến | Medium | Medium | `mart_cashflow_reserve_status.gap_remaining > 0` trigger alert trên dashboard. |
 
 ### Rollback
@@ -520,18 +518,28 @@ GROUP BY 1;
 Finance không dùng MISA budget module → không có gì để scrape. Budget source duy nhất: Google Sheet → CSV.
 Nếu sau này finance adopt MISA budget module, xem xét lại. Tham chiếu: `docs/context/sme-budget-planning-practices.md` § 9.
 
-**Budget edit workflow (Google Sheet → CSV):**
-1. Script auto-pull từ Google Sheet tab "Budget" → generate `seed_cashflow_budget.csv`
-2. `dbt seed --select seed_cashflow_budget && dbt build --select seed_cashflow_budget+ `
-3. Metabase refreshes on next query — no redeploy needed for data-only changes.
-4. Script chạy đầu mỗi tháng pre-fill tab "Gợi ý" (rolling avg 3 tháng actual).
+**Budget edit workflow (Google Sheet → 2 CSV seeds):**
+1. Script pull tab `BUDGET_ITEMS` → merge với historical rows trong CSV → generate `seed_cashflow_budget.csv`
+2. Script pull tab `ALLOCATION_POLICY` → append-only merge (đóng rows cũ, thêm rows mới) → generate `seed_cash_allocation_policy.csv`
+3. `dbt seed && dbt build --select seed_cashflow_budget+ seed_cash_allocation_policy+`
+4. Metabase refreshes on next query — no redeploy needed for data-only changes.
+5. Script pre-fill "Gợi ý" chạy đầu mỗi tháng (rolling avg 3 tháng actual cho recurring; gap/months cho reserve).
+
+**`seed_cash_allocation_policy.csv` schema:**
+```
+priority, bucket, rule_type, value, effective_from, effective_to
+```
+- `rule_type`: `fill_to_target` | `from_plan` | `fixed` | `pct_remaining` | `remainder`
+- `value`: ngưỡng VND (fill_to_target), số tiền cố định (fixed), % (pct_remaining), null (from_plan/remainder)
+- Append-only: đóng dòng cũ bằng `effective_to`, thêm dòng mới — không xóa history
+- Mart join: `WHERE effective_from <= period_month AND (effective_to IS NULL OR effective_to >= period_month)`
 
 **New marts cần thêm vào scope Phase 4:**
-- `mart_cashflow_reserve_status` — tracking sinking fund progress per item (item_type='reserve')
-- `mart_cash_surplus_allocation` — monthly surplus phân bổ theo Waterfall policy
-- `dim_cash_allocation_policy` (seed) — cấu hình Waterfall buckets, review hàng quý
+- `mart_cashflow_reserve_status` — tracking sinking fund progress (item_type='reserve'): accumulated vs target vs gap vs required_monthly_adj
+- `mart_cash_surplus_allocation` — monthly surplus phân bổ theo Waterfall: per-bucket allocation + free_cash metric
+- `dim_cash_allocation_policy` (from seed) — cấu hình Waterfall với effective dating
 
-Xem thiết kế chi tiết: `docs/context/sme-budget-planning-practices.md` §§ 5-6.
+Xem thiết kế SQL chi tiết: `docs/context/sme-budget-planning-practices.md` §§ 5-6.
 
 ---
 

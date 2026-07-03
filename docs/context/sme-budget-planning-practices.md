@@ -88,25 +88,41 @@ Chi bán hàng/QLDN │ Chi   │Trải đều│   19M  │   20M         │  
 - Cột **Budget** = finance điều chỉnh (màu trắng, có data validation)
 - Cột **Tuần TT** = điền 1 lần lúc setup, không đổi theo tháng
 
-**Tab SPECIAL\_ITEMS** — khoản không thường xuyên (xem Mục 5):
+**Tab BUDGET\_ITEMS** (gộp BUDGET\_INPUT + khoản đặc biệt) — finance nhập đầu mỗi tháng:
 
 ```
-Hạng mục          │item_type│Tổng cần│Tháng cần│Để dành/th│Ghi chú
-Máy nén khí mới   │reserve  │  80M   │ T10/26  │   15M    │ Máy hiện hư dần
-Bảo hiểm tài sản  │one_off  │  12M   │ T12/26  │    0     │ Đóng 1 lần/năm
-Sửa chữa mái kho  │reserve  │  30M   │  ???    │    5M    │ Chưa rõ thời điểm
+                   │      │       │          │        │          │    T7/2026    │
+Dòng tiền          │Chiều │TuầnTT │item_type │Cần tổng│Tháng cần │ Gợi ý │Budget │
+─── THU ───────────────────────────────────────────────────────────────────────────
+Bán hàng KH        │ Thu  │spread │recurring │        │          │  464M │  480M │
+─── CHI THƯỜNG XUYÊN ──────────────────────────────────────────────────────────────
+Chi lương          │ Chi  │Tuần 1 │recurring │        │          │  238M │  240M │
+Chi BHXH           │ Chi  │Tuần 3 │recurring │        │          │   97M │  100M │
+─── CHI ĐẶC BIỆT / DỰ PHÒNG ───────────────────────────────────────────────────────
+Để dành máy nén khí│ Chi  │Tuần 4 │reserve   │  80M   │  T10/26  │   27M │   27M │  ← sinking fund
+Bảo hiểm tài sản   │ Chi  │Tuần 1 │one_off   │  12M   │  T12/26  │    0  │    0  │  ← 0 đến T12
+Sửa chữa mái kho   │ Chi  │Tuần 4 │reserve   │  30M   │    ???   │    5M │    5M │
 ```
+
+- `recurring`: Gợi ý = rolling avg 3 tháng actual
+- `reserve`: Gợi ý = `gap_còn_lại / months_until_target`; finance confirm hoặc điều chỉnh; `Cần tổng` + `Tháng cần` điền 1 lần lúc setup
+- `one_off`: Gợi ý = 0 trừ tháng target; `Cần tổng` = số lần đó
 
 **Tab ALLOCATION\_POLICY** — finance review hàng quý (xem Mục 6):
 
 ```
-Ưu tiên │ Bucket                │ Loại rule      │ Giá trị │ Target
-  1     │ Emergency buffer      │ fill_to_target │   —     │ 330M
-  2     │ Reserve máy nén khí   │ fixed          │  15M/th │  80M
-  3     │ Reserve sửa chữa      │ fixed          │   5M/th │  30M
-  4     │ Working capital       │ pct_remaining  │   30%   │  —
-  5     │ Owner / reinvestment  │ remainder      │   —     │  —
+Ưu tiên │ Bucket             │ rule_type      │ value     │ effective_from │ effective_to
+  1     │ Emergency buffer   │ fill_to_target │ 330000000 │ 2026-01-01     │            ← value = ngưỡng VND
+  2     │ Reserve items      │ from_plan      │           │ 2026-01-01     │            ← từ BUDGET_ITEMS
+  3     │ Quỹ phúc lợi NV   │ fixed          │ 2000000   │ 2026-01-01     │            ← open-ended
+  4     │ Working capital    │ pct_remaining  │ 30        │ 2026-01-01     │            ← value = %
+  5     │ Owner              │ remainder      │           │ 2026-01-01     │
 ```
+
+- **`value`** là tham số duy nhất của rule — không có cột `target` riêng (target và % đều dùng chung `value`)
+- **`effective_from`/`effective_to`**: finance điền khi thay đổi policy. Để `effective_to` trống = đang hiệu lực.
+- **Sheet chỉ hiển thị current rows** (effective_to trống). Khi đổi policy: set `effective_to` vào dòng cũ → thêm dòng mới với `effective_from` mới. Script merge với historical rows trong CSV (append-only) — không xóa lịch sử.
+- Script validate không có **gap hoặc overlap** giữa các dòng cùng bucket trước khi generate CSV.
 
 ### Auto pre-fill logic
 
@@ -239,15 +255,54 @@ Ví dụ thực tế (dự án này):
 
 ### Allocation Policy Config
 
-Finance review hàng quý, không phải hàng tháng:
+Finance review hàng quý, không phải hàng tháng. Schema: `(priority, bucket, rule_type, value, effective_from, effective_to)` — không có cột `target` riêng, `value` mang cả hai vai trò (ngưỡng tiền hoặc %).
 
 ```
 rule_type options:
-  fill_to_target  → đổ vào đến khi đạt target, thừa mới xuống bucket tiếp
-  fixed           → cố định N triệu/tháng (nếu không đủ → partial fill, alert)
-  pct_remaining   → N% của phần còn lại sau các bucket trên
-  remainder       → toàn bộ phần còn lại
+  fill_to_target  → đổ vào cho đến khi đạt value (VND), thừa xuống bucket tiếp
+  from_plan       → allocate đúng Σ Budget tháng đó của item_type='reserve' trong BUDGET_ITEMS
+                    (value = null — amount đến từ Sheet, không hardcode ở đây)
+  fixed           → cố định N triệu/tháng (value = VND) — dùng cho quỹ open-ended
+                    không có target/deadline cụ thể (quỹ phúc lợi, quỹ sáng kiến…)
+                    nếu surplus không đủ → partial fill + alert
+  pct_remaining   → N% của phần còn lại sau các bucket trên (value = %)
+  remainder       → toàn bộ phần còn lại (value = null)
 ```
+
+**Phân biệt `fixed` vs `from_plan`:**
+
+| | `fixed` | `from_plan` |
+|---|---|---|
+| Amount định nghĩa ở đâu | ALLOCATION_POLICY (hardcode) | BUDGET_ITEMS (reserve rows) |
+| Có target tích lũy? | Không (open-ended) | Có (item_target + target_month) |
+| Ví dụ | Quỹ phúc lợi 2M/tháng mãi mãi | Để dành máy nén khí 80M vào T10 |
+| Khi mục tiêu đủ | Không dừng tự động | Finance xóa khỏi BUDGET_ITEMS là xong |
+
+### Thay đổi Policy tạm thời (1 tháng)
+
+Effective dating cho phép thay đổi policy cho 1 tháng cụ thể rồi revert — hệ thống tự ghi nhận đúng từng kỳ.
+
+**Ví dụ:** T7 tăng working capital lên 50%, T8 revert về 30%:
+
+```
+bucket          | rule_type     | value | effective_from | effective_to
+Working capital | pct_remaining |  30   | 2026-01-01     | 2026-06-30   ← đóng
+Working capital | pct_remaining |  50   | 2026-07-01     | 2026-07-31   ← T7 only
+Working capital | pct_remaining |  30   | 2026-08-01     |              ← revert
+```
+
+Mart join `WHERE effective_from <= period_month AND (effective_to IS NULL OR effective_to >= period_month)` → T6 lấy dòng 1, T7 lấy dòng 2, T8+ lấy dòng 3. Không cần can thiệp gì thêm sau khi chỉnh Sheet.
+
+**Quy tắc kỹ thuật bắt buộc:**
+
+1. `mart_cash_surplus_allocation` phải dùng materialization **`table`** (full rebuild), KHÔNG phải `incremental`.
+   - `table` → recalculate lại tất cả tháng, mỗi tháng dùng đúng policy của kỳ đó → correct
+   - `incremental` → past months bị frozen kể cả khi CSV đã có đủ history rows → sai
+
+2. Script pull Sheet phải **validate không có gap hoặc overlap** trong `effective_from`/`effective_to` cho cùng 1 bucket:
+   - Gap → mart trả về 0 rows cho tháng đó (bucket bị bỏ qua im lặng)
+   - Overlap → mart trả về 2 rows cho cùng tháng (double-allocate)
+   - Nếu phát hiện → reject + báo lỗi rõ dòng nào bị conflict
 
 ### Free Cash Metric — số quan trọng nhất trên dashboard
 
