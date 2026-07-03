@@ -43,6 +43,7 @@ elements:
   "✗": A-M15-006
   "+ Thêm kênh liên lạc": A-M15-005
   "Lưu": A-M15-007
+  "Hủy": A-M15-008
 ```
 
 <!-- ui-layout:ascii:start -->
@@ -190,4 +191,10 @@ interactions:
     guard: "active_tab == 'core' ? form.display_name != '' : true"
     action: mutate
     effects: [party_or_identity.save, modal.close, ui.toast.show, sidebar.reload]
+  - id: A-M15-008
+    element: btn_cancel
+    region: actions
+    trigger: click
+    action: close_overlay
+    target: return_to_invoker
 ```

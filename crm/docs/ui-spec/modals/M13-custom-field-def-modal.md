@@ -34,6 +34,7 @@ elements:
   "✕": A-M13-001
   "Hủy": A-M13-002
   "Lưu": A-M13-004
+  "+ Thêm tùy chọn": A-M13-005
 ```
 
 <!-- ui-layout:ascii:start -->
@@ -113,4 +114,10 @@ interactions:
     guard: "form.entity_type != null && form.field_name != '' && form.display_label != '' && form.data_type != null"
     action: mutate
     effects: [custom_field_def.save, modal.close, ui.toast.show, settings_list.reload]
+  - id: A-M13-005
+    element: btn_add_option
+    region: body
+    trigger: click
+    action: mutate
+    effects: [options_list.append_empty_row]
 ```

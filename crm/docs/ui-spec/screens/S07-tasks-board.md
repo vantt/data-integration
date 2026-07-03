@@ -37,6 +37,9 @@ elements:
   "Assignee ▼": A-S07-005
   "Campaign ▼": A-S07-006
   "List|Board": A-S07-007
+  "Priority ▼": A-S07-008
+  "Status ▼": A-S07-009
+  "Party 🔍": A-S07-010
 ```
 
 <!-- ui-layout:ascii:start -->
@@ -118,6 +121,24 @@ interactions:
     trigger: click
     action: mutate
     effects: [board.toggle_list_view]
+  - id: A-S07-008
+    element: filter_priority
+    region: topbar
+    trigger: change
+    action: mutate
+    effects: [board.reload_with_filters]
+  - id: A-S07-009
+    element: filter_status
+    region: topbar
+    trigger: change
+    action: mutate
+    effects: [board.reload_with_filters]
+  - id: A-S07-010
+    element: filter_party
+    region: topbar
+    trigger: change
+    action: mutate
+    effects: [board.reload_with_filters]
   - id: A-S07-LSN01
     listens_to: filter_bar.changed
     action: mutate

@@ -39,6 +39,7 @@ elements:
   "← Chiến dịch": A-S11-001
   "Sửa": A-S11-007
   "Filter: status ▼": A-S11-005
+  "Kích hoạt": A-S11-008
 ```
 
 <!-- ui-layout:ascii:start -->
@@ -133,6 +134,13 @@ interactions:
     action: open_overlay
     target: M07
     payload: { campaign_id: "$campaign.id" }
+  - id: A-S11-008
+    element: btn_activate_campaign
+    region: topbar
+    trigger: click
+    guard: "campaign.status == 'draft'"
+    action: mutate
+    effects: [campaign.status.set_active, topbar.activate_btn.hide, ui.toast.show]
   - id: A-S11-LSN01
     listens_to: campaign.target.converted
     action: mutate

@@ -77,6 +77,7 @@ elements:
   "▶ Vào phiên gọi": A-S15-006
   "Xem 360 >": A-S15-007
   "✓ Ghi log & hoàn thành": A-S15-005
+  "← Quay lại": A-S15-011
 ```
 
 <!-- ui-layout:ascii:start -->
@@ -273,4 +274,10 @@ interactions:
     action: open_overlay
     target: M03
     payload: { party_id: "$task.party_id" }
+  - id: A-S15-011
+    element: btn_back
+    region: header
+    trigger: click
+    action: navigate
+    target: S07
 ```

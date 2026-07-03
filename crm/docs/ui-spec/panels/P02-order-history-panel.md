@@ -29,6 +29,8 @@ areas:
 samples:
   toolbar: "10 đơn gần nhất  Cache: hôm nay 08:00 ICT ✓  [Xem thêm →]"
   order_list: "ORD-20060812  12/06/2026  1.250.000đ  completed"
+elements:
+  "Xem thêm →": A-P02-003
 ```
 
 <!-- ui-layout:ascii:start -->
@@ -79,3 +81,10 @@ interactions:
     action: open_overlay
     target: M08
     payload: { party_id: "$party.id", prefill_order_code: "$order.order_code" }
+  - id: A-P02-003
+    element: btn_load_more
+    region: toolbar
+    trigger: click
+    action: mutate
+    effects: [order_list.load_next_page, order_list.append_rows]
+```
