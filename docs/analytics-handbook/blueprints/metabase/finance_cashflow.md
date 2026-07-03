@@ -106,22 +106,20 @@ FROM prev_calc
 Hero scalar — tong so du tat ca tai khoan tien mat cuoi ky. Source: fact_account_balance_monthly WHERE is_cash. Fallback: MAX(running_balance) per cash_account per period in fact_cash_movement if fact_account_balance_monthly not yet materialized.
 
 ```sql
--- Primary: uses fact_account_balance_monthly
--- FALLBACK (if fact_account_balance_monthly not materialized): uncomment below and comment primary
--- SELECT COALESCE(SUM(closing_balance_derived), 0) AS "So du quy cuoi ky"
--- FROM (
---     SELECT cash_account, MAX(running_balance) AS closing_balance_derived
---     FROM main_marts.fact_cash_movement
---     WHERE 1=1
---       [[AND {{period_month}}]]
---     GROUP BY cash_account
--- ) t
-
-SELECT COALESCE(SUM(closing_balance), 0) AS "So du quy cuoi ky"
+-- period_bounds derives date range via fact_cash_movement (field filter only injects into that table).
+-- fact_account_balance_monthly is filtered by derived p_to (closing balance at end of period).
+WITH period_bounds AS (
+    SELECT MIN(period_month) AS p_from, MAX(period_month) AS p_to
+    FROM main_marts.fact_cash_movement
+    WHERE 1=1
+      [[AND {{period_month}}]]
+)
+SELECT COALESCE(SUM(b.closing_balance), 0) AS "So du quy cuoi ky"
 FROM main_marts.fact_account_balance_monthly b
 JOIN main_marts.dim_gl_account g ON b.account_code = g.account_code
+CROSS JOIN period_bounds
 WHERE g.is_cash = true
-  [[AND {{period_month}}]]
+  AND b.period_month = period_bounds.p_to
 ```
 
 ```json metabase-viz
@@ -257,19 +255,25 @@ Waterfall — so du dau ky → cac cashflow_line net (inflow+, outflow−) → s
 NOTE: Metabase `waterfall` display IS supported (catalog row 17, display: "waterfall"). Used here with same pattern as finance_pl.md "Revenue Waterfall".
 
 ```sql
--- Build ordered waterfall rows:
--- Row 1: So du dau ky (opening) — from fact_account_balance_monthly (or fallback)
--- Middle rows: net per cashflow_line (inflow positive, outflow negative), exclude internal_transfer
--- Last row: So du cuoi ky (closing) — total bar
-WITH opening AS (
+-- period_bounds derives date range via fact_cash_movement (field filter injects only into that table).
+-- opening: balance at p_from (start of period), closing: balance at p_to (end of period).
+-- movements: net signed_amount across full p_from..p_to range.
+WITH period_bounds AS (
+    SELECT MIN(period_month) AS p_from, MAX(period_month) AS p_to
+    FROM main_marts.fact_cash_movement
+    WHERE 1=1
+      [[AND {{period_month}}]]
+),
+opening AS (
     SELECT
-        0                          AS sort_order,
-        'So du dau ky'             AS "Khoan muc",
-        COALESCE(SUM(opening_balance), 0) AS "Gia tri"
+        0                                   AS sort_order,
+        'So du dau ky'                      AS "Khoan muc",
+        COALESCE(SUM(b.opening_balance), 0) AS "Gia tri"
     FROM main_marts.fact_account_balance_monthly b
     JOIN main_marts.dim_gl_account g ON b.account_code = g.account_code
+    CROSS JOIN period_bounds
     WHERE g.is_cash = true
-      [[AND {{period_month}}]]
+      AND b.period_month = period_bounds.p_from
 ),
 movements AS (
     SELECT
@@ -277,20 +281,22 @@ movements AS (
         cashflow_line                                   AS "Khoan muc",
         SUM(signed_amount)                              AS "Gia tri"
     FROM main_marts.fact_cash_movement
+    CROSS JOIN period_bounds
     WHERE NOT is_internal_transfer
-      [[AND {{period_month}}]]
+      AND period_month BETWEEN period_bounds.p_from AND period_bounds.p_to
     GROUP BY cashflow_line
     HAVING SUM(signed_amount) <> 0
 ),
 closing AS (
     SELECT
-        999                        AS sort_order,
-        'So du cuoi ky'            AS "Khoan muc",
-        COALESCE(SUM(closing_balance), 0) AS "Gia tri"
+        999                                  AS sort_order,
+        'So du cuoi ky'                      AS "Khoan muc",
+        COALESCE(SUM(b.closing_balance), 0)  AS "Gia tri"
     FROM main_marts.fact_account_balance_monthly b
     JOIN main_marts.dim_gl_account g ON b.account_code = g.account_code
+    CROSS JOIN period_bounds
     WHERE g.is_cash = true
-      [[AND {{period_month}}]]
+      AND b.period_month = period_bounds.p_to
 )
 SELECT "Khoan muc", "Gia tri"
 FROM (
@@ -506,40 +512,33 @@ FROM prev_calc
 
 #### ❓ Question: Pivot cashflow line x thang
 
-Pivot table — rows = cashflow_line, columns = period_month, values = SUM(amount) split by direction (thu/chi separate). Exclude internal transfers. Use Metabase pivot display.
-
-NOTE on pivot: Metabase `pivot` (display: "pivot") supports row/column/value dimensions. This query returns flat grain (cashflow_line, period_month, direction, amount) and Metabase pivot UI lets user configure row/col/value pivoting interactively. Alternatively, wire graph.dimensions for row + column grouping.
+Crosstab — rows = (cashflow_line, direction), columns = period_month (MM/YYYY), values = SUM(amount). Exclude internal transfers. Uses DuckDB native PIVOT to avoid Metabase v0.60.x pivot result_metadata off-by-one bug (pivot-grouping column shifts all column types on every execution).
 
 ```sql
-SELECT
-    cashflow_line                                                AS "Cashflow Line",
-    period_month                                                 AS "Thang",
-    direction                                                    AS "Huong",
-    SUM(amount)                                                  AS "So tien"
-FROM main_marts.fact_cash_movement
-WHERE NOT is_internal_transfer
-  [[AND {{period_month}}]]
-GROUP BY 1, 2, 3
-ORDER BY 1, 2, 3
+-- DuckDB native PIVOT: crosstab cashflow_line x direction x month.
+-- Field filter injects into main_marts.fact_cash_movement (fully qualified) — no Binder Error.
+-- display:table avoids Metabase pivot result_metadata corruption bug (v0.60.x).
+PIVOT (
+    SELECT
+        cashflow_line                       AS "Cashflow Line",
+        direction                           AS "Huong",
+        strftime(period_month, '%m/%Y')     AS "Thang",
+        amount
+    FROM main_marts.fact_cash_movement
+    WHERE NOT is_internal_transfer
+      [[AND {{period_month}}]]
+)
+ON "Thang"
+USING SUM(amount)
+GROUP BY "Cashflow Line", "Huong"
+ORDER BY 1, 2
 ```
 
 ```json metabase-viz
 {
-  "display": "pivot",
+  "display": "table",
   "visualization_settings": {
-    "pivot_table.column_split": {
-      "rows":    ["Cashflow Line", "Huong"],
-      "columns": ["Thang"],
-      "values":  ["So tien"]
-    },
-    "column_settings": {
-      "So tien": {
-        "number_style": "currency",
-        "currency": "VND",
-        "decimals": 0,
-        "compact": true
-      }
-    }
+    "table.pivot": false
   }
 }
 ```

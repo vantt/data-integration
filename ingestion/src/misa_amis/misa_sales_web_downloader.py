@@ -55,7 +55,7 @@ def period_date_range(period: str) -> tuple[date, date]:
         return start, end
     # Fallback: last 7 days
     return today - timedelta(days=7), today
-COOKIE_TTL_HOURS = 12  # MISA session appears to last ~12-24h
+COOKIE_TTL_HOURS = 168  # MISA x-sessionid lasts ~30 days; 7 days is conservative safe value
 
 
 # ── Cookie persistence ─────────────────────────────────────────────────────────
@@ -75,7 +75,8 @@ def load_cookies(cookie_dir: Path) -> Optional[list]:
         saved_at = datetime.fromisoformat(data["saved_at"])
         if saved_at.tzinfo is None:
             saved_at = saved_at.replace(tzinfo=timezone.utc)
-        expires = saved_at + timedelta(hours=data.get("ttl_hours", COOKIE_TTL_HOURS))
+        # Use max(saved TTL, current code TTL) so bumping COOKIE_TTL_HOURS takes effect immediately
+        expires = saved_at + timedelta(hours=max(data.get("ttl_hours", COOKIE_TTL_HOURS), COOKIE_TTL_HOURS))
         if datetime.now(timezone.utc) > expires:
             print(f"  [misa] Cookies expired at {expires}")
             return None
