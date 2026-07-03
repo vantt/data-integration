@@ -323,6 +323,20 @@ Phrase the selection by criteria when spec IDs change across projects; these thr
 
 ---
 
+## 12. Chip coverage audit
+
+After every `build.mjs` run, `generated/chip-audit.md` lists every `[token]` chip found in any `samples:` value, classified as **mapped** (key present in `elements:`) or **unmapped** (no key).
+
+Review the unmapped chips and decide for each one:
+
+- **(a) Should be mapped** — the chip represents a real user action. Add it to `elements:` with the correct action ID.
+- **(b) Interaction missing from contract** — the action doesn't exist yet. Add the interaction to the `yaml {project}-contract` block, then add the `elements:` mapping.
+- **(c) Legitimately display-only** — the chip is a status badge, placeholder label, or visual indicator with no direct user trigger (e.g., `[GOLD]`, `[active]`, `[P1]`). Leave it unmapped — unmapped is not an error, it is information.
+
+The audit is idempotent: running `build.mjs` twice produces the same `chip-audit.md` if the spec has not changed. The file is a small registry-like artifact and is tracked in git (unlike `wireframe-v2.html` which is gitignored).
+
+---
+
 ## 10. Schema key quick-reference
 
 | Key | Type | Required | Description |

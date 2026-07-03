@@ -58,6 +58,7 @@ Generate artifacts from validated source files:
 - `generated/navigation-graph.yaml` — navigate edges between surfaces
 - `generated/action-registry.csv` — all action IDs, elements, triggers, targets
 - `generated/coverage-report.md` — flow coverage: flows → steps → missing action refs
+- `generated/chip-audit.md` — chip coverage audit: every `[token]` in `samples:` classified as mapped/unmapped against `elements:` (idempotent; tracked in git)
 - `generated/wireframe-v2.html` — interactive wireframe (surfaces, storyboard, graph)
 - ASCII injection — for each surface with a `yaml ui-layout` fence: regenerates box-drawing ASCII between `<!-- ui-layout:ascii:start/end -->` markers (idempotent)
 

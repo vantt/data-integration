@@ -844,6 +844,30 @@ edges:
     effects:
       - board.toggle_list_view
     region: topbar
+  - id: A-S07-008
+    from: S07
+    element: filter_priority
+    trigger: change
+    action: mutate
+    effects:
+      - board.reload_with_filters
+    region: topbar
+  - id: A-S07-009
+    from: S07
+    element: filter_status
+    trigger: change
+    action: mutate
+    effects:
+      - board.reload_with_filters
+    region: topbar
+  - id: A-S07-010
+    from: S07
+    element: filter_party
+    trigger: change
+    action: mutate
+    effects:
+      - board.reload_with_filters
+    region: topbar
   - id: A-S07-LSN01
     from: S07
     listens_to: filter_bar.changed
@@ -1062,6 +1086,17 @@ edges:
     target: M07
     payload:
       campaign_id: $campaign.id
+    region: topbar
+  - id: A-S11-008
+    from: S11
+    element: btn_activate_campaign
+    trigger: click
+    guard: campaign.status == 'draft'
+    action: mutate
+    effects:
+      - campaign.status.set_active
+      - topbar.activate_btn.hide
+      - ui.toast.show
     region: topbar
   - id: A-S11-LSN01
     from: S11
@@ -1472,6 +1507,13 @@ edges:
     payload:
       party_id: $task.party_id
     region: body_internal
+  - id: A-S15-011
+    from: S15
+    element: btn_back
+    trigger: click
+    action: navigate
+    target: S07
+    region: header
   - id: A-P01-001
     from: P01
     element: affinity_product_link
@@ -1578,6 +1620,15 @@ edges:
     payload:
       party_id: $party.id
       prefill_order_code: $order.order_code
+    region: toolbar
+  - id: A-P02-003
+    from: P02
+    element: btn_load_more
+    trigger: click
+    action: mutate
+    effects:
+      - order_list.load_next_page
+      - order_list.append_rows
     region: toolbar
   - id: A-P03-001
     from: P03
@@ -2239,6 +2290,14 @@ edges:
       - ui.toast.show
       - settings_list.reload
     region: actions
+  - id: A-M13-005
+    from: M13
+    element: btn_add_option
+    trigger: click
+    action: mutate
+    effects:
+      - options_list.append_empty_row
+    region: body
   - id: A-M14-001
     from: M14
     element: btn_close
@@ -2323,6 +2382,13 @@ edges:
       - modal.close
       - ui.toast.show
       - sidebar.reload
+    region: actions
+  - id: A-M15-008
+    from: M15
+    element: btn_cancel
+    trigger: click
+    action: close_overlay
+    target: return_to_invoker
     region: actions
   - id: A-M16-001
     from: M16

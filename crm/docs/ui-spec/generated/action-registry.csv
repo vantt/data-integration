@@ -99,6 +99,9 @@ A-S07-004,S07,task_card_drag,drag_drop,mutate,,,board
 A-S07-005,S07,filter_assignee,change,mutate,,,topbar
 A-S07-006,S07,filter_campaign,change,mutate,,,topbar
 A-S07-007,S07,btn_toggle_view,click,mutate,,,topbar
+A-S07-008,S07,filter_priority,change,mutate,,,topbar
+A-S07-009,S07,filter_status,change,mutate,,,topbar
+A-S07-010,S07,filter_party,change,mutate,,,topbar
 A-S07-LSN01,S07,,filter_bar.changed,mutate,,,
 A-S07-LSN02,S07,,filter_bar.cleared,mutate,,,
 A-S08-001,S08,btn_create_segment,click,navigate,S09,,topbar
@@ -127,6 +130,7 @@ A-S11-004,S11,btn_mark_skipped,click,mutate,,,target_list
 A-S11-005,S11,filter_status,change,mutate,,,target_list
 A-S11-006,S11,filter_assignee,change,mutate,,,target_list
 A-S11-007,S11,btn_edit_campaign,click,open_overlay,M07,,topbar
+A-S11-008,S11,btn_activate_campaign,click,mutate,,campaign.status == 'draft',topbar
 A-S11-LSN01,S11,,campaign.target.converted,mutate,,,
 A-S11-LSN02,S11,,filter_bar.changed,mutate,,,
 A-S11-LSN03,S11,,filter_bar.cleared,mutate,,,
@@ -174,6 +178,7 @@ A-S15-007,S15,btn_view_360,click,navigate,S03,,header
 A-S15-008,S15,internal_checklist_item,click,mutate,,,body_internal
 A-S15-009,S15,btn_tool_edit_contact,click,open_overlay,M15,,body_internal
 A-S15-010,S15,btn_tool_add_tag,click,open_overlay,M03,,body_internal
+A-S15-011,S15,btn_back,click,navigate,S07,,header
 A-P01-001,P01,affinity_product_link,click,mutate,,,signals_block
 A-P01-002,P01,btn_add_insight,click,open_overlay,M16,,rep_insights_block
 A-P01-003,P01,insight_edit_btn,click,open_overlay,M16,,rep_insights_block
@@ -186,6 +191,7 @@ A-P01-LSN01,P01,,cache.refreshed,mutate,,,
 A-P01-LSN02,P01,,freshness_badge.hovered,mutate,,,
 A-P02-001,P02,order_row,click,mutate,,,order_list
 A-P02-002,P02,btn_log_activity_with_order,click,open_overlay,M08,,toolbar
+A-P02-003,P02,btn_load_more,click,mutate,,,toolbar
 A-P03-001,P03,btn_log_activity,click,open_overlay,M08,,toolbar
 A-P03-002,P03,filter_type,change,mutate,,,toolbar
 A-P03-003,P03,activity_chat_link,click,navigate,S06,,timeline
@@ -261,6 +267,7 @@ A-M13-001,M13,btn_close,click,close_overlay,return_to_invoker,,header
 A-M13-002,M13,btn_cancel,click,close_overlay,return_to_invoker,,actions
 A-M13-003,M13,data_type_select,change,mutate,,,body
 A-M13-004,M13,btn_save,click,mutate,,form.entity_type != null && form.field_name != '' && form.display_label != '' && form.data_type != null,actions
+A-M13-005,M13,btn_add_option,click,mutate,,,body
 A-M14-001,M14,btn_close,click,close_overlay,return_to_invoker,,header
 A-M14-002,M14,btn_cancel,click,close_overlay,return_to_invoker,,actions
 A-M14-003,M14,btn_create_tag,click,mutate,,form.name != '' && form.display_label != '' && form.category != null,actions
@@ -271,6 +278,7 @@ A-M15-004,M15,tab_core,click,mutate,,,tab_bar
 A-M15-005,M15,btn_add_channel,click,mutate,,,body
 A-M15-006,M15,btn_deactivate_channel,click,mutate,,,body
 A-M15-007,M15,btn_save,click,mutate,,active_tab == 'core' ? form.display_name != '' : true,actions
+A-M15-008,M15,btn_cancel,click,close_overlay,return_to_invoker,,actions
 A-M16-001,M16,btn_close,click,close_overlay,return_to_invoker,,header
 A-M16-002,M16,btn_cancel,click,close_overlay,return_to_invoker,,actions
 A-M16-003,M16,btn_save,click,mutate,,form.insight_type != null && form.body != '',actions
