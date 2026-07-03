@@ -29,7 +29,12 @@ ACCOUNT_MARKER_PREFIX = "Tài khoản:"
 # Sentinel in col E (index 4) that marks a subtotal row → skip
 SUBTOTAL_MARKER = "Cộng"
 
-# Column indices (0-based) — matched to spec: A=0…H=7
+# Sentinels in col E marking the per-account opening/closing balance rows.
+# These carry running balances (cols I/J) but no debit/credit movement.
+OPENING_BALANCE_MARKER = "Số dư đầu kỳ"
+CLOSING_BALANCE_MARKER = "Số dư cuối kỳ"
+
+# Column indices (0-based) — real export has 10 cols: A=0…J=9
 COL_POSTING_DATE = 0   # A — Ngày hạch toán
 COL_VOUCHER_NO   = 1   # B — Số chứng từ
 COL_INVOICE_DATE = 2   # C — Ngày hóa đơn
@@ -38,6 +43,8 @@ COL_DESCRIPTION  = 4   # E — Diễn giải
 COL_OFFSET_ACCT  = 5   # F — TK đối ứng
 COL_DEBIT        = 6   # G — Phát sinh Nợ
 COL_CREDIT       = 7   # H — Phát sinh Có
+COL_DEBIT_BAL    = 8   # I — Dư Nợ (running debit balance after this line)
+COL_CREDIT_BAL   = 9   # J — Dư Có (running credit balance after this line)
 
 # Kết chuyển cuối kỳ account — warn if present (see §5 net rule)
 KET_CHUYEN_ACCOUNT = "911"
@@ -204,6 +211,11 @@ def parse_misa_account_ledger(file_path):
     cong_totals = {}    # account → int (subtotal from Cộng row col G)
     line_debits = {}    # account → int (sum of detail row debits)
 
+    # Opening balance per account (signed: Dư Nợ − Dư Có) from "Số dư đầu kỳ" row.
+    # Forward-filled onto every detail row of the account so cashflow/balance
+    # models get the period-opening anchor without a second pass.
+    opening_balances = {}  # account → int (signed opening balance)
+
     has_ket_chuyen_911 = False
 
     data_start = 4  # 0-based index of first data row (Excel row 5)
@@ -229,6 +241,19 @@ def parse_misa_account_ledger(file_path):
             print(f"  Account marker: {current_account} (marker Nợ = {marker_debit:,})")
             continue
 
+        # ── Opening balance row: col E == "Số dư đầu kỳ" ──────────────────────
+        # Carries the period-opening running balance in cols I/J (no movement).
+        if isinstance(cell_e, str) and cell_e.strip() == OPENING_BALANCE_MARKER:
+            if current_account is not None and raw.shape[1] > COL_CREDIT_BAL:
+                open_dr = _to_int_vnd(row.iloc[COL_DEBIT_BAL])
+                open_cr = _to_int_vnd(row.iloc[COL_CREDIT_BAL])
+                opening_balances[current_account] = open_dr - open_cr
+            continue
+
+        # ── Closing balance row: col E == "Số dư cuối kỳ" → skip (running bal covers it) ──
+        if isinstance(cell_e, str) and cell_e.strip() == CLOSING_BALANCE_MARKER:
+            continue
+
         # ── Subtotal row: col E == "Cộng" ─────────────────────────────────────
         if isinstance(cell_e, str) and cell_e.strip() == SUBTOTAL_MARKER:
             if current_account is not None:
@@ -250,6 +275,9 @@ def parse_misa_account_ledger(file_path):
             offset_account = _fmt_offset_account(row.iloc[COL_OFFSET_ACCT] if raw.shape[1] > COL_OFFSET_ACCT else None)
             debit = _to_int_vnd(row.iloc[COL_DEBIT] if raw.shape[1] > COL_DEBIT else None)
             credit = _to_int_vnd(row.iloc[COL_CREDIT] if raw.shape[1] > COL_CREDIT else None)
+            # Running balance after this line (cols I/J); signed net for convenience.
+            debit_balance = _to_int_vnd(row.iloc[COL_DEBIT_BAL] if raw.shape[1] > COL_DEBIT_BAL else None)
+            credit_balance = _to_int_vnd(row.iloc[COL_CREDIT_BAL] if raw.shape[1] > COL_CREDIT_BAL else None)
 
             # ── 911 kết chuyển guard (§5) ──────────────────────────────────────
             if offset_account == KET_CHUYEN_ACCOUNT:
@@ -272,6 +300,9 @@ def parse_misa_account_ledger(file_path):
                 "offset_account": offset_account,
                 "debit": debit,
                 "credit": credit,
+                "debit_balance": debit_balance,
+                "credit_balance": credit_balance,
+                "opening_balance": opening_balances.get(current_account, 0),
                 "account": current_account,
                 "account_group": _account_group(current_account),
             })
@@ -315,6 +346,7 @@ def parse_misa_account_ledger(file_path):
         df = pd.DataFrame(columns=[
             "posting_date", "voucher_no", "invoice_date", "invoice_no",
             "description", "offset_account", "debit", "credit",
+            "debit_balance", "credit_balance", "opening_balance",
             "account", "account_group",
             "ingest_method", "source_file", "ingested_at",
             "year", "month",
@@ -328,6 +360,9 @@ def parse_misa_account_ledger(file_path):
     # Coerce money columns to Int64 (nullable integer — consistent with sales parser)
     df["debit"] = df["debit"].astype("Int64")
     df["credit"] = df["credit"].astype("Int64")
+    df["debit_balance"] = df["debit_balance"].astype("Int64")
+    df["credit_balance"] = df["credit_balance"].astype("Int64")
+    df["opening_balance"] = df["opening_balance"].astype("Int64")
 
     # ── 5. Reconciliation checksum per account ─────────────────────────────────
     # Σ(detail debit) per account == marker col-G == Cộng col-G.

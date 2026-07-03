@@ -1,0 +1,50 @@
+account_code,account_name
+111,Tiền mặt
+1111,Tiền mặt VND
+112,Tiền gửi ngân hàng
+1121,Tiền gửi ngân hàng VND
+11212,Tiền gửi ngân hàng - TK chính
+11219,Tiền gửi ngân hàng - khác
+1122,Tiền gửi ngân hàng ngoại tệ
+11221,Tiền gửi ngân hàng - TK phụ
+131,Phải thu khách hàng
+1331,Thuế GTGT được khấu trừ
+133,Thuế GTGT được khấu trừ
+136,Phải thu nội bộ
+1368,Phải thu nội bộ khác
+13681,Phải thu nội bộ khác
+138,Phải thu khác
+141,Tạm ứng
+156,Hàng hóa
+331,Phải trả người bán
+333,Thuế và các khoản phải nộp NN
+33311,Thuế GTGT đầu ra
+3341,Phải trả người lao động - lương
+3348,Phải trả người lao động - khác
+334,Phải trả người lao động
+338,Phải trả phải nộp khác
+3383,Bảo hiểm xã hội
+3384,Bảo hiểm y tế
+3386,Bảo hiểm thất nghiệp
+33881,Phải trả phải nộp khác
+411,Vốn đầu tư của chủ sở hữu
+4111,Vốn góp của chủ sở hữu
+421,Lợi nhuận sau thuế chưa phân phối
+4211,Lợi nhuận chưa phân phối
+511,Doanh thu bán hàng
+5111,Doanh thu bán hàng hóa
+51111,Doanh thu bán hàng hóa
+5113,Doanh thu cung cấp dịch vụ
+5153,Doanh thu khác
+641,Chi phí bán hàng
+642,Chi phí quản lý doanh nghiệp
+6421,Chi phí bán hàng
+6422,Chi phí quản lý doanh nghiệp
+642172,Chi phí quảng cáo
+642282,Chi phí dịch vụ mua ngoài
+711,Thu nhập khác
+7118,Thu nhập khác
+811,Chi phí khác
+8112,Chi phí khác
+8118,Chi phí khác
+911,Xác định kết quả kinh doanh

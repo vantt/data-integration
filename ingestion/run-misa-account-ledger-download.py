@@ -65,7 +65,17 @@ def run(argv=None):
     arg_parser.add_argument("--account",       type=str,
                             default=downloader.DEFAULT_ACCOUNT,
                             help="Account prefix to download (default: 642 → all 6421*/6422*)")
+    arg_parser.add_argument("--all-accounts",   action="store_true",
+                            help="Download the FULL chart of accounts (overrides --account)")
+    arg_parser.add_argument("--month",          type=str, default=None,
+                            help="Specific month 'YYYY-MM' to download (default: previous month). "
+                                 "Used for backfill.")
     args = arg_parser.parse_args(argv)
+
+    if args.all_accounts:
+        args.account = ""  # empty prefix → select all accounts
+
+    period = args.month if args.month else PERIOD
 
     if args.clear_cookies:
         cookie_file = COOKIE_DIR / "misa_amis_cookies.json"
@@ -78,8 +88,8 @@ def run(argv=None):
 
     headless = not args.headed
     output   = Path(OUTPUT_DIR)
-    start_d, end_d = downloader.period_date_range(PERIOD)
-    print(f"MISA account-ledger download: period={PERIOD}  {start_d} → {end_d}")
+    start_d, end_d = downloader.period_date_range(period)
+    print(f"MISA account-ledger download: period={period}  {start_d} → {end_d}")
     print(f"Account prefix: {args.account}")
     print(f"Output dir: {output}")
     print(f"Headless:   {headless}")
@@ -90,7 +100,7 @@ def run(argv=None):
         username        = MISA_USERNAME,
         password        = MISA_PASSWORD,
         headless        = headless,
-        period          = PERIOD,
+        period          = period,
         timeout_seconds = args.timeout,
         account         = args.account,
     )

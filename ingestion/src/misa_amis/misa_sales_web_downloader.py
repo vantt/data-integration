@@ -44,6 +44,15 @@ def period_date_range(period: str) -> tuple[date, date]:
         last_prev = first_this - timedelta(days=1)
         start = last_prev.replace(day=1)
         return start, last_prev
+    # Explicit month "YYYY-MM" → first..last calendar day of that month (for backfill)
+    import re
+    m = re.fullmatch(r"(\d{4})-(\d{2})", (period or "").strip())
+    if m:
+        y, mo = int(m.group(1)), int(m.group(2))
+        start = date(y, mo, 1)
+        end = (date(y, 12, 31) if mo == 12
+               else date(y, mo + 1, 1) - timedelta(days=1))
+        return start, end
     # Fallback: last 7 days
     return today - timedelta(days=7), today
 COOKIE_TTL_HOURS = 12  # MISA session appears to last ~12-24h

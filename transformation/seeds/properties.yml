@@ -64,6 +64,16 @@ seeds:
         remind_lead_days: integer
         journey_enabled: boolean
 
+  - name: ref_gl_accounts
+    description: >
+      MISA chart-of-accounts name enrichment (TT200). One row per account_code →
+      Vietnamese account_name. Optional lookup consumed by dim_gl_account; accounts
+      absent here fall back to their code. Add codes as new accounts appear in the ledger.
+    config:
+      column_types:
+        account_code: varchar
+        account_name: varchar
+
   - name: seed_channel_targets
     description: >
       Raw CSV seed: channel-level budget targets maintained manually. One row per

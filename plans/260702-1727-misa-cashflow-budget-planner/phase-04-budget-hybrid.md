@@ -1,0 +1,561 @@
+# Phase 04 — Budget Layer Hybrid + Budget-vs-Actual + Cash Forecast
+
+## Mục tiêu
+
+Deliver "hoạch định dòng tiền" (cash budget planner):
+1. CSV-seeded budget at `cashflow_line × period_month × direction` grain
+2. `fact_cashflow_budget` — source-agnostic, swappable to MISA in phase-05 with zero report changes
+3. `mart_cashflow_budget_vs_actual` — budget ⋈ `fact_cash_movement` actuals with variance
+4. `mart_cashflow_forecast` — số dư quỹ hiện tại + Σ planned net future flows
+5. Metabase overlay on phase-03 cashflow dashboard: kế hoạch vs thực tế per line + đường dự báo số dư
+
+---
+
+## Dependencies
+
+| Blocker | What it provides |
+|---------|-----------------|
+| **Phase 01** (full-ledger ingestion) | `src_misa_account_ledger` has 111/112 data in production |
+| **Phase 02** (GL modeling) | `fact_cash_movement`, `dim_gl_account` (cashflow_line taxonomy), `fact_account_balance_monthly` (số dư anchor) |
+| **Phase 03** (report tooling) | Report target = **Metabase** (confirmed in `phase-03-cashflow-report.md`). Bootstrap procedure established. |
+
+**Do not start phase-04 implementation before phase-02 marts are live and `fact_account_balance_monthly` is populated.**
+
+---
+
+## Data Flow
+
+```
+CSV edit (finance team)
+  → transformation/seeds/seed_cashflow_budget.csv
+    → dbt seed --select seed_cashflow_budget
+      → fact_cashflow_budget.sql  [budget_source = 'csv', source_priority_rank = 1]
+        ┐
+        ├── mart_cashflow_budget_vs_actual.sql
+        │     ← fact_cash_movement (actual agg by cashflow_line/period/direction)
+        │     outputs: planned_amount, actual_amount, variance_amount, variance_pct, attainment_pct
+        │
+        └── mart_cashflow_forecast.sql
+              ← fact_account_balance_monthly (closing balance anchor)
+              ← fact_cashflow_budget (future periods)
+              outputs: actual_balance (past) + projected_balance (future) per period_month
+```
+
+**Phase-05 swap point:** Add `budget_source='misa'` rows into `fact_cashflow_budget` via UNION. Priority rule (misa=1 > csv=2) handles overlap. Zero downstream report changes.
+
+---
+
+## Cashflow Line Taxonomy (provisional — needs finance sign-off)
+
+Exact strings from `transformation/models/marts/core/dim_gl_account.sql` L42–60. Budget CSV **must use these verbatim** — they are the join key to actuals.
+
+| cashflow_line | Offset account prefix | T6/2026 sample |
+|---------------|-----------------------|----------------|
+| Bán hàng & phải thu KH | 131x | inflow 464M |
+| Chi lương | 334x | outflow 238M |
+| Phải trả khác & bảo hiểm | 335x / 336x / 338x | outflow 97M |
+| Phải thu/trả nội bộ khác | 136x / 138x | mixed 66M |
+| Chi phí bán hàng & QLDN | 641x / 642x | outflow 19M |
+| Thanh toán nhà cung cấp | 331x | outflow 14M |
+| Thuế | 133x / 333x | outflow |
+| Tạm ứng | 141x | mixed |
+| Hàng tồn kho | 15x | outflow |
+| Đầu tư TSCĐ | 21x / 24x | outflow |
+| Vay & vốn chủ sở hữu | 34x / 41x | mixed |
+| Doanh thu & thu nhập | 511x / 515x / 71x | inflow |
+| Chi phí khác | 81x | outflow |
+| Chuyển nội bộ tiền | 111x / 112x | internal (exclude) |
+| Khác | all others | mixed |
+
+---
+
+## Files to Create
+
+### 1. `transformation/seeds/seed_cashflow_budget.csv`
+
+Grain: `(cashflow_line, period_month, direction, budget_source)` — one row per cell.
+
+**Columns:**
+
+| Column | Type | Notes |
+|--------|------|-------|
+| `cashflow_line` | varchar | Must match `dim_gl_account.cashflow_line` exactly |
+| `period_month` | date | Month-start `YYYY-MM-01` |
+| `direction` | varchar | `'inflow'` or `'outflow'` — matches `fact_cash_movement.direction` |
+| `planned_amount` | double | VND, always positive |
+| `budget_source` | varchar | Always `'csv'` in this file |
+| `notes` | varchar | Free text |
+
+**Placeholder rows (T7–T12 2026, 5 key lines):**
+
+```csv
+cashflow_line,period_month,direction,planned_amount,budget_source,notes
+Bán hàng & phải thu KH,2026-07-01,inflow,460000000,csv,Placeholder — update with real budget
+Bán hàng & phải thu KH,2026-08-01,inflow,480000000,csv,Placeholder — update with real budget
+Bán hàng & phải thu KH,2026-09-01,inflow,500000000,csv,Placeholder — update with real budget
+Bán hàng & phải thu KH,2026-10-01,inflow,520000000,csv,Placeholder — update with real budget
+Bán hàng & phải thu KH,2026-11-01,inflow,540000000,csv,Placeholder — update with real budget
+Bán hàng & phải thu KH,2026-12-01,inflow,560000000,csv,Placeholder — update with real budget
+Chi lương,2026-07-01,outflow,240000000,csv,Placeholder — update with real budget
+Chi lương,2026-08-01,outflow,240000000,csv,Placeholder — update with real budget
+Chi lương,2026-09-01,outflow,240000000,csv,Placeholder — update with real budget
+Chi lương,2026-10-01,outflow,240000000,csv,Placeholder — update with real budget
+Chi lương,2026-11-01,outflow,240000000,csv,Placeholder — update with real budget
+Chi lương,2026-12-01,outflow,240000000,csv,Placeholder — update with real budget
+Phải trả khác & bảo hiểm,2026-07-01,outflow,100000000,csv,Placeholder — update with real budget
+Phải trả khác & bảo hiểm,2026-08-01,outflow,100000000,csv,Placeholder — update with real budget
+Phải trả khác & bảo hiểm,2026-09-01,outflow,100000000,csv,Placeholder — update with real budget
+Phải trả khác & bảo hiểm,2026-10-01,outflow,100000000,csv,Placeholder — update with real budget
+Phải trả khác & bảo hiểm,2026-11-01,outflow,100000000,csv,Placeholder — update with real budget
+Phải trả khác & bảo hiểm,2026-12-01,outflow,100000000,csv,Placeholder — update with real budget
+Thanh toán nhà cung cấp,2026-07-01,outflow,15000000,csv,Placeholder — update with real budget
+Thanh toán nhà cung cấp,2026-08-01,outflow,15000000,csv,Placeholder — update with real budget
+Thanh toán nhà cung cấp,2026-09-01,outflow,15000000,csv,Placeholder — update with real budget
+Thanh toán nhà cung cấp,2026-10-01,outflow,15000000,csv,Placeholder — update with real budget
+Thanh toán nhà cung cấp,2026-11-01,outflow,15000000,csv,Placeholder — update with real budget
+Thanh toán nhà cung cấp,2026-12-01,outflow,15000000,csv,Placeholder — update with real budget
+Chi phí bán hàng & QLDN,2026-07-01,outflow,20000000,csv,Placeholder — update with real budget
+Chi phí bán hàng & QLDN,2026-08-01,outflow,20000000,csv,Placeholder — update with real budget
+Chi phí bán hàng & QLDN,2026-09-01,outflow,20000000,csv,Placeholder — update with real budget
+Chi phí bán hàng & QLDN,2026-10-01,outflow,20000000,csv,Placeholder — update with real budget
+Chi phí bán hàng & QLDN,2026-11-01,outflow,20000000,csv,Placeholder — update with real budget
+Chi phí bán hàng & QLDN,2026-12-01,outflow,20000000,csv,Placeholder — update with real budget
+```
+
+Finance edits this file directly. Backfill T1–T6 2026 rows when real historical budget numbers are available (enables closed-period variance).
+
+### 2. `transformation/seeds/properties.yml` — append under `seeds:`
+
+```yaml
+  - name: seed_cashflow_budget
+    description: >
+      Manual CSV budget: planned cash flows per cashflow_line × period_month × direction.
+      budget_source='csv' in this file; phase-05 adds budget_source='misa' via UNION in
+      fact_cashflow_budget.sql. Join key to actuals: cashflow_line (exact string match to
+      dim_gl_account.cashflow_line) + period_month + direction.
+      Refresh: dbt seed --select seed_cashflow_budget && dbt build --select fact_cashflow_budget+
+    config:
+      column_types:
+        cashflow_line: varchar
+        period_month: date
+        direction: varchar
+        planned_amount: double
+        budget_source: varchar
+        notes: varchar
+```
+
+### 3. `transformation/models/marts/finance/fact_cashflow_budget.sql`
+
+```sql
+{{ config(
+    tags=['mart', 'fact', 'finance', 'budget'],
+    location="{{ get_rolling_location() }}"
+) }}
+
+-- =================================================================================================
+-- FACT: CASHFLOW BUDGET
+-- =================================================================================================
+-- Grain: 1 row per (cashflow_line, period_month, direction, budget_source).
+-- Source: seed_cashflow_budget (budget_source='csv') now.
+--
+-- SWAP POINT (phase-05): Uncomment the UNION block below to add MISA budget rows.
+--   Priority: misa=1 wins over csv=2 per grain. Reports filter source_priority_rank=1.
+--   Zero schema changes required downstream (mart_cashflow_budget_vs_actual,
+--   mart_cashflow_forecast) when MISA rows are activated.
+-- =================================================================================================
+
+WITH csv_budget AS (
+    SELECT
+        cashflow_line,
+        CAST(period_month AS DATE)        AS period_month,
+        direction,
+        CAST(planned_amount AS DOUBLE)    AS planned_amount,
+        budget_source,
+        notes
+    FROM {{ ref('seed_cashflow_budget') }}
+    WHERE cashflow_line IS NOT NULL
+      AND period_month IS NOT NULL
+      AND direction IN ('inflow', 'outflow')
+      AND planned_amount >= 0
+
+    -- ── PHASE-05 UNION POINT ───────────────────────────────────────────
+    -- UNION ALL
+    -- SELECT
+    --     cashflow_line,
+    --     CAST(period_month AS DATE),
+    --     direction,
+    --     CAST(planned_amount AS DOUBLE),
+    --     'misa'   AS budget_source,
+    --     NULL     AS notes
+    -- FROM {{ ref('stg_misa_budget') }}
+    -- ──────────────────────────────────────────────────────────────────
+),
+
+-- Priority dedup: misa wins over csv for same grain (phase-05 ready)
+ranked AS (
+    SELECT
+        *,
+        ROW_NUMBER() OVER (
+            PARTITION BY cashflow_line, period_month, direction
+            ORDER BY
+                CASE budget_source WHEN 'misa' THEN 1 WHEN 'csv' THEN 2 ELSE 3 END
+        ) AS source_priority_rank
+    FROM csv_budget
+)
+
+SELECT
+    {{ dbt_utils.generate_surrogate_key([
+        'cashflow_line',
+        'CAST(period_month AS VARCHAR)',
+        'direction',
+        'budget_source'
+    ]) }}                                 AS cashflow_budget_key,
+
+    cashflow_line,
+    period_month,
+    direction,
+    CAST(planned_amount AS BIGINT)        AS planned_amount,
+    budget_source,
+    source_priority_rank,
+    notes,
+    current_timestamp                     AS loaded_at
+
+FROM ranked
+```
+
+### 4. `transformation/models/marts/finance/mart_cashflow_budget_vs_actual.sql`
+
+```sql
+{{ config(
+    tags=['mart', 'finance', 'budget', 'report'],
+    location="{{ get_rolling_location() }}"
+) }}
+
+-- =================================================================================================
+-- MART: CASHFLOW BUDGET vs ACTUAL
+-- =================================================================================================
+-- Grain: 1 row per (cashflow_line, period_month, direction).
+-- FULL OUTER JOIN: budget-only rows = future periods; actual-only rows = lines without budget.
+-- variance_amount = actual − plan (+ve = over-collected for inflow / overspent for outflow).
+-- attainment_pct = actual / plan * 100 (pace indicator within period).
+-- =================================================================================================
+
+WITH budget AS (
+    SELECT cashflow_line, period_month, direction, planned_amount, budget_source
+    FROM {{ ref('fact_cashflow_budget') }}
+    WHERE source_priority_rank = 1
+),
+
+actual AS (
+    SELECT
+        cashflow_line,
+        period_month,
+        direction,
+        SUM(amount) AS actual_amount
+    FROM {{ ref('fact_cash_movement') }}
+    WHERE NOT is_internal_transfer
+      AND cashflow_line IS NOT NULL
+      AND cashflow_line NOT IN ('Chuyển nội bộ tiền', 'Khác')
+    GROUP BY 1, 2, 3
+),
+
+joined AS (
+    SELECT
+        COALESCE(b.cashflow_line, a.cashflow_line) AS cashflow_line,
+        COALESCE(b.period_month,  a.period_month)  AS period_month,
+        COALESCE(b.direction,     a.direction)      AS direction,
+        COALESCE(b.planned_amount, 0)               AS planned_amount,
+        COALESCE(a.actual_amount,  0)               AS actual_amount,
+        b.budget_source,
+        CASE
+            WHEN b.cashflow_line IS NULL THEN 'actual_only'
+            WHEN a.cashflow_line IS NULL THEN 'budget_only'
+            ELSE 'both'
+        END AS coverage
+    FROM budget b
+    FULL OUTER JOIN actual a
+        ON  a.cashflow_line = b.cashflow_line
+        AND a.period_month  = b.period_month
+        AND a.direction     = b.direction
+)
+
+SELECT
+    {{ dbt_utils.generate_surrogate_key([
+        'cashflow_line',
+        'CAST(period_month AS VARCHAR)',
+        'direction'
+    ]) }}                                               AS bva_key,
+
+    cashflow_line,
+    period_month,
+    direction,
+    CAST(planned_amount AS BIGINT)                      AS planned_amount,
+    CAST(actual_amount  AS BIGINT)                      AS actual_amount,
+    CAST(actual_amount - planned_amount AS BIGINT)      AS variance_amount,
+    ROUND(
+        (actual_amount - planned_amount) * 100.0
+        / NULLIF(planned_amount, 0), 1
+    )                                                   AS variance_pct,
+    ROUND(
+        actual_amount * 100.0 / NULLIF(planned_amount, 0), 1
+    )                                                   AS attainment_pct,
+    budget_source,
+    coverage,
+    current_timestamp                                   AS loaded_at
+
+FROM joined
+```
+
+### 5. `transformation/models/marts/finance/mart_cashflow_forecast.sql`
+
+```sql
+{{ config(
+    tags=['mart', 'finance', 'budget', 'forecast'],
+    location="{{ get_rolling_location() }}"
+) }}
+
+-- =================================================================================================
+-- MART: CASH BALANCE FORECAST (dự báo số dư quỹ)
+-- =================================================================================================
+-- Algorithm:
+--   anchor_balance = closing balance of latest complete month (fact_account_balance_monthly,
+--                    summed across all 111x/112x cash accounts)
+--   for each FUTURE period_month in fact_cashflow_budget:
+--     planned_net_flow(m) = Σ planned_inflow(m) − Σ planned_outflow(m)
+--     projected_balance(m) = anchor_balance + Σ planned_net_flow(anchor+1 .. m)
+--
+-- Output has two row_type values:
+--   'actual'   → past periods: actual_balance from fact_account_balance_monthly (solid line)
+--   'forecast' → future periods: projected_balance (dashed line in chart)
+-- =================================================================================================
+
+WITH balance_monthly AS (
+    SELECT
+        period_month,
+        SUM(closing_balance) AS actual_closing_balance
+    FROM {{ ref('fact_account_balance_monthly') }}
+    WHERE cash_account LIKE '111%' OR cash_account LIKE '112%'
+    GROUP BY 1
+),
+
+anchor AS (
+    SELECT period_month AS anchor_month, actual_closing_balance AS anchor_balance
+    FROM balance_monthly
+    ORDER BY period_month DESC
+    LIMIT 1
+),
+
+future_budget AS (
+    SELECT
+        b.period_month,
+        SUM(CASE WHEN b.direction = 'inflow'  THEN b.planned_amount ELSE 0 END) AS planned_inflow,
+        SUM(CASE WHEN b.direction = 'outflow' THEN b.planned_amount ELSE 0 END) AS planned_outflow,
+        SUM(CASE WHEN b.direction = 'inflow'  THEN  b.planned_amount
+                 WHEN b.direction = 'outflow' THEN -b.planned_amount
+                 ELSE 0 END)                                                     AS planned_net_flow
+    FROM {{ ref('fact_cashflow_budget') }} b
+    CROSS JOIN anchor a
+    WHERE b.source_priority_rank = 1
+      AND b.period_month > a.anchor_month
+      AND b.cashflow_line NOT IN ('Chuyển nội bộ tiền', 'Khác')
+    GROUP BY 1
+),
+
+forecast_cumulative AS (
+    SELECT
+        period_month,
+        planned_inflow,
+        planned_outflow,
+        planned_net_flow,
+        SUM(planned_net_flow) OVER (
+            ORDER BY period_month
+            ROWS BETWEEN UNBOUNDED PRECEDING AND CURRENT ROW
+        ) AS cumulative_net_flow
+    FROM future_budget
+)
+
+SELECT
+    b.period_month,
+    CAST(b.actual_closing_balance AS BIGINT) AS actual_balance,
+    NULL::BIGINT                             AS planned_inflow,
+    NULL::BIGINT                             AS planned_outflow,
+    NULL::BIGINT                             AS planned_net_flow,
+    NULL::BIGINT                             AS projected_balance,
+    'actual'                                 AS row_type
+FROM balance_monthly b
+
+UNION ALL
+
+SELECT
+    fc.period_month,
+    NULL::BIGINT                                               AS actual_balance,
+    CAST(fc.planned_inflow   AS BIGINT)                       AS planned_inflow,
+    CAST(fc.planned_outflow  AS BIGINT)                       AS planned_outflow,
+    CAST(fc.planned_net_flow AS BIGINT)                       AS planned_net_flow,
+    CAST(a.anchor_balance + fc.cumulative_net_flow AS BIGINT) AS projected_balance,
+    'forecast'                                                 AS row_type
+FROM forecast_cumulative fc
+CROSS JOIN anchor a
+
+ORDER BY period_month
+```
+
+**Forecast formula (human-readable):**
+```
+projected_balance(month N) = anchor_balance
+                           + SUM(planned_net_flow  for months anchor+1 .. N)
+where:
+  planned_net_flow(m) = SUM(planned_inflow, m) − SUM(planned_outflow, m)
+  anchor_balance      = closing balance of latest actual month from fact_account_balance_monthly
+```
+
+### 6. `docs/analytics-handbook/blueprints/metabase/finance_cashflow_budget.md`
+
+Blueprint adds to (or extends) the phase-03 cashflow dashboard. Four cards:
+
+| Card | Type | Source mart | Key columns |
+|------|------|-------------|-------------|
+| A — Budget vs Actual by Line | Grouped bar (planned / actual) | `mart_cashflow_budget_vs_actual` | cashflow_line, period_month, planned_amount, actual_amount |
+| B — Variance Table | Table w/ conditional formatting | `mart_cashflow_budget_vs_actual` | variance_amount, variance_pct, attainment_pct |
+| C — Cash Balance Forecast | Dual-series line (actual + projected) | `mart_cashflow_forecast` | period_month, actual_balance, projected_balance, row_type |
+| D — Scorecard | 4-cell scorecard | `mart_cashflow_budget_vs_actual` | Σ planned, Σ actual, Σ variance, latest projected_balance |
+
+All SQL templates: `FROM main_marts.<mart>` (schema-qualified — required for field filters).
+Field filters required: `period_month` (date, field_id after sync), `cashflow_line` (string =, field_id after sync).
+
+---
+
+## Implementation Steps (Ordered)
+
+### Step 1 — Seed file + properties.yml
+- Create `transformation/seeds/seed_cashflow_budget.csv` with placeholder rows above.
+- Append seed entry to `transformation/seeds/properties.yml`.
+- **Verify**: copy cashflow_line strings verbatim from `dim_gl_account.sql` L42–60 (no typos).
+
+### Step 2 — Create three dbt models
+- `transformation/models/marts/finance/fact_cashflow_budget.sql`
+- `transformation/models/marts/finance/mart_cashflow_budget_vs_actual.sql`
+- `transformation/models/marts/finance/mart_cashflow_forecast.sql`
+- No new macros — uses existing `dbt_utils.generate_surrogate_key` + `get_rolling_location()`.
+
+### Step 3 — Build
+```bash
+# Run inside dbt container
+dbt seed --select seed_cashflow_budget
+dbt build --select seed_cashflow_budget fact_cashflow_budget mart_cashflow_budget_vs_actual mart_cashflow_forecast
+```
+Expect 0 errors. Run validation queries (Step 7) before proceeding.
+
+### Step 4 — Restart data_platform
+```bash
+docker compose restart data_platform
+```
+Required: manifest pre-parsed at startup. New nodes (1 seed + 3 models) invisible to Dagster until restart.
+
+### Step 5 — Bootstrap serving views
+```bash
+docker compose stop metabase
+python scripts/provisioning/bootstrap_serving_views.py
+docker compose start metabase
+```
+Exposes `main_marts.fact_cashflow_budget`, `main_marts.mart_cashflow_budget_vs_actual`, `main_marts.mart_cashflow_forecast`.
+
+### Step 6 — Sync Metabase schema + get field_ids
+Admin → Databases → Sync database schema now. Record field_ids for:
+- `main_marts.mart_cashflow_budget_vs_actual.period_month`
+- `main_marts.mart_cashflow_budget_vs_actual.cashflow_line`
+- `main_marts.mart_cashflow_forecast.period_month`
+
+### Step 7 — Validation (before blueprint deploy)
+
+**Closed-period variance check:**
+```sql
+SELECT cashflow_line, period_month, direction, planned_amount, actual_amount,
+       variance_amount, variance_pct, attainment_pct
+FROM main_marts.mart_cashflow_budget_vs_actual
+WHERE period_month = '2026-06-01'
+ORDER BY direction, actual_amount DESC;
+```
+Expected (if T6 placeholder rows added to CSV): Bán hàng inflow — actual≈464M, planned≈460M, variance≈+4M, attainment≈100.9%.
+
+**Forecast anchor check:**
+```sql
+SELECT * FROM main_marts.mart_cashflow_forecast ORDER BY period_month;
+```
+- `anchor_month = 2026-06-01`, `anchor_balance ≈ 164,600,000` (from plan.md recon).
+- T7 2026 `projected_balance = 164.6M + (460M − 240M − 100M − 15M − 20M) = 164.6M + 85M ≈ 249.6M`.
+- T8 2026 `projected_balance = T7_projected + T8_net`. Hand-verify 2 consecutive periods.
+
+**Join integrity check:**
+```sql
+SELECT b.cashflow_line
+FROM main_marts.fact_cashflow_budget b
+LEFT JOIN main_marts.fact_cash_movement a USING (cashflow_line)
+WHERE a.cashflow_line IS NULL
+GROUP BY 1;
+-- Must return 0 rows (all seeded lines exist in actual data)
+```
+
+### Step 8 — Blueprint + deploy
+- Author `docs/analytics-handbook/blueprints/metabase/finance_cashflow_budget.md` per card specs.
+- Deploy: `node .skills/metabase-automation/scripts/deploy_from_markdown.js docs/analytics-handbook/blueprints/metabase/finance_cashflow_budget.md`
+
+---
+
+## Risks & Mitigations
+
+| Risk | Likelihood | Impact | Mitigation |
+|------|-----------|--------|------------|
+| cashflow_line string mismatch (CSV vs dim CASE) | Medium | High — join produces 0 rows silently | Copy strings verbatim from `dim_gl_account.sql` L42–60. Join integrity check (Step 7) catches mismatches. |
+| `fact_account_balance_monthly` schema unknown (phase-02 gap) | Medium | High — forecast model fails at build | `mart_cashflow_forecast` ref will error explicitly. Confirm field names (`period_month`, `cash_account`, `closing_balance`) before build. |
+| Finance changes budget taxonomy (cashflow_line rename) | Low | Medium — CSV lines orphaned | cashflow_line is an enum. If CASE changes: update dim_gl_account, re-seed CSV, rebuild. Coordinate. |
+| Metabase field_id stale after sync | Medium | Low — field filter breaks | Always verify field_ids post-sync (memory: Metabase field filter required). |
+| DuckDB write lock during bootstrap | Known | Medium | Stop Metabase before bootstrap (memory: DuckDB always read_only). |
+| Manifest not reloaded after new nodes | Known | High — Dagster can't schedule | Step 4 mandatory. Memory: new dbt node needs manifest reload. |
+| Phase-05 UNION corrupts existing CSV rows | Low | High | `ranked` CTE + `source_priority_rank` isolates swap. CSV becomes rank=2 fallback; reports use rank=1. Transparent. |
+
+### Rollback
+- **Seed**: idempotent — delete offending rows + `dbt seed`. No upstream impact.
+- **Models**: new objects only. Drop serving views via bootstrap re-run with exclusion, or stop Metabase queries. `fact_cash_movement` / `dim_gl_account` / `fact_order_costs` untouched.
+- **Metabase**: delete dashboard via manage-metabase-resources. Blueprint is source of truth; re-deploy resets.
+
+---
+
+## Phase-05 MISA Budget Swap Design Note
+
+When phase-05 delivers `stg_misa_budget`:
+1. Uncomment the UNION block in `fact_cashflow_budget.sql` (clearly marked with comments).
+2. `stg_misa_budget` must output: `cashflow_line`, `period_month`, `direction`, `planned_amount` with `budget_source='misa'`.
+3. `ranked` CTE promotes misa to rank=1. CSV fills any lines MISA doesn't cover.
+4. `mart_cashflow_budget_vs_actual` and `mart_cashflow_forecast` need **zero changes**.
+5. Verify: if MISA covers all lines, CSV rows drop out of effective output. Partial MISA → CSV gap-fill.
+
+**Budget edit workflow (CSV era):**
+1. Finance edits `transformation/seeds/seed_cashflow_budget.csv`.
+2. `dbt seed --select seed_cashflow_budget && dbt build --select fact_cashflow_budget mart_cashflow_budget_vs_actual mart_cashflow_forecast`.
+3. Metabase refreshes on next query — no redeploy needed for data-only changes.
+4. No UI for budget entry (future enhancement — out of scope).
+
+---
+
+## Acceptance Criteria
+
+- [ ] `seed_cashflow_budget.csv` loads via `dbt seed` without type errors.
+- [ ] `fact_cashflow_budget`: all seeded rows present, `budget_source='csv'`, `source_priority_rank=1`.
+- [ ] `mart_cashflow_budget_vs_actual`: closed-period T6/2026 variance correct (hand-verified).
+- [ ] `mart_cashflow_forecast`: anchor = latest actual closing balance; projected_balance = anchor + cumulative net, hand-verified 2 future periods.
+- [ ] Join integrity check returns 0 mismatched cashflow_lines.
+- [ ] Metabase budget cards render (schema-qualified FROM, field_ids confirmed).
+- [ ] `fact_cash_movement`, `dim_gl_account`, `fact_order_costs` results unchanged (no regression).
+
+---
+
+## Unresolved Questions
+
+1. **Cashflow_line taxonomy sign-off**: current prefix-based CASE in `dim_gl_account.sql` is provisional. Finance must confirm these groups match how they plan the budget. If taxonomy changes, the CASE, CSV, and report all change together — minor but requires coordination before finance enters real numbers.
+
+2. **`fact_account_balance_monthly` schema**: listed as "planned" in `docs/analytics-handbook/domains/finance.md` (Context: Balance Sheet & Liquidity). Field names (`period_month`, `cash_account`, `closing_balance`) assumed — confirm when phase-02 delivers; `mart_cashflow_forecast` must match exactly.
+
+3. **Past-period budget backfill**: placeholder CSV covers T7–T12 2026 only. Closed-period variance for T1–T6 2026 requires finance to provide historical budget numbers. No implementation blocker; report shows `coverage='actual_only'` for past periods until backfilled.
+
+4. **Accepted_values dbt test on cashflow_line**: CSV typos would silently produce `coverage='actual_only'` rows. Optional quality gate: add `dbt test` sourcing accepted values from `dim_gl_account` distinct cashflow_line values. Not blocking but recommended before finance enters production budget numbers.

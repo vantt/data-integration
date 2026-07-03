@@ -158,17 +158,23 @@ def misa_sales_download_asset(context):
 
 
 class MisaAccountLedgerDownloadConfig(Config):
-    account: str = "642"  # prefix: "642" → all 6421*/6422* sub-accounts
+    # Empty prefix → full chart of accounts (cash 111/112 + overhead 642 + revenue/COGS…).
+    # A single full-ledger export per month keeps UPSERT-by-(year,month) idempotency valid
+    # (complete-per-period) and feeds both overhead allocation and cashflow from one file.
+    # Set to "642" to pull only the overhead group (legacy behaviour).
+    account: str = ""
 
 
 @asset(group_name="misa_amis_ingestion", key_prefix=["misa_amis"])
 def misa_account_ledger_download_asset(context, config: MisaAccountLedgerDownloadConfig):
     """Download 'Sổ chi tiết tài khoản' Excel from MISA AMIS web portal.
 
-    Searches account prefix (default '642' → all 6421*/6422*), selects ALL
-    matching sub-accounts via 'Chọn tất cả tài khoản' (.row-check-all),
-    exports So_chi_tiet_{account}_{YYYYMM}.xlsx into the account-ledger
-    input directory. The file-drop sensor picks it up automatically.
+    Default: empty prefix → FULL chart of accounts (cash 111/112 + overhead 642 +
+    revenue/COGS/…), selected via 'Chọn tất cả tài khoản' (.row-check-all) with no
+    search text. One full-ledger export per month feeds both overhead allocation
+    (filters 6421/6422) and cashflow (filters 111/112) from a single file, keeping
+    UPSERT-by-(year,month) idempotency valid. Set config.account to a prefix (e.g.
+    '642') for a scoped legacy pull. The file-drop sensor picks it up automatically.
 
     Scheduled monthly: 1st of each month 07:00 ICT.
     """
@@ -182,7 +188,10 @@ def misa_account_ledger_download_asset(context, config: MisaAccountLedgerDownloa
         cwd = os.getcwd()
         try:
             os.chdir(DLT_DIR)
-            _get_run_account_ledger_download_module().run(argv=["--account", config.account])
+            # Empty account → full chart of accounts (self-documenting --all-accounts flag);
+            # non-empty → specific prefix (e.g. legacy "642").
+            argv = ["--all-accounts"] if not config.account else ["--account", config.account]
+            _get_run_account_ledger_download_module().run(argv=argv)
         finally:
             os.chdir(cwd)
 

@@ -1671,12 +1671,198 @@
 | `DVVS` | Vệ sinh văn phòng | DISCONTINUED | 0 (12M) | Last 2022-12 |
 | `DVDT1` | Thiết bị phóng cao áp (one-off) | DISCONTINUED | 0 (12M) | Last 2022-06, 1.29B one-off |
 
+## Context: Cashflow (Dòng tiền vận hành)
+
+> **Description:** GL-based operational cash tracking — actual inflows, outflows, and running balance from MISA cash accounts (111x tiền mặt / 112x tiền gửi ngân hàng). Method: direct/operational (thu-chi + số dư quỹ), not the TT200 3-section indirect statement. Internal transfers between 111/112 are ALWAYS excluded from thu/chi totals.
+> **dbt Sources:** [`fact_cash_movement`](../../../transformation/models/marts/finance/fact_cash_movement.sql) (phase-03, available), [`fact_account_balance_monthly`](../../../transformation/models/marts/finance/fact_account_balance_monthly.sql) (phase-02, planned)
+> **Dimension:** [`dim_gl_account`](../../../transformation/models/marts/core/dim_gl_account.sql)
+> **Grain (fact_cash_movement):** 1 row per cash journal line (accounts 111x/112x)
+> **Grain (fact_account_balance_monthly):** (account_code, period_month)
+> **Supersedes:** "Context: Cash Flow" above (that context referenced `fact_payments` which lacks inflow/outflow classification; this context uses the GL-based models)
+
+### Context Overview
+
+| Category | Foundational Analytical Questions | Related Metrics | Data Ready | Needs Added |
+|----------|-----------------------------------|-----------------|------------|-------------|
+| Cashflow (Dòng tiền vận hành) | Is operational cash net positive? Where does cash go and come from? What is the current fund balance? | CF1. Số dư quỹ (cash_balance), CF2. Tổng thu (cash_inflow), CF3. Tổng chi (cash_outflow), CF4. Dòng tiền ròng (net_cash_flow) | `fact_cash_movement` (phase-03) | `fact_account_balance_monthly` (phase-02, needed for zero-movement account balances) |
+
+### Analytical Questions
+
+#### Q1. Cashflow Readiness
+
+- **Question:** Is operational cash net positive, and what is driving thu/chi movement this period?
+- **Nature:** cash flow, operational finance.
+- **Why It Matters:** Profit and cash are different — a company can be P&L-profitable but cash-negative. This context answers the actual treasury question: how much cash do we hold and where is it moving?
+- **Tradeoffs / Caveats:** Direct method shows thu/chi by counterpart account (offset_account), NOT the TT200 operating/investing/financing split. Budget-vs-Actual comparison requires `fact_cashflow_budget` (phase-04, not yet built).
+- **Insight / Action Enabled:** Net negative trend or sharp outflow spike triggers investigation by cashflow_line (Lương, NCC, BHXH) and review with CFO before end of period.
+- **Related Metrics:** CF1–CF4
+
+### Key Columns — fact_cash_movement
+
+| Column | Type | Description |
+|--------|------|-------------|
+| `posting_date` | DATE | Date of journal entry (ICT) |
+| `period_month` | DATE | First day of accounting month |
+| `cash_account` | VARCHAR | 111x or 112x account code |
+| `cash_account_name` | VARCHAR | Display name of cash account |
+| `offset_account` | VARCHAR | Counterpart GL account code |
+| `offset_account_name` | VARCHAR | Counterpart GL account display name |
+| `cashflow_line` | VARCHAR | Budget grouping label (derived from dim_gl_account; provisional — needs finance sign-off) |
+| `direction` | VARCHAR | `'inflow'` or `'outflow'` |
+| `is_internal_transfer` | BOOL | TRUE when both debit and credit are 111x/112x (chuyển quỹ nội bộ) |
+| `amount` | BIGINT | Absolute amount in VND (always positive) |
+| `signed_amount` | BIGINT | Positive for inflow, negative for outflow |
+| `running_balance` | BIGINT | Cumulative balance after this line (per cash_account, ordered by posting_date) |
+| `opening_balance` | BIGINT | Balance at start of period_month |
+| `voucher_no` | VARCHAR | MISA voucher reference |
+| `description` | VARCHAR | Journal line description |
+| `source_system` | VARCHAR | Always `'misa_amis'` |
+
+### Metrics
+
+#### CF1. Số dư quỹ (`cash_balance`)
+
+> **dbt Model:** [`fact_account_balance_monthly`](../../../transformation/models/marts/finance/fact_account_balance_monthly.sql) (phase-02, planned) — or approximated from `fact_cash_movement.running_balance` for the latest row per account
+
+- **Business Definition:** Số dư cuối kỳ của tài khoản tiền (111+112). Đây là "tiền thực còn trong két và ngân hàng" — không phải lợi nhuận kế toán. Recon anchor tháng 6-2026: closing_balance = 164.5M VND.
+- **Logic (SQL):**
+  ```sql
+  -- preferred: from fact_account_balance_monthly (phase-02)
+  SELECT
+      period_month,
+      SUM(closing_balance) AS cash_balance
+  FROM fact_account_balance_monthly
+  WHERE account_code LIKE '11%'
+  GROUP BY period_month
+
+  -- interim: max running_balance per account per month from fact_cash_movement
+  SELECT
+      period_month,
+      SUM(closing_bal) AS cash_balance
+  FROM (
+      SELECT period_month, cash_account,
+             LAST_VALUE(running_balance) OVER (
+                 PARTITION BY cash_account, period_month
+                 ORDER BY posting_date, voucher_no
+                 ROWS BETWEEN UNBOUNDED PRECEDING AND UNBOUNDED FOLLOWING
+             ) AS closing_bal
+      FROM fact_cash_movement
+  ) t
+  GROUP BY period_month
+  ```
+- **Formula:** closing_balance = opening_balance + SUM(signed_amount) for the period
+- **Unit:** VND (BIGINT)
+- **Common Misunderstandings:** cash_balance ≠ net_cash_flow. cash_balance is the absolute fund level; net_cash_flow is the period delta. A company can have high cash_balance but negative net_cash_flow this month.
+- **Pitfalls / Edge Cases:** `fact_account_balance_monthly` is needed to capture accounts with ZERO movement in a period (they won't appear in fact_cash_movement). Until phase-02 is live, use running_balance from the last voucher of the month.
+
+#### CF2. Tổng thu (`cash_inflow`)
+
+> **dbt Model:** [`fact_cash_movement`](../../../transformation/models/marts/finance/fact_cash_movement.sql)
+
+- **Business Definition:** Tổng tiền thực thu vào quỹ trong kỳ — chỉ tính giao dịch với bên ngoài (khách hàng, người cho vay, v.v.). LUÔN loại trừ `is_internal_transfer = TRUE` vì chuyển tiền giữa 111/112 nets về 0 và sẽ làm phình thu/chi giả tạo. Recon anchor tháng 6-2026: cash_inflow = 464.4M VND (chủ yếu "Bán hàng & phải thu KH").
+- **Logic (SQL):**
+  ```sql
+  SELECT
+      period_month,
+      SUM(amount) AS cash_inflow
+  FROM fact_cash_movement
+  WHERE direction = 'inflow'
+    AND NOT is_internal_transfer
+  GROUP BY period_month
+  ```
+- **Formula:** SUM(amount) WHERE direction='inflow' AND NOT is_internal_transfer
+- **Unit:** VND
+- **Common Misunderstandings:** KHÔNG filter `is_internal_transfer` thủ công trong dashboard — đây là hardcoded business rule, không phải user filter. Nếu filter bị bỏ sót, tổng thu sẽ tăng ảo ~64% (tháng 6-2026: 299M transfers).
+- **Pitfalls / Edge Cases:** `is_internal_transfer` flag phải được set đúng ở mart level. Verify bằng cách check: SUM(amount WHERE is_internal_transfer) nên ≈ SUM giữa các 111x/112x journals của cùng ngày.
+
+#### CF3. Tổng chi (`cash_outflow`)
+
+> **dbt Model:** [`fact_cash_movement`](../../../transformation/models/marts/finance/fact_cash_movement.sql)
+
+- **Business Definition:** Tổng tiền thực chi ra ngoài trong kỳ — loại trừ chuyển quỹ nội bộ. Breakdown theo cashflow_line cho biết khoản chi lớn nhất: Lương, BHXH & phải trả, NCC, CP BH&QLDN. Recon anchor tháng 6-2026: cash_outflow = 434.0M (Lương 238M, BHXH&phải trả 97M, nội bộ 66M excluded, CP BH&QLDN 19M, NCC 14M).
+- **Logic (SQL):**
+  ```sql
+  SELECT
+      period_month,
+      cashflow_line,
+      SUM(amount) AS cash_outflow
+  FROM fact_cash_movement
+  WHERE direction = 'outflow'
+    AND NOT is_internal_transfer
+  GROUP BY period_month, cashflow_line
+  ```
+- **Formula:** SUM(amount) WHERE direction='outflow' AND NOT is_internal_transfer
+- **Unit:** VND
+- **Common Misunderstandings:** Cùng quy tắc loại trừ is_internal_transfer như CF2. Tổng chi bao gồm cả chi lương, trả NCC, nộp thuế — tất cả offset_account bên ngoài 111x/112x range.
+- **Pitfalls / Edge Cases:** cashflow_line taxonomy được derive từ prefix của offset_account trong dim_gl_account. Nếu 1 TK đối ứng chưa được map, cashflow_line sẽ là NULL hoặc 'Khác'. Cần finance sign-off trên taxonomy trước khi dùng cho báo cáo chính thức.
+
+#### CF4. Dòng tiền ròng (`net_cash_flow`)
+
+> **dbt Model:** [`fact_cash_movement`](../../../transformation/models/marts/finance/fact_cash_movement.sql)
+
+- **Business Definition:** Thu ròng trong kỳ = Tổng thu − Tổng chi (cả hai đã loại nội bộ). Nếu dương: quỹ tăng; âm: quỹ giảm. Không phải lợi nhuận kế toán — là cash thực tế tăng/giảm trong kỳ. Recon anchor tháng 6-2026: net_cash_flow = +30.4M (464.4M thu − 434.0M chi).
+- **Logic (SQL):**
+  ```sql
+  SELECT
+      period_month,
+      SUM(CASE WHEN direction = 'inflow'  THEN  amount ELSE 0 END) AS cash_inflow,
+      SUM(CASE WHEN direction = 'outflow' THEN  amount ELSE 0 END) AS cash_outflow,
+      SUM(signed_amount) AS net_cash_flow
+  FROM fact_cash_movement
+  WHERE NOT is_internal_transfer
+  GROUP BY period_month
+  ```
+- **Formula:** net_cash_flow = cash_inflow − cash_outflow (both excluding is_internal_transfer)
+- **Unit:** VND (positive = net inflow, negative = net outflow)
+- **Threshold:**
+  - Healthy: > 0 for ≥ 2 consecutive months
+  - Watch: negative 1 month (investigate cashflow_line breakdown)
+  - Alert: negative ≥ 2 months or closing_balance < 1 month of average cash_outflow
+- **Common Misunderstandings:** net_cash_flow ≠ net profit. A month can be profitable (accrual) but cash-negative if receivables are high. Conversely, high thu from KH payments can give positive net_cash_flow in a loss-making month.
+- **Pitfalls / Edge Cases:** Always verify: opening_balance + net_cash_flow ≈ closing_balance. Discrepancy indicates missing transactions or mis-flagged internal transfers.
+
+### Dimensions for Cashflow Context
+
+| Dimension | Source Column | Use |
+|-----------|--------------|-----|
+| Period | `period_month` | Primary time grain for monthly review |
+| Cash Account | `cash_account` / `cash_account_name` | Filter by 111 (tiền mặt) vs 112 (ngân hàng) vs ALL |
+| Cashflow Line | `cashflow_line` | Budget grouping — breakdown of thu/chi by category |
+| Offset Account | `offset_account` / `offset_account_name` | Drill-down to specific counterpart (TK đối ứng) |
+
+**Filter design rule:** `is_internal_transfer` is HARDCODED-excluded in all cashflow metrics — it is NOT a user-facing filter. Users only filter on `period_month` and `cash_account`.
+
+### Recon Anchor — June 2026
+
+| Item | Amount (VND) |
+|------|-------------|
+| Opening balance | 134,200,000 |
+| Tổng thu (excl. internal) | 464,400,000 |
+| Tổng chi (excl. internal) | 434,000,000 |
+| Net cash flow | +30,400,000 |
+| Closing balance | 164,500,000 |
+| Internal transfers (excluded) | 299,000,000 |
+
+Top chi breakdown (June 2026): Lương 238M · BHXH & phải trả 97M · nội bộ 66M (excluded) · CP BH&QLDN 19M · NCC 14M.
+
+### Scope Notes
+
+| Scope | Status |
+|-------|--------|
+| Actual cashflow (phase-03) | **Available** — `fact_cash_movement` built and validated |
+| Zero-movement account balances | **Planned** — needs `fact_account_balance_monthly` (phase-02) |
+| Budget-vs-Actual comparison | **Planned (phase-04)** — needs `fact_cashflow_budget` |
+| Forecast số dư quỹ | **Planned (phase-04)** — same dependency |
+
+---
+
 ## Related Dashboards
 
 | Dashboard | Audience | Purpose | Link |
 |:---|:---|:---|:---|
 | **Finance Services Revenue** | CFO, Finance Manager | Monthly services revenue tracking (DV* + CPBH) | [Playbook](../playbooks/finance_services_revenue.md) |
 | **Finance P&L Dashboard** | CFO, Finance | Monthly P&L: revenue vs COGS vs margin | [Playbook](../playbooks/finance_pl.md) |
+| **Finance Cashflow** | CEO, CFO, Kế toán trưởng | Monthly operational cashflow: thu-chi + số dư quỹ | [Playbook](../playbooks/finance_cashflow.md) |
 | **Channel Profitability Monthly** | CEO, Finance, Sales Director | Cross-channel margin comparison | [Playbook](../playbooks/channel_profitability_monthly.md) |
 | **Shopee Channel Economics** | Sales Ops, CS Lead | Shopee fee structure & settlement analysis | [Playbook](../playbooks/shopee_channel_economics.md) |
 | **Product Performance** | Merchandising | Product margin using MISA COGS | [Playbook](../blueprints/product_performance_velocity.md) |

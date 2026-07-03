@@ -93,15 +93,20 @@ def _select_account_prefix(page, account: str) -> None:
     including deeply nested sub-accounts not visible in the current list view.
     """
     search_selector = "input[placeholder='Nhập từ khóa tìm kiếm']"
-    print(f"    selecting account prefix: {account}")
+    account = (account or "").strip()
+    # Empty prefix → no search filter → 'Chọn tất cả tài khoản' selects the FULL
+    # chart of accounts (all groups). Non-empty → substring-filtered selection.
+    print(f"    selecting account prefix: {account or '(ALL accounts)'}")
     try:
         inp = page.locator(search_selector).first
         inp.click(timeout=5000)
         inp.press("Control+A")
-        inp.fill(account, timeout=3000)
+        inp.press("Delete")
+        if account:
+            inp.fill(account, timeout=3000)
         time.sleep(1.5)  # wait for list to filter
 
-        _screenshot(page, f"acct_{account}_filtered")
+        _screenshot(page, f"acct_{account or 'ALL'}_filtered")
 
         # Click the 'Chọn tất cả tài khoản' checkbox inside .row-check-all —
         # this selects every account matching the search, not just the visible page.
