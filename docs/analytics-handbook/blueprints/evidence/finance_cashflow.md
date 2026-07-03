@@ -77,6 +77,7 @@ The full content below is deployed verbatim to `evidence/pages/finance-cashflow/
 ````markdown
 ---
 title: Finance Cashflow
+full_width: true
 ---
 
 # Finance Cashflow

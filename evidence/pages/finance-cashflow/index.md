@@ -1,5 +1,6 @@
 ---
 title: Finance Cashflow
+full_width: true
 ---
 
 # Finance Cashflow
