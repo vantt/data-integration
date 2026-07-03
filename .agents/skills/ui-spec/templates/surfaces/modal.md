@@ -18,19 +18,26 @@ regions: [header, body, actions]
 
 ## Layout
 
+<!-- ui-layout: machine-readable spatial model. Edit this fence, not the generated ASCII below.
+     Schema: columns (fr widths), areas (grid-template-areas rows), floating (overlay toggles),
+     variants (prepend/append rows), samples (sample content per region), children (sub-layouts).
+     After editing, run: node tools/build.mjs (regenerates ASCII + wireframe).
+-->
+
+```yaml ui-layout
+columns: ["1fr"]
+areas:
+  - [header]
+  - [body]
+  - [actions]
+samples:
+  header: ""
+  body: ""
+  actions: ""
 ```
-<!-- ASCII wireframe of the modal. -->
-┌ MODAL ─────────────────────────────┐
-│  {NAME}                      [✕]   │
-├────────────────────────────────────┤
-│                                    │
-│   BODY                             │
-│   (form fields / confirmation msg) │
-│                                    │
-├────────────────────────────────────┤
-│  ACTIONS: [Cancel]      [Confirm]  │
-└────────────────────────────────────┘
-```
+
+<!-- ui-layout:ascii:start -->
+<!-- ui-layout:ascii:end -->
 
 ## States
 <!-- - default: opened fresh

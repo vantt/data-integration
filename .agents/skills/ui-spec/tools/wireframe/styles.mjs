@@ -6,6 +6,8 @@
 
 import { CSS2 } from "./styles-phase2.mjs";
 import { CSS3 } from "./styles-phase3.mjs";
+import { CSS4 } from "./styles-phase4.mjs";
+import { CSS6 } from "./styles-phase6.mjs";
 
 const CSS1 = `
 *,*::before,*::after { box-sizing:border-box; margin:0; padding:0; }
@@ -178,4 +180,4 @@ body { font-family:system-ui,Segoe UI,sans-serif; font-size:14px; background:#f0
 .swatch { width:14px; height:14px; border-radius:4px; display:inline-block; }
 `;
 
-export const CSS = CSS1 + CSS2 + CSS3;
+export const CSS = CSS1 + CSS2 + CSS3 + CSS4 + CSS6;

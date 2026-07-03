@@ -28,10 +28,47 @@ function typeBadgeClass(type) {
   return map[type] || "badge-default";
 }
 
+/**
+ * Scroll to and briefly flash the action button matching actionId.
+ * Called after navigateTo(); uses setTimeout(50) to wait for renderMain().
+ */
+function highlightAction(actionId) {
+  setTimeout(() => {
+    const escaped = actionId.replace(/\\/g, "\\\\").replace(/"/g, '\\"');
+    const btn = document.querySelector('[data-id="' + escaped + '"]');
+    if (!btn) return;
+    if (typeof btn.scrollIntoView === "function") btn.scrollIntoView({ behavior: "smooth", block: "center" });
+    btn.classList.add("action-highlight");
+    setTimeout(() => btn.classList.remove("action-highlight"), 1800);
+  }, 50);
+}
+
+/**
+ * Read URL hash on init and navigate to the referenced surface or action.
+ * Surface hash:  #S14       → navigate to S14.
+ * Action hash:   #A-S14-009 → navigate to S14 + highlight that action button.
+ * Invalid hash   → silently ignored.
+ */
+function resolveInitialHash() {
+  const hash = location.hash.slice(1); // strip leading "#"
+  if (!hash) return;
+  // Action-id pattern: one or more letters, dash, then surface-id segment (e.g. A-S14-009)
+  const actionMatch = hash.match(/^[A-Za-z]+-([A-Z]{1,2}\d+)/);
+  if (actionMatch) {
+    const sid = actionMatch[1];
+    if (surfaceById[sid]) { navigateTo(sid); highlightAction(hash); }
+  } else if (surfaceById[hash]) {
+    navigateTo(hash);
+  }
+  // invalid hash → fall through silently
+}
+
 // ── Render main surface area ───────────────────────────────────────────────────
 function renderMain() {
   if (!currentSurface) return;
   const s = currentSurface;
+  // Reset blueprint-link guard so initBlueprintLinks() re-runs for the new surface.
+  document.getElementById("blueprint-pre")?.removeAttribute("data-linked");
   const meta = s.meta || {};
   const type = meta.type || "unknown";
 
@@ -53,22 +90,37 @@ function renderMain() {
     errEl.style.display = "none";
   }
 
-  // Interactions view — region boxes
-  document.getElementById("view-layout").innerHTML = renderLayout(s);
+  // Interactions view — stacked region boxes (always rendered; visible via Interactions subtab).
+  const layoutDiv = document.getElementById("view-layout");
+  layoutDiv.innerHTML = renderLayout(s);
+  rewireActionButtons(layoutDiv);  // rewireActionButtons defined in render-grid.js
+
+  // Grid view — CSS grid (Phase 6): rendered when surface has a ui-layout model.
+  // Layout subtab shown first and default-active; surfaces without layout fall back to Interactions.
+  const gridDiv    = document.getElementById("view-grid");
+  const gridSubtab = document.getElementById("subtab-grid");
+  if (s.layout && gridDiv) {
+    gridDiv.innerHTML = renderGrid(s);  // renderGrid defined in render-grid.js
+    rewireActionButtons(gridDiv);
+    rewireInspectorHover(gridDiv, s);   // inspector hover — defined in render-grid.js
+    if (gridSubtab) gridSubtab.style.display = "";
+    switchView("grid");
+  } else {
+    if (gridDiv)    gridDiv.innerHTML = "";
+    if (gridSubtab) gridSubtab.style.display = "none";
+    switchView("layout");
+  }
 
   // Blueprint view — original ASCII
   document.getElementById("blueprint-pre").textContent =
     s.asciiLayout || "(no ASCII layout for this surface)";
 
-  // Wire action button clicks
-  for (const btn of document.querySelectorAll("#view-layout .action-btn"))
-    btn.addEventListener("click", () => handleInteraction(btn));
-  // Reaction chips: click → informational toast
-  for (const chip of document.querySelectorAll("#view-layout .listener-chip"))
-    chip.addEventListener("click", () =>
-      showToast("Reaction [" + (chip.dataset.id || "") + "]: " + (chip.getAttribute("title") || ""), 3500));
+  // States subtab — ST-* state cards with ERR-* chips (Phase 4)
+  document.getElementById("view-states").innerHTML = renderStates(s);
 
   updateBottomBar();
+  // Blueprint ↔ region-box 2-way links (blueprint-link.js)
+  initBlueprintLinks();
 }
 
 // ── Navigation ────────────────────────────────────────────────────────────────
@@ -83,6 +135,8 @@ function navigateTo(surfaceId) {
   updateBreadcrumb();
   updateBackBtn();
   updateSidebarActive();
+  // Sync URL hash without adding a history entry (no back-button spam).
+  try { history.replaceState(null, "", "#" + surfaceId); } catch (e) { /* file:// or CSP */ }
 }
 
 function goBack() {
@@ -186,6 +240,8 @@ if (firstScreen) {
   updateBreadcrumb();
   updateBackBtn();
   updateSidebarActive();
+  // Override initial surface if URL hash specifies a different surface or action.
+  resolveInitialHash();
 } else {
   document.getElementById("view-layout").innerHTML =
     '<p style="color:#9ca3af;padding:40px;text-align:center">No surfaces found. Check spec.config.yaml.</p>';

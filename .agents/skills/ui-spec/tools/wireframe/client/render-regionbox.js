@@ -53,10 +53,51 @@ function listenerChipHtml(ix, surfaceId) {
 </div>`;
 }
 
-// ── Shared region-box builder ─────────────────────────────────────────────────
+// ── Single-region renderer (DRY building block) ───────────────────────────────
 
 /**
- * Build HTML for all region boxes of a surface.
+ * Render one region box (label + optional sample line + action/listener list).
+ * DRY building block consumed by both buildRegionBoxes (stacked) and render-grid.js (grid cells).
+ *
+ * @param {object} surface    - full surface object
+ * @param {string} region     - region name
+ * @param {object} [opts]     - { activeId, activeRegion, sampleText }
+ *   activeId     {string}  - action id to highlight with .active-el class
+ *   activeRegion {string}  - region name to highlight with .active-region class
+ *   sampleText   {string}  - sample content line; rendered as stakeholder-readable italic text
+ * @returns {string} HTML
+ */
+function regionBoxHtml(surface, region, opts) {
+  const { activeId, activeRegion, sampleText } = opts || {};
+  // groupByRegion with a single-element array scopes interaction lookup to this region only.
+  const groups = groupByRegion(surface, [region]);
+  const g      = groups[region] || { actions: [], listeners: [] };
+  const n      = g.actions.length + g.listeners.length;
+  const regionActiveCls = activeRegion && region === activeRegion ? " active-region" : "";
+  const sampleHtml = sampleText
+    ? `<div class="sample-content">${esc(sampleText)}</div>` : "";
+
+  if (n === 0) {
+    return `<div class="region-box empty${regionActiveCls}" data-region="${escAttr(region)}">
+  <div class="region-label" data-region="${escAttr(region)}">${esc(region)} <span class="region-count">0</span></div>
+  ${sampleHtml}<div class="region-empty-note">(display only — no interactions)</div>
+</div>`;
+  }
+  let body = "";
+  for (const ix of g.actions)   body += actionBtnHtml(ix, surface.id, activeId);
+  for (const ix of g.listeners) body += listenerChipHtml(ix, surface.id);
+  return `<div class="region-box${regionActiveCls}" data-region="${escAttr(region)}">
+  <div class="region-label" data-region="${escAttr(region)}">${esc(region)} <span class="region-count">${n}</span></div>
+  ${sampleHtml}<div class="region-body">${body}</div>
+</div>`;
+}
+
+// ── Stacked region-box builder (all regions, top-to-bottom) ──────────────────
+
+/**
+ * Build HTML for all region boxes of a surface in stacked order.
+ * Used by renderLayout (Interactions subtab) and renderMini (storyboard cards).
+ * Delegates per-region rendering to regionBoxHtml for DRY.
  * @param {object} surface
  * @param {object} [opts] - { activeId, activeRegion } for highlight
  * @returns {string}
@@ -67,27 +108,9 @@ function buildRegionBoxes(surface, opts) {
   if (order.length === 0) {
     return '<p style="color:#9ca3af;font-style:italic;padding:12px 0">No regions or interactions defined.</p>';
   }
-  const groups = groupByRegion(surface, order);
   let html = "";
   for (const region of order) {
-    const g = groups[region];
-    const n = g.actions.length + g.listeners.length;
-    // Highlight this region box if it matches the active region
-    const regionActiveCls = activeRegion && region === activeRegion ? " active-region" : "";
-    if (n === 0) {
-      html += `<div class="region-box empty${regionActiveCls}">
-  <div class="region-label">${esc(region)} <span class="region-count">0</span></div>
-  <div class="region-empty-note">(display only — no interactions)</div>
-</div>`;
-      continue;
-    }
-    let body = "";
-    for (const ix of g.actions) body += actionBtnHtml(ix, surface.id, activeId);
-    for (const ix of g.listeners) body += listenerChipHtml(ix, surface.id);
-    html += `<div class="region-box${regionActiveCls}">
-  <div class="region-label">${esc(region)} <span class="region-count">${n}</span></div>
-  <div class="region-body">${body}</div>
-</div>`;
+    html += regionBoxHtml(surface, region, { activeId, activeRegion });
   }
   return html;
 }

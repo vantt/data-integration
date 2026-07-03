@@ -18,17 +18,24 @@ regions: [toolbar, content]
 
 ## Layout
 
+<!-- ui-layout: machine-readable spatial model. Edit this fence, not the generated ASCII below.
+     Schema: columns (fr widths), areas (grid-template-areas rows), floating (overlay toggles),
+     variants (prepend/append rows), samples (sample content per region), children (sub-layouts).
+     After editing, run: node tools/build.mjs (regenerates ASCII + wireframe).
+-->
+
+```yaml ui-layout
+columns: ["1fr"]
+areas:
+  - [header]
+  - [content]
+samples:
+  header: ""
+  content: ""
 ```
-<!-- ASCII wireframe of the panel. -->
-┌ PANEL ──────────────────┐
-│ TOOLBAR: [actions]      │
-├─────────────────────────┤
-│                         │
-│   CONTENT               │
-│   (list / form / tree)  │
-│                         │
-└─────────────────────────┘
-```
+
+<!-- ui-layout:ascii:start -->
+<!-- ui-layout:ascii:end -->
 
 ## States
 <!-- - default: loaded with data

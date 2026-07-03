@@ -14,6 +14,9 @@ export function extractProse(raw, contractTag) {
   // Strip fenced contract blocks: ```yaml <contractTag> ... ```
   const fenceRe = new RegExp("```yaml\\s+" + contractTag + "[\\s\\S]*?```", "g");
   text = text.replace(fenceRe, "");
+  // Strip ```yaml ui-layout blocks so they don't leak into Blueprint prose view
+  // or confuse findAsciiBlock (the structured layout model is consumed by extract-layout.mjs).
+  text = text.replace(/```yaml\s+ui-layout[\s\S]*?```/g, "");
   return text;
 }
 

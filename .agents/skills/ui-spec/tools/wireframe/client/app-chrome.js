@@ -27,8 +27,39 @@ function buildSidebar() {
     html += "</div>";
   }
   content.innerHTML = html;
+
+  // Inject search box above the type-groups (prepend so it scrolls with sidebar but stays at top).
+  const searchWrap = document.createElement("div");
+  searchWrap.className = "sidebar-search";
+  searchWrap.innerHTML = `<input id="sidebar-search-input" type="search" placeholder="Search surfaces…" autocomplete="off">`;
+  content.prepend(searchWrap);
+  document.getElementById("sidebar-search-input")
+    ?.addEventListener("input", e => filterSidebar(e.target.value));
+
   for (const item of content.querySelectorAll(".sidebar-item")) {
     item.addEventListener("click", () => { if (item.dataset.sid) navigateTo(item.dataset.sid); });
+  }
+}
+
+/**
+ * Filter sidebar items by surface id/name substring (case-insensitive).
+ * If the raw term matches an action id (via edgeById), also navigates to the owning surface
+ * and highlights the action button — Enter not required, it reacts on every keystroke.
+ */
+function filterSidebar(term) {
+  const q = term.trim().toLowerCase();
+  for (const item of document.querySelectorAll(".sidebar-item")) {
+    const sid  = (item.dataset.sid || "").toLowerCase();
+    const name = (item.querySelector("span:last-child")?.textContent || "").toLowerCase();
+    item.style.display = (!q || sid.includes(q) || name.includes(q)) ? "" : "none";
+  }
+  // Action-id exact match: navigate to owning surface + flash the action button.
+  if (q && typeof surfaceById !== "undefined") {
+    const edge = edgeById(term.trim()); // edgeById is a lazy singleton from region-model.js
+    if (edge?.from && surfaceById[edge.from]) {
+      navigateTo(edge.from);
+      highlightAction(term.trim()); // highlightAction declared in app.js
+    }
   }
 }
 
@@ -81,21 +112,24 @@ function updateBackBtn() {
     navStack.length === 0 && overlayStack.length === 0;
 }
 
-// ── View tab switching (Layout / Blueprint / Storyboard / Graph) ─────────────
+// ── View tab switching (Grid / Interactions / Blueprint / States / Storyboard / Graph) ─
 function switchView(view) {
   currentView = view;
   // Show only the active view container. Explicit "block" (not "") overrides the CSS
   // `#view-blueprint{display:none}` / `#view-graph{display:none}` ID rules.
-  for (const v of ["layout", "blueprint", "storyboard", "graph"])
-    document.getElementById("view-" + v).style.display = v === view ? "block" : "none";
+  // "grid" (Phase 6) added to the list; element guarded for backward compat.
+  for (const v of ["layout", "blueprint", "storyboard", "states", "graph", "grid"]) {
+    const el = document.getElementById("view-" + v);
+    if (el) el.style.display = v === view ? "block" : "none";
+  }
 
   const toolbar = document.getElementById("graph-toolbar");
   if (toolbar) toolbar.style.display = view === "graph" ? "" : "none";
   const surfaceWrap = document.getElementById("surface-wrap");
   if (surfaceWrap) surfaceWrap.style.display = view === "graph" ? "none" : "";
 
-  // Top tabs are scopes: "Surface" (data-view "layout") stays active for all surface sub-views.
-  const isSurfaceView = view === "layout" || view === "blueprint";
+  // "Surface" top tab stays active for all surface sub-views (layout / blueprint / states / grid).
+  const isSurfaceView = ["layout", "blueprint", "states", "grid"].includes(view);
   for (const tab of document.querySelectorAll(".tab:not([disabled])"))
     tab.classList.toggle("active", tab.dataset.view === view || (tab.dataset.view === "layout" && isSurfaceView));
   for (const st of document.querySelectorAll(".subtab"))

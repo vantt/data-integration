@@ -73,4 +73,35 @@ export const CSS2 = `
 .sb-branch-arrow { color:#b45309; }
 .sb-branch-action { color:#374151; }
 .sb-branch-id { font-family:ui-monospace,monospace; font-size:10px; color:#9ca3af; }
+
+/* ── Phase 2 (search + hash): Sidebar search input ── */
+.sidebar-search { padding:8px 10px 4px; }
+.sidebar-search input[type=search] {
+  width:100%; box-sizing:border-box; padding:5px 8px;
+  background:#1e293b; border:1px solid #334155; border-radius:6px;
+  color:#e2e8f0; font-size:12px; outline:none;
+}
+.sidebar-search input[type=search]:focus { border-color:#60a5fa; }
+.sidebar-search input[type=search]::placeholder { color:#64748b; }
+
+/* ── Phase 2 (search + hash): Action highlight flash ── */
+@keyframes action-flash {
+  0%,100% { outline:none; }
+  15%,85% { outline:2px solid #f59e0b; outline-offset:2px; }
+  50%      { background:#fde68a !important; }
+}
+.action-highlight { animation: action-flash 1.8s ease; }
+
+/* ── Blueprint ↔ region-box 2-way linking ── */
+/* Region name spans injected into <pre> by blueprint-link.js */
+.bp-region-span { cursor:pointer; border-bottom:1px dotted #60a5fa; border-radius:2px; }
+.bp-region-span:hover { background:#1e3a5f; color:#93c5fd; border-bottom-color:transparent; }
+.bp-span-active { background:#f59e0b !important; color:#000 !important; border-bottom:none !important; border-radius:2px; }
+/* Region-label click hint (cursor + underline when hovering) */
+.region-label-link { cursor:pointer; }
+.region-label-link:hover .region-count { /* keep, no extra change */ }
+.region-label-link:hover { text-decoration:underline; color:#1d4ed8; }
+/* Flash animation for region-box when navigated from Blueprint */
+@keyframes region-flash { 0%,100%{background:inherit} 30%{background:#fde68a} }
+.region-box-flash { animation:region-flash 1.6s ease; }
 `;

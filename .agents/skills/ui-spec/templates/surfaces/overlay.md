@@ -19,15 +19,26 @@ regions: [content, actions]
 
 ## Layout
 
+<!-- ui-layout: machine-readable spatial model. Edit this fence, not the generated ASCII below.
+     Schema: columns (fr widths), areas (grid-template-areas rows), floating (overlay toggles),
+     variants (prepend/append rows), samples (sample content per region), children (sub-layouts).
+     After editing, run: node tools/build.mjs (regenerates ASCII + wireframe).
+-->
+
+```yaml ui-layout
+columns: ["1fr"]
+areas:
+  - [header]
+  - [body]
+  - [actions]
+samples:
+  header: ""
+  body: ""
+  actions: ""
 ```
-<!-- ASCII wireframe of the overlay. -->
-     ┌ OVERLAY ─────────────────┐
-     │  CONTENT                 │
-     │  (contextual info/form)  │
-     ├──────────────────────────┤
-     │  ACTIONS: [Btn1] [Btn2]  │
-     └──────────────────────────┘
-```
+
+<!-- ui-layout:ascii:start -->
+<!-- ui-layout:ascii:end -->
 
 ## Trigger
 <!-- How/where this overlay is opened. Example: "Right-click on a table row." -->

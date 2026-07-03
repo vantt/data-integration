@@ -24,13 +24,16 @@ function readNodeBundle(relPath) {
 }
 
 /** Inline all client modules + cytoscape bundle into one <script> block. */
-function buildClientScript(surfacesJson) {
+function buildClientScript(surfacesJson, errCatalogJson) {
   // graph-layout.js excluded — Cytoscape does layout now; no module references layeredLayout.
   const files = [
     "region-model.js",      // esc, escAttr, isReaction, interactionsOf, edgeById, narrate
-    "render-regionbox.js",  // renderLayout, renderMini, actionBtnHtml, listenerChipHtml
+    "render-regionbox.js",  // renderLayout, renderMini, regionBoxHtml, actionBtnHtml, listenerChipHtml
+    "render-grid.js",       // renderGrid, rewireActionButtons, toggleFloating, switchGridVariant (Phase 6)
+    "blueprint-link.js",    // initBlueprintLinks, flashRegionBox, flashBlueprintSpan (Phase 3 plan)
     "render-storyboard.js", // renderStoryboard (Phase 2)
     "render-graph.js",      // buildGraph, renderGraph → Cytoscape elements (Phase 3)
+    "render-states.js",     // renderStates — States subtab (Phase 4)
     "app-chrome.js",        // sidebar, breadcrumb, bottombar, switchView
     "graph-controls.js",    // graphState, renderAndInsertGraph, initGraphControls (Phase 3)
     "flow-play.js",         // flow play 2.0: timer, highlight, narration
@@ -45,18 +48,39 @@ function buildClientScript(surfacesJson) {
   return (
     `<script>\n/* cytoscape + cytoscape-dagre — inlined UMD */\n${cytoscapeBundle}\n${dagreExtBundle}\n` +
     `try{ if (window.cytoscape && window.cytoscapeDagre) cytoscape.use(cytoscapeDagre); }catch(e){ console.warn("dagre ext", e); }\n</script>\n` +
-    `<script>\nconst SURFACES = ${surfacesJson};\n\n${clientJs}\n</script>`
+    `<script>\nconst ERR_CATALOG = ${errCatalogJson};\nconst SURFACES = ${surfacesJson};\n\n${clientJs}\n</script>`
   );
+}
+
+/**
+ * Format current time as "YYYY-MM-DD HH:mm" in Asia/Ho_Chi_Minh (ICT, UTC+7).
+ * Uses Intl.DateTimeFormat.formatToParts for locale-independent extraction.
+ */
+function ictTimestamp() {
+  const parts = new Intl.DateTimeFormat("en-CA", {
+    timeZone: "Asia/Ho_Chi_Minh",
+    year: "numeric", month: "2-digit", day: "2-digit",
+    hour: "2-digit", minute: "2-digit",
+    hour12: false,
+  }).formatToParts(new Date());
+  const p = Object.fromEntries(parts.map(({ type, value }) => [type, value]));
+  return `${p.year}-${p.month}-${p.day} ${p.hour}:${p.minute}`;
 }
 
 /**
  * Build the complete self-contained HTML string.
  * @param {object[]} surfaces - enriched surface data array
+ * @param {{ errCatalog?: Record<string,string> }} opts
  * @returns {string}
  */
-export function buildHtml(surfaces) {
-  const surfacesJson = JSON.stringify(surfaces, null, 2);
-  const script = buildClientScript(surfacesJson);
+export function buildHtml(surfaces, opts = {}) {
+  const { errCatalog = {} } = opts;
+  const surfacesJson  = JSON.stringify(surfaces, null, 2);
+  const errCatalogJson = JSON.stringify(errCatalog);
+  const script = buildClientScript(surfacesJson, errCatalogJson);
+
+  // Freshness stamp shown in the bottom bar area — computed at generation time.
+  const freshnessStamp = `Generated ${ictTimestamp()} ICT · ${surfaces.length} surfaces`;
 
   return `<!DOCTYPE html>
 <html lang="vi">
@@ -138,13 +162,18 @@ export function buildHtml(surfaces) {
           <span class="type-badge" id="surface-type-badge">—</span>
           <span class="region-chips" id="surface-region-chips"></span>
         </div>
-        <!-- Surface sub-tabs: two representations of the SAME surface -->
+        <!-- Surface sub-tabs: views of the SAME surface -->
         <div id="surface-subtabs">
+          <!-- Layout subtab (Phase 6): spatial CSS grid — shown only for surfaces with ui-layout model -->
+          <button class="subtab" id="subtab-grid" data-view="grid" style="display:none" title="Spatial CSS grid layout — stakeholder view">Layout</button>
           <button class="subtab active" data-view="layout" title="Interactions grouped by region">Interactions</button>
           <button class="subtab" data-view="blueprint" title="Original hand-authored ASCII layout">Blueprint</button>
+          <button class="subtab" data-view="states" title="Surface states and error references">States</button>
         </div>
         <div class="surface-body">
           <div class="surface-errors" id="surface-errors" style="display:none"></div>
+          <!-- Grid view (Phase 6): CSS grid for surfaces with ui-layout model -->
+          <div id="view-grid" style="display:none"></div>
           <div id="view-layout"></div>
           <div id="view-blueprint" style="display:none">
             <div class="blueprint-note">Bản ASCII gốc (hand-authored) — tham chiếu bố cục 2D.</div>
@@ -152,6 +181,8 @@ export function buildHtml(surfaces) {
           </div>
           <!-- Storyboard filmstrip view (Phase 2) -->
           <div id="view-storyboard" style="display:none"></div>
+          <!-- States subtab (Phase 4) -->
+          <div id="view-states" style="display:none"></div>
         </div>
       </div>
 
@@ -168,6 +199,7 @@ export function buildHtml(surfaces) {
       </div>
     </div>
     <div id="bottombar"></div>
+    <div id="gen-stamp" style="font-size:11px;color:#94a3b8;padding:2px 12px 4px;text-align:right;border-top:1px solid #e2e8f0;">${freshnessStamp}</div>
   </div>
 </div>
 

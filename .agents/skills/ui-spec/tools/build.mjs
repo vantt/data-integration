@@ -1,11 +1,15 @@
 // build.mjs — generate machine-readable artifacts into generated/.
 // DO NOT edit generated/ by hand. Run after validate.
 // Output: surface-registry.yaml, navigation-graph.yaml, action-registry.csv, coverage-report.md
+//         wireframe-v2.html (generated via generateWireframe — browser NOT opened)
 
-import { writeFileSync, mkdirSync } from "node:fs";
+import { readFileSync, writeFileSync, mkdirSync } from "node:fs";
 import { join } from "node:path";
 import yaml from "js-yaml";
-import { extractAll, SPEC_ROOT } from "./extract.mjs";
+import { extractAll, listSpecFiles, SPEC_ROOT } from "./extract.mjs";
+import { generateWireframe } from "./interpret-wireframe.mjs";
+import { generateAscii, injectAscii } from "./wireframe/generate-ascii.mjs";
+import { extractLayout } from "./wireframe/extract-layout.mjs";
 
 const OUT = join(SPEC_ROOT, "generated");
 mkdirSync(OUT, { recursive: true });
@@ -116,3 +120,42 @@ writeFileSync(join(OUT, "coverage-report.md"), cov);
 
 console.log(`✓ built generated/: surface-registry.yaml, navigation-graph.yaml, action-registry.csv, coverage-report.md`);
 console.log(`  surfaces=${Object.keys(registry.surfaces).length} actions=${cleanEdges.length} flows=${flows.length}`);
+
+// ---- ASCII injection (phase 7) ----
+// MUST run BEFORE wireframe generation: the wireframe embeds spec prose (Blueprint
+// tab reads the generated ASCII from the .md), and writing .md files after the
+// wireframe would leave spec mtimes newer than the wireframe — a false-positive
+// VR-WIREFRAME-STALE on the very next validate.
+// For every surface with a yaml ui-layout model: regenerate ASCII and inject
+// between <!-- ui-layout:ascii:start/end --> markers. Idempotent: only writes
+// the file when the generated content differs from the current content.
+{
+  const specFiles = listSpecFiles();
+  let asciiChanged = 0, asciiSkipped = 0;
+  for (const absPath of specFiles) {
+    let raw;
+    try { raw = readFileSync(absPath, "utf8"); } catch { asciiSkipped++; continue; }
+    const layout = extractLayout(raw);
+    if (!layout) { asciiSkipped++; continue; }
+    const ascii   = generateAscii(layout);
+    const updated = injectAscii(raw, ascii);
+    if (updated !== raw) {
+      writeFileSync(absPath, updated, "utf8");
+      asciiChanged++;
+      console.log(`  ascii regenerated: ${absPath.replace(SPEC_ROOT + "/", "").replace(SPEC_ROOT + "\\", "")}`);
+    }
+  }
+  const total = specFiles.length - asciiSkipped;
+  if (asciiChanged === 0) {
+    console.log(`✓ ascii: ${total} surface(s) with layout — all up to date`);
+  } else {
+    console.log(`✓ ascii: regenerated ${asciiChanged}/${total} surface(s) with layout`);
+  }
+}
+
+// ---- wireframe-v2.html ----
+// Regenerate wireframe so one build command refreshes all outputs together.
+// Runs last: reads the .md files (incl. freshly injected ASCII) — see note above.
+// open:false — never auto-open browser in a build pipeline step.
+generateWireframe(SPEC_ROOT, { open: false });
+console.log(`✓ built generated/wireframe-v2.html`);

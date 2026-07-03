@@ -7,6 +7,8 @@ import { join } from "node:path";
 import Ajv from "ajv";
 import { extractAll, SPEC_ROOT } from "./extract.mjs";
 import { schemaPath, config, surfaceDirs } from "./config.mjs";
+import { extractLayout, layoutAreaNames, nonRectRegions } from "./wireframe/extract-layout.mjs";
+import { generateAscii, injectAscii } from "./wireframe/generate-ascii.mjs";
 
 // Surface ID pattern: one or two uppercase letters + digits (e.g. S01, M2, P10, OV3)
 const SURFACE_ID_RE = /^[A-Z]{1,2}\d+$/;
@@ -227,6 +229,64 @@ for (const [surfaceId, regions] of surfaceRegions) {
   }
 }
 
+// VR-LAYOUT-*: validate ui-layout fence when present in a surface file.
+// Three rules:
+//   VR-LAYOUT-UNKNOWN (error) — area/floating/samples region name not in frontmatter regions[]
+//   VR-LAYOUT-RECT    (error) — region cells in areas matrix don't form a solid rectangle
+//   VR-LAYOUT-ORPHAN  (warn)  — declared region absent from all layout areas + floating + variants + children
+for (const f of files) {
+  if (!f.meta?.id) continue;
+  let raw;
+  try { raw = readFileSync(join(SPEC_ROOT, f.file), "utf8"); } catch { continue; }
+
+  let layout;
+  try {
+    layout = extractLayout(raw);
+  } catch {
+    warn(f.file, "ui-layout fence present but failed to parse (VR-LAYOUT-PARSE)");
+    continue;
+  }
+  if (!layout) continue; // no fence on this surface — skip all layout rules
+
+  const sid = f.meta.id;
+  const declaredRegions = surfaceRegions.get(sid) || [];
+  const areaNames = layoutAreaNames(layout); // Set<string> incl. floating + variants + children
+
+  // VR-LAYOUT-UNKNOWN: every name used in layout must be declared in frontmatter regions[].
+  // Checks: areas matrix (via areaNames), floating regions (included in areaNames), samples keys.
+  const allLayoutNames = new Set(areaNames);
+  for (const sampleKey of Object.keys(layout.samples || {})) allLayoutNames.add(sampleKey);
+  for (const name of allLayoutNames) {
+    if (!declaredRegions.includes(name)) {
+      err(f.file, `ui-layout region \`${name}\` not in frontmatter regions[] (VR-LAYOUT-UNKNOWN)`);
+    }
+  }
+
+  // VR-LAYOUT-RECT: each region in the areas matrix must form a solid rectangle.
+  for (const bad of nonRectRegions(layout)) {
+    err(f.file, `ui-layout region \`${bad}\` does not form a solid rectangle in areas matrix (VR-LAYOUT-RECT)`);
+  }
+
+  // VR-LAYOUT-ORPHAN: warn when a declared region doesn't appear anywhere in the layout.
+  // areaNames already includes floating + variant rows + children names.
+  for (const r of declaredRegions) {
+    if (!areaNames.has(r)) {
+      warn(f.file, `region \`${r}\` declared in frontmatter but absent from ui-layout areas+floating+variants (VR-LAYOUT-ORPHAN)`);
+    }
+  }
+
+  // VR-ASCII-DRIFT: the ASCII between ui-layout:ascii markers must equal what the
+  // model generates. Reuses the exact build path (generateAscii + injectAscii): if
+  // re-injecting produces a different file, either someone hand-edited the generated
+  // block (their edit will be silently overwritten on next build) or the model
+  // changed without rebuilding. Layout is the YAML fence; ASCII is derived output.
+  try {
+    if (injectAscii(raw, generateAscii(layout)) !== raw) {
+      warn(f.file, "generated ASCII out of sync with ui-layout model — edit the YAML fence, not the ASCII, then run build (VR-ASCII-DRIFT)");
+    }
+  } catch { /* generation errors already surface via build */ }
+}
+
 // VR-SHOW-PANEL: show_panel target must be a known surface with type=panel
 for (const it of allInteractions) {
   if (it.action !== "show_panel") continue;
@@ -427,6 +487,44 @@ for (const f of files) {
   const refs = [...(flow.steps || []), ...((flow.branches || []).map((b) => b.action))];
   for (const aid of refs) {
     if (aid && !actionIndex.has(aid)) err(f.file, `flow references action \`${aid}\` which does not exist (dangling step/branch)`);
+  }
+}
+
+// VR-ELEMENT-REF: every layout.elements value must be an existing action id (warn-level).
+// Prevents chip→action mappings pointing at typo'd or deleted interaction ids.
+for (const f of files) {
+  if (!f.meta?.id) continue;
+  let raw;
+  try { raw = readFileSync(join(SPEC_ROOT, f.file), "utf8"); } catch { continue; }
+  let layout;
+  try { layout = extractLayout(raw); } catch { continue; }
+  if (!layout || !layout.elements || typeof layout.elements !== "object") continue;
+  for (const [chipText, actionId] of Object.entries(layout.elements)) {
+    if (!actionIndex.has(String(actionId))) {
+      warn(f.file, `layout.elements["${chipText}"] references unknown action id \`${actionId}\` (VR-ELEMENT-REF)`);
+    }
+  }
+}
+
+// VR-WIREFRAME-STALE: warn if generated/wireframe-v2.html is older than any spec .md file.
+// Informs the developer to re-run build without blocking the validation gate.
+const wireframePath = join(SPEC_ROOT, "generated", "wireframe-v2.html");
+if (existsSync(wireframePath)) {
+  const wireframeMtime = statSync(wireframePath).mtimeMs;
+  let newerCount = 0;
+  for (const dir of surfaceDirs) {
+    const absDir = join(SPEC_ROOT, dir);
+    let entries = [];
+    try { entries = readdirSync(absDir); } catch { continue; }
+    for (const entry of entries) {
+      if (!entry.endsWith(".md")) continue;
+      try {
+        if (statSync(join(absDir, entry)).mtimeMs > wireframeMtime) newerCount++;
+      } catch { /* skip unreadable */ }
+    }
+  }
+  if (newerCount > 0) {
+    warn("wireframe", `wireframe-v2.html is older than ${newerCount} spec file(s) — run build to regenerate`);
   }
 }
 

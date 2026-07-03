@@ -18,19 +18,26 @@ regions: [header, body, footer]
 
 ## Layout
 
+<!-- ui-layout: machine-readable spatial model. Edit this fence, not the generated ASCII below.
+     Schema: columns (fr widths), areas (grid-template-areas rows), floating (overlay toggles),
+     variants (prepend/append rows), samples (sample content per region), children (sub-layouts).
+     After editing, run: node tools/build.mjs (regenerates ASCII + wireframe).
+-->
+
+```yaml ui-layout
+columns: ["1fr"]
+areas:
+  - [header]
+  - [body]
+  - [footer]
+samples:
+  header: ""
+  body: ""
+  footer: ""
 ```
-<!-- ASCII wireframe of the screen layout. Replace with actual regions. -->
-┌ HEADER ──────────────────────────────────────┐
-│  [Logo]              [Nav]        [User Menu] │
-├──────────────────────────────────────────────┤
-│                                              │
-│                   BODY                       │
-│   (main content area)                        │
-│                                              │
-├ FOOTER ──────────────────────────────────────┤
-│  [Links]                        [Copyright]  │
-└──────────────────────────────────────────────┘
-```
+
+<!-- ui-layout:ascii:start -->
+<!-- ui-layout:ascii:end -->
 
 ## States
 <!-- Key states this screen can be in. Link to shared states file if applicable.
