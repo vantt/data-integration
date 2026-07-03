@@ -1685,6 +1685,7 @@
 | Category | Foundational Analytical Questions | Related Metrics | Data Ready | Needs Added |
 |----------|-----------------------------------|-----------------|------------|-------------|
 | Cashflow (Dòng tiền vận hành) | Is operational cash net positive? Where does cash go and come from? What is the current fund balance? | CF1. Số dư quỹ (cash_balance), CF2. Tổng thu (cash_inflow), CF3. Tổng chi (cash_outflow), CF4. Dòng tiền ròng (net_cash_flow) | `fact_cash_movement` (phase-03) | `fact_account_balance_monthly` (phase-02, needed for zero-movement account balances) |
+| Cashflow — Multi-Year (mùa vụ, tăng trưởng cấu trúc) | So với cùng kỳ năm trước ra sao? Lũy kế năm nay vs năm ngoái? Tháng nào lịch sử luôn cao/thấp? Khoản chi nào tăng trưởng cấu trúc qua nhiều năm (không phải one-off)? | CF5. YoY (net_cash_flow_yoy_pct), CF6. Lũy kế YTD (net_cash_flow_ytd), CF7. Chỉ số mùa vụ (seasonality_index) | `fact_cash_movement` (đủ dùng khi MISA GL backfill 2022→present ingest xong) | Không cần model mới — cùng `fact_cash_movement`, chỉ cần ≥13 tháng lịch sử liên tục cho CF5, ≥3 năm cho CF7 đáng tin cậy |
 
 ### Analytical Questions
 
@@ -1821,6 +1822,71 @@
 - **Common Misunderstandings:** net_cash_flow ≠ net profit. A month can be profitable (accrual) but cash-negative if receivables are high. Conversely, high thu from KH payments can give positive net_cash_flow in a loss-making month.
 - **Pitfalls / Edge Cases:** Always verify: opening_balance + net_cash_flow ≈ closing_balance. Discrepancy indicates missing transactions or mis-flagged internal transfers.
 
+#### CF5. So sánh cùng kỳ năm trước (`net_cash_flow_yoy_pct`)
+
+> **dbt Model:** [`fact_cash_movement`](../../../transformation/models/marts/finance/fact_cash_movement.sql) — requires ≥13 months of history (multi-year MISA backfill, 2022→ present)
+
+- **Business Definition:** So sánh CF1–CF4 với đúng tháng đó của năm trước (VD: tháng 6/2026 vs tháng 6/2025), thay vì tháng liền trước (MoM). Cần thiết vì dòng tiền có mùa vụ (VD: chi lương tháng 13/thưởng Tết dồn vào Q1 hàng năm) — MoM một mình gây báo động giả mỗi năm vào cùng thời điểm.
+- **Logic (SQL):**
+  ```sql
+  WITH monthly AS (
+      SELECT period_month, SUM(signed_amount) AS net_cash_flow
+      FROM fact_cash_movement
+      WHERE NOT is_internal_transfer
+      GROUP BY period_month
+  )
+  SELECT
+      period_month,
+      net_cash_flow,
+      LAG(net_cash_flow, 12) OVER (ORDER BY period_month) AS net_cash_flow_yoy,
+      (net_cash_flow - LAG(net_cash_flow, 12) OVER (ORDER BY period_month))
+          / NULLIF(ABS(LAG(net_cash_flow, 12) OVER (ORDER BY period_month)), 0) AS net_cash_flow_yoy_pct
+  FROM monthly
+  ```
+- **Formula:** yoy_pct = (this_month − same_month_last_year) / ABS(same_month_last_year)
+- **Common Misunderstandings:** YoY không thay thế MoM — cả hai đều cần hiển thị (MoM cho biết momentum ngắn hạn, YoY loại nhiễu mùa vụ).
+- **Pitfalls / Edge Cases:** `LAG(..., 12)` giả định không có tháng nào bị thiếu trong chuỗi period_month. Nếu backfill có gap (tháng không ingest), phải `generate_series` đủ 1 tháng/dòng trước khi LAG, nếu không sẽ lệch kỳ so sánh.
+
+#### CF6. Lũy kế từ đầu năm (`net_cash_flow_ytd`)
+
+> **dbt Model:** [`fact_cash_movement`](../../../transformation/models/marts/finance/fact_cash_movement.sql)
+
+- **Business Definition:** Tổng thu/chi/dòng tiền ròng cộng dồn từ tháng 1 đến tháng hiện tại của mỗi năm, để so sánh "năm nay tính đến hôm nay" vs "năm ngoái tính đến cùng điểm mốc" — quan trọng hơn total-năm khi năm chưa kết thúc.
+- **Logic (SQL):**
+  ```sql
+  SELECT
+      EXTRACT(year FROM period_month)  AS fiscal_year,
+      SUM(CASE WHEN direction = 'inflow'  THEN amount ELSE 0 END) AS cash_inflow_ytd,
+      SUM(CASE WHEN direction = 'outflow' THEN amount ELSE 0 END) AS cash_outflow_ytd,
+      SUM(signed_amount)                                          AS net_cash_flow_ytd
+  FROM fact_cash_movement
+  WHERE NOT is_internal_transfer
+    AND EXTRACT(month FROM period_month) <= EXTRACT(month FROM current_date)  -- cap mọi năm ở cùng tháng để so sánh công bằng
+  GROUP BY 1
+  ```
+- **Formula:** YTD = SUM(metric) WHERE calendar_month(period_month) <= calendar_month(today), GROUP BY year
+- **Common Misunderstandings:** Không cắt theo `current_date` tuyệt đối (ngày trong tháng) — cắt theo **tháng**, vì grain của mart là period_month, không phải ngày.
+- **Pitfalls / Edge Cases:** Năm hiện tại luôn là partial (chưa đủ 12 tháng) — không so sánh trực tiếp YTD năm nay với **total cả năm** trước; phải so YTD vs YTD cùng mốc tháng.
+
+#### CF7. Chỉ số mùa vụ theo tháng (`seasonality_index`)
+
+> **dbt Model:** [`fact_cash_movement`](../../../transformation/models/marts/finance/fact_cash_movement.sql) — chỉ đáng tin khi có ≥3 năm dữ liệu
+
+- **Business Definition:** Giá trị trung bình của CF2/CF3/CF4 theo **tháng dương lịch** (1–12), gộp qua tất cả các năm có dữ liệu — trả lời "tháng nào lịch sử luôn cao/thấp bất kể năm nào" (VD: chi luôn cao tháng 1-2 do lương tháng 13 + thưởng Tết). Khác YoY (so 1 tháng cụ thể của 2 năm) — đây là pattern lặp lại **mọi năm**.
+- **Logic (SQL):**
+  ```sql
+  SELECT
+      EXTRACT(month FROM period_month) AS calendar_month,
+      AVG(SUM(signed_amount)) OVER (PARTITION BY EXTRACT(month FROM period_month)) AS avg_net_cash_flow,
+      COUNT(DISTINCT EXTRACT(year FROM period_month))                              AS years_observed
+  FROM fact_cash_movement
+  WHERE NOT is_internal_transfer
+  GROUP BY 1, period_month
+  ```
+- **Formula:** seasonality_index[m] = AVG(net_cash_flow) WHERE calendar_month(period_month) = m, across all years
+- **Common Misunderstandings:** `years_observed` phải hiển thị kèm — trung bình từ 2 năm kém tin cậy hơn trung bình từ 5 năm; không dùng làm threshold cứng nếu years_observed < 3.
+- **Pitfalls / Edge Cases:** Năm hiện tại (chưa đủ 12 tháng) sẽ kéo lệch trung bình các tháng chưa xảy ra trong năm đó xuống — cân nhắc loại năm hiện-tại-chưa-đủ-tháng khỏi seasonality_index, hoặc chú thích rõ.
+
 ### Dimensions for Cashflow Context
 
 | Dimension | Source Column | Use |
@@ -1853,6 +1919,7 @@ Top chi breakdown (June 2026): Lương 238M · BHXH & phải trả 97M · nội 
 | Zero-movement account balances | **Planned** — needs `fact_account_balance_monthly` (phase-02) |
 | Budget-vs-Actual comparison | **Planned (phase-04)** — needs `fact_cashflow_budget` |
 | Forecast số dư quỹ | **Planned (phase-04)** — same dependency |
+| Multi-year history (2022→present) | **In progress** — MISA GL backfill downloaded to staging, ingest agent chưa file-drop hết vào `misa_raw` (serving mart hiện chỉ có 2025-01→2026-06). CF5-CF7 hoạt động ngay khi ingest xong, không cần đổi model. |
 
 ---
 

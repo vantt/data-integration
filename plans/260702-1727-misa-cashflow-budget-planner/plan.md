@@ -26,7 +26,7 @@ Ràng buộc **không được vỡ**: pipeline overhead allocation (642 → `fa
 | 2 | GL modeling (dim/std/fact) | `phase-02-gl-modeling.md` | P1 | `dim_gl_account`, `std_misa_gl_ledger`, `fact_cash_movement`, `fact_account_balance_monthly` |
 | 3 | Cashflow report (Metabase) | `phase-03-cashflow-report.md` | P2 | Dashboard vận hành: số dư quỹ, thu/chi theo kỳ, top đối ứng, dòng tiền ròng |
 | 4 | Budget layer hybrid + Budget-vs-Actual | `phase-04-budget-hybrid.md` | P3 | `fact_cashflow_budget` (source-swappable), report kế hoạch vs thực tế + dự báo số dư |
-| 5 | (Deferred) MISA budget scraper | `phase-05-misa-budget-scraper.md` | P4 | Đọc ngân sách/dự báo MISA → `budget_source='misa'` |
+| 5 | ~~MISA budget scraper~~ **DROPPED** | `phase-05-misa-budget-scraper.md` | — | Finance không dùng MISA budget module → không có gì để scrape (2026-07-03) |
 
 ## Tiến độ 2026-07-03 — Phase 01→03 DONE (báo cáo LIVE)
 
@@ -38,6 +38,14 @@ Ràng buộc **không được vỡ**: pipeline overhead allocation (642 → `fa
 **Insight thật (6 tháng):** dòng tiền âm 3/6 tháng (Jan −100M, Feb −70M, May −23M); dương Mar +85M, Jun +30M; số dư quỹ 72M–165M.
 
 **Cleanup nhỏ deferred:** `fact_account_balance_monthly` có vài dòng 2025 balance NULL (từ export 642 cũ) — thêm `WHERE opening_balance IS NOT NULL` sau. Blueprint dùng header `## Segmentation Scope` (cũ) → warning non-blocking, đổi `## Semantic Contract` sau.
+
+## Kiến thức domain & Thực hành (cập nhật khi có learnings mới)
+
+- **SME Budget Planning Practices**: `docs/context/sme-budget-planning-practices.md`
+  - Kiến trúc rolling 13-week forecast, zero-based nhẹ, Tier 1/2/3 chi tiêu
+  - Schema `fact_cashflow_budget`, variance mart SQL, cash forecast model
+  - Sai lầm phổ biến + KPIs dashboard cho CFO
+  - **Quy tắc:** Khi Phase 04/05 phát sinh learnings mới → cập nhật tài liệu này trước, rồi dẫn chiếu lại từ phase file
 
 ## Tài liệu thiết kế báo cáo (analytics-handbook — nguồn sự thật cho WHAT)
 
