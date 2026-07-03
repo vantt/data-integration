@@ -85,6 +85,17 @@ Launch wireframe v2 renderer — interactions laid out inside their region boxes
 - Command: `node interpret-wireframe.mjs --root <spec-root>` or `npm run interpret:wf -- --root <spec-root>`
 - **Preferred workflow:** `node tools/build.mjs --root <spec-root>` runs validate → registries → wireframe → ASCII injection in one step. Open `generated/wireframe-v2.html` after.
 
+### `screenshot --root <spec-root> --surface <id[,id,...]> [--out-dir <dir>] [--width 1600] [--height 1400]`
+Launch a headless browser and write one PNG per requested surface from `generated/wireframe-v2.html`.
+```bash
+node .agents/skills/ui-spec/tools/wireframe/screenshot.mjs \
+     --root <spec-root> --surface S14,S03,M01
+```
+- Output lands in `<spec-root>/generated/screenshots/<sid>.png` by default; override with `--out-dir`.
+- Browser discovery: `UISPEC_BROWSER` env → msedge.exe → chrome.exe (standard install paths); exits 1 with all paths checked if none found.
+- Success gate: PNG must exist **and** exceed 20 KB (blank shells are smaller).
+- **Use this inside the Visual QA loop** — build → screenshot → read each PNG with vision → judge against the checklist → fix → repeat. See `references/ui-layout-authoring.md §11` for the full loop, representative surface criteria, and checklist.
+
 ### `context <surface-or-flow-id>`
 Output LLM-ready context block for codegen — surface contract + relevant domain rules + connected surfaces. Use before implementing a specific screen/component.
 

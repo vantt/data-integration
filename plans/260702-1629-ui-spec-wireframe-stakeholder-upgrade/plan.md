@@ -31,6 +31,7 @@
 
 - Phase 6c (2026-07-02): pills removed from grid cells; `[...]` tokens in samples render as inline hoverable chips; fixed 300px Contract Inspector panel (hover region/chip → contract; click pins; mapped navigate chips still navigate). New optional `elements:` map in ui-layout (chip text → action id, VR-ELEMENT-REF warn rule); S14 piloted with 4 verified mappings. Screenshot-verified S14/S03.
 - DONE 2026-07-03: `elements:` maps migrated to all 39 remaining surfaces — 149 chip→action mappings total; VR-ELEMENT-REF clean. Skill know-how consolidated into `references/ui-layout-authoring.md` + SKILL.md/METHODOLOGY.md pointers. VR-ASCII-DRIFT rule + build-order fix (ascii before wireframe) landed.
+- DONE 2026-07-03: Visual QA loop encoded into skill — `tools/wireframe/screenshot.mjs` (headless capture, browser discovery, 20KB blank-guard) + §11 in ui-layout-authoring.md (mandatory triggers, 7-item checklist, representative-surface criteria) + SKILL.md command entry. End-to-end proven: agent captured S14/S03/M01 and self-judged against checklist.
 - SPEC GAPS found during elements mapping (sample draws a control, contract lacks the interaction): P02 `Xem thêm →`; S07 `Priority ▼`/`Party 🔍`/`Status ▼` filters; S11 `Kích hoạt`; S15 `← Quay lại` (btn_back); M15 `Hủy` (no btn_cancel); M13 `+ Thêm tùy chọn`. Decide per item: add interaction or drop from sample.
 - Minor polish: long chip (S03 tab_bar) overflows cell edge slightly — wrap/max-width tweak.
 

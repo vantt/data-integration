@@ -276,6 +276,53 @@ Emoji and CJK characters are display-width-2 in monospace terminals. The ASCII g
 
 ---
 
+## 11. Visual QA loop
+
+After any change to the wireframe rendering pipeline — or before declaring wireframe work done — screenshot representative surfaces and read the PNGs with vision. Static assertions (validate, verify-runtime) cannot catch visual regressions; only eyes catch proportion drift, chip overflow, and mojibake.
+
+### When mandatory
+
+Run the Visual QA loop after any of these:
+- Changes under `tools/wireframe/client/`, `styles*.mjs`, or `html-shell.mjs`
+- Bulk spec migrations (new layout model, region rename, ASCII regeneration)
+- Before declaring wireframe implementation work done
+
+### Loop
+
+```
+1. node .agents/skills/ui-spec/tools/build.mjs --root <spec-root>
+2. node .agents/skills/ui-spec/tools/wireframe/screenshot.mjs \
+       --root <spec-root> --surface S14,S03,M01
+3. Read each PNG with your vision — do NOT skip. verify-runtime proves no JS crash;
+   only eyes prove readability and proportion.
+4. Judge against the checklist below.
+5. Fix; repeat from step 1.
+Cap at ~3–4 iterations, then report remaining issues honestly.
+```
+
+### Representative surface set
+
+Pick at minimum:
+- **The most complex grid** — multi-column, row-spanning, floating regions, and named variants all present. Currently S14.
+- **A surface with `children` sub-layouts** — a region renders stacked mini-sections inside its cell. Currently S03.
+- **A modal** — must show close controls and a narrower single-column layout. Currently M01.
+
+Phrase the selection by criteria when spec IDs change across projects; these three criteria must always be covered.
+
+### Visual QA checklist
+
+1. **Proportions** — column widths visibly match the `columns` fr ratios; row-spanning regions actually span the declared rows.
+2. **Sample content is dominant** — the `samples` text is the main text in each cell; the region label is small and muted above it.
+3. **Airy layout** — visible gaps between cells, cell padding present, no content overlap; long chips must not overflow cell edges.
+4. **Chips render as interactive elements** — mapped chips are visually distinct from unmapped ones; no raw contract text (action IDs, `trigger → action` strings) appears inside grid cells — that content belongs to the Inspector panel and the Interactions tab, not the Layout grid.
+5. **Inspector panel** — visible and not cramping the grid; no horizontal page scroll at the target viewport width.
+6. **Floating and variant controls** — floating toggle buttons and the variant switcher are present whenever the layout model declares them.
+7. **Vietnamese diacritics and emoji** — render cleanly with no tofu boxes or mojibake.
+
+> **Note:** hover and pin states cannot be captured in a static screenshot — assert those via `verify-runtime.mjs` jsdom sections instead.
+
+---
+
 ## 10. Schema key quick-reference
 
 | Key | Type | Required | Description |
