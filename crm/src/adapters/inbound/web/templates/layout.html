@@ -22,6 +22,7 @@
   <!-- beRich alternate theme (jade+gold jewel palette; activates via data-theme="berich|berich-dark") -->
   <link rel="stylesheet" href="/static/berich-theme.css">
   <script src="/static/htmx.min.js"></script>
+  <script src="/static/marked.min.js"></script>
   {% block head_extra %}{% endblock %}
 </head>
 <body class="app">
@@ -466,6 +467,103 @@
 
   </div><!-- /.app-body -->
 
+<script>
+/* ── Markdown editor & viewer ── */
+(function () {
+  if (typeof marked === 'undefined') return;
+  marked.use({ breaks: true, gfm: true });
+
+  /* Convert a contenteditable DOM subtree to Markdown */
+  function htmlToMd(el) {
+    function w(node) {
+      if (node.nodeType === 3) return node.textContent;
+      if (node.nodeType !== 1) return '';
+      var t = node.tagName.toLowerCase();
+      var c = [].slice.call(node.childNodes).map(w).join('');
+      if (t === 'b' || t === 'strong') return c.trim() ? '**' + c + '**' : c;
+      if (t === 'i' || t === 'em') return c.trim() ? '*' + c + '*' : c;
+      if (t === 'h1') return '# ' + c.trim() + '\n\n';
+      if (t === 'h2') return '## ' + c.trim() + '\n\n';
+      if (t === 'h3') return '### ' + c.trim() + '\n\n';
+      if (t === 'br') return '\n';
+      if (t === 'p') return c + '\n\n';
+      if (t === 'div') { var s = c.trim(); return s ? s + '\n' : '\n'; }
+      if (t === 'li') return c;
+      if (t === 'ul') {
+        return [].slice.call(node.children).map(function (li) {
+          return '- ' + w(li).trim();
+        }).join('\n') + '\n\n';
+      }
+      if (t === 'ol') {
+        return [].slice.call(node.children).map(function (li, i) {
+          return (i + 1) + '. ' + w(li).trim();
+        }).join('\n') + '\n\n';
+      }
+      if (t === 'code') return '`' + node.textContent + '`';
+      if (t === 'a') return '[' + c + '](' + (node.getAttribute('href') || '') + ')';
+      return c;
+    }
+    return w(el).replace(/\n{3,}/g, '\n\n').trim();
+  }
+
+  /* Sync contenteditable → hidden textarea */
+  function mdWysiwygSync(editor) {
+    var body = editor.querySelector('.md-wysiwyg');
+    var hidden = editor.querySelector('.md-wysiwyg__hidden');
+    if (body && hidden) hidden.value = htmlToMd(body);
+  }
+
+  /* Execute a formatting command on the active WYSIWYG editor */
+  window.wysiwygCmd = function (btn, cmd) {
+    var editor = btn.closest('.md-editor');
+    var body = editor.querySelector('.md-wysiwyg');
+    body.focus();
+    if (cmd === 'h2') document.execCommand('formatBlock', false, 'H2');
+    else if (cmd === 'h3') document.execCommand('formatBlock', false, 'H3');
+    else if (cmd === 'ul') document.execCommand('insertUnorderedList');
+    else if (cmd === 'ol') document.execCommand('insertOrderedList');
+    else if (cmd === 'code') {
+      var sel = window.getSelection();
+      if (sel && sel.rangeCount && !sel.isCollapsed) {
+        var range = sel.getRangeAt(0);
+        var code = document.createElement('code');
+        try { range.surroundContents(code); }
+        catch (e) { document.execCommand('insertHTML', false, '<code>' + sel.toString() + '</code>'); }
+      }
+    }
+    else document.execCommand(cmd); /* bold, italic */
+    mdWysiwygSync(editor);
+  };
+
+  /* Initialize all .md-wysiwyg editors in (root) */
+  function mdWysiwygInit(root) {
+    (root || document).querySelectorAll('.md-wysiwyg').forEach(function (body) {
+      if (body.dataset.wysInit) return;
+      body.dataset.wysInit = '1';
+      var md = body.getAttribute('data-md') || '';
+      if (md) body.innerHTML = marked.parse(md);
+      var editor = body.closest('.md-editor');
+      body.addEventListener('input', function () { mdWysiwygSync(editor); });
+      body.addEventListener('keydown', function (ev) {
+        if (!(ev.ctrlKey || ev.metaKey)) return;
+        if (ev.key === 'b') { ev.preventDefault(); document.execCommand('bold'); mdWysiwygSync(editor); }
+        else if (ev.key === 'i') { ev.preventDefault(); document.execCommand('italic'); mdWysiwygSync(editor); }
+      });
+      mdWysiwygSync(editor);
+    });
+  }
+
+  /* Render all .md-view[data-md] elements */
+  window.mdRenderViews = function (root) {
+    (root || document).querySelectorAll('.md-view[data-md]').forEach(function (el) {
+      el.innerHTML = marked.parse(el.getAttribute('data-md') || '');
+    });
+  };
+
+  document.addEventListener('DOMContentLoaded', function () { window.mdRenderViews(); mdWysiwygInit(); });
+  document.addEventListener('htmx:afterSwap', function () { window.mdRenderViews(); mdWysiwygInit(); });
+}());
+</script>
 <script>
 /* [data-tooltip] — JS tooltip appended to <body> to bypass overflow:hidden containers.
    Event-delegated so HTMX-loaded fragments work without re-init. */
