@@ -1,6 +1,6 @@
 // chip-audit.test.mjs — self-contained node tests for chip-audit.mjs.
 // No test framework. Uses assert + process.exit(1) on first failure.
-// Run: node .agents/skills/ui-spec/tools/wireframe/chip-audit.test.mjs
+// Run: node .skills/ui-spec/tools/wireframe/chip-audit.test.mjs
 
 import assert from "node:assert/strict";
 import { auditChips, renderChipAuditMd } from "./chip-audit.mjs";

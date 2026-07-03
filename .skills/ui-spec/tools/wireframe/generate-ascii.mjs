@@ -1,7 +1,7 @@
 // wireframe/generate-ascii.mjs
 // Deterministic ASCII generator from ui-layout model.
 // Exports: generateAscii(model, opts?), injectAscii(markdown, asciiBlock)
-// CLI: node .agents/skills/ui-spec/tools/wireframe/generate-ascii.mjs --root <spec-root> [--surface SXX]
+// CLI: node .skills/ui-spec/tools/wireframe/generate-ascii.mjs --root <spec-root> [--surface SXX]
 
 import { readFileSync, writeFileSync } from "node:fs";
 import { basename } from "node:path";
@@ -357,7 +357,7 @@ export function injectAscii(markdown, asciiBlock) {
 }
 
 // ─── CLI entry point ──────────────────────────────────────────────────────────
-// Usage: node .agents/skills/ui-spec/tools/wireframe/generate-ascii.mjs
+// Usage: node .skills/ui-spec/tools/wireframe/generate-ascii.mjs
 //          --root <spec-root> [--surface S14]
 
 const isCLI =

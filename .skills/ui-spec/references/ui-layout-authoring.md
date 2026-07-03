@@ -165,9 +165,9 @@ The two lists must agree exactly. Keep them in sync:
 
 ```
 1. Edit the yaml ui-layout fence (and frontmatter regions[] if regions changed)
-2. node .agents/skills/ui-spec/tools/validate.mjs --root <spec-root>
+2. node .skills/ui-spec/tools/validate.mjs --root <spec-root>
    Fix all errors (VR-LAYOUT-UNKNOWN, VR-LAYOUT-RECT); address warnings.
-3. node .agents/skills/ui-spec/tools/build.mjs --root <spec-root>
+3. node .skills/ui-spec/tools/build.mjs --root <spec-root>
    Build order: parse contracts → surface-registry → navigation-graph →
    action-registry → coverage-report → ASCII injection (writes .md) → wireframe-v2.html
    All idempotent: same model → byte-identical output.
@@ -176,8 +176,8 @@ The two lists must agree exactly. Keep them in sync:
 
 Combined one-liner:
 ```bash
-node .agents/skills/ui-spec/tools/validate.mjs --root crm/docs/ui-spec && \
-  node .agents/skills/ui-spec/tools/build.mjs --root crm/docs/ui-spec
+node .skills/ui-spec/tools/validate.mjs --root crm/docs/ui-spec && \
+  node .skills/ui-spec/tools/build.mjs --root crm/docs/ui-spec
 ```
 
 **ASCII injection is part of `build.mjs`** — no separate step. The generator writes the file only when content differs (idempotent at file level). Markers `<!-- ui-layout:ascii:start -->` and `<!-- ui-layout:ascii:end -->` are placed immediately after the fence on the first build; subsequent builds replace content between existing markers.
@@ -290,8 +290,8 @@ Run the Visual QA loop after any of these:
 ### Loop
 
 ```
-1. node .agents/skills/ui-spec/tools/build.mjs --root <spec-root>
-2. node .agents/skills/ui-spec/tools/wireframe/screenshot.mjs \
+1. node .skills/ui-spec/tools/build.mjs --root <spec-root>
+2. node .skills/ui-spec/tools/wireframe/screenshot.mjs \
        --root <spec-root> --surface S14,S03,M01
 3. Read each PNG with your vision — do NOT skip. verify-runtime proves no JS crash;
    only eyes prove readability and proportion.

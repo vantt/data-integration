@@ -19,10 +19,10 @@ function parseRootArg() {
   return null;
 }
 const rootArg = parseRootArg();
-// __dir = .agents/skills/ui-spec/tools/wireframe → 5 levels up to git root (legacy fallback)
+// __dir = .skills/ui-spec/tools/wireframe → 4 levels up to git root (legacy fallback)
 const HTML_PATH = rootArg
   ? join(rootArg, "generated", "wireframe-v2.html")
-  : resolve(__dir, "../../../../../frontend/docs/ui-spec/generated/wireframe-v2.html");
+  : resolve(__dir, "../../../../frontend/docs/ui-spec/generated/wireframe-v2.html");
 
 const errors = [];
 function fail(msg) { errors.push(msg); }

@@ -12,8 +12,8 @@ import { isDeepStrictEqual } from "node:util";
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const validateMjs   = resolve(__dirname, "..", "validate.mjs");
 const fixtureRoot   = join(__dirname, "fixture-spec");
-// repo root is 5 levels above test/ (.agents/skills/ui-spec/tools/test → repo root)
-const repoRoot      = resolve(__dirname, "..", "..", "..", "..", "..");
+// repo root is 4 levels above test/ (.skills/ui-spec/tools/test → repo root)
+const repoRoot      = resolve(__dirname, "..", "..", "..", "..");
 const crmSpecRoot   = join(repoRoot, "crm", "docs", "ui-spec");
 
 // ---- helpers ----

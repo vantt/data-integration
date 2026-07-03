@@ -1,6 +1,6 @@
 // extract-layout.test.mjs — self-contained node test for extract-layout.mjs.
 // No test framework. Uses assert + process.exit(1) on first failure.
-// Run: node .agents/skills/ui-spec/tools/wireframe/extract-layout.test.mjs
+// Run: node .skills/ui-spec/tools/wireframe/extract-layout.test.mjs
 
 import assert from "node:assert/strict";
 import { extractLayout, layoutAreaNames, nonRectRegions } from "./extract-layout.mjs";

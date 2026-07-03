@@ -203,15 +203,15 @@ Source of truth = `.md` files. `generated/` is derived output — run `build`, d
 
 ```bash
 # From repo root (canonical — no vendor copy needed):
-npm install --prefix .agents/skills/ui-spec/tools   # one-time
-node .agents/skills/ui-spec/tools/validate.mjs --root crm/docs/ui-spec
-node .agents/skills/ui-spec/tools/build.mjs   --root crm/docs/ui-spec
+npm install --prefix .skills/ui-spec/tools   # one-time
+node .skills/ui-spec/tools/validate.mjs --root crm/docs/ui-spec
+node .skills/ui-spec/tools/build.mjs   --root crm/docs/ui-spec
 # combined:
-node .agents/skills/ui-spec/tools/validate.mjs --root crm/docs/ui-spec && \
-  node .agents/skills/ui-spec/tools/build.mjs --root crm/docs/ui-spec
+node .skills/ui-spec/tools/validate.mjs --root crm/docs/ui-spec && \
+  node .skills/ui-spec/tools/build.mjs --root crm/docs/ui-spec
 ```
 
-`init` scaffolds the spec directory without copying tools. Pass `--vendor` only when the spec is exported to a repo with no access to `.agents/skills/ui-spec/`.
+`init` scaffolds the spec directory without copying tools. Pass `--vendor` only when the spec is exported to a repo with no access to `.skills/ui-spec/`.
 
 ---
 

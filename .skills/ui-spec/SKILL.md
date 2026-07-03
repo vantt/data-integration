@@ -10,7 +10,7 @@ metadata:
 
 # ui-spec skill
 
-> **Source of truth:** this directory (`.agents/skills/ui-spec/`) owns all ui-spec instructions, references, templates, and compiler tools — edit here, nowhere else. `.claude/skills/ui-spec/` is a thin discovery wrapper for Claude Code. Each spec root (e.g. `crm/docs/ui-spec/`) carries only `schema/` — tool invocations are centralized (see Commands section).
+> **Source of truth:** this directory (`.skills/ui-spec/`) owns all ui-spec instructions, references, templates, and compiler tools — edit here, nowhere else. `.claude/skills/ui-spec/` is a thin discovery wrapper for Claude Code. Each spec root (e.g. `crm/docs/ui-spec/`) carries only `schema/` — tool invocations are centralized (see Commands section).
 
 > Core insight: **Prose for humans, structured YAML contract for machines, compiler as trust gate.**
 > Each surface file = free-form Markdown + one fenced `yaml {project}-contract` block. Compiler ignores prose; only parses frontmatter + contract block. Drift is impossible by construction.
@@ -42,7 +42,7 @@ docs/ui-spec/
 └── generated/                # build output (gitignore-able)
 ```
 
-Default: does **not** copy tools. Use `--vendor` flag only when exporting a spec to a repo that has no access to `.agents/skills/ui-spec/tools/`.
+Default: does **not** copy tools. Use `--vendor` flag only when exporting a spec to a repo that has no access to `.skills/ui-spec/tools/`.
 
 ### `check [surface-id]`
 Run `validate` + `build`. If `surface-id` provided, validate that single surface in context.
@@ -89,7 +89,7 @@ Launch wireframe v2 renderer — interactions laid out inside their region boxes
 ### `screenshot --root <spec-root> --surface <id[,id,...]> [--out-dir <dir>] [--width 1600] [--height 1400]`
 Launch a headless browser and write one PNG per requested surface from `generated/wireframe-v2.html`.
 ```bash
-node .agents/skills/ui-spec/tools/wireframe/screenshot.mjs \
+node .skills/ui-spec/tools/wireframe/screenshot.mjs \
      --root <spec-root> --surface S14,S03,M01
 ```
 - Output lands in `<spec-root>/generated/screenshots/<sid>.png` by default; override with `--out-dir`.
@@ -283,8 +283,8 @@ After parallel pass, run `validate` to catch any remaining cross-agent wiring ga
 
 Three modes an LLM agent will encounter. Run validate + build (from repo root) as the final step of every mode:
 ```bash
-node .agents/skills/ui-spec/tools/validate.mjs --root <spec-root>
-node .agents/skills/ui-spec/tools/build.mjs --root <spec-root>
+node .skills/ui-spec/tools/validate.mjs --root <spec-root>
+node .skills/ui-spec/tools/build.mjs --root <spec-root>
 ```
 
 ---
@@ -309,8 +309,8 @@ Ordered steps — do NOT skip step order; cross-file consistency depends on it.
 5. **Wire flows**: author `flows/Fxx-*.md` referencing real action IDs from Pass 2.
 6. **Run validate + build** from repo root. Fix every error:
    ```bash
-   node .agents/skills/ui-spec/tools/validate.mjs --root <spec-root>
-   node .agents/skills/ui-spec/tools/build.mjs --root <spec-root>
+   node .skills/ui-spec/tools/validate.mjs --root <spec-root>
+   node .skills/ui-spec/tools/build.mjs --root <spec-root>
    ```
    Where `<spec-root>` = path from repo root (e.g. `crm/docs/ui-spec`). Errors:
    - Dangling targets → VR-TARGET
@@ -318,7 +318,7 @@ Ordered steps — do NOT skip step order; cross-file consistency depends on it.
    - Listen-orphans → VR-LISTEN-ORPHAN
    - Rule drift → VR-RULE-DRIFT
    - Modal missing exit → VR-MODAL-EXIT-001
-7. **Eyeball**: `node .agents/skills/ui-spec/tools/interpret.mjs --root <spec-root>` (v1 wireframe) or `node .agents/skills/ui-spec/tools/interpret-wireframe.mjs --root <spec-root>` (v2, region-box layout) to confirm navigation graph makes sense.
+7. **Eyeball**: `node .skills/ui-spec/tools/interpret.mjs --root <spec-root>` (v1 wireframe) or `node .skills/ui-spec/tools/interpret-wireframe.mjs --root <spec-root>` (v2, region-box layout) to confirm navigation graph makes sense.
 
 > **Multi-agent note:** for > 40 surfaces split by *domain* (one screen + its hosted components + its modals per agent). Never split by surface type. After parallel pass, run validate to catch cross-agent wiring gaps. See "Multi-agent orchestration" section.
 
@@ -350,7 +350,7 @@ Ordered steps — do NOT skip step order; cross-file consistency depends on it.
 | Rename/remove surface from `hosts:` | Update dependent panels'/components' `hosted_by:` frontmatter |
 | Split surface into two new IDs | Old ID must be replaced everywhere; update `00-overview.md`; re-wire flows |
 
-> **Rename tool:** for a pure rename (surface ID, action ID, or event name) run `node .agents/skills/ui-spec/tools/rename.mjs --root <spec-root> <old> <new>` (dry-run; add `--apply` to write) — it word-boundary-replaces every reference across the spec (including `A-<id>-*` action prefixes) and renames the file. Then validate + build.
+> **Rename tool:** for a pure rename (surface ID, action ID, or event name) run `node .skills/ui-spec/tools/rename.mjs --root <spec-root> <old> <new>` (dry-run; add `--apply` to write) — it word-boundary-replaces every reference across the spec (including `A-<id>-*` action prefixes) and renames the file. Then validate + build.
 
 **d. Validate + build** (from repo root) — the validator now catches: VR-TARGET (dangling navigate), VR-HOSTS (bad host ref), VR-LISTEN-ORPHAN (listen to non-existent event), VR-RULE-DRIFT (rules mismatch). Fix every **error** before done; warns are advisory.
 

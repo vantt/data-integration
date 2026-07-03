@@ -8,11 +8,11 @@ import { fileURLToPath } from "node:url";
 import { dirname, resolve, sep } from "node:path";
 
 // Repo root: env when the harness provides it, else derived from this file's
-// location (.agents/skills/ui-spec/tools/ -> four levels up).
+// location (.skills/ui-spec/tools/ -> three levels up).
 const TOOLS_DIR = dirname(fileURLToPath(import.meta.url));
 const REPO_ROOT = process.env.CLAUDE_PROJECT_DIR
   ? resolve(process.env.CLAUDE_PROJECT_DIR)
-  : resolve(TOOLS_DIR, "..", "..", "..", "..");
+  : resolve(TOOLS_DIR, "..", "..", "..");
 
 const SPEC_ROOT = resolve(REPO_ROOT, "crm", "docs", "ui-spec");
 

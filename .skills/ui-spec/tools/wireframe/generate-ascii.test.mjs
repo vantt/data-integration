@@ -1,5 +1,5 @@
 // generate-ascii.test.mjs — unit tests for generate-ascii.mjs
-// No framework. Run: node .agents/skills/ui-spec/tools/wireframe/generate-ascii.test.mjs
+// No framework. Run: node .skills/ui-spec/tools/wireframe/generate-ascii.test.mjs
 
 import assert from "node:assert/strict";
 import { generateAscii, injectAscii, computeColWidths } from "./generate-ascii.mjs";

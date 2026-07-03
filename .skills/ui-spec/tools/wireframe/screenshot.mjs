@@ -154,7 +154,7 @@ if (args.surfaces.length === 0) {
 const htmlPath = join(args.root, "generated", "wireframe-v2.html");
 if (!existsSync(htmlPath)) {
   console.error(`ERROR: wireframe-v2.html not found at:\n  ${htmlPath}`);
-  console.error("  Run build first: node .agents/skills/ui-spec/tools/build.mjs --root <spec-root>");
+  console.error("  Run build first: node .skills/ui-spec/tools/build.mjs --root <spec-root>");
   process.exit(1);
 }
 
