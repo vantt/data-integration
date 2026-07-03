@@ -215,9 +215,17 @@ docker exec evidence cat /app/.evidence/template/static/data/manifest.json
 
 ## Existing Dashboards
 
-- `evidence/pages/ceo-weekly-pulse/index.md` — Revenue & Target
-- `evidence/pages/ceo-weekly-pulse/channels.md` — Channel analysis
-- `evidence/pages/ceo-weekly-pulse/customers.md` — Customers & Alerts
+- `evidence/pages/ceo-weekly-pulse/index.md` — Revenue, channels, customers, alerts (single page, `<Tabs>` for sections)
+- `evidence/pages/finance-cashflow/index.md` — Cash balance, thu/chi, cashflow_line breakdown (single page, `<Tabs>` for sections)
+
+## Blueprints
+
+Evidence dashboards with a domain playbook behind them get a blueprint doc
+in `docs/analytics-handbook/blueprints/evidence/` (same chain as Metabase
+and Rill: domain → semantic → playbook → blueprint). See
+`docs/analytics-handbook/blueprints/evidence/README.md` for the format —
+unlike Metabase, the blueprint body *is* the deployable page content since
+Evidence has no separate deploy script.
 
 ## Limitations vs Metabase
 

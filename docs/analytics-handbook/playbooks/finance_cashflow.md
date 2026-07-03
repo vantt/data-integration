@@ -8,11 +8,12 @@
 
 - **Audience:** CEO, CFO, Kế toán trưởng
 - **Goal:** Theo dõi dòng tiền vận hành thực tế hàng tháng — tổng thu, tổng chi, số dư quỹ, và breakdown chi tiết theo nhóm nghiệp vụ (cashflow_line). Phương pháp: trực tiếp (thu-chi + số dư quỹ). Không phải báo cáo lưu chuyển tiền tệ gián tiếp theo TT200.
-- **Tool:** metabase
+- **Tool:** metabase (primary), evidence (offline/static mirror)
 - **Collection:** `Finance`
 - **Cadence:** Monthly review (đọc sau khi tháng kế toán đóng)
 - **Domain Reference:** [domains/finance.md — Context: Cashflow (Dòng tiền vận hành)](../domains/finance.md#context-cashflow-dòng-tiền-vận-hành)
-- **Blueprint:** [blueprints/metabase/finance_cashflow.md](../blueprints/metabase/finance_cashflow.md) *(to be created — phase-03)*
+- **Blueprint (Metabase):** [blueprints/metabase/finance_cashflow.md](../blueprints/metabase/finance_cashflow.md)
+- **Blueprint (Evidence):** [blueprints/evidence/finance_cashflow.md](../blueprints/evidence/finance_cashflow.md) — same metrics/recon anchor; no interactive filter, waterfall/combo/pivot approximated (see blueprint's Deviations table)
 
 ## Data Lineage
 
