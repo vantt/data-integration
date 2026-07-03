@@ -19,6 +19,37 @@ Dropdown từ `crm_app_user` list. Sau khi lưu, worklist của NV được gán
 
 ## Layout
 
+```yaml ui-layout
+columns: [1fr]
+areas:
+  - [header]
+  - [body]
+  - [actions]
+samples:
+  header: "Gán phụ trách: Nguyễn Văn A [✕]"
+  body: "Phụ trách hiện tại: NV A · Chọn NV mới: [NV A ▼] · ○ NV A (hiện tại) ○ NV B ○ CSKH B ○ Manager C"
+  actions: "[Hủy]  [Lưu]"
+elements:
+  "✕": A-M04-001
+  "Hủy": A-M04-002
+  "Lưu": A-M04-003
+```
+
+<!-- ui-layout:ascii:start -->
+```
+┌────────────────────────────────────────────────────────────────────────────┐
+│HEADER                                                                      │
+│· Gán phụ trách: Nguyễn Văn A [x]                                           │
+├────────────────────────────────────────────────────────────────────────────┤
+│BODY                                                                        │
+│· Phụ trách hiện tại: NV A · Chọn NV mới: [NV A v] · ? NV A (hiện tại) ? NV…│
+├────────────────────────────────────────────────────────────────────────────┤
+│ACTIONS                                                                     │
+│· [Hủy]  [Lưu]                                                              │
+└────────────────────────────────────────────────────────────────────────────┘
+```
+<!-- ui-layout:ascii:end -->
+
 ```
 ┌ MODAL — Gán phụ trách ────────────────────────────┐
 │  Gán phụ trách: Nguyễn Văn A               [✕]   │

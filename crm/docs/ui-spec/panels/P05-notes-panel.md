@@ -26,6 +26,39 @@ Notes có type để surface đúng chỗ:
 
 ## Layout
 
+```yaml ui-layout
+areas:
+  - [toolbar]
+  - [pinned_section]
+  - [notes_list]
+samples:
+  toolbar: "[Tất cả] [★ Ưu tiên] [⚠ Cảnh báo] [📞 Liên lạc] [Campaign]  [+ Thêm ghi chú]"
+  pinned_section: "★ [warning] NV A • 15/06/2026 · Hoàn hàng 3 lần. Xác nhận kỹ trước khi ship."
+  notes_list: "[preference] NV A • 13/06/2026 · Da nhạy cảm, thích dòng gentle. Không dùng retinol."
+elements:
+  "Tất cả": A-P05-004
+  "★ Ưu tiên": A-P05-004
+  "⚠ Cảnh báo": A-P05-004
+  "📞 Liên lạc": A-P05-004
+  "Campaign": A-P05-004
+  "+ Thêm ghi chú": A-P05-001
+```
+
+<!-- ui-layout:ascii:start -->
+```
+┌────────────────────────────────────────────────────────────────────────────┐
+│TOOLBAR                                                                     │
+│· [Tất cả] [* Ưu tiên] [! Cảnh báo] [> Liên lạc] [Campaign]  [+ Thêm ghi ch…│
+├────────────────────────────────────────────────────────────────────────────┤
+│PINNED_SECTION                                                              │
+│· * [warning] NV A • 15/06/2026 · Hoàn hàng 3 lần. Xác nhận kỹ trước khi sh…│
+├────────────────────────────────────────────────────────────────────────────┤
+│NOTES_LIST                                                                  │
+│· [preference] NV A • 13/06/2026 · Da nhạy cảm, thích dòng gentle. Không dù…│
+└────────────────────────────────────────────────────────────────────────────┘
+```
+<!-- ui-layout:ascii:end -->
+
 ```
 ┌ TOOLBAR ──────────────────────────────────────────────────────────┐
 │  [Tất cả] [★ Ưu tiên] [⚠ Cảnh báo] [📞 Liên lạc] [Campaign]     │

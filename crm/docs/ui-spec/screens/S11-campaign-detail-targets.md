@@ -24,6 +24,41 @@ Conversion tracker: order_code mới trong `wh_order_hdr` sau `campaign.schedule
 
 ## Layout
 
+```yaml ui-layout
+areas:
+  - [topbar]
+  - [summary_bar]
+  - [target_list]
+  - [conversion_stats]
+samples:
+  topbar: "[← Chiến dịch]  Win-back Q3  [Sửa] [Kích hoạt]"
+  summary_bar: "Targets: 87 | Sent: 43 | Converted: 13 | Rate: 14.9% | Revenue attributed: 28.500.000đ"
+  target_list: "Nguyễn V. A · converted · NV A · ORD-20060901  |  Trần T. B · queued · NV B · —  [Filter: status ▼]"
+  conversion_stats: "(conversion rate + attributed revenue tracker; updates via SSE campaign.target.converted)"
+elements:
+  "← Chiến dịch": A-S11-001
+  "Sửa": A-S11-007
+  "Filter: status ▼": A-S11-005
+```
+
+<!-- ui-layout:ascii:start -->
+```
+┌────────────────────────────────────────────────────────────────────────────┐
+│TOPBAR                                                                      │
+│· [← Chiến dịch]  Win-back Q3  [Sửa] [Kích hoạt]                            │
+├────────────────────────────────────────────────────────────────────────────┤
+│SUMMARY_BAR                                                                 │
+│· Targets: 87 | Sent: 43 | Converted: 13 | Rate: 14.9% | Revenue attributed…│
+├────────────────────────────────────────────────────────────────────────────┤
+│TARGET_LIST                                                                 │
+│· Nguyễn V. A · converted · NV A · ORD-20060901  |  Trần T. B · queued · NV…│
+├────────────────────────────────────────────────────────────────────────────┤
+│CONVERSION_STATS                                                            │
+│· (conversion rate + attributed revenue tracker; updates via SSE campaign.t…│
+└────────────────────────────────────────────────────────────────────────────┘
+```
+<!-- ui-layout:ascii:end -->
+
 ```
 ┌─ C01 SIDEBAR ─┬──────────────────────────────────────────────────────────────┐
 │               │  TOPBAR: [← Chiến dịch]  Win-back Q3  [Sửa] [Kích hoạt]    │

@@ -23,6 +23,32 @@ trong campaign nào).
 
 ## Layout
 
+```yaml ui-layout
+columns: [1fr, 4fr]
+areas:
+  - [sidebar, topbar]
+  - [sidebar, segment_list]
+samples:
+  sidebar: "(C01 global nav)"
+  topbar: "Segments  [+ Tạo segment]  [Search tên...]"
+  segment_list: "Win-back GOLD Q3 · dynamic · 87 thành viên · hôm nay  |  VIP tay - tháng 6 · static · 12 · 12/06"
+elements:
+  "+ Tạo segment": A-S08-001
+  "Search tên...": A-S08-004
+```
+
+<!-- ui-layout:ascii:start -->
+```
+┌───────────────┬────────────────────────────────────────────────────────────┐
+│SIDEBAR        │TOPBAR                                                      │
+│· (C01 global …│· Segments  [+ Tạo segment]  [Search tên...]                │
+│               ├────────────────────────────────────────────────────────────┤
+│               │SEGMENT_LIST                                                │
+│               │· Win-back GOLD Q3 · dynamic · 87 thành viên · hôm nay  |  …│
+└───────────────┴────────────────────────────────────────────────────────────┘
+```
+<!-- ui-layout:ascii:end -->
+
 ```
 ┌─ C01 SIDEBAR ─┬──────────────────────────────────────────────────────────────┐
 │               │  TOPBAR: Segments   [+ Tạo segment]   [Search tên...]        │

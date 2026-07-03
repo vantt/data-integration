@@ -22,6 +22,27 @@ NV có thể ghi `related_order_code` khi log activity từ panel này.
 
 ## Layout
 
+```yaml ui-layout
+areas:
+  - [toolbar]
+  - [order_list]
+samples:
+  toolbar: "10 đơn gần nhất  Cache: hôm nay 08:00 ICT ✓  [Xem thêm →]"
+  order_list: "ORD-20060812  12/06/2026  1.250.000đ  completed"
+```
+
+<!-- ui-layout:ascii:start -->
+```
+┌────────────────────────────────────────────────────────────────────────────┐
+│TOOLBAR                                                                     │
+│· 10 đơn gần nhất  Cache: hôm nay 08:00 ICT v  [Xem thêm →]                 │
+├────────────────────────────────────────────────────────────────────────────┤
+│ORDER_LIST                                                                  │
+│· ORD-20060812  12/06/2026  1.250.000đ  completed                           │
+└────────────────────────────────────────────────────────────────────────────┘
+```
+<!-- ui-layout:ascii:end -->
+
 ```
 ┌ TOOLBAR ───────────────────────────────────────────────────────────┐
 │  10 đơn gần nhất    Cache: hôm nay 08:00 ICT ✓   [Xem thêm →]   │

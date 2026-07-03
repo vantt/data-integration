@@ -23,6 +23,34 @@ NV có thể tạo task mới, chỉnh sửa, đánh dấu done trực tiếp. T
 
 ## Layout
 
+```yaml ui-layout
+columns: [1fr, 4fr]
+areas:
+  - [sidebar, topbar]
+  - [sidebar, board]
+samples:
+  sidebar: "(C01 global nav)"
+  topbar: "Tasks  [+ Tạo task]  [Assignee ▼][Priority ▼]  Filter: [Party 🔍] [Campaign ▼] [Status ▼]  [List|Board]"
+  board: "OPEN: [AUTO] CALL_NOW Nguyễn V. A Due: hôm nay  |  DOING: Follow-up A Due: 15/06  |  DONE: Gọi T. B ✓ 12/06"
+elements:
+  "+ Tạo task": A-S07-001
+  "Assignee ▼": A-S07-005
+  "Campaign ▼": A-S07-006
+  "List|Board": A-S07-007
+```
+
+<!-- ui-layout:ascii:start -->
+```
+┌───────────────┬────────────────────────────────────────────────────────────┐
+│SIDEBAR        │TOPBAR                                                      │
+│· (C01 global …│· Tasks  [+ Tạo task]  [Assignee v][Priority v]  Filter: [P…│
+│               ├────────────────────────────────────────────────────────────┤
+│               │BOARD                                                       │
+│               │· OPEN: [AUTO] CALL_NOW Nguyễn V. A Due: hôm nay  |  DOING:…│
+└───────────────┴────────────────────────────────────────────────────────────┘
+```
+<!-- ui-layout:ascii:end -->
+
 ```
 ┌─ C01 SIDEBAR ─┬─────────────────────────────────────────────────────────────┐
 │               │  TOPBAR: Tasks   [+ Tạo task]  [Assignee ▼][Priority ▼]    │

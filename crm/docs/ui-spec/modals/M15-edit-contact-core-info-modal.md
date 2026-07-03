@@ -21,6 +21,48 @@ Chỉnh sửa thông tin cốt lõi của party: kênh liên lạc (contacts), �
 3 tabs: Liên lạc / Địa chỉ / Thông tin cơ bản.
 Mở từ S03 sidebar với tab được preselect theo button clicked (A-S03-013/014/015).
 
+## Layout
+
+```yaml ui-layout
+columns: [1fr]
+areas:
+  - [header]
+  - [tab_bar]
+  - [body]
+  - [actions]
+samples:
+  header: "Nguyễn Văn A [✕]"
+  tab_bar: "[Liên lạc]  [Địa chỉ]  [Thông tin cơ bản]"
+  body: "Danh sách kênh: 📞 Số chính +84901234567 ● active [✎][✗] · 💬 Zalo zalo_handle_123 ● active [✎][✗] · 📘 Facebook fb_handle ○ invalid [✎][✗] · [+ Thêm kênh liên lạc]"
+  actions: "[Hủy]  [Lưu]"
+elements:
+  "✕": A-M15-001
+  "Liên lạc": A-M15-002
+  "Địa chỉ": A-M15-003
+  "Thông tin cơ bản": A-M15-004
+  "✗": A-M15-006
+  "+ Thêm kênh liên lạc": A-M15-005
+  "Lưu": A-M15-007
+```
+
+<!-- ui-layout:ascii:start -->
+```
+┌────────────────────────────────────────────────────────────────────────────┐
+│HEADER                                                                      │
+│· Nguyễn Văn A [x]                                                          │
+├────────────────────────────────────────────────────────────────────────────┤
+│TAB_BAR                                                                     │
+│· [Liên lạc]  [Địa chỉ]  [Thông tin cơ bản]                                 │
+├────────────────────────────────────────────────────────────────────────────┤
+│BODY                                                                        │
+│· Danh sách kênh: > Số chính +84901234567 o active [?][x] · ~ Zalo zalo_han…│
+├────────────────────────────────────────────────────────────────────────────┤
+│ACTIONS                                                                     │
+│· [Hủy]  [Lưu]                                                              │
+└────────────────────────────────────────────────────────────────────────────┘
+```
+<!-- ui-layout:ascii:end -->
+
 ## Layout — Tab: Liên lạc
 
 ```

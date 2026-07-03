@@ -38,6 +38,122 @@ Panel nạp (tất cả **cache SQLite, rẻ**): `party` (Party360), `identities
 
 ## Layout
 
+```yaml ui-layout
+columns: [3fr, 2fr]
+areas:
+  - [identity_bar, identity_bar]
+  - [alert_row, alert_row]
+  - [talk_track, reason_to_call]
+  - [strategy_summary, reason_to_call]
+  - [talking_points, snapshot]
+  - [objection_handling, collect]
+  - [guardrails, collect]
+  - [trust_footer, trust_footer]
+  - [outcome_bar, outcome_bar]
+floating:
+  - region: stop_banner
+    when: "recommended == false"
+    replaces: [talk_track, strategy_summary, talking_points, objection_handling,
+               guardrails, reason_to_call, snapshot, collect]
+variants:
+  full_screen:
+    prepend_rows:
+      - [topbar, topbar]
+samples:
+  topbar: "[← Worklist]  #9/31  [Khách kế →]"
+  identity_bar: "Hoàng Thức [GOLD][active] · Miền Trung · ☎0983***35 [📞Gọi][💬Zalo] [360]"
+  alert_row: "[sắp churn 11d] [cancel 32%] [SĐT phụ invalid] [liên hệ 3 ngày trước]"
+  talk_track: "\"Dạ em chào anh Thức…\" [📋Copy]"
+  strategy_summary: "⏱ Gọi 1-2 ngày, giờ hành chính"
+  talking_points: "2/3 · ☑ Nhắc chu kỳ ☑ Ưu đãi ☐ Combo · Gợi thêm: [Omega3] [Vitamin D]"
+  objection_handling: "▸ \"Chưa cần mua\" ▸ \"Giá sao?\" [🔍 khách vừa nói gì?]"
+  guardrails: "⛔ không giảm sâu · không hứa giao nhanh"
+  reason_to_call: "★ PRIMARY: REORDER · GT~1.2tr · quá chu kỳ 11d · #DH2093 [⏱Đặt lịch]"
+  snapshot: "LTV 8.2tr · 3 đơn · 45d · gần nhất 11d"
+  collect: "• Zalo [+] • Email [+] • Sinh nhật [+] • SĐT phụ invalid → [Sửa]"
+  trust_footer: "độ tin vừa · script 24/6 07:15 ICT · ⚠ AI gợi ý, dùng phán đoán"
+  outcome_bar: "[ghi chú tạm…] [✓Gọi được][✗Không nghe][⏳Hẹn lại][🛒Đã mua]"
+  stop_banner: "⛔ KHÔNG GỌI THEO KỊCH BẢN — CẦN XÁC MINH · [Tạo task xác minh] [Xem hồ sơ 360]"
+elements:
+  "📞Gọi": A-S14-006
+  "360": A-S14-007
+  "📋Copy": A-S14-001
+  "⏱Đặt lịch": A-S14-024
+```
+
+<!-- ui-layout:ascii:start -->
+```
+┌────────────────────────────────────────────────────────────────────────────┐
+│IDENTITY_BAR                                                                │
+│· Hoàng Thức [GOLD][active] · Miền Trung · T:0983***35 [>Gọi][~Zalo] [360]  │
+├────────────────────────────────────────────────────────────────────────────┤
+│ALERT_ROW                                                                   │
+│· [sắp churn 11d] [cancel 32%] [SĐT phụ invalid] [liên hệ 3 ngày trước]     │
+├─────────────────────────────────────────────┬──────────────────────────────┤
+│TALK_TRACK                                   │REASON_TO_CALL                │
+│· "Dạ em chào anh Thức…" [#Copy]             │· * PRIMARY: REORDER · GT~1.2…│
+├─────────────────────────────────────────────┤                              │
+│STRATEGY_SUMMARY                             │                              │
+│· (t) Gọi 1-2 ngày, giờ hành chính           │                              │
+├─────────────────────────────────────────────┼──────────────────────────────┤
+│TALKING_POINTS                               │SNAPSHOT                      │
+│· 2/3 · [x] Nhắc chu kỳ [x] Ưu đãi [ ] Combo…│· LTV 8.2tr · 3 đơn · 45d · g…│
+├─────────────────────────────────────────────┼──────────────────────────────┤
+│OBJECTION_HANDLING                           │COLLECT                       │
+│· > "Chưa cần mua" > "Giá sao?" [(?) khách v…│· • Zalo [+] • Email [+] • Si…│
+├─────────────────────────────────────────────┤                              │
+│GUARDRAILS                                   │                              │
+│· !! không giảm sâu · không hứa giao nhanh   │                              │
+├─────────────────────────────────────────────┴──────────────────────────────┤
+│TRUST_FOOTER                                                                │
+│· độ tin vừa · script 24/6 07:15 ICT · ! AI gợi ý, dùng phán đoán           │
+├────────────────────────────────────────────────────────────────────────────┤
+│OUTCOME_BAR                                                                 │
+│· [ghi chú tạm…] [vGọi được][xKhông nghe][(t)Hẹn lại][$Đã mua]              │
+└────────────────────────────────────────────────────────────────────────────┘
+
+[variant: full_screen]
+┌────────────────────────────────────────────────────────────────────────────┐
+│TOPBAR                                                                      │
+│· [← Worklist]  #9/31  [Khách kế →]                                         │
+├────────────────────────────────────────────────────────────────────────────┤
+│IDENTITY_BAR                                                                │
+│· Hoàng Thức [GOLD][active] · Miền Trung · T:0983***35 [>Gọi][~Zalo] [360]  │
+├────────────────────────────────────────────────────────────────────────────┤
+│ALERT_ROW                                                                   │
+│· [sắp churn 11d] [cancel 32%] [SĐT phụ invalid] [liên hệ 3 ngày trước]     │
+├─────────────────────────────────────────────┬──────────────────────────────┤
+│TALK_TRACK                                   │REASON_TO_CALL                │
+│· "Dạ em chào anh Thức…" [#Copy]             │· * PRIMARY: REORDER · GT~1.2…│
+├─────────────────────────────────────────────┤                              │
+│STRATEGY_SUMMARY                             │                              │
+│· (t) Gọi 1-2 ngày, giờ hành chính           │                              │
+├─────────────────────────────────────────────┼──────────────────────────────┤
+│TALKING_POINTS                               │SNAPSHOT                      │
+│· 2/3 · [x] Nhắc chu kỳ [x] Ưu đãi [ ] Combo…│· LTV 8.2tr · 3 đơn · 45d · g…│
+├─────────────────────────────────────────────┼──────────────────────────────┤
+│OBJECTION_HANDLING                           │COLLECT                       │
+│· > "Chưa cần mua" > "Giá sao?" [(?) khách v…│· • Zalo [+] • Email [+] • Si…│
+├─────────────────────────────────────────────┤                              │
+│GUARDRAILS                                   │                              │
+│· !! không giảm sâu · không hứa giao nhanh   │                              │
+├─────────────────────────────────────────────┴──────────────────────────────┤
+│TRUST_FOOTER                                                                │
+│· độ tin vừa · script 24/6 07:15 ICT · ! AI gợi ý, dùng phán đoán           │
+├────────────────────────────────────────────────────────────────────────────┤
+│OUTCOME_BAR                                                                 │
+│· [ghi chú tạm…] [vGọi được][xKhông nghe][(t)Hẹn lại][$Đã mua]              │
+└────────────────────────────────────────────────────────────────────────────┘
+
+[STOP variant — when: recommended == false]
+┌────────────────────────────────────────────────────────────────────────────┐
+│STOP_BANNER                                                                 │
+│when: recommended == false                                                  │
+│· !! KHÔNG GỌI THEO KỊCH BẢN — CẦN XÁC MINH · [Tạo task xác minh] [Xem hồ s…│
+└────────────────────────────────────────────────────────────────────────────┘
+```
+<!-- ui-layout:ascii:end -->
+
 ### Embedded trong S03 (tab "Gọi") — sidebar tĩnh S03 ẩn, cockpit full-width
 
 ```

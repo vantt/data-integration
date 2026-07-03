@@ -23,6 +23,39 @@ Có 2 entry points:
 
 Insights surface trong P01 bên cạnh warehouse insights, giúp rep khác và future reps hiểu khách.
 
+## Layout
+
+```yaml ui-layout
+columns: [1fr]
+areas:
+  - [header]
+  - [body]
+  - [actions]
+samples:
+  header: "Insight: Nguyễn Văn A [✕]"
+  body: "Loại insight * [Persona ▼] · Nội dung * [Mua cho shop tại Q7, không phải cá nhân. Cần báo giá sỉ thay vì giá lẻ.] · Độ tin cậy [● Cao ○ Trung bình ○ Thấp] · Nguồn: Ghi chú #45: Gọi lần 3: nói đang mua cho..."
+  actions: "[Hủy]  [Lưu insight]"
+elements:
+  "✕": A-M16-001
+  "Hủy": A-M16-002
+  "Lưu insight": A-M16-003
+```
+
+<!-- ui-layout:ascii:start -->
+```
+┌────────────────────────────────────────────────────────────────────────────┐
+│HEADER                                                                      │
+│· Insight: Nguyễn Văn A [x]                                                 │
+├────────────────────────────────────────────────────────────────────────────┤
+│BODY                                                                        │
+│· Loại insight * [Persona v] · Nội dung * [Mua cho shop tại Q7, không phải …│
+├────────────────────────────────────────────────────────────────────────────┤
+│ACTIONS                                                                     │
+│· [Hủy]  [Lưu insight]                                                      │
+└────────────────────────────────────────────────────────────────────────────┘
+```
+<!-- ui-layout:ascii:end -->
+
 ## Layout — Create / Promote
 
 ```

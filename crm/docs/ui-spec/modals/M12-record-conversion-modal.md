@@ -20,6 +20,37 @@ trong `wh_order_hdr` và tính `converted_revenue_vnd`.
 
 ## Layout
 
+```yaml ui-layout
+columns: [1fr]
+areas:
+  - [header]
+  - [body]
+  - [actions]
+samples:
+  header: "Ghi chuyển đổi: Nguyễn Văn A [✕]"
+  body: "Chiến dịch: Win-back Q3 · Mã đơn hàng * [ORD-____________] → Doanh thu: (tự tính từ wh_order_hdr) · Hoặc: [✓] Đơn chưa có — ghi nhận thủ công · Doanh thu ước tính [__________] đ"
+  actions: "[Hủy]  [Ghi nhận]"
+elements:
+  "✕": A-M12-001
+  "Hủy": A-M12-002
+  "Ghi nhận": A-M12-004
+```
+
+<!-- ui-layout:ascii:start -->
+```
+┌────────────────────────────────────────────────────────────────────────────┐
+│HEADER                                                                      │
+│· Ghi chuyển đổi: Nguyễn Văn A [x]                                          │
+├────────────────────────────────────────────────────────────────────────────┤
+│BODY                                                                        │
+│· Chiến dịch: Win-back Q3 · Mã đơn hàng * [ORD-____________] → Doanh thu: (…│
+├────────────────────────────────────────────────────────────────────────────┤
+│ACTIONS                                                                     │
+│· [Hủy]  [Ghi nhận]                                                         │
+└────────────────────────────────────────────────────────────────────────────┘
+```
+<!-- ui-layout:ascii:end -->
+
 ```
 ┌ MODAL — Ghi nhận chuyển đổi ──────────────────────┐
 │  Ghi chuyển đổi: Nguyễn Văn A               [✕]  │

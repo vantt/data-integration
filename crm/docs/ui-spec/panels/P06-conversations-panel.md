@@ -20,6 +20,30 @@ toàn bộ thread. v1 read-only — chỉ ingest + hiển thị (R12).
 
 ## Layout
 
+```yaml ui-layout
+areas:
+  - [toolbar]
+  - [conv_list]
+samples:
+  toolbar: "Hội thoại (Messenger)  [Filter: status ▼]"
+  conv_list: "Messenger • 13/06/2026 10:30 ICT • CSKH B • closed · Đã giải quyết thắc mắc về đơn hàng [Xem →]"
+elements:
+  "Filter: status ▼": A-P06-002
+  "Xem →": A-P06-001
+```
+
+<!-- ui-layout:ascii:start -->
+```
+┌────────────────────────────────────────────────────────────────────────────┐
+│TOOLBAR                                                                     │
+│· Hội thoại (Messenger)  [Filter: status v]                                 │
+├────────────────────────────────────────────────────────────────────────────┤
+│CONV_LIST                                                                   │
+│· Messenger • 13/06/2026 10:30 ICT • CSKH B • closed · Đã giải quyết thắc m…│
+└────────────────────────────────────────────────────────────────────────────┘
+```
+<!-- ui-layout:ascii:end -->
+
 ```
 ┌ TOOLBAR ──────────────────────────────────────────────────────────┐
 │  Hội thoại (Messenger)   [Filter: status ▼]                      │

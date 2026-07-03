@@ -23,6 +23,40 @@ Segment static: Manager add/remove party thủ công sau khi tạo.
 
 ## Layout
 
+```yaml ui-layout
+columns: [3fr, 2fr]
+areas:
+  - [topbar, topbar]
+  - [rule_editor, preview_panel]
+  - [actions_bar, actions_bar]
+samples:
+  topbar: "[← Segments]  Tên segment: [___________]  [Lưu]  Loại: ● Dynamic  ○ Static"
+  rule_editor: "Điều kiện (AND/OR)  · value_group = GOLD ✕ · customer_status = at_risk ✕ · [+ Thêm điều kiện]"
+  preview_panel: "Kết quả dự kiến: 34 khách  (3 bị loại do consent)  [Preview danh sách]  Nguyễn Văn A · GOLD"
+  actions_bar: "[Hủy]  [Lưu & Materialize]"
+elements:
+  "← Segments": A-S09-001
+  "+ Thêm điều kiện": A-S09-002
+  "Preview danh sách": A-S09-005
+  "Hủy": A-S09-007
+  "Lưu & Materialize": A-S09-006
+```
+
+<!-- ui-layout:ascii:start -->
+```
+┌────────────────────────────────────────────────────────────────────────────┐
+│TOPBAR                                                                      │
+│· [← Segments]  Tên segment: [___________]  [Lưu]  Loại: o Dynamic  ? Static│
+├─────────────────────────────────────────────┬──────────────────────────────┤
+│RULE_EDITOR                                  │PREVIEW_PANEL                 │
+│· Điều kiện (AND/OR)  · value_group = GOLD x…│· Kết quả dự kiến: 34 khách  …│
+├─────────────────────────────────────────────┴──────────────────────────────┤
+│ACTIONS_BAR                                                                 │
+│· [Hủy]  [Lưu & Materialize]                                                │
+└────────────────────────────────────────────────────────────────────────────┘
+```
+<!-- ui-layout:ascii:end -->
+
 ```
 ┌─ C01 SIDEBAR ─┬──────────────────────────────────────────────────────────────┐
 │               │  TOPBAR: [← Segments]  Tên segment: [___________]  [Lưu]    │

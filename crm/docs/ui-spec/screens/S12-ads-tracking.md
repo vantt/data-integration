@@ -23,6 +23,33 @@ danh sách lead và attribution chi tiết.
 
 ## Layout
 
+```yaml ui-layout
+columns: [1fr, 3fr, 2fr]
+areas:
+  - [sidebar, topbar, topbar]
+  - [sidebar, ad_campaign_list, stats_panel]
+samples:
+  sidebar: "(C01 global nav)"
+  topbar: "Ads Tracking  [Date range ▼]  [Ad platform ▼]"
+  ad_campaign_list: "Summer-2026 · Spend 5.200.000đ · Leads 42 · Converted 8 · CPC 123.800đ  |  Brand-June-2026 · Spend 7.100.000đ"
+  stats_panel: "Tổng spend: 12.300.000đ · Tổng leads: 87 · Conversion: 9.2% · Revenue attr: 48.000.000đ"
+elements:
+  "Date range ▼": A-S12-002
+  "Ad platform ▼": A-S12-003
+```
+
+<!-- ui-layout:ascii:start -->
+```
+┌────────────┬───────────────────────────────────────────────────────────────┐
+│SIDEBAR     │TOPBAR                                                         │
+│· (C01 glob…│· Ads Tracking  [Date range v]  [Ad platform v]                │
+│            ├─────────────────────────────────────┬─────────────────────────┤
+│            │AD_CAMPAIGN_LIST                     │STATS_PANEL              │
+│            │· Summer-2026 · Spend 5.200.000đ · L…│· Tổng spend: 12.300.000…│
+└────────────┴─────────────────────────────────────┴─────────────────────────┘
+```
+<!-- ui-layout:ascii:end -->
+
 ```
 ┌─ C01 SIDEBAR ─┬──────────────────────────────────────────────────────────────┐
 │               │  TOPBAR: Ads Tracking  [Date range ▼]  [Ad platform ▼]      │

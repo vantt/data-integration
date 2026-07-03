@@ -23,6 +23,34 @@ SSE cập nhật real-time khi có tin nhắn mới hoặc conversation được
 
 ## Layout
 
+```yaml ui-layout
+columns: [1fr, 2fr, 3fr]
+areas:
+  - [sidebar, topbar, topbar]
+  - [sidebar, conv_list, preview_pane]
+samples:
+  sidebar: "(C01 global nav)"
+  topbar: "Inbox  [All ▼] [Open | Pending | Closed]  [Gán cho tôi]"
+  conv_list: "● PSID_abc 🟡 Chưa link khách · \"Hỏi đơn hàng\" · 2 phút trước  |  Nguyễn Văn A ✓ Đã link"
+  preview_pane: "Chọn một hội thoại để xem nội dung"
+elements:
+  "All ▼": A-S05-003
+  "Open | Pending | Closed": A-S05-002
+  "Gán cho tôi": A-S05-004
+```
+
+<!-- ui-layout:ascii:start -->
+```
+┌────────────┬───────────────────────────────────────────────────────────────┐
+│SIDEBAR     │TOPBAR                                                         │
+│· (C01 glob…│· Inbox  [All v] [Open | Pending | Closed]  [Gán cho tôi]      │
+│            ├────────────────────────┬──────────────────────────────────────┤
+│            │CONV_LIST               │PREVIEW_PANE                          │
+│            │· o PSID_abc ? Chưa lin…│· Chọn một hội thoại để xem nội dung  │
+└────────────┴────────────────────────┴──────────────────────────────────────┘
+```
+<!-- ui-layout:ascii:end -->
+
 ```
 ┌─ C01 SIDEBAR ─┬──────────────────────────────────────────────────────────────┐
 │               │  TOPBAR: Inbox   [All ▼] [Open|Pending|Closed]  [Gán cho tôi]│

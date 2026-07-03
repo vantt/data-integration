@@ -30,6 +30,32 @@ WHERE party_id = current), sort: overdue trước → open → doing → done cu
 
 ## Layout
 
+```yaml ui-layout
+areas:
+  - [toolbar]
+  - [task_list]
+samples:
+  toolbar: "Tasks  [+ Tạo task]  [Filter: open/all ▼]"
+  task_list: "● [AUTO] Follow-up sau cuộc gọi  P2  NV A · Quá hạn 2 ngày · [Ghi log] [Xong nhanh] [···]"
+elements:
+  "+ Tạo task": A-P04-001
+  "Filter: open/all ▼": A-P04-007
+  "Ghi log": A-P04-002
+  "Xong nhanh": A-P04-003
+```
+
+<!-- ui-layout:ascii:start -->
+```
+┌────────────────────────────────────────────────────────────────────────────┐
+│TOOLBAR                                                                     │
+│· Tasks  [+ Tạo task]  [Filter: open/all v]                                 │
+├────────────────────────────────────────────────────────────────────────────┤
+│TASK_LIST                                                                   │
+│· o [AUTO] Follow-up sau cuộc gọi  P2  NV A · Quá hạn 2 ngày · [Ghi log] [X…│
+└────────────────────────────────────────────────────────────────────────────┘
+```
+<!-- ui-layout:ascii:end -->
+
 ```
 ┌ TOOLBAR ──────────────────────────────────────────────────────────┐
 │  Tasks   [+ Tạo task]   [Filter: open/all ▼]                     │

@@ -21,6 +21,37 @@ party trong segment (consent_contact=true — R1).
 
 ## Layout
 
+```yaml ui-layout
+columns: [1fr]
+areas:
+  - [header]
+  - [body]
+  - [actions]
+samples:
+  header: "Tạo chiến dịch mới [✕]"
+  body: "Tên chiến dịch * [React-Jul-2026] · Mục tiêu * [Reactivation ▼] · Kênh * [Messenger ▼] · Segment * [Reactivation tháng 7 ▼] → 34 khách (3 bị loại consent) · Giao cho [NV A, NV B ▼] · Ngày bắt đầu * [01/07/2026]"
+  actions: "[Hủy]  [Tạo & Kích hoạt]"
+elements:
+  "✕": A-M07-001
+  "Hủy": A-M07-002
+  "Tạo & Kích hoạt": A-M07-004
+```
+
+<!-- ui-layout:ascii:start -->
+```
+┌────────────────────────────────────────────────────────────────────────────┐
+│HEADER                                                                      │
+│· Tạo chiến dịch mới [x]                                                    │
+├────────────────────────────────────────────────────────────────────────────┤
+│BODY                                                                        │
+│· Tên chiến dịch * [React-Jul-2026] · Mục tiêu * [Reactivation v] · Kênh * …│
+├────────────────────────────────────────────────────────────────────────────┤
+│ACTIONS                                                                     │
+│· [Hủy]  [Tạo & Kích hoạt]                                                  │
+└────────────────────────────────────────────────────────────────────────────┘
+```
+<!-- ui-layout:ascii:end -->
+
 ```
 ┌ MODAL — Tạo chiến dịch ───────────────────────────┐
 │  Tạo chiến dịch mới                          [✕]  │

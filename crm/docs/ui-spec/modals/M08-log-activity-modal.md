@@ -38,6 +38,54 @@ Nếu party có `crm_note.note_type='contact_pref'` và `pinned=true` → banner
 ⚠ Lưu ý liên hệ: Chỉ nhắn Zalo sau 8pm, không nghe số lạ
 ```
 
+## Layout
+
+```yaml ui-layout
+columns: [1fr]
+areas:
+  - [header]
+  - [body]
+  - [actions]
+floating:
+  - region: contact_pref_banner
+    when: "party has crm_note(note_type='contact_pref', pinned=true)"
+samples:
+  header: "Ghi nhận tiếp xúc · Nguyễn Văn A [✕]"
+  contact_pref_banner: "⚠ Lưu ý liên hệ: Chỉ nhắn Zalo sau 8pm, không nghe số lạ"
+  body: "📋 Task: Follow-up sau cuộc gọi · HÌNH THỨC * [📞 Cuộc gọi ▾] · SỐ ĐIỆN THOẠI [● 0901234567 (chính)] [Dùng số khác] · KẾT QUẢ * [Đã nghe] [Không bắt] [Hẹn lại] [Từ chối] · NỘI DUNG [textarea] · THỜI GIAN [datetime ICT]  ĐƠN LIÊN QUAN [ORD-…]"
+  actions: "[Hủy]  [Lưu hoạt động]"
+elements:
+  "✕": A-M08-001
+  "Đã nghe": A-M08-005
+  "Không bắt": A-M08-005
+  "Hẹn lại": A-M08-005
+  "Từ chối": A-M08-005
+  "Hủy": A-M08-002
+  "Lưu hoạt động": A-M08-003
+```
+
+<!-- ui-layout:ascii:start -->
+```
+┌────────────────────────────────────────────────────────────────────────────┐
+│HEADER                                                                      │
+│· Ghi nhận tiếp xúc · Nguyễn Văn A [x]                                      │
+├────────────────────────────────────────────────────────────────────────────┤
+│BODY                                                                        │
+│· # Task: Follow-up sau cuộc gọi · HÌNH THỨC * [> Cuộc gọi v] · SỐ ĐIỆN THO…│
+├────────────────────────────────────────────────────────────────────────────┤
+│ACTIONS                                                                     │
+│· [Hủy]  [Lưu hoạt động]                                                    │
+└────────────────────────────────────────────────────────────────────────────┘
+
+[STOP variant — when: party has crm_note(note_type='contact_pref', pinned=true)]
+┌────────────────────────────────────────────────────────────────────────────┐
+│CONTACT_PREF_BANNER                                                         │
+│when: party has crm_note(note_type='contact_pref', pinned=true)             │
+│· ! Lưu ý liên hệ: Chỉ nhắn Zalo sau 8pm, không nghe số lạ                  │
+└────────────────────────────────────────────────────────────────────────────┘
+```
+<!-- ui-layout:ascii:end -->
+
 ## Layout — Mode: log (default)
 
 6 bước tuần tự; các section phụ hiện/ẩn theo JS.

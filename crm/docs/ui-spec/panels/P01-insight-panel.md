@@ -22,6 +22,51 @@ Panel tab "Value & Behavior" trong Customer 360 (S03). Hiển thị hai lớp in
 
 ## Layout
 
+```yaml ui-layout
+areas:
+  - [action_queue]
+  - [rfm_segments_block]
+  - [value_metrics_block]
+  - [signals_block]
+  - [rep_insights_block]
+  - [freshness_bar]
+samples:
+  action_queue: "[2 việc] ☑ CALL_NOW 💰2.400.000đ · [📞 Gọi ngay] [Hoàn tất (2) ✓]"
+  rfm_segments_block: "R: 28 ngày | F: 8 đơn | M: 2.350.000đ · [GOLD] [active] [ON_TRACK]"
+  value_metrics_block: "LTV 18.400.000₫ (hero×2) | 8 đơn | 2.300.000₫ · GM 34.2% | Cancel 5% | 32d | POS"
+  signals_block: "active · ON_TRACK 2025-07-15 · Discount: LOW · Top affinity: Sữa rửa mặt"
+  rep_insights_block: "[Persona] Mua cho shop Q7 — cần báo giá sỉ [cao] · [+ Thêm insight]"
+  freshness_bar: "Cache insight: 07:15 ICT hôm nay · R2 · CRM không tính lại insight"
+elements:
+  "📞 Gọi ngay": A-P01-005
+  "Hoàn tất (2) ✓": A-P01-008
+  "+ Thêm insight": A-P01-002
+```
+
+<!-- ui-layout:ascii:start -->
+```
+┌────────────────────────────────────────────────────────────────────────────┐
+│ACTION_QUEUE                                                                │
+│· [2 việc] [x] CALL_NOW ?2.400.000đ · [> Gọi ngay] [Hoàn tất (2) v]         │
+├────────────────────────────────────────────────────────────────────────────┤
+│RFM_SEGMENTS_BLOCK                                                          │
+│· R: 28 ngày | F: 8 đơn | M: 2.350.000đ · [GOLD] [active] [ON_TRACK]        │
+├────────────────────────────────────────────────────────────────────────────┤
+│VALUE_METRICS_BLOCK                                                         │
+│· LTV 18.400.000₫ (hero×2) | 8 đơn | 2.300.000₫ · GM 34.2% | Cancel 5% | 32…│
+├────────────────────────────────────────────────────────────────────────────┤
+│SIGNALS_BLOCK                                                               │
+│· active · ON_TRACK 2025-07-15 · Discount: LOW · Top affinity: Sữa rửa mặt  │
+├────────────────────────────────────────────────────────────────────────────┤
+│REP_INSIGHTS_BLOCK                                                          │
+│· [Persona] Mua cho shop Q7 — cần báo giá sỉ [cao] · [+ Thêm insight]       │
+├────────────────────────────────────────────────────────────────────────────┤
+│FRESHNESS_BAR                                                               │
+│· Cache insight: 07:15 ICT hôm nay · R2 · CRM không tính lại insight        │
+└────────────────────────────────────────────────────────────────────────────┘
+```
+<!-- ui-layout:ascii:end -->
+
 ```
 ┌ ACTION QUEUE ──────────────────────────────────────────────────────────┐
 │ MODE A — SESSION CHECKLIST (≥2 unresolved)                            │

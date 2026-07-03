@@ -35,6 +35,65 @@ Target: point-lookup ≤ 200ms (view `crm_party_360`). `refreshed_at` hiển th�
 
 ## Layout
 
+```yaml ui-layout
+columns: [7fr, 3fr]
+areas:
+  - [topbar, sidebar]
+  - [tab_bar, sidebar]
+  - [main_col, sidebar]
+floating:
+  - region: sidebar.warning
+    when: "party.warning_notes.active.length > 0"
+children:
+  sidebar:
+    areas:
+      - [sidebar.warning]
+      - [sidebar.core_info]
+      - [sidebar.head_line]
+      - [sidebar.contact]
+      - [sidebar.dates]
+      - [sidebar.tags]
+samples:
+  topbar: "[← Quay lại]  Nguyễn Văn A  [Gán NV ▼]  [+ Tag]  [Ghi log]  [Tạo task]"
+  tab_bar: "[Value & Behavior | Ghi chú | Đơn | Timeline | Tasks | Chat | Gọi]"
+  main_col: "(active panel: P01 / P05 / P02 / P03 / P04 / P06 / S14↗)"
+  sidebar.warning: "⚠ Cảnh báo: khách nghi B2B — cần xác minh (nền đỏ nhạt, manager mới xóa được)"
+  sidebar.core_info: "Nguyễn Văn A  [GOLD][active]  SĐT: 0901234567  owner: NV A  consent: ✓  [✎]"
+  sidebar.head_line: "LTV 8.2tr · 3 đơn · AOV 1.2tr · Recency 11d"
+  sidebar.contact: "📞 0901234567 (chính) · 💬 zalo_id · ✉ email · 📍 Q.1, TP.HCM  [+]"
+  sidebar.dates: "First Order: 15/01/2023 · Last Order: 24/06/2026 · Tenure: 892d (2y)"
+  sidebar.tags: "[VIP] [repeat]  [✎]"
+elements:
+  "← Quay lại": A-S03-001
+  "Gán NV ▼": A-S03-002
+  "+ Tag": A-S03-003
+  "Ghi log": A-S03-011
+  "Tạo task": A-S03-012
+  "+": A-S03-013
+```
+
+<!-- ui-layout:ascii:start -->
+```
+┌────────────────────────────────────────────────────┬───────────────────────┐
+│TOPBAR                                              │SIDEBAR                │
+│· [← Quay lại]  Nguyễn Văn A  [Gán NV v]  [+ Tag]  …│                       │
+├────────────────────────────────────────────────────┤                       │
+│TAB_BAR                                             │                       │
+│· [Value & Behavior | Ghi chú | Đơn | Timeline | Ta…│                       │
+├────────────────────────────────────────────────────┤                       │
+│MAIN_COL                                            │                       │
+│· (active panel: P01 / P05 / P02 / P03 / P04 / P06 …│                       │
+└────────────────────────────────────────────────────┴───────────────────────┘
+
+[STOP variant — when: party.warning_notes.active.length > 0]
+┌────────────────────────────────────────────────────────────────────────────┐
+│SIDEBAR.WARNING                                                             │
+│when: party.warning_notes.active.length > 0                                 │
+│· ! Cảnh báo: khách nghi B2B — cần xác minh (nền đỏ nhạt, manager mới xóa đ…│
+└────────────────────────────────────────────────────────────────────────────┘
+```
+<!-- ui-layout:ascii:end -->
+
 ```
 ┌──────────────────────────────────────────────┬─── SIDEBAR (30%) ─────────────┐
 │ TOPBAR: [← Quay lại]  Nguyễn Văn A           │ ⚠ Cảnh báo (conditional)     │

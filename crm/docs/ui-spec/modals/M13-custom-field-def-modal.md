@@ -20,6 +20,37 @@ display_label, section (grouping), sort_order, data_type, required, options (sel
 
 ## Layout
 
+```yaml ui-layout
+columns: [1fr]
+areas:
+  - [header]
+  - [body]
+  - [actions]
+samples:
+  header: "Tạo custom field mới [✕]"
+  body: "Áp dụng cho * [● Khách hàng ○ Đơn hàng] · Field name (slug) * [da_nhay_cam] · Nhãn hiển thị * [Da nhạy cảm] · Section [Sức khoẻ & Da liễu] · Thứ tự hiển thị [1] · Loại dữ liệu * [Boolean (Có/Không) ▼] · Bắt buộc [○ Có ● Không] · Tùy chọn [+ Thêm tùy chọn] (chỉ khi select/multiselect)"
+  actions: "[Hủy]  [Lưu]"
+elements:
+  "✕": A-M13-001
+  "Hủy": A-M13-002
+  "Lưu": A-M13-004
+```
+
+<!-- ui-layout:ascii:start -->
+```
+┌────────────────────────────────────────────────────────────────────────────┐
+│HEADER                                                                      │
+│· Tạo custom field mới [x]                                                  │
+├────────────────────────────────────────────────────────────────────────────┤
+│BODY                                                                        │
+│· Áp dụng cho * [o Khách hàng ? Đơn hàng] · Field name (slug) * [da_nhay_ca…│
+├────────────────────────────────────────────────────────────────────────────┤
+│ACTIONS                                                                     │
+│· [Hủy]  [Lưu]                                                              │
+└────────────────────────────────────────────────────────────────────────────┘
+```
+<!-- ui-layout:ascii:end -->
+
 ```
 ┌ MODAL — Định nghĩa custom field ──────────────────┐
 │  Tạo custom field mới                        [✕]  │

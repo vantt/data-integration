@@ -21,6 +21,30 @@ activity thủ công (ghi log cuộc gọi, ghi chú nhanh) từ toolbar.
 
 ## Layout
 
+```yaml ui-layout
+areas:
+  - [toolbar]
+  - [timeline]
+samples:
+  toolbar: "Activity Timeline  [+ Ghi log]  [Filter type ▼]"
+  timeline: "● 13/06/2026 10:32 ICT [call] NV A: Khách xác nhận sẽ đặt tuần tới. Gợi ý SP mới."
+elements:
+  "+ Ghi log": A-P03-001
+  "Filter type ▼": A-P03-002
+```
+
+<!-- ui-layout:ascii:start -->
+```
+┌────────────────────────────────────────────────────────────────────────────┐
+│TOOLBAR                                                                     │
+│· Activity Timeline  [+ Ghi log]  [Filter type v]                           │
+├────────────────────────────────────────────────────────────────────────────┤
+│TIMELINE                                                                    │
+│· o 13/06/2026 10:32 ICT [call] NV A: Khách xác nhận sẽ đặt tuần tới. Gợi ý…│
+└────────────────────────────────────────────────────────────────────────────┘
+```
+<!-- ui-layout:ascii:end -->
+
 ```
 ┌ TOOLBAR ──────────────────────────────────────────────────────────┐
 │  Activity Timeline   [+ Ghi log]  [Filter type ▼]                │

@@ -20,6 +20,30 @@ customer_status, top_affinity_product, action_queue count, ngày mua gần nhấ
 
 ## Layout
 
+```yaml ui-layout
+areas:
+  - [content]
+  - [actions]
+samples:
+  content: "Nguyễn Văn A [✕] · +84901234567 · GOLD · active · Mua gần nhất: 12/06/2026 · Affinity: Sữa rửa mặt gentle · Action queue: 2 items (CALL_NOW, REORDER)"
+  actions: "[Mở hồ sơ đầy đủ →]"
+elements:
+  "✕": A-O02-002
+  "Mở hồ sơ đầy đủ →": A-O02-003
+```
+
+<!-- ui-layout:ascii:start -->
+```
+┌────────────────────────────────────────────────────────────────────────────┐
+│CONTENT                                                                     │
+│· Nguyễn Văn A [x] · +84901234567 · GOLD · active · Mua gần nhất: 12/06/202…│
+├────────────────────────────────────────────────────────────────────────────┤
+│ACTIONS                                                                     │
+│· [Mở hồ sơ đầy đủ →]                                                       │
+└────────────────────────────────────────────────────────────────────────────┘
+```
+<!-- ui-layout:ascii:end -->
+
 ```
      ┌ OVERLAY — Quick Preview ───────────────────┐
      │  Nguyễn Văn A                    [✕]       │

@@ -24,6 +24,37 @@ Chỉ hiển thị fields có `entity_type='customer'`. Order custom fields (ent
 
 ## Layout
 
+```yaml ui-layout
+columns: [1fr]
+areas:
+  - [header]
+  - [body]
+  - [actions]
+samples:
+  header: "Chỉnh sửa thông tin bổ sung [✕]"
+  body: "── Sức khoẻ & Da liễu ── · Da nhạy cảm [✓ Có / ✗ Không] · Loại da [Da dầu ▼] · ── Nguồn & Marketing ── · Nguồn KH [Facebook ▼] · Ngày sinh [dd/mm/yyyy] · ── Nội bộ ── · Ghi chú nội bộ [________________]"
+  actions: "[Hủy]  [Lưu]"
+elements:
+  "✕": A-M06-001
+  "Hủy": A-M06-002
+  "Lưu": A-M06-003
+```
+
+<!-- ui-layout:ascii:start -->
+```
+┌────────────────────────────────────────────────────────────────────────────┐
+│HEADER                                                                      │
+│· Chỉnh sửa thông tin bổ sung [x]                                           │
+├────────────────────────────────────────────────────────────────────────────┤
+│BODY                                                                        │
+│· ── Sức khoẻ & Da liễu ── · Da nhạy cảm [v Có / x Không] · Loại da [Da dầu…│
+├────────────────────────────────────────────────────────────────────────────┤
+│ACTIONS                                                                     │
+│· [Hủy]  [Lưu]                                                              │
+└────────────────────────────────────────────────────────────────────────────┘
+```
+<!-- ui-layout:ascii:end -->
+
 ```
 ┌ MODAL — Thông tin bổ sung ──────────────────────────┐
 │  Chỉnh sửa thông tin bổ sung                  [✕]  │

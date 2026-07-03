@@ -20,6 +20,41 @@ khớp, ghi note, đóng hội thoại. Sidebar phải hiển thị Customer 360
 
 ## Layout
 
+```yaml ui-layout
+columns: [3fr, 1fr]
+areas:
+  - [topbar, customer_sidebar]
+  - [message_thread, customer_sidebar]
+  - [input_bar, customer_sidebar]
+samples:
+  topbar: "[← Inbox]  PSID_abc  🟡 Pending  Assignee: CSKH B  [Đổi NV]  [Đóng hội thoại]  [Ghi note]"
+  message_thread: "[Khách] \"Tôi muốn hỏi...\" 10:32 ICT  |  [NV] \"Dạ, đơn số ...\" 10:35 ICT"
+  input_bar: "(disabled — read-only v1)"
+  customer_sidebar: "Nguyễn Văn A · GOLD · active · Mua gần: 3 ngày · [Mở hồ sơ đầy]  ↙  [Chưa link khách → 🔍 Tìm khách]"
+elements:
+  "← Inbox": A-S06-001
+  "Đổi NV": A-S06-004
+  "Đóng hội thoại": A-S06-002
+  "Ghi note": A-S06-003
+  "Mở hồ sơ đầy": A-S06-006
+  "Chưa link khách → 🔍 Tìm khách": A-S06-005
+```
+
+<!-- ui-layout:ascii:start -->
+```
+┌────────────────────────────────────────────────────────┬───────────────────┐
+│TOPBAR                                                  │CUSTOMER_SIDEBAR   │
+│· [← Inbox]  PSID_abc  ? Pending  Assignee: CSKH B  [Đổ…│· Nguyễn Văn A · G…│
+├────────────────────────────────────────────────────────┤                   │
+│MESSAGE_THREAD                                          │                   │
+│· [Khách] "Tôi muốn hỏi..." 10:32 ICT  |  [NV] "Dạ, đơn…│                   │
+├────────────────────────────────────────────────────────┤                   │
+│INPUT_BAR                                               │                   │
+│· (disabled — read-only v1)                             │                   │
+└────────────────────────────────────────────────────────┴───────────────────┘
+```
+<!-- ui-layout:ascii:end -->
+
 ```
 ┌─ C01 SIDEBAR ─┬────────────────────────────────────┬───────────────────────┐
 │               │  TOPBAR                             │  CUSTOMER SIDEBAR     │

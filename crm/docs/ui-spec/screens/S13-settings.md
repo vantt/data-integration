@@ -22,6 +22,33 @@ Không cần migration khi thêm field mới (schema-less JSON1).
 
 ## Layout
 
+```yaml ui-layout
+columns: [1fr, 1fr, 4fr]
+areas:
+  - [sidebar, topbar, topbar]
+  - [sidebar, settings_nav, settings_content]
+samples:
+  sidebar: "(C01 global nav)"
+  topbar: "Cài đặt"
+  settings_nav: "> Custom Fields  Tags  Người dùng"
+  settings_content: "Custom Fields  [+ Thêm]  · Da nhạy cảm · bool · không bắt buộc · [Edit]  · Nguồn KH · select · không · [Edit]"
+elements:
+  "+ Thêm": A-S13-004
+  "Edit": A-S13-005
+```
+
+<!-- ui-layout:ascii:start -->
+```
+┌────────────┬───────────────────────────────────────────────────────────────┐
+│SIDEBAR     │TOPBAR                                                         │
+│· (C01 glob…│· Cài đặt                                                      │
+│            ├────────────┬──────────────────────────────────────────────────┤
+│            │SETTINGS_NAV│SETTINGS_CONTENT                                  │
+│            │· > Custom …│· Custom Fields  [+ Thêm]  · Da nhạy cảm · bool ·…│
+└────────────┴────────────┴──────────────────────────────────────────────────┘
+```
+<!-- ui-layout:ascii:end -->
+
 ### Tab: Custom Fields (default)
 
 ```

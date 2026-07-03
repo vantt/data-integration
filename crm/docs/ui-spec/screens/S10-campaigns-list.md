@@ -20,6 +20,32 @@ Manager tạo campaign mới từ đây, hoặc nhấn vào campaign để xem c
 
 ## Layout
 
+```yaml ui-layout
+columns: [1fr, 4fr]
+areas:
+  - [sidebar, topbar]
+  - [sidebar, campaign_list]
+samples:
+  sidebar: "(C01 global nav)"
+  topbar: "Chiến dịch  [+ Tạo chiến dịch]  [Filter status ▼]"
+  campaign_list: "Win-back Q3 · winback · 87 targets · 13 converted · 14.9%  |  React-Jul-2026 · react. · 34 · 0 · —"
+elements:
+  "+ Tạo chiến dịch": A-S10-001
+  "Filter status ▼": A-S10-003
+```
+
+<!-- ui-layout:ascii:start -->
+```
+┌───────────────┬────────────────────────────────────────────────────────────┐
+│SIDEBAR        │TOPBAR                                                      │
+│· (C01 global …│· Chiến dịch  [+ Tạo chiến dịch]  [Filter status v]         │
+│               ├────────────────────────────────────────────────────────────┤
+│               │CAMPAIGN_LIST                                               │
+│               │· Win-back Q3 · winback · 87 targets · 13 converted · 14.9%…│
+└───────────────┴────────────────────────────────────────────────────────────┘
+```
+<!-- ui-layout:ascii:end -->
+
 ```
 ┌─ C01 SIDEBAR ─┬──────────────────────────────────────────────────────────────┐
 │               │  TOPBAR: Chiến dịch   [+ Tạo chiến dịch]  [Filter status ▼] │

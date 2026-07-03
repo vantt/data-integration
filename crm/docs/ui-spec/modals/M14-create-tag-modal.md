@@ -22,6 +22,37 @@ Category là enum cố định (selectbox, không cho nhập tay) để warehous
 
 ## Layout
 
+```yaml ui-layout
+columns: [1fr]
+areas:
+  - [header]
+  - [body]
+  - [actions]
+samples:
+  header: "Tạo tag mới [✕]"
+  body: "Tag name (slug) * [vip-repeat] · Nhãn hiển thị * [VIP Repeat] · Phân loại * [Phân tầng VIP ▼] · Màu (optional) [● Xanh ○ Đỏ ○ Vàng ...]"
+  actions: "[Hủy]  [Tạo tag]"
+elements:
+  "✕": A-M14-001
+  "Hủy": A-M14-002
+  "Tạo tag": A-M14-003
+```
+
+<!-- ui-layout:ascii:start -->
+```
+┌────────────────────────────────────────────────────────────────────────────┐
+│HEADER                                                                      │
+│· Tạo tag mới [x]                                                           │
+├────────────────────────────────────────────────────────────────────────────┤
+│BODY                                                                        │
+│· Tag name (slug) * [vip-repeat] · Nhãn hiển thị * [VIP Repeat] · Phân loại…│
+├────────────────────────────────────────────────────────────────────────────┤
+│ACTIONS                                                                     │
+│· [Hủy]  [Tạo tag]                                                          │
+└────────────────────────────────────────────────────────────────────────────┘
+```
+<!-- ui-layout:ascii:end -->
+
 ```
 ┌ MODAL — Tạo tag mới ──────────────────────────────┐
 │  Tạo tag mới                                 [✕]  │

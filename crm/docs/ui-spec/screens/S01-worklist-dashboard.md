@@ -29,6 +29,43 @@ protocol only — no direct repo access.
 
 ## Layout
 
+```yaml ui-layout
+columns: [1fr, 4fr]
+areas:
+  - [sidebar, main]
+children:
+  main:
+    areas:
+      - [topbar]
+      - [kpi_strip]
+      - [filter_bar]
+      - [task_list]
+samples:
+  sidebar: "[≡] CRM  > Worklist ●  Khách hàng  Inbox 3  Tasks  Segments  Chiến dịch  Ads  Cài đặt"
+  main: "(right content area — topbar · kpi_strip · filter_bar · task_list)"
+  topbar: "Worklist hôm nay  [Làm mới ↺]  [+ Tạo task]"
+  kpi_strip: "[ Task mở: N ] [ Hành động AQ: N ] [ Giá trị: Ntr ] [ Khẩn: N ]"
+  filter_bar: "Ưu tiên:[↕] Loại:[↕] Sản phẩm:[↕]  [💰 Giá trị cao] [✅ Ẩn đã liên hệ] [📋 Có kịch bản]"
+  task_list: "▼ 🔴 Quá hạn (3) · [P1] Nguyễn Văn A quá hạn 2 ngày · 🛍 Fine Japan · [Dời hạn][Dọn][📞 Gọi][Mở hồ sơ >]"
+elements:
+  "Làm mới ↺": A-S01-020
+  "+ Tạo task": A-S01-004
+  "✅ Ẩn đã liên hệ": A-S01-013
+  "📋 Có kịch bản": A-S01-010
+  "Dời hạn": A-S01-019
+  "Dọn": A-S01-018
+  "📞 Gọi": A-S01-007
+```
+
+<!-- ui-layout:ascii:start -->
+```
+┌───────────────┬────────────────────────────────────────────────────────────┐
+│SIDEBAR        │MAIN                                                        │
+│· [≡] CRM  > W…│· (right content area — topbar · kpi_strip · filter_bar · t…│
+└───────────────┴────────────────────────────────────────────────────────────┘
+```
+<!-- ui-layout:ascii:end -->
+
 ```
 ┌─ C01 SIDEBAR ──┬──────────────────────────────────────────────────────────────┐
 │  [≡] CRM       │  TOPBAR (pagehead)                                           │

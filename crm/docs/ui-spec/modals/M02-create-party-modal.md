@@ -20,6 +20,37 @@ navigate thẳng đến Customer 360 (S03) của party mới.
 
 ## Layout
 
+```yaml ui-layout
+columns: [1fr]
+areas:
+  - [header]
+  - [body]
+  - [actions]
+samples:
+  header: "Tạo khách hàng mới [✕]"
+  body: "Tên hiển thị * [___] · Số điện thoại * [0901234567] → +84901234567 · Email [___] · Ghi chú nhanh [___] · ⚠ Nếu SĐT đã tồn tại, hệ thống sẽ cảnh báo"
+  actions: "[Hủy]  [Tạo khách]"
+elements:
+  "✕": A-M02-001
+  "Hủy": A-M02-002
+  "Tạo khách": A-M02-003
+```
+
+<!-- ui-layout:ascii:start -->
+```
+┌────────────────────────────────────────────────────────────────────────────┐
+│HEADER                                                                      │
+│· Tạo khách hàng mới [x]                                                    │
+├────────────────────────────────────────────────────────────────────────────┤
+│BODY                                                                        │
+│· Tên hiển thị * [___] · Số điện thoại * [0901234567] → +84901234567 · Emai…│
+├────────────────────────────────────────────────────────────────────────────┤
+│ACTIONS                                                                     │
+│· [Hủy]  [Tạo khách]                                                        │
+└────────────────────────────────────────────────────────────────────────────┘
+```
+<!-- ui-layout:ascii:end -->
+
 ```
 ┌ MODAL — Tạo khách hàng mới ────────────────────────┐
 │  Tạo khách hàng mới                          [✕]  │

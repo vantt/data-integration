@@ -46,6 +46,74 @@ hiển thị này; S15 chỉ liệt kê tóm tắt + nút "Vào phiên gọi" đ
 
 ## Layout
 
+```yaml ui-layout
+areas:
+  - [header]
+  - [lifecycle]
+  - [body_contact]
+  - [activity_log]
+  - [close_bar]
+floating:
+  - region: body_internal
+    when: "task.task_kind == 'internal'"
+    replaces: [body_contact]
+  - region: body_generic
+    when: "task.task_kind == 'generic'"
+    replaces: [body_contact]
+samples:
+  header: "[← Quay lại]  \"Follow-up sau cuộc gọi\"  [P1] [Quá hạn 2 ngày]  [status chip]  Đến hạn: 20/06/2026  Giao: NV A  [Nguyễn Văn A ↗ 360]"
+  lifecycle: "open → doing → done → cancelled  |  [▷ Bắt đầu]  [✎ Sửa]  [⏳ Hoãn]  [✕ Huỷ]"
+  body_contact: "Nguồn: action_queue · Lý do: \"Sắp hết hàng...\" · GT: 1.800.000đ  |  Nguyễn Văn A [GOLD] SĐT: 0901234567  [▶ Vào phiên gọi]"
+  body_internal: "Nguyễn Văn A [GOLD] LTV 8.2tr  [Xem 360 >]  |  ☑ Tra cứu đơn hàng  ☐ Xác nhận địa chỉ  ☐ Gửi báo giá"
+  body_generic: "Mô tả: Cập nhật bảng giá Q3  |  ☑ Thu thập bảng giá  ☐ Upload lên Sapo  |  [https://drive.google.com/…]"
+  activity_log: "12/06 10:30 Cuộc gọi — Không bắt  |  13/06 14:00 Zalo — Chưa phản hồi"
+  close_bar: "[ghi chú nhanh…]  [✓ Ghi log & hoàn thành]"
+elements:
+  "Nguyễn Văn A ↗ 360": A-S15-007
+  "▷ Bắt đầu": A-S15-001
+  "✎ Sửa": A-S15-002
+  "⏳ Hoãn": A-S15-003
+  "✕ Huỷ": A-S15-004
+  "▶ Vào phiên gọi": A-S15-006
+  "Xem 360 >": A-S15-007
+  "✓ Ghi log & hoàn thành": A-S15-005
+```
+
+<!-- ui-layout:ascii:start -->
+```
+┌────────────────────────────────────────────────────────────────────────────┐
+│HEADER                                                                      │
+│· [← Quay lại]  "Follow-up sau cuộc gọi"  [P1] [Quá hạn 2 ngày]  [status ch…│
+├────────────────────────────────────────────────────────────────────────────┤
+│LIFECYCLE                                                                   │
+│· open → doing → done → cancelled  |  [? Bắt đầu]  [? Sửa]  [(t) Hoãn]  [x …│
+├────────────────────────────────────────────────────────────────────────────┤
+│BODY_CONTACT                                                                │
+│· Nguồn: action_queue · Lý do: "Sắp hết hàng..." · GT: 1.800.000đ  |  Nguyễ…│
+├────────────────────────────────────────────────────────────────────────────┤
+│ACTIVITY_LOG                                                                │
+│· 12/06 10:30 Cuộc gọi — Không bắt  |  13/06 14:00 Zalo — Chưa phản hồi     │
+├────────────────────────────────────────────────────────────────────────────┤
+│CLOSE_BAR                                                                   │
+│· [ghi chú nhanh…]  [v Ghi log & hoàn thành]                                │
+└────────────────────────────────────────────────────────────────────────────┘
+
+[STOP variant — when: task.task_kind == 'internal']
+┌────────────────────────────────────────────────────────────────────────────┐
+│BODY_INTERNAL                                                               │
+│when: task.task_kind == 'internal'                                          │
+│· Nguyễn Văn A [GOLD] LTV 8.2tr  [Xem 360 >]  |  [x] Tra cứu đơn hàng  [ ] …│
+└────────────────────────────────────────────────────────────────────────────┘
+
+[STOP variant — when: task.task_kind == 'generic']
+┌────────────────────────────────────────────────────────────────────────────┐
+│BODY_GENERIC                                                                │
+│when: task.task_kind == 'generic'                                           │
+│· Mô tả: Cập nhật bảng giá Q3  |  [x] Thu thập bảng giá  [ ] Upload lên Sap…│
+└────────────────────────────────────────────────────────────────────────────┘
+```
+<!-- ui-layout:ascii:end -->
+
 ### Frame chung (header + lifecycle + close_bar)
 
 ```

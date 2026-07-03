@@ -30,6 +30,37 @@ Field không bao giờ bắt NV chọn khi máy đã chắc — giảm ma sát, 
 
 ## Layout
 
+```yaml ui-layout
+columns: [1fr]
+areas:
+  - [header]
+  - [body]
+  - [actions]
+samples:
+  header: "Tạo task mới [✕]"
+  body: "Tiêu đề * [Follow-up sau cuộc gọi] · Khách hàng [Nguyễn Văn A ▼] · Loại việc [Liên hệ ▼] (ẩn khi chắc) · Due date * [20/06/2026] Giờ [10:00] · Priority [P2 — Cao ▼] · Giao cho [NV A ▼] · Ghi chú [___]"
+  actions: "[Hủy]  [Lưu task]"
+elements:
+  "✕": A-M05-001
+  "Hủy": A-M05-002
+  "Lưu task": A-M05-003
+```
+
+<!-- ui-layout:ascii:start -->
+```
+┌────────────────────────────────────────────────────────────────────────────┐
+│HEADER                                                                      │
+│· Tạo task mới [x]                                                          │
+├────────────────────────────────────────────────────────────────────────────┤
+│BODY                                                                        │
+│· Tiêu đề * [Follow-up sau cuộc gọi] · Khách hàng [Nguyễn Văn A v] · Loại v…│
+├────────────────────────────────────────────────────────────────────────────┤
+│ACTIONS                                                                     │
+│· [Hủy]  [Lưu task]                                                         │
+└────────────────────────────────────────────────────────────────────────────┘
+```
+<!-- ui-layout:ascii:end -->
+
 ```
 ┌ MODAL — Tạo / Sửa task ───────────────────────────┐
 │  Tạo task mới                                [✕]  │

@@ -20,6 +20,37 @@ User phải gõ xác nhận hoặc check checkbox trước khi merge.
 
 ## Layout
 
+```yaml ui-layout
+columns: [1fr]
+areas:
+  - [header]
+  - [body]
+  - [actions]
+samples:
+  header: "Merge Party B → Party A (surviving) [✕]"
+  body: "Party A (giữ lại): Nguyễn Văn A +84901234567 · Party B (gộp vào): NVA · Sẽ chuyển: 1 identity, 3 activity, 0 task · ⚠ Party B sẽ bị ẩn (is_merged=true) · ✓ Snapshot undo sẽ được lưu · [✓] Tôi xác nhận muốn gộp 2 khách này"
+  actions: "[Hủy]  [Xác nhận Merge]"
+elements:
+  "✕": A-M01-001
+  "Hủy": A-M01-002
+  "Xác nhận Merge": A-M01-003
+```
+
+<!-- ui-layout:ascii:start -->
+```
+┌────────────────────────────────────────────────────────────────────────────┐
+│HEADER                                                                      │
+│· Merge Party B → Party A (surviving) [x]                                   │
+├────────────────────────────────────────────────────────────────────────────┤
+│BODY                                                                        │
+│· Party A (giữ lại): Nguyễn Văn A +84901234567 · Party B (gộp vào): NVA · S…│
+├────────────────────────────────────────────────────────────────────────────┤
+│ACTIONS                                                                     │
+│· [Hủy]  [Xác nhận Merge]                                                   │
+└────────────────────────────────────────────────────────────────────────────┘
+```
+<!-- ui-layout:ascii:end -->
+
 ```
 ┌ MODAL — Xác nhận gộp khách ────────────────────────┐
 │  Merge Party B → Party A (surviving)          [✕]  │

@@ -23,6 +23,39 @@ Mỗi row hiển thị: tên, SĐT, value_group (GOLD/VIP/…), customer_status,
 
 ## Layout
 
+```yaml ui-layout
+columns: [1fr, 4fr]
+areas:
+  - [sidebar, main]
+children:
+  main:
+    areas:
+      - [topbar]
+      - [result_list]
+samples:
+  sidebar: "(C01 global nav)"
+  main: "(right content area — topbar · result_list)"
+  topbar: "[🔍 SĐT / Tên / Email...]  Filter: [Value Group ▼] [Status ▼] [Owner ▼] [Tag ▼]"
+  result_list: "Họ tên · SĐT · Group · Status · Owner  |  Nguyễn Văn A · 0901234567 · GOLD · active  [+ Tạo mới]  Trang 1/10 [< Trước][Sau >]"
+elements:
+  "Value Group ▼": A-S02-003
+  "Status ▼": A-S02-004
+  "Owner ▼": A-S02-005
+  "Tag ▼": A-S02-006
+  "+ Tạo mới": A-S02-002
+  "< Trước": A-S02-008
+  "Sau >": A-S02-007
+```
+
+<!-- ui-layout:ascii:start -->
+```
+┌───────────────┬────────────────────────────────────────────────────────────┐
+│SIDEBAR        │MAIN                                                        │
+│· (C01 global …│· (right content area — topbar · result_list)               │
+└───────────────┴────────────────────────────────────────────────────────────┘
+```
+<!-- ui-layout:ascii:end -->
+
 ```
 ┌─ C01 SIDEBAR ─────┬──────────────────────────────────────────────────────┐
 │                   │  TOPBAR                                               │

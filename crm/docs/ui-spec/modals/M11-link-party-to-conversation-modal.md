@@ -20,6 +20,38 @@ chọn. Nếu không tìm thấy party, có thể tạo mới inline (mở M02).
 
 ## Layout
 
+```yaml ui-layout
+columns: [1fr]
+areas:
+  - [header]
+  - [body]
+  - [actions]
+samples:
+  header: "Tìm khách cho: PSID_abc [✕]"
+  body: "[🔍 Tìm theo SĐT, tên, email...] · Nguyễn Văn A +84901234567 GOLD active · Nguyễn Văn An +84909876543 NEW active · Hoặc: [+ Tạo khách mới]"
+  actions: "[Hủy]  [Gắn khách đã chọn]"
+elements:
+  "✕": A-M11-001
+  "+ Tạo khách mới": A-M11-006
+  "Hủy": A-M11-002
+  "Gắn khách đã chọn": A-M11-005
+```
+
+<!-- ui-layout:ascii:start -->
+```
+┌────────────────────────────────────────────────────────────────────────────┐
+│HEADER                                                                      │
+│· Tìm khách cho: PSID_abc [x]                                               │
+├────────────────────────────────────────────────────────────────────────────┤
+│BODY                                                                        │
+│· [(?) Tìm theo SĐT, tên, email...] · Nguyễn Văn A +84901234567 GOLD active…│
+├────────────────────────────────────────────────────────────────────────────┤
+│ACTIONS                                                                     │
+│· [Hủy]  [Gắn khách đã chọn]                                                │
+└────────────────────────────────────────────────────────────────────────────┘
+```
+<!-- ui-layout:ascii:end -->
+
 ```
 ┌ MODAL — Gắn khách vào hội thoại ──────────────────┐
 │  Tìm khách cho: PSID_abc                     [✕]  │

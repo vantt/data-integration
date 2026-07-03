@@ -20,6 +20,37 @@ và Conversation Detail (S06). Dropdown từ `crm_app_user` với role care/sale
 
 ## Layout
 
+```yaml ui-layout
+columns: [1fr]
+areas:
+  - [header]
+  - [body]
+  - [actions]
+samples:
+  header: "Gán NV: PSID_abc [✕]"
+  body: "NV hiện tại: CSKH B · Gán cho [CSKH B ▼] · ○ CSKH A · ● CSKH B (hiện tại) · ○ CSKH C"
+  actions: "[Hủy]  [Gán]"
+elements:
+  "✕": A-M09-001
+  "Hủy": A-M09-002
+  "Gán": A-M09-003
+```
+
+<!-- ui-layout:ascii:start -->
+```
+┌────────────────────────────────────────────────────────────────────────────┐
+│HEADER                                                                      │
+│· Gán NV: PSID_abc [x]                                                      │
+├────────────────────────────────────────────────────────────────────────────┤
+│BODY                                                                        │
+│· NV hiện tại: CSKH B · Gán cho [CSKH B v] · ? CSKH A · o CSKH B (hiện tại)…│
+├────────────────────────────────────────────────────────────────────────────┤
+│ACTIONS                                                                     │
+│· [Hủy]  [Gán]                                                              │
+└────────────────────────────────────────────────────────────────────────────┘
+```
+<!-- ui-layout:ascii:end -->
+
 ```
 ┌ MODAL — Gán NV xử lý ─────────────────────────────┐
 │  Gán NV: PSID_abc                            [✕]  │

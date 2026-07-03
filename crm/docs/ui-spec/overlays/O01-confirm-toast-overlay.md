@@ -20,6 +20,30 @@ khi không cần confirm. `confirm_type` payload điều khiển nội dung.
 
 ## Layout
 
+```yaml ui-layout
+areas:
+  - [content]
+  - [actions]
+samples:
+  content: "⚠ Xóa ghi chú này?  Hành động không thể hoàn tác."
+  actions: "[Hủy]  [Xóa]"
+elements:
+  "Hủy": A-O01-002
+  "Xóa": A-O01-003
+```
+
+<!-- ui-layout:ascii:start -->
+```
+┌────────────────────────────────────────────────────────────────────────────┐
+│CONTENT                                                                     │
+│· ! Xóa ghi chú này?  Hành động không thể hoàn tác.                         │
+├────────────────────────────────────────────────────────────────────────────┤
+│ACTIONS                                                                     │
+│· [Hủy]  [Xóa]                                                              │
+└────────────────────────────────────────────────────────────────────────────┘
+```
+<!-- ui-layout:ascii:end -->
+
 ```
      ┌ OVERLAY ──────────────────────────────┐
      │  ⚠ Xóa ghi chú này?                  │

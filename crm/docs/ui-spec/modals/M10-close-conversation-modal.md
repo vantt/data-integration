@@ -19,6 +19,37 @@ regions: [header, body, actions]
 
 ## Layout
 
+```yaml ui-layout
+columns: [1fr]
+areas:
+  - [header]
+  - [body]
+  - [actions]
+samples:
+  header: "Đóng hội thoại với Nguyễn Văn A [✕]"
+  body: "Kết quả xử lý: [Đã giải quyết thắc mắc về đơn hàng] · [✓] Ghi vào activity timeline của khách"
+  actions: "[Hủy]  [Đóng hội thoại]"
+elements:
+  "✕": A-M10-001
+  "Hủy": A-M10-002
+  "Đóng hội thoại": A-M10-003
+```
+
+<!-- ui-layout:ascii:start -->
+```
+┌────────────────────────────────────────────────────────────────────────────┐
+│HEADER                                                                      │
+│· Đóng hội thoại với Nguyễn Văn A [x]                                       │
+├────────────────────────────────────────────────────────────────────────────┤
+│BODY                                                                        │
+│· Kết quả xử lý: [Đã giải quyết thắc mắc về đơn hàng] · [v] Ghi vào activit…│
+├────────────────────────────────────────────────────────────────────────────┤
+│ACTIONS                                                                     │
+│· [Hủy]  [Đóng hội thoại]                                                   │
+└────────────────────────────────────────────────────────────────────────────┘
+```
+<!-- ui-layout:ascii:end -->
+
 ```
 ┌ MODAL — Đóng hội thoại ───────────────────────────┐
 │  Đóng hội thoại với Nguyễn Văn A             [✕]  │

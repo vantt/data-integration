@@ -20,6 +20,41 @@ Tag có category (từ `crm_tag.category`).
 
 ## Layout
 
+```yaml ui-layout
+columns: [1fr]
+areas:
+  - [header]
+  - [body]
+  - [actions]
+samples:
+  header: "Tag cho: Nguyễn Văn A [✕]"
+  body: "Đang có: [VIP ✕] [repeat ✕] [da-nhạy-cảm ✕] · [🔍 Tìm hoặc tạo tag mới...] · [+] skin-care [+] wholesale [+] gift-buyer [+] price-sensitive"
+  actions: "[Đóng]  [Lưu]"
+elements:
+  "✕": A-M03-001
+  "VIP ✕": A-M03-003
+  "repeat ✕": A-M03-003
+  "da-nhạy-cảm ✕": A-M03-003
+  "+": A-M03-004
+  "Đóng": A-M03-002
+  "Lưu": A-M03-005
+```
+
+<!-- ui-layout:ascii:start -->
+```
+┌────────────────────────────────────────────────────────────────────────────┐
+│HEADER                                                                      │
+│· Tag cho: Nguyễn Văn A [x]                                                 │
+├────────────────────────────────────────────────────────────────────────────┤
+│BODY                                                                        │
+│· Đang có: [VIP x] [repeat x] [da-nhạy-cảm x] · [(?) Tìm hoặc tạo tag mới..…│
+├────────────────────────────────────────────────────────────────────────────┤
+│ACTIONS                                                                     │
+│· [Đóng]  [Lưu]                                                             │
+└────────────────────────────────────────────────────────────────────────────┘
+```
+<!-- ui-layout:ascii:end -->
+
 ```
 ┌ MODAL — Quản lý tag ───────────────────────────────┐
 │  Tag cho: Nguyễn Văn A                       [✕]  │
