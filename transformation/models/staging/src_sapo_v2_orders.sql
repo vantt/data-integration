@@ -67,7 +67,8 @@ deduped AS (
                     WHEN ingest_method = 'webhook' THEN 1
                     WHEN ingest_method = 'history_log' THEN 2
                     ELSE 3
-                END ASC
+                END ASC,
+                _dlt_load_id DESC  -- newest load wins when modified_on + ingest_method tie
         ) AS rn
     FROM raw_data
 ),
@@ -211,5 +212,6 @@ QUALIFY ROW_NUMBER() OVER (
             WHEN 'webhook' THEN 1
             WHEN 'history_log' THEN 2
             ELSE 3
-        END ASC
+        END ASC,
+        _dlt_load_id DESC  -- newest load wins when modified_on + ingest_method tie
 ) = 1

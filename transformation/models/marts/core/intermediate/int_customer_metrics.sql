@@ -34,9 +34,8 @@ changed_customers AS (
     SELECT DISTINCT customer_key
     FROM orders
     -- Watermark on updated_at (order modification time), not last_order_date (business date).
-    -- 1-day safety buffer catches late-arriving Sapo backfills whose updated_at may land
-    -- slightly before the prior run's MAX(metric_calculated_at) due to clock skew.
-    WHERE updated_at >= (SELECT MAX(metric_calculated_at) - INTERVAL '1 day' FROM {{ this }})
+    -- 3-day safety buffer catches late-arriving Sapo backfills (clock skew + multi-hop reordering).
+    WHERE updated_at >= (SELECT MAX(metric_calculated_at) - INTERVAL '3 days' FROM {{ this }})
     {% else %}
     SELECT DISTINCT customer_key FROM orders
     {% endif %}

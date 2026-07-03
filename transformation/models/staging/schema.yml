@@ -46,7 +46,7 @@ models:
   - name: stg_sapo_v2_orders
     columns:
       - name: order_id
-        tests: [not_null]
+        tests: [not_null, unique]
 
   - name: stg_sapo_v2_order_items
     columns:
