@@ -5,6 +5,7 @@ post-ingest archiving, and full-refresh guardrails.
 """
 
 import os
+import time
 import shutil
 from pathlib import Path
 from datetime import datetime, timezone
@@ -77,8 +78,17 @@ def archive_source_file(source_file, archive_base, max_date, ingested_at_ts=None
 
     original_name = os.path.basename(source_file)
     dest = os.path.join(archive_dir, f"{ingested_at_ts}__{original_name}")
-    shutil.move(str(source_file), dest)
-    print(f"  Archived: {source_file} -> {dest}")
+    # Retry up to 3× with 1s delay — Windows may hold the xlsx handle briefly after openpyxl read.
+    for attempt in range(3):
+        try:
+            shutil.move(str(source_file), dest)
+            print(f"  Archived: {source_file} -> {dest}")
+            return
+        except PermissionError:
+            if attempt < 2:
+                time.sleep(1)
+            else:
+                print(f"  WARNING: could not archive {source_file} (file locked) — ingest succeeded, file left in place.")
 
 
 def full_refresh_partitions(base_path, entity_name, touched_partitions):

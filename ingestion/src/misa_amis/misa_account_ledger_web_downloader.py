@@ -75,9 +75,12 @@ def _set_dates_for_period(page, period: str) -> None:
     for i, val in enumerate([start_str, end_str]):
         try:
             inp = date_inputs.nth(i)
-            inp.click(timeout=3000)
+            # Triple-click selects all including the year sub-field, then type overwrites.
+            # fill() alone leaves the year sub-field unchanged when MISA's picker has a
+            # pre-populated year that differs from the target (e.g. backfill to 2021).
+            inp.click(timeout=3000, click_count=3)
             inp.press("Control+A")
-            inp.fill(val, timeout=3000)
+            inp.type(val, delay=40)
             inp.press("Tab")
             time.sleep(0.5)
             print(f"    set date[{i}] = {val}")
