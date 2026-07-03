@@ -110,6 +110,8 @@ Use `/ui-spec context <surface-id>` to get a pre-assembled context bundle for a 
 
 **For design generation:** surface prose (Layout section) + `design_ref` path + contract (element names map to design components).
 
+**For layout authoring:** the `## Layout` section may include a `yaml ui-layout` fence (model-first flow). Draft the YAML fence — do NOT draw ASCII. Run `build.mjs` to generate the ASCII and wireframe deterministically. Hand-drawing aligned 2D ASCII is unreliable for LLM authors. See `references/ui-layout-authoring.md` for the full schema and workflow.
+
 ---
 
 ## The authoring model for LLMs

@@ -49,7 +49,7 @@ Run `validate` + `build`. If `surface-id` provided, validate that single surface
 
 ### `validate`
 Structural validation only — does not generate artifacts.
-Checks: unique action IDs, target resolution, modal exit rules, rule drift, required frontmatter.
+Checks: unique action IDs, target resolution, modal exit rules, rule drift, required frontmatter, `ui-layout` fence geometry (VR-LAYOUT-UNKNOWN/RECT/ORPHAN), element→action mapping (VR-ELEMENT-REF), ASCII drift (VR-ASCII-DRIFT), wireframe staleness (VR-WIREFRAME-STALE).
 Exit non-zero on any error → CI gate.
 
 ### `build`
@@ -58,6 +58,8 @@ Generate artifacts from validated source files:
 - `generated/navigation-graph.yaml` — navigate edges between surfaces
 - `generated/action-registry.csv` — all action IDs, elements, triggers, targets
 - `generated/coverage-report.md` — flow coverage: flows → steps → missing action refs
+- `generated/wireframe-v2.html` — interactive wireframe (surfaces, storyboard, graph)
+- ASCII injection — for each surface with a `yaml ui-layout` fence: regenerates box-drawing ASCII between `<!-- ui-layout:ascii:start/end -->` markers (idempotent)
 
 ### `add-surface <type> <id> <name>`
 Add a new surface file from the appropriate template.
@@ -74,13 +76,14 @@ Launch runtime wireframe renderer — opens a single HTML file in browser.
 
 ### `interpret:wf` (wireframe v2 — region-box layout)
 Launch wireframe v2 renderer — interactions laid out inside their region boxes.
-- **Layout tab (default):** region boxes with action buttons (colored) + reaction chips (dashed ⚡)
-- **Blueprint tab:** original hand-authored ASCII layout for 2D reference
-- Declared regions with no interactions show "(display only)" dashed box
+- **Layout tab (default):** spatial CSS grid from the `ui-layout` model — cells show sample content; `[...]` tokens render as hoverable chips; fixed Contract Inspector panel shows the hovered element/region contract (click pins); floating regions toggle; variants switch
+- **Interactions tab:** full contract region boxes — action buttons (colored) + reaction chips (dashed ⚡); regions with no interactions show "(display only)"
+- **Blueprint tab:** generated ASCII (from the ui-layout model) for 2D reference; hand-authored ASCII only for surfaces without a model
 - Sidebar groups all surfaces by type; click to navigate; overlay surfaces open in a card
 - Storyboard + Graph tabs present but disabled (Phase 2/3)
 - Output: `generated/wireframe-v2.html` (does not overwrite v1's `wireframe.html`)
 - Command: `node interpret-wireframe.mjs --root <spec-root>` or `npm run interpret:wf -- --root <spec-root>`
+- **Preferred workflow:** `node tools/build.mjs --root <spec-root>` runs validate → registries → wireframe → ASCII injection in one step. Open `generated/wireframe-v2.html` after.
 
 ### `context <surface-or-flow-id>`
 Output LLM-ready context block for codegen — surface contract + relevant domain rules + connected surfaces. Use before implementing a specific screen/component.
@@ -132,6 +135,42 @@ interactions:
 (prose or ST-* links)
 ```
 
+### `ui-layout` fence (spatial layout model)
+
+Each surface may include a `yaml ui-layout` fence in the `## Layout` section. This is the **machine-readable source of truth** for spatial layout — edit the fence, never the generated ASCII.
+
+**Key insight:** LLMs cannot reliably draw aligned 2D ASCII; the YAML model is what you author, and both the interactive CSS grid and the markdown ASCII are deterministic renders of that model. VR-ASCII-DRIFT errors if the stored ASCII diverges from the model.
+
+```yaml
+# Schema overview:
+columns: ["3fr", "2fr"]          # CSS fr units — column widths
+areas:                            # grid-template-areas matrix (rows × cols)
+  - [header, header]             # regions must form solid rectangles (VR-LAYOUT-RECT)
+  - [main,   sidebar]
+floating:                         # overlay regions rendered as toggle banners
+  - region: stop_banner
+    when: "condition"             # human-readable condition string
+    replaces: [main, sidebar]    # cells hidden when banner is active
+variants:                         # alternate layouts (prepend/append rows)
+  full_screen:
+    prepend_rows: [[topbar, topbar]]
+samples:                          # one realistic data line per region; [text] → hoverable chip
+  header: "Page title [Action]"
+children:                         # sub-layout for a nested region (1-level only)
+  sidebar:
+    areas: [[sidebar.info], [sidebar.tags]]
+elements:                         # chip text → action ID for Contract Inspector
+  "Action": A-S05-003            # map ONLY unambiguous 1:1 pairs; validated by VR-ELEMENT-REF
+```
+
+**Generated ASCII** lives between `<!-- ui-layout:ascii:start -->` and `<!-- ui-layout:ascii:end -->` markers (injected by `build.mjs`). Do not hand-edit these markers or the content between them — they are overwritten on every build.
+
+**Coverage rule:** every region in frontmatter `regions[]` must appear in `areas`, `floating`, variant rows, or `children` (VR-LAYOUT-ORPHAN). Every name used in the layout must be in `regions[]` (VR-LAYOUT-UNKNOWN → error). Regions must form solid rectangles in the `areas` matrix (VR-LAYOUT-RECT → error).
+
+**Validation rules (layout-specific):** `VR-LAYOUT-PARSE` (warn) · `VR-LAYOUT-UNKNOWN` (error) · `VR-LAYOUT-RECT` (error) · `VR-LAYOUT-ORPHAN` (warn) · `VR-ELEMENT-REF` (warn) · `VR-ASCII-DRIFT` (warn) · `VR-WIREFRAME-STALE` (warn)
+
+Full schema, worked S14 example, common mistakes, and migration recipe: `references/ui-layout-authoring.md`.
+
 ### Surface types
 | Type | ID prefix | Key rule |
 |---|---|---|
@@ -163,6 +202,12 @@ Interactions may include `region: <region-id>` as a layout hint. If present, the
                           │
                           ├── validate.mjs   (schema + rules)  → exit≠0 on error
                           └── build.mjs      → generated/*
+                                                  ├── surface-registry.yaml
+                                                  ├── navigation-graph.yaml
+                                                  ├── action-registry.csv
+                                                  ├── coverage-report.md
+                                                  ├── wireframe-v2.html
+                                                  └── ASCII injected into *.md (idempotent)
 ```
 
 Source of truth = `.md` files. `generated/` is output — do not edit by hand, safe to gitignore.
