@@ -6,7 +6,7 @@
         "hooks": [
           {
             "type": "command",
-            "command": "node \"$CLAUDE_PROJECT_DIR/.agents/skills/ui-spec/tools/hook-validate-on-edit.mjs\"",
+            "command": "node \"$CLAUDE_PROJECT_DIR/.skills/ui-spec/tools/hook-validate-on-edit.mjs\"",
             "timeout": 90,
             "statusMessage": "ui-spec validate"
           }

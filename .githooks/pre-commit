@@ -1,24 +1,24 @@
 #!/bin/sh
 # ui-spec pre-commit gate
-# Runs only when staged files touch crm/docs/ui-spec/ or .agents/skills/ui-spec/
+# Runs only when staged files touch crm/docs/ui-spec/ or .skills/ui-spec/
 # Validates spec integrity, regenerates artifacts, checks freshness.
 
 STAGED=$(git diff --cached --name-only)
 
 # -- Early exit: nothing in scope --
-echo "$STAGED" | grep -qE '^crm/docs/ui-spec/|^\.agents/skills/ui-spec/' || exit 0
+echo "$STAGED" | grep -qE '^crm/docs/ui-spec/|^\.skills/ui-spec/' || exit 0
 
 # -- Validate --
-OUT=$(node .agents/skills/ui-spec/tools/validate.mjs --root crm/docs/ui-spec 2>&1)
+OUT=$(node .skills/ui-spec/tools/validate.mjs --root crm/docs/ui-spec 2>&1)
 if [ $? -ne 0 ]; then
   echo "$OUT"
   exit 1
 fi
 
 # -- Build (suppress stdout, capture stderr for errors) --
-node .agents/skills/ui-spec/tools/build.mjs --root crm/docs/ui-spec > /dev/null 2>&1
+node .skills/ui-spec/tools/build.mjs --root crm/docs/ui-spec > /dev/null 2>&1
 if [ $? -ne 0 ]; then
-  node .agents/skills/ui-spec/tools/build.mjs --root crm/docs/ui-spec 2>&1
+  node .skills/ui-spec/tools/build.mjs --root crm/docs/ui-spec 2>&1
   exit 1
 fi
 
@@ -34,8 +34,8 @@ if [ $? -ne 0 ]; then
 fi
 
 # -- Tool tests: run when ui-spec tool source files are staged --
-echo "$STAGED" | grep -qE '^\.agents/skills/ui-spec/tools/' && {
-  npm test --prefix .agents/skills/ui-spec/tools 2>&1 || exit 1
+echo "$STAGED" | grep -qE '^\.skills/ui-spec/tools/' && {
+  npm test --prefix .skills/ui-spec/tools 2>&1 || exit 1
 }
 
 echo "ui-spec pre-commit gate: OK"
