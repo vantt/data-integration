@@ -58,6 +58,8 @@ class ActivityService:
             related_order_code=activity_data.get("related_order_code"),
             staff_user_id=activity_data.get("staff_user_id"),
             custom_fields=activity_data.get("custom_fields"),
+            task_id=activity_data.get("task_id") or None,
+            channel_type=activity_data.get("channel_type") or None,
         )
         self._repo.insert(activity)
         # Keep last_contact snapshot in sync whenever outcome is recorded.

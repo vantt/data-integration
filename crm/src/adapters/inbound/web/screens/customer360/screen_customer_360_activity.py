@@ -182,11 +182,13 @@ def register_activity_routes(
             "activity_type": _HT_TO_ACT_TYPE.get(hinh_thuc, "other"),
             "direction": "out",
             "channel": channel_value.strip() or None,
+            "channel_type": hinh_thuc.strip() or None,
             "outcome": outcome.strip() or None,
             "body": body.strip() or None,
             "occurred_at": utc_occurred,
             "related_order_code": related_order_code.strip() or None,
             "staff_user_id": actor_id,
+            "task_id": task_id.strip() or None,
         }
         if outcome == "callback" and callback_at.strip():
             act_data["callback_at"] = _ict_local_to_utc(callback_at)
@@ -287,9 +289,11 @@ def register_activity_routes(
             "activity_type": act_type,
             "direction": "out",
             "channel": ch or None,
+            "channel_type": ch or None,
             "outcome": "async_sent",
             "body": note.strip() or None,
             "staff_user_id": actor_id,
+            "task_id": task_id.strip() or None,
         }
         try:
             activity_log.log_activity(act_data)

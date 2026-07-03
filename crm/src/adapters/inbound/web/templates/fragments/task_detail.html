@@ -16,6 +16,16 @@
 {% set _kind_tone = {'contact': 'amber', 'internal': 'moss', 'generic': 'default'} %}
 {% set _kind_label = {'contact': 'Liên hệ', 'internal': 'Nội bộ', 'generic': 'Chung'} %}
 {% set _status_label = {'open': 'Đang mở', 'doing': 'Đang làm', 'done': 'Hoàn thành', 'cancelled': 'Đã huỷ'} %}
+{% set _outcome_label = {
+  'answered': 'Đã nghe', 'no_answer': 'Không bắt máy', 'callback': 'Hẹn gọi lại', 'refused': 'Từ chối',
+  'replied': 'Đã phản hồi', 'pending': 'Chưa phản hồi', 'no_reply': 'Không phản hồi',
+  'met': 'Gặp được', 'not_met': 'Không gặp được', 'async_sent': 'Đã gửi',
+} %}
+{% set _channel_label = {
+  'call': 'Điện thoại', 'zalo': 'Zalo', 'fb': 'Facebook', 'email': 'Email', 'visit': 'Ghé thăm', 'other': 'Khác',
+} %}
+{% set _pref_ch_labels = {'phone': 'SĐT', 'phone_secondary': 'Số phụ', 'zalo': 'Zalo', 'facebook': 'FB', 'email': 'Email'} %}
+{% set _pref_ch = identities | selectattr('identity_type', 'in', ['phone', 'phone_secondary', 'zalo', 'facebook', 'email']) | sort(attribute='is_preferred', reverse=true) | list | first %}
 {% set _lifecycle = ['open', 'doing', 'done'] %}
 {% set _read_only = task.status in ('done', 'cancelled') %}
 {% set _kind = task.task_kind %}
@@ -100,7 +110,11 @@
   <div class="s15-banner s15-banner--done">
     <svg width="14" height="14" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.3" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 8l3.5 3.5L13 5"/></svg>
     Task đã hoàn thành — chỉ đọc. Nhật ký vẫn hiển thị bên dưới.
-    <form method="post" action="/tasks/{{ task.task_id }}/status" style="display:inline">
+    <form method="post" action="/tasks/{{ task.task_id }}/status" style="display:inline"
+          hx-post="/tasks/{{ task.task_id }}/status"
+          hx-vals='{"new_status": "open"}'
+          hx-target="body" hx-swap="none"
+          hx-on::after-request="window.location.reload()">
       <input type="hidden" name="new_status" value="open">
       <button type="submit" class="s15-banner__link">Mở lại</button>
     </form>
@@ -109,7 +123,11 @@
   <div class="s15-banner s15-banner--cancel">
     <svg width="14" height="14" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.3" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 4l8 8M12 4l-8 8"/></svg>
     Task đã huỷ.
-    <form method="post" action="/tasks/{{ task.task_id }}/status" style="display:inline">
+    <form method="post" action="/tasks/{{ task.task_id }}/status" style="display:inline"
+          hx-post="/tasks/{{ task.task_id }}/status"
+          hx-vals='{"new_status": "open"}'
+          hx-target="body" hx-swap="none"
+          hx-on::after-request="window.location.reload()">
       <input type="hidden" name="new_status" value="open">
       <button type="submit" class="s15-banner__link">Mở lại</button>
     </form>
@@ -290,8 +308,12 @@
             </div>
             <div class="s15-cust__meta mono">
               {% if party.province %}<span>{{ party.province }}</span><span class="s15-cust__sep">·</span>{% endif %}
+              {% if _pref_ch %}<span>{{ _pref_ch_labels.get(_pref_ch.identity_type, _pref_ch.identity_type) }}: {{ _pref_ch.identity_value }}</span><span class="s15-cust__sep">·</span>{% endif %}
               <span>ID: {{ task.party_id }}</span>
             </div>
+            {% if party.consent_contact == 'denied' %}
+            <div class="consent-row" style="margin-top:4px"><span class="consent-no">Không được liên hệ (R1)</span></div>
+            {% endif %}
           </div>
           <a class="btn btn--ghost" href="/customers/{{ task.party_id }}" style="padding:8px 12px">
             360
@@ -317,7 +339,7 @@
           <svg width="13" height="13" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.3" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M11.5 2.5l2 2-9 9L2 14l.5-2.5 9-9z"/></svg>
           Mô tả
         </div>
-        <p class="s15-desc">{{ task.description }}</p>
+        <div class="md-prose s15-desc md-view" data-md="{{ task.description | e }}"></div>
       </div>
       {% endif %}
 
@@ -338,7 +360,12 @@
             </div>
             <div class="s15-cust__meta mono">
               {% if party.province %}<span>{{ party.province }}</span>{% endif %}
+              {% if party.province and _pref_ch %}<span class="s15-cust__sep">·</span>{% endif %}
+              {% if _pref_ch %}<span>{{ _pref_ch_labels.get(_pref_ch.identity_type, _pref_ch.identity_type) }}: {{ _pref_ch.identity_value }}</span>{% endif %}
             </div>
+            {% if party.consent_contact == 'denied' %}
+            <div class="consent-row" style="margin-top:4px"><span class="consent-no">Không được liên hệ (R1)</span></div>
+            {% endif %}
           </div>
         </div>
         <div class="s15-tools">
@@ -368,7 +395,7 @@
           <svg width="13" height="13" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.3" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M11.5 2.5l2 2-9 9L2 14l.5-2.5 9-9z"/></svg>
           Mô tả
         </div>
-        <p class="s15-desc">{{ task.description }}</p>
+        <div class="md-prose s15-desc md-view" data-md="{{ task.description | e }}"></div>
       </div>
       {% endif %}
 
@@ -381,7 +408,7 @@
           <svg width="13" height="13" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.3" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M11.5 2.5l2 2-9 9L2 14l.5-2.5 9-9z"/></svg>
           Mô tả
         </div>
-        <p class="s15-desc">{{ task.description }}</p>
+        <div class="md-prose s15-desc md-view" data-md="{{ task.description | e }}"></div>
       </div>
       {% endif %}
 
@@ -400,10 +427,16 @@
           <span class="s15-tl-dot s15-tl-dot--attempt"></span>
           <div class="s15-tl-main">
             <div class="s15-tl-top">
-              <span class="s15-tl-kind">{{ entry.activity_type | upper }}</span>
-              <span class="s15-tl-time mono">{{ entry.occurred_at | format_datetime_ict }} ICT</span>
+              <span class="bdg">{{ entry.activity_type | upper }}</span>
+              <span class="s15-tl-time mono">{{ entry.occurred_at | format_datetime_ict }}</span>
             </div>
-            <div class="s15-tl-text">{{ entry.outcome or '—' }}</div>
+            {% if entry.channel %}
+            <div class="s15-tl-text">{{ _channel_label.get(entry.channel_type, 'Liên hệ') }}: {{ entry.channel }}</div>
+            {% endif %}
+            <div class="s15-tl-text">Kết quả: {{ _outcome_label.get(entry.outcome, entry.outcome) if entry.outcome else '—' }}</div>
+            {% if entry.body %}
+            <div class="s15-tl-note">{{ entry.body }}</div>
+            {% endif %}
           </div>
         </div>
         {% endfor %}

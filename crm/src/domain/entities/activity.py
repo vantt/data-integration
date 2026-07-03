@@ -52,3 +52,5 @@ class Activity:
     related_order_code: Optional[str] = None  # soft ref; order lives in warehouse
     staff_user_id: Optional[str] = None     # FK → crm_app_user (nullable)
     custom_fields: Optional[dict] = None   # structured metadata (JSON in DB)
+    task_id: Optional[str] = None           # FK → crm_task (nullable) — links attempt to task
+    channel_type: Optional[str] = None      # call|zalo|fb|email|visit|other — labels `channel` value

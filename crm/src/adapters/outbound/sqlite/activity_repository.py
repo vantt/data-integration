@@ -19,15 +19,15 @@ _INSERT = """
 INSERT INTO crm_activity_log (
   activity_id, party_id, activity_type, direction, channel,
   subject, body, outcome, related_order_code,
-  staff_user_id, occurred_at, created_at, custom_fields
-) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+  staff_user_id, occurred_at, created_at, custom_fields, task_id, channel_type
+) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
 """
 
 _LIST_BY_PARTY = """
 SELECT
   activity_id, party_id, activity_type, direction, channel,
   subject, body, outcome, related_order_code,
-  staff_user_id, occurred_at, created_at, custom_fields
+  staff_user_id, occurred_at, created_at, custom_fields, task_id, channel_type
 FROM crm_activity_log
 WHERE party_id = ?
 ORDER BY occurred_at DESC
@@ -56,6 +56,8 @@ def _activity_from_row(row: sqlite3.Row) -> Activity:
         related_order_code=row["related_order_code"],
         staff_user_id=row["staff_user_id"],
         custom_fields=custom_fields,
+        task_id=row["task_id"],
+        channel_type=row["channel_type"],
     )
 
 
@@ -88,6 +90,8 @@ class SQLiteActivityRepository:
             activity.occurred_at,
             activity.created_at,
             json.dumps(activity.custom_fields) if activity.custom_fields else None,
+            activity.task_id,
+            activity.channel_type,
         ))
         return activity
 
