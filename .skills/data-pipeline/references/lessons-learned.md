@@ -4574,3 +4574,43 @@ The nullable field is the true source of truth: rows from `wh_action_queue` (cus
 3. UNION ALL branches must carry the same column count in the same order. In SQLite, column *names* come from the first SELECT but *values* come from all branches. A NULL placeholder in branch 1 will be displaced by the real value from branch 2 at the same position — verify by running the UNION query directly, not just checking the individual branch.
 
 **Reference:** `c360_insight_panel.html` (purchase context condition), `cache_repository.py` (`_fetch_actions` UNION ALL). Fixed 2026-06-29.
+
+---
+
+### L154 — A validation function reading the wrong column of a lookup sheet silently checks against the wrong dimension, causing false-positive errors
+
+**Group:** SERVE / APPS-SCRIPT
+
+**Symptom:** Apps Script validator reported every `recurring` row's Dòng Tiền as invalid even though the values were correct and matched the `__REF` tab exactly. Dropdown (built by `applyDongTienDropdown`) worked fine but `validateBudgetRow` flagged them as "không có trong danh sách hợp lệ".
+
+**Root cause:** `getValidCashflowLines` was written when `__REF` had one column. After schema changed to 2 columns (col A = Chiều direction, col B = cashflow_line), only `applyDongTienDropdown` was updated. `getValidCashflowLines` still read `'A:A'` — returning ["Thu","Chi","Thu",...] — not cashflow_line names. Silent split: dropdown read col B correctly, validator read col A incorrectly.
+
+**Fix:** Changed `getValidCashflowLines` to `getRange(1, 2, lastRow, 1)` (col B), matching `applyDongTienDropdown`.
+
+**Rules:**
+1. When a lookup sheet schema changes, search ALL functions reading that sheet and update column references everywhere — not just the function you're actively editing.
+2. A validator and a dropdown builder reading the same reference sheet must use identical column indices. Divergence causes false positives where both appear to "work" independently.
+3. When dropdown shows valid options but validator rejects the same values, first suspect is mismatched column reads against a shared reference.
+
+**Reference:** `scripts/budget/validate-budget-sheet.gs` (`getValidCashflowLines`, `applyDongTienDropdown`). Fixed 2026-07-04.
+
+### L155 — PowerShell 5.1 `Set-Content -Encoding utf8` adds BOM; deploy scripts that use `startsWith('---')` silently skip the entire blueprint
+
+**Group:** SERVE / METABASE
+
+**Symptom:** `deploy_from_markdown.js` output showed "📖 Parsing... 🚀 Deployment Complete" with no cards or dashboard created. Dashboard not found in Metabase search. No error message.
+
+**Root cause:** Blueprint file was written through PowerShell `Set-Content -Encoding utf8` which in PS 5.1 adds a UTF-8 BOM (`\xEF\xBB\xBF`) to the start. The deploy script checks `fileContent.startsWith('---')` to find the YAML frontmatter; with BOM the file starts with `\xEF\xBB\xBFprimary_scope:`, so the check fails silently. The script reads no sections and exits successfully. Additionally, if a subagent writes a blueprint with wrong encoding and the file gets re-saved, Vietnamese multi-byte characters collapse into Mojibake (`T�"ng` instead of `Tổng`) — the `"` embedded in replacement sequences breaks JSON block parsing.
+
+**Fix:**
+1. BOM: use `[System.IO.File]::WriteAllText(path, content, [System.Text.Encoding]::new('utf-8', $false))` (no-BOM UTF-8). Never use PS5.1 `Set-Content -Encoding utf8` for files consumed by Node.js.
+2. Garbled emoji in section headers: post-process with regex to strip garbled prefix and re-add correct emoji (`## 📂 Collection:`, `### 🖥️ Dashboard:`, etc.).
+3. Garbled column aliases in SQL/viz: replace with ASCII aliases that are valid in both SQL identifiers and JSON keys; use Metabase API `PUT /api/card/:id` to patch cards that were already created with broken settings.
+
+**Rules:**
+1. Any file written by PowerShell 5.1 that is consumed by Node.js must use no-BOM UTF-8; validate with `xxd file | head -1` — first bytes must NOT be `ef bb bf`.
+2. When blueprint deploy prints "Complete" with no card creation logs, first check for BOM, then check Collection/Dashboard header emoji.
+3. Metabase `column_settings` keys must be the JSON-encoded field reference string `["name","COL_NAME"]`, not a bare identifier.
+4. Always use ASCII column aliases (`AS "Col_ascii"`) in SQL for Metabase native questions when the display name contains Vietnamese — alias separately in `column_settings` display name if needed.
+
+**Reference:** `docs/analytics-handbook/blueprints/metabase/finance_cashflow_budget.md`, `.skills/metabase-automation/scripts/deploy_from_markdown.js`. Fixed 2026-07-04.
