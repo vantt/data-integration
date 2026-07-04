@@ -105,8 +105,11 @@ Sửa chữa mái kho   │ Chi  │Tuần 4 │reserve   │  30M   │    ??? 
 ```
 
 - `recurring`: Gợi ý = rolling avg 3 tháng actual
-- `reserve`: Gợi ý = `gap_còn_lại / months_until_target`; finance confirm hoặc điều chỉnh; `Cần tổng` + `Tháng cần` điền 1 lần lúc setup
-- `one_off`: Gợi ý = 0 trừ tháng target; `Cần tổng` = số lần đó
+- `reserve`: Gợi ý phụ thuộc vào `Cần tổng` / `Tháng cần`:
+  - Có cả hai → `gap_còn_lại / months_until_target` (sinking fund tự động)
+  - Chỉ có target, không deadline → không tính gợi ý; dashboard hiển thị "accumulated X / cần Y — chưa có deadline"
+  - Không có cả hai → không tính gợi ý; finance nhập tay mỗi tháng; dashboard hiển thị "đã tích lũy X"
+- `one_off`: Gợi ý = 0 trừ tháng target; `Cần tổng` = số chi lần đó
 
 **Tab ALLOCATION\_POLICY** — finance review hàng quý (xem Mục 6):
 
@@ -123,6 +126,46 @@ Sửa chữa mái kho   │ Chi  │Tuần 4 │reserve   │  30M   │    ??? 
 - **`effective_from`/`effective_to`**: finance điền khi thay đổi policy. Để `effective_to` trống = đang hiệu lực.
 - **Sheet chỉ hiển thị current rows** (effective_to trống). Khi đổi policy: set `effective_to` vào dòng cũ → thêm dòng mới với `effective_from` mới. Script merge với historical rows trong CSV (append-only) — không xóa lịch sử.
 - Script validate không có **gap hoặc overlap** giữa các dòng cùng bucket trước khi generate CSV.
+
+### Chống sai sót nhập liệu — Dropdown validation
+
+`cashflow_line` là join key giữa Sheet và pipeline. Typo một ký tự → join 0 rows, không có lỗi, số biến mất im lặng.
+
+**Giải pháp: tab `__REF` + dropdown validation** (đơn giản hơn code column):
+
+```
+Tab __REF (ẩn, finance không cần đụng):
+  Cột A: toàn bộ cashflow_line hợp lệ (copy từ dim_gl_account.sql CASE expression)
+  Cập nhật khi taxonomy thay đổi
+
+Tab BUDGET_ITEMS:
+  Cột "Dòng tiền" → Data Validation: List from range = __REF!A:A
+  → Finance chỉ chọn từ dropdown, không thể gõ sai
+  → Script pull không cần thêm mapping layer
+```
+
+**Code column không cần thiết** vì:
+- `cashflow_line` (dropdown) đã đủ làm join key cho recurring/one_off
+- `item_label` đã phân biệt các reserve items cùng cashflow_line
+- `from_plan` bucket trong ALLOCATION_POLICY sum theo `item_type='reserve'`, không cần code riêng
+- Nếu sau này cần cross-lookup phức tạp hơn → thêm lúc đó (YAGNI)
+
+**Cột Gợi ý vs Budget** (2 cột per tháng trong BUDGET_ITEMS):
+
+| | Gợi ý | Budget |
+|---|---|---|
+| Ai điền | Script (đầu tháng) | Finance |
+| Editable | Không (lock cell, màu xám) | Có (màu trắng) |
+| recurring | Rolling avg 3 tháng actual | Finance confirm hoặc override |
+| reserve | gap_còn_lại / months_until_target | Finance confirm hoặc điều chỉnh |
+| one_off | 0 (trừ target_month = item_target) | Finance confirm |
+| Vào pipeline | Không | Có → seed CSV → dbt |
+
+**Script phân biệt 2 scripts:**
+- `prefill-budget-suggestions.py` — DuckDB → Sheet (ghi cột Gợi ý, chạy đầu tháng)
+- `pull-budget-from-sheet.py` — Sheet → CSV (đọc cột Budget, chạy sau khi finance điền xong)
+
+Cả hai cần **Google Sheets API + Service Account** (share Sheet với service account email là Editor). Public share = read-only, không ghi được.
 
 ### Auto pre-fill logic
 
@@ -149,9 +192,18 @@ planned_amount     -- VND, luôn dương
 payment_week       -- 1 | 2 | 3 | 4 | 'spread' (cho weekly view)
 item_type          -- 'recurring' | 'one_off' | 'reserve'
 item_label         -- tên tự do để hiển thị dashboard (nullable cho recurring)
-item_target        -- tổng cần đạt (chỉ dùng khi item_type='reserve')
-target_month       -- tháng cần dùng tiền (chỉ dùng khi item_type='reserve'/'one_off')
+item_target        -- tổng cần đạt (nullable — xem validation bên dưới)
+target_month       -- tháng cần dùng tiền (nullable — xem validation bên dưới)
 ```
+
+**Validation target/deadline (script enforce):**
+
+| target | deadline | Xử lý |
+|--------|----------|--------|
+| có | có | Sinking fund — script tính gợi ý `gap/months` |
+| có | không | Tích lũy không áp lực thời gian — finance nhập tay, progress bar hiện `X/target` |
+| không | không | Open-ended — finance nhập tay, hiện `tích lũy X` |
+| không | có | **REJECT** — deadline không có target là vô nghĩa |
 
 ---
 
@@ -165,6 +217,13 @@ target_month       -- tháng cần dùng tiền (chỉ dùng khi item_type='rese
 | Biết timing? | Biết tháng cụ thể | Có thể chưa biết |
 | Xử lý | Budget lump sum vào tháng đó | Để dành monthly, tích lũy dần |
 | Dashboard | Hiển thị như khoản chi bình thường | Hiển thị "đã để dành X / cần Y" |
+
+**Cả hai đều nằm trong BUDGET_ITEMS** — dù có hay không có target/deadline. Khác nhau chỉ ở cách hệ thống tính Gợi ý và cách dashboard hiển thị:
+
+| Có target + deadline | Sinking fund đầy đủ: progress %, months left, on-track/behind |
+|---|---|
+| Có target, không deadline | Progress % + "còn thiếu X" — không áp lực thời gian |
+| Không target, không deadline | "Đã tích lũy X" — open-ended; finance nhập tay mỗi tháng |
 
 ### Sinking fund — cơ chế chia tiền theo chu kỳ
 
@@ -224,14 +283,28 @@ Không có policy phân bổ rõ ràng → thặng dư "tan biến" vào operati
 
 **Waterfall (ưu tiên theo bucket):** Fill bucket quan trọng trước, remainder mới xuống bucket tiếp theo. Phù hợp với SME có cash không đều.
 
-### Cấu trúc Waterfall
+### Thứ tự ưu tiên trong Waterfall
+
+**`priority` number là cơ chế sắp xếp duy nhất** — số nhỏ hơn được fill trước. `rule_type` chỉ xác định "lấy bao nhiêu", không xác định thứ tự.
+
+Convention được khuyến nghị (không phải bắt buộc về mặt kỹ thuật):
+
+```
+from_plan → fill_to_target → fixed → pct_remaining → remainder
+```
+
+Finance tự đặt priority numbers theo ngữ nghĩa business. Chỉ có 1 constraint cứng bắt buộc validate:
+
+> **`remainder` phải là priority cao nhất (số lớn nhất)** — nếu có bucket nào sau `remainder` thì bucket đó không nhận được gì.
+
+### Cấu trúc Waterfall (ví dụ điển hình)
 
 ```
 Net surplus tháng X
     │
 [P1] Emergency buffer      → fill đến target (8–12 tuần outflow)
     │ còn lại
-[P2] Reserve contributions → mỗi item theo plan (fixed/month)
+[P2] Reserve contributions → Σ planned_amount của reserve+one_off trong BUDGET_ITEMS tháng đó
     │ còn lại
 [P3] Working capital buffer → giữ N% cho tháng tới
     │ còn lại
@@ -260,23 +333,27 @@ Finance review hàng quý, không phải hàng tháng. Schema: `(priority, bucke
 ```
 rule_type options:
   fill_to_target  → đổ vào cho đến khi đạt value (VND), thừa xuống bucket tiếp
-  from_plan       → allocate đúng Σ Budget tháng đó của item_type='reserve' trong BUDGET_ITEMS
-                    (value = null — amount đến từ Sheet, không hardcode ở đây)
-  fixed           → cố định N triệu/tháng (value = VND) — dùng cho quỹ open-ended
-                    không có target/deadline cụ thể (quỹ phúc lợi, quỹ sáng kiến…)
-                    nếu surplus không đủ → partial fill + alert
+  from_plan       → allocate đúng Σ planned_amount tháng đó của reserve+one_off trong BUDGET_ITEMS
+                    (value = null — amount đến từ Sheet; bao gồm cả open-ended reserves)
+  fixed           → cố định N triệu/tháng (value = VND) — dùng cho bucket BYPASS budget planning
+                    (không tracked trong BUDGET_ITEMS; nếu surplus không đủ → partial fill + alert)
   pct_remaining   → N% của phần còn lại sau các bucket trên (value = %)
-  remainder       → toàn bộ phần còn lại (value = null)
+  remainder       → toàn bộ phần còn lại (value = null) — PHẢI là priority cuối cùng
 ```
+
+**`from_plan` bao gồm tất cả BUDGET_ITEMS contributions** (không phân biệt có hay không có target/deadline):
+- reserve có target+deadline → monthly contribution được tính tự động
+- reserve có target, không deadline → finance nhập tay → vẫn thuộc `from_plan`
+- reserve không có cả hai → finance nhập tay → vẫn thuộc `from_plan`
 
 **Phân biệt `fixed` vs `from_plan`:**
 
 | | `fixed` | `from_plan` |
 |---|---|---|
-| Amount định nghĩa ở đâu | ALLOCATION_POLICY (hardcode) | BUDGET_ITEMS (reserve rows) |
-| Có target tích lũy? | Không (open-ended) | Có (item_target + target_month) |
-| Ví dụ | Quỹ phúc lợi 2M/tháng mãi mãi | Để dành máy nén khí 80M vào T10 |
-| Khi mục tiêu đủ | Không dừng tự động | Finance xóa khỏi BUDGET_ITEMS là xong |
+| Amount định nghĩa ở đâu | ALLOCATION_POLICY (hardcode) | BUDGET_ITEMS (reserve/one_off rows) |
+| Finance theo dõi monthly? | Không — set-and-forget trong policy | Có — cập nhật mỗi tháng trong Sheet |
+| Ví dụ | Cổ tức cố định bypass ngân sách | Quỹ phúc lợi, để dành mua laptop, máy nén khí |
+| Khi mục tiêu đủ | Không dừng tự động | Finance xóa/update dòng trong BUDGET_ITEMS |
 
 ### Thay đổi Policy tạm thời (1 tháng)
 
@@ -344,10 +421,18 @@ FROM ...
 | **Cash Position** | Free cash / Total cash / Reserved | Daily |
 | **Budget vs Actual** | Variance % per cashflow_line | Monthly |
 | **Cash Forecast** | Projected balance 6 tháng tới (actual + forecast band) | Monthly |
-| **Reserve Status** | Mỗi item: đã để dành / cần / gap / deadline | Monthly |
+| **Reserve Status** | Mỗi item theo 3 chế độ hiển thị (xem bên dưới) | Monthly |
 | **Allocation Tracker** | Tháng vừa rồi: thặng dư phân bổ ra sao | Monthly |
 | **Upcoming Large Items** | Khoản đặc biệt sắp đến (one_off + reserve chưa đủ) | Monthly |
 | **Cash Coverage Weeks** | Tuần buffer hiện tại vs. target 8 tuần | Weekly |
+
+**Reserve Status — 3 chế độ hiển thị:**
+
+| Loại reserve | Dashboard hiển thị |
+|---|---|
+| target + deadline | Progress bar %, months left, on-track / behind |
+| target, không deadline | Progress bar %, "còn thiếu X" — không áp lực thời gian |
+| Không target, không deadline | "Đã tích lũy X" — open-ended accumulation |
 
 ---
 
