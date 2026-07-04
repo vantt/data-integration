@@ -19,7 +19,11 @@
 
 const TAB_BUDGET   = 'BUDGET_ITEMS';
 const TAB_POLICY   = 'ALLOCATION_POLICY';
-const TAB_REF      = '__REF';           // hidden tab with valid cashflow_line values
+// __REF: hidden tab với 2 cột
+//   A = direction      (Thu | Chi) — cột đầu để sort/group dễ đọc
+//   B = cashflow_line  (khớp chính xác với dim_gl_account.cashflow_line trong MISA)
+// Populate từ DuckDB: SELECT direction, cashflow_line FROM dim_gl_account ORDER BY direction DESC, cashflow_line
+const TAB_REF      = '__REF';
 
 // BUDGET_ITEMS column positions (1-indexed, A=1)
 // Khớp với cấu trúc thực tế của Sheet (đọc từ header row).
@@ -69,23 +73,33 @@ function installTriggers() {
   SpreadsheetApp.getUi().alert('Trigger installed. Menu "Budget Tools" ready.');
 }
 
-/** Called automatically on every cell edit. Lightweight — only checks edited row. */
+/**
+ * Simple trigger — tự động active, không cần installTriggers().
+ * Xử lý dropdown Dòng Tiền ngay khi edit (không cần authorization mở rộng).
+ */
+function onEdit(e) {
+  onEditTrigger(e);
+}
+
+/** Installable trigger (backup) — cài bằng installTriggers() nếu cần auth mở rộng sau này. */
 function onEditTrigger(e) {
   const sheet = e.range.getSheet();
   const name  = sheet.getName();
   if (name === TAB_BUDGET) {
     const row = e.range.getRow();
     if (row <= 2) return; // skip 2 header rows (row1=month, row2=column names)
-    // Cách 2: nếu finance thay đổi cột Type → cập nhật dropdown Dòng Tiền ngay lập tức
-    if (e.range.getColumn() === BI_COL.ITEM_TYPE) {
-      const itemType = String(e.value || '').trim();
-      applyDongTienDropdown(sheet, row, itemType);
+    // Cách 2: cập nhật dropdown Dòng Tiền ngay khi Type hoặc Chiều thay đổi
+    const col = e.range.getColumn();
+    if (col === BI_COL.ITEM_TYPE || col === BI_COL.DIRECTION) {
+      const itemType  = String(sheet.getRange(row, BI_COL.ITEM_TYPE).getValue() || '').trim();
+      const direction = String(sheet.getRange(row, BI_COL.DIRECTION).getValue() || '').trim();
+      applyDongTienDropdown(sheet, row, itemType, direction);
     }
     const errors = validateBudgetRow(sheet, row);
     highlightRow(sheet, row, errors);
   } else if (name === TAB_POLICY) {
     const row = e.range.getRow();
-    if (row <= 1) return;
+    if (row <= 2) return; // skip 2 header rows
     const errors = validatePolicyRow(sheet, row);
     highlightRow(sheet, row, errors);
     // Cross-row rules (remainder must be last, no gap/overlap) — show toast only
@@ -120,11 +134,31 @@ function setupAllDropdowns() {
   SpreadsheetApp.getUi().alert('✅ Setup xong', 'Dropdown đã được cấu hình cho toàn bộ Sheet.', SpreadsheetApp.getUi().ButtonSet.OK);
 }
 
+/**
+ * Tạo tab __REF (nếu chưa có) rồi ẩn đi.
+ * Data do finance paste trực tiếp vào sheet — script chỉ đọc, không ghi.
+ * Format: col A = Chiều (Thu|Chi), col B = Dòng Tiền (cashflow_line khớp MISA)
+ */
+function createRefTab() {
+  const ss = SpreadsheetApp.getActive();
+  let refSheet = ss.getSheetByName(TAB_REF);
+  if (!refSheet) {
+    refSheet = ss.insertSheet(TAB_REF);
+  }
+  refSheet.hideSheet();
+  SpreadsheetApp.getUi().alert(
+    '✅ Tab __REF đã tạo',
+    'Paste dữ liệu vào __REF:\n  Cột A = Chiều (Thu/Chi)\n  Cột B = Dòng Tiền\n\nUnhide để paste, sau đó hide lại.',
+    SpreadsheetApp.getUi().ButtonSet.OK
+  );
+}
+
 /** Custom menu — added on open. */
 function onOpen() {
   SpreadsheetApp.getUi()
     .createMenu('Budget Tools')
     .addItem('Validate All', 'validateAll')
+    .addItem('Tạo tab __REF (lần đầu)', 'createRefTab')
     .addItem('Setup Dropdowns (chạy lần đầu)', 'setupAllDropdowns')
     .addItem('Clear All Highlights', 'clearHighlights')
     .addToUi();
@@ -453,36 +487,43 @@ function validatePolicyCrossRows(sheet) {
 // ─────────────────────────────────────────────────────────────────────────────
 
 /**
- * Áp dụng dropdown Dòng Tiền cho 1 dòng cụ thể dựa vào item_type.
+ * Áp dụng dropdown Dòng Tiền cho 1 dòng cụ thể.
+ *   recurring + Chiều đã chọn → lọc __REF col B theo col A = direction (chỉ thấy đúng chiều)
+ *   recurring + chưa chọn Chiều → toàn bộ col B của __REF
+ *   reserve / one_off / trống  → xoá validation (label tự do)
  *
- * Luật:
- *   recurring  → dropdown từ __REF!A:A (phải khớp cashflow_line để join MISA)
- *   reserve    → xoá validation (label tự do, không cần join actual)
- *   one_off    → xoá validation (label tự do)
- *   trống/khác → xoá validation (chờ finance chọn Type)
+ * __REF: col A = direction (Thu|Chi), col B = cashflow_line
  */
-function applyDongTienDropdown(sheet, row, itemType) {
+function applyDongTienDropdown(sheet, row, itemType, direction) {
   const cell = sheet.getRange(row, BI_COL.CASHFLOW_LINE);
-  if (itemType === 'recurring') {
-    const ss       = SpreadsheetApp.getActive();
-    const refSheet = ss.getSheetByName(TAB_REF);
-    if (!refSheet) {
-      // __REF chưa được tạo — bỏ qua, script validation sẽ báo lỗi
-      return;
-    }
-    // Dropdown có strict — không cho nhập giá trị ngoài danh sách
-    const lastRefRow = refSheet.getLastRow() || 1;
-    const refRange   = refSheet.getRange(1, 1, lastRefRow, 1);
-    const rule = SpreadsheetApp.newDataValidation()
-      .requireValueInRange(refRange, true)   // true = show dropdown
-      .setAllowInvalid(false)               // reject nếu không có trong list
-      .setHelpText('recurring: chọn Dòng Tiền từ danh sách — phải khớp chính xác với sổ cái MISA để join được.')
-      .build();
-    cell.setDataValidation(rule);
-  } else {
-    // reserve/one_off/trống: Dòng Tiền là label tự do → xoá validation
+
+  if (itemType !== 'recurring') {
     cell.clearDataValidations();
+    return;
   }
+
+  const ss       = SpreadsheetApp.getActive();
+  const refSheet = ss.getSheetByName(TAB_REF);
+  if (!refSheet || refSheet.getLastRow() < 1) return;
+
+  const lastRefRow = refSheet.getLastRow();
+  const refData    = refSheet.getRange(1, 1, lastRefRow, 2).getValues();
+
+  // Lọc theo chiều nếu đã chọn, còn không thì show tất cả
+  const filtered = (direction === 'Thu' || direction === 'Chi')
+    ? refData.filter(r => String(r[0] || '').trim() === direction).map(r => String(r[1] || '').trim()).filter(v => v)
+    : refData.map(r => String(r[1] || '').trim()).filter(v => v);
+
+  if (!filtered.length) { cell.clearDataValidations(); return; }
+
+  const rule = SpreadsheetApp.newDataValidation()
+    .requireValueInList(filtered, true)
+    .setAllowInvalid(false)
+    .setHelpText(direction
+      ? `recurring (${direction}): chọn Dòng Tiền — phải khớp chính xác sổ cái MISA để join`
+      : 'recurring: chọn Chiều (Thu/Chi) trước để lọc danh sách theo chiều')
+    .build();
+  cell.setDataValidation(rule);
 }
 
 /**
@@ -524,10 +565,11 @@ function setupBudgetDropdowns(ss) {
     .build();
   sheet.getRange(3, BI_COL.PAYMENT_WEEK, dataRows, 1).setDataValidation(weekRule);
 
-  // ── Cột Dòng Tiền (A) — dynamic theo từng dòng ─────────────────────────────
+  // ── Cột Dòng Tiền (A) — dynamic theo từng dòng (lọc theo Type + Chiều) ────
   for (let row = 3; row <= lastRow; row++) {
-    const itemType = String(sheet.getRange(row, BI_COL.ITEM_TYPE).getValue() || '').trim();
-    applyDongTienDropdown(sheet, row, itemType);
+    const itemType  = String(sheet.getRange(row, BI_COL.ITEM_TYPE).getValue()  || '').trim();
+    const direction = String(sheet.getRange(row, BI_COL.DIRECTION).getValue()  || '').trim();
+    applyDongTienDropdown(sheet, row, itemType, direction);
   }
 }
 
