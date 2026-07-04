@@ -124,7 +124,7 @@ FROM prev_calc
 T�"ng kế hoạch (inflow + outflow) theo kỳ filter. Dùng làm anchor �Ồ �ánh giá quy mô ngân sách.
 
 ```sql
-SELECT COALESCE(SUM(planned_amount), 0) AS "T�"ng kế hoạch"
+SELECT COALESCE(SUM(planned_amount), 0) AS "Ke_hoach"
 FROM main_marts.mart_cashflow_budget_vs_actual
 WHERE 1=1
   [[AND {{period_month}}]]
@@ -136,7 +136,7 @@ WHERE 1=1
   "display": "scalar",
   "visualization_settings": {
     "column_settings": {
-      "T�"ng kế hoạch": {
+      "[\"name\",\"Ke_hoach\"]": {
         "number_style": "currency",
         "currency": "VND",
         "decimals": 0,
@@ -156,7 +156,7 @@ WHERE 1=1
 T�"ng thực tế theo kỳ filter. So sánh v�:i kế hoạch �  xem thực hi�!n.
 
 ```sql
-SELECT COALESCE(SUM(actual_amount), 0) AS "T�"ng thực tế"
+SELECT COALESCE(SUM(actual_amount), 0) AS "Thuc_te"
 FROM main_marts.mart_cashflow_budget_vs_actual
 WHERE 1=1
   [[AND {{period_month}}]]
@@ -168,7 +168,7 @@ WHERE 1=1
   "display": "scalar",
   "visualization_settings": {
     "column_settings": {
-      "T�"ng thực tế": {
+      "[\"name\",\"Thuc_te\"]": {
         "number_style": "currency",
         "currency": "VND",
         "decimals": 0,
@@ -314,45 +314,30 @@ Variance table per (cashflow_line, direction). Conditional formatting: variance_
 
 ```sql
 SELECT
-    cashflow_line           AS "Cashflow Line",
-    direction               AS "Hư�:ng",
-    planned_amount          AS "Kế hoạch",
-    actual_amount           AS "Thực tế",
-    variance_amount         AS "Chênh l�!ch",
-    variance_pct            AS "% Chênh l�!ch",
-    attainment_pct          AS "% Thực hi�!n"
-FROM main_marts.mart_cashflow_budget_vs_actual
-WHERE 1=1
-  [[AND {{period_month}}]]
-  [[AND {{cashflow_line}}]]
-ORDER BY direction, ABS(COALESCE(variance_pct, 0)) DESC
+    period_month            AS "Thang",
+    actual_balance          AS "So_du_thuc_te",
+    projected_balance       AS "Du_bao_so_du"
+FROM main_marts.mart_cashflow_forecast
+WHERE row_type IN ('actual', 'forecast')
+ORDER BY 1
 ```
 
 ```json metabase-viz
 {
-  "display": "table",
+  "display": "line",
   "visualization_settings": {
-    "table.pivot": false,
-    "column_settings": {
-      "Kế hoạch":     { "number_style": "currency", "currency": "VND", "decimals": 0, "compact": true },
-      "Thực tế":      { "number_style": "currency", "currency": "VND", "decimals": 0, "compact": true },
-      "Chênh l�!ch":   { "number_style": "currency", "currency": "VND", "decimals": 0, "compact": true },
-      "% Chênh l�!ch": { "number_style": "percent", "decimals": 1, "scale": 0.01 },
-      "% Thực hi�!n":  { "number_style": "percent", "decimals": 1, "scale": 0.01 }
+    "graph.dimensions": ["Thang"],
+    "graph.metrics": ["So_du_thuc_te", "Du_bao_so_du"],
+    "series_settings": {
+      "So_du_thuc_te": { "color": "#509EE3", "line.marker_enabled": true },
+      "Du_bao_so_du":  { "color": "#84BB4C", "line.marker_enabled": false }
     },
-    "table.column_formatting": [
-      {
-        "columns": ["% Chênh l�!ch"],
-        "type": "range",
-        "colors": ["#EF8C8C", "#FFFFFF", "#84BB4C"],
-        "min_type": "custom",
-        "min_value": -0.1,
-        "max_type": "custom",
-        "max_value": 0.1,
-        "mid_type": "custom",
-        "mid_value": 0
-      }
-    ]
+    "graph.x_axis.title_text": "",
+    "graph.y_axis.title_text": "VND",
+    "column_settings": {
+      "[\"name\",\"So_du_thuc_te\"]": { "number_style": "currency", "currency": "VND", "decimals": 0, "compact": true },
+      "[\"name\",\"Du_bao_so_du\"]":  { "number_style": "currency", "currency": "VND", "decimals": 0, "compact": true }
+    }
   }
 }
 ```
@@ -446,13 +431,17 @@ FROM main_marts.mart_cashflow_budget_vs_actual
 
 ```sql
 SELECT
-    '�x& Hôm nay: ' || strftime(current_date, '%d/%m/%Y') ||
-    '  ·  Tháng theo dõi: ' || strftime(date_trunc('month', current_date), '%m/%Y')
-    AS "Chu kỳ báo cáo"
+    CASE WHEN MAX(period_month) < date_trunc('month', current_date) - INTERVAL '1 month'
+         THEN '⚠️ DỮ LIỆU CÓ THỂ CŨ ⚠️'
+         ELSE '✅ Dữ liệu cập nhật: ' || strftime(MAX(period_month), '%Y-%m')
+    END AS status
+FROM main_marts.mart_cash_surplus_allocation
 ```
 
 ```json metabase-viz
-{ "display": "scalar", "visualization_settings": { "card.title": "", "dashcard.background": false } }
+{
+  "display": "scalar"
+}
 ```
 
 ```json metabase-pos
@@ -573,9 +562,9 @@ Stacked bar � allocated_amount per bucket per tháng. Màu sắc phân bi�!
 
 ```sql
 SELECT
-    period_month    AS "Tháng",
-    bucket          AS "Bucket",
-    allocated_amount AS "Phân b�""
+    period_month,
+    bucket,
+    allocated_amount
 FROM main_marts.mart_cash_surplus_allocation
 ORDER BY 1, 2
 ```
@@ -584,13 +573,13 @@ ORDER BY 1, 2
 {
   "display": "bar",
   "visualization_settings": {
-    "graph.dimensions": ["Tháng", "Bucket"],
-    "graph.metrics": ["Phân b�""],
+    "graph.dimensions": ["period_month", "bucket"],
+    "graph.metrics": ["allocated_amount"],
     "stackable.stack_type": "stacked",
     "graph.x_axis.title_text": "",
     "graph.y_axis.title_text": "VND",
     "column_settings": {
-      "Phân b�"": { "number_style": "currency", "currency": "VND", "decimals": 0, "compact": true }
+      "[\"name\",\"allocated_amount\"]": { "number_style": "currency", "currency": "VND", "decimals": 0, "compact": true }
     }
   }
 }
