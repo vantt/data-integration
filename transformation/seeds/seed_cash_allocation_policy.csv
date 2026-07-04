@@ -1,0 +1,4 @@
+priority,bucket,rule_type,value,effective_from,effective_to,notes
+1,operating_reserve,fill_to_target,200000000,2026-01-01,,Dự trữ vận hành tối thiểu 200M
+2,investment_reserve,fixed,20000000,2026-01-01,,Đầu tư TSCĐ tích lũy
+3,free_cash,remainder,,2026-01-01,,Phần còn lại sau reserve

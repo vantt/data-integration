@@ -87,3 +87,37 @@ seeds:
         target_value: double
         target_source: varchar
         notes: varchar
+
+  - name: seed_cashflow_budget
+    description: >
+      Monthly cash budget: planned flows per cashflow_line × period_month × direction.
+      Generated from Google Sheet tab BUDGET_ITEMS. Join key to actuals: cashflow_line
+      (exact match to dim_gl_account.cashflow_line) + period_month + direction.
+      Refresh: dbt seed --select seed_cashflow_budget && dbt build --select fact_cashflow_budget+
+    config:
+      column_types:
+        cashflow_line: varchar
+        period_month: date
+        direction: varchar
+        planned_amount: double
+        payment_week: varchar
+        item_type: varchar
+        item_label: varchar
+        item_target: double
+        target_month: date
+        notes: varchar
+
+  - name: seed_cash_allocation_policy
+    description: >
+      Waterfall allocation policy config. Append-only: close old rows with effective_to,
+      add new rows. Grain: (priority, bucket) per effective period.
+      Constraint: rule_type='remainder' must be highest priority number (last in waterfall).
+    config:
+      column_types:
+        priority: integer
+        bucket: varchar
+        rule_type: varchar
+        value: double
+        effective_from: date
+        effective_to: date
+        notes: varchar
