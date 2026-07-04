@@ -590,11 +590,13 @@ function setupPolicyDropdowns(ss) {
   sheet.getRange(3, AP_COL.RULE_TYPE, lastRow - 2, 1).setDataValidation(ruleTypeRule);
 }
 
-/** Load valid cashflow_line values from hidden __REF tab, column A. */
+/** Load valid cashflow_line values from hidden __REF tab, col B (col A = direction Thu/Chi). */
 function getValidCashflowLines(ss) {
   const refSheet = ss.getSheetByName(TAB_REF);
   if (!refSheet) return null;
-  return refSheet.getRange('A:A').getValues()
+  const lastRow = refSheet.getLastRow();
+  if (lastRow < 1) return null;
+  return refSheet.getRange(1, 2, lastRow, 1).getValues()
     .flat()
     .map(v => String(v).trim())
     .filter(v => v.length > 0);
