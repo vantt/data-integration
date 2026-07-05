@@ -19,15 +19,15 @@ _INSERT = """
 INSERT INTO crm_task (
   task_id, party_id, title, description, due_at, priority, status,
   assignee_user_id, source, source_ref, created_by, created_at, updated_at, completed_at,
-  task_kind, channel
-) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+  task_kind, channel, value_at_stake_vnd, top_affinity_product
+) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
 """
 
 _GET_BY_ID = """
 SELECT
   t.task_id, t.party_id, t.title, t.description, t.due_at, t.priority, t.status,
   t.assignee_user_id, t.source, t.source_ref, t.created_by, t.created_at, t.updated_at, t.completed_at,
-  t.task_kind, t.channel,
+  t.task_kind, t.channel, t.value_at_stake_vnd, t.top_affinity_product,
   p.display_name AS party_name,
   u.full_name AS assignee_name
 FROM crm_task t
@@ -60,7 +60,7 @@ _GET_BY_SOURCE_REF = """
 SELECT
   t.task_id, t.party_id, t.title, t.description, t.due_at, t.priority, t.status,
   t.assignee_user_id, t.source, t.source_ref, t.created_by, t.created_at, t.updated_at, t.completed_at,
-  t.task_kind, t.channel,
+  t.task_kind, t.channel, t.value_at_stake_vnd, t.top_affinity_product,
   p.display_name AS party_name,
   u.full_name AS assignee_name
 FROM crm_task t
@@ -85,7 +85,7 @@ _GET_CUSTOMER_CLAIM = """
 SELECT
   t.task_id, t.party_id, t.title, t.description, t.due_at, t.priority, t.status,
   t.assignee_user_id, t.source, t.source_ref, t.created_by, t.created_at, t.updated_at, t.completed_at,
-  t.task_kind, t.channel,
+  t.task_kind, t.channel, t.value_at_stake_vnd, t.top_affinity_product,
   p.display_name AS party_name,
   COALESCE(u.full_name, t.assignee_user_id, 'nhân viên') AS assignee_name
 FROM crm_task t
@@ -101,7 +101,7 @@ _LIST_BY_ASSIGNEE_AND_STATUS = """
 SELECT
   t.task_id, t.party_id, t.title, t.description, t.due_at, t.priority, t.status,
   t.assignee_user_id, t.source, t.source_ref, t.created_by, t.created_at, t.updated_at, t.completed_at,
-  t.task_kind, t.channel,
+  t.task_kind, t.channel, t.value_at_stake_vnd, t.top_affinity_product,
   p.display_name AS party_name,
   u.full_name AS assignee_name
 FROM crm_task t
@@ -116,7 +116,7 @@ _LIST_BY_ASSIGNEE = """
 SELECT
   t.task_id, t.party_id, t.title, t.description, t.due_at, t.priority, t.status,
   t.assignee_user_id, t.source, t.source_ref, t.created_by, t.created_at, t.updated_at, t.completed_at,
-  t.task_kind, t.channel,
+  t.task_kind, t.channel, t.value_at_stake_vnd, t.top_affinity_product,
   p.display_name AS party_name,
   u.full_name AS assignee_name
 FROM crm_task t
@@ -131,7 +131,7 @@ _LIST_BY_STATUS = """
 SELECT
   t.task_id, t.party_id, t.title, t.description, t.due_at, t.priority, t.status,
   t.assignee_user_id, t.source, t.source_ref, t.created_by, t.created_at, t.updated_at, t.completed_at,
-  t.task_kind, t.channel,
+  t.task_kind, t.channel, t.value_at_stake_vnd, t.top_affinity_product,
   p.display_name AS party_name,
   u.full_name AS assignee_name
 FROM crm_task t
@@ -146,7 +146,7 @@ _LIST_ALL = """
 SELECT
   t.task_id, t.party_id, t.title, t.description, t.due_at, t.priority, t.status,
   t.assignee_user_id, t.source, t.source_ref, t.created_by, t.created_at, t.updated_at, t.completed_at,
-  t.task_kind, t.channel,
+  t.task_kind, t.channel, t.value_at_stake_vnd, t.top_affinity_product,
   p.display_name AS party_name,
   u.full_name AS assignee_name
 FROM crm_task t
@@ -160,7 +160,7 @@ _LIST_UNASSIGNED_BY_STATUS = """
 SELECT
   t.task_id, t.party_id, t.title, t.description, t.due_at, t.priority, t.status,
   t.assignee_user_id, t.source, t.source_ref, t.created_by, t.created_at, t.updated_at, t.completed_at,
-  t.task_kind, t.channel,
+  t.task_kind, t.channel, t.value_at_stake_vnd, t.top_affinity_product,
   p.display_name AS party_name,
   u.full_name AS assignee_name
 FROM crm_task t
@@ -175,7 +175,7 @@ _LIST_UNASSIGNED = """
 SELECT
   t.task_id, t.party_id, t.title, t.description, t.due_at, t.priority, t.status,
   t.assignee_user_id, t.source, t.source_ref, t.created_by, t.created_at, t.updated_at, t.completed_at,
-  t.task_kind, t.channel,
+  t.task_kind, t.channel, t.value_at_stake_vnd, t.top_affinity_product,
   p.display_name AS party_name,
   u.full_name AS assignee_name
 FROM crm_task t
@@ -190,7 +190,7 @@ _LIST_BY_PARTY = """
 SELECT
   t.task_id, t.party_id, t.title, t.description, t.due_at, t.priority, t.status,
   t.assignee_user_id, t.source, t.source_ref, t.created_by, t.created_at, t.updated_at, t.completed_at,
-  t.task_kind, t.channel,
+  t.task_kind, t.channel, t.value_at_stake_vnd, t.top_affinity_product,
   p.display_name AS party_name,
   u.full_name AS assignee_name
 FROM crm_task t
@@ -225,6 +225,9 @@ def _task_from_row(row: sqlite3.Row) -> Task:
         completed_at=row["completed_at"],
         task_kind=row["task_kind"] if "task_kind" in keys else "contact",
         channel=row["channel"] if "channel" in keys else None,
+        # Migration 0036: claim-context fields — None for pre-migration rows
+        value_at_stake_vnd=row["value_at_stake_vnd"] if "value_at_stake_vnd" in keys else None,
+        top_affinity_product=row["top_affinity_product"] if "top_affinity_product" in keys else None,
         party_name=row["party_name"] if "party_name" in keys else None,
         assignee_name=row["assignee_name"] if "assignee_name" in keys else None,
     )
@@ -262,6 +265,8 @@ class SQLiteTaskRepository:
             task.completed_at,
             task.task_kind,
             task.channel,
+            task.value_at_stake_vnd,
+            task.top_affinity_product,
         ))
         return task
 

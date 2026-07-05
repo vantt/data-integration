@@ -35,6 +35,8 @@
 
 {% set ap = (script.approach if script else none) %}
 {% set meta_rec = (meta if meta else {}) %}
+{# Item 1 (Phase 06): parsed custom fields dict — passed from screen_call_cockpit.py #}
+{% set party_custom = party_custom | default({}) %}
 {% set is_stop = (meta_rec.recommended == false) if meta else false %}
 {% set confidence = script.confidence | default('medium') if script else 'medium' %}
 {# Inline confidence lookups — avoids requiring confidence_label/confidence_tone filters in test env #}
@@ -85,6 +87,9 @@
 {% if party and not party.birthday %}{% set _ = collect_rows.append({'key':'birthday','label':'Sinh nhật','kind':'core','field':'birthday','ph':'dd/mm/yyyy'}) %}{% endif %}
 {% if party and party.gender in (none, '', 'unknown') %}{% set _ = collect_rows.append({'key':'gender','label':'Giới tính','kind':'core','field':'gender','ph':'Nam / Nữ'}) %}{% endif %}
 {% for idn in invalid_contacts %}{% set _ = collect_rows.append({'key':'fix_'~idn.identity_type,'label':idn.display_label~' lỗi','kind':'fix','sub':idn.identity_value}) %}{% endfor %}
+{# Item 1 (Phase 06): custom profile fields — show only when not yet collected #}
+{% if not party_custom.get('skin_type') %}{% set _ = collect_rows.append({'key':'skin_type','label':'Loại da','kind':'custom_select','options':['dầu','khô','hỗn hợp','nhạy cảm','thường'],'current':''}) %}{% endif %}
+{% if not party_custom.get('preferred_contact') %}{% set _ = collect_rows.append({'key':'preferred_contact','label':'Kênh ưu thích','kind':'custom_select','options':['phone','zalo','messenger','email'],'current':''}) %}{% endif %}
 {% set data_gaps = (script.data_gaps if script and script.data_gaps else []) %}
 
 {# ── Alert chips derivation (§6) ─────────────────────────────────────────────
@@ -155,6 +160,35 @@
 {# ══════════════════════════════════════════════════════════════════════════════
    ROOT — #s14-panel-root  (outermost; CSS :has targets this to hide S03 sidebar)
    ══════════════════════════════════════════════════════════════════════════════ #}
+{# ── Phase 05: R14 warn-with-ack styles (inline; ds-extra.css > 500 lines) ─ #}
+<style>
+/* R14 warn-with-ack (Phase 05) */
+.s14-r14-banner {
+  background: var(--coral-100, #fff0f0);
+  border: 2px solid var(--coral-500, #e53e3e);
+  border-radius: 8px;
+  padding: 12px 16px;
+  margin-bottom: 12px;
+  display: flex;
+  gap: 10px;
+  align-items: flex-start;
+  position: sticky;
+  top: 0;
+  z-index: 10;
+}
+.s14-r14-banner__icon { flex: none; font-size: 18px; line-height: 1.2; }
+.s14-r14-banner__body { display: flex; flex-direction: column; gap: 8px; flex: 1; }
+.s14-r14-banner__sub { font-size: var(--fs-caption, 0.75rem); color: var(--fg-tertiary); }
+.s14-r14-banner__reason { font-size: var(--fs-caption, 0.8rem); opacity: 0.85; }
+.s14-r14-banner__ctas { display: flex; gap: 8px; flex-wrap: wrap; align-items: center; }
+.s14-locked {
+  opacity: 0.35;
+  pointer-events: none;
+  user-select: none;
+  filter: blur(1px);
+}
+</style>
+
 <div class="s14-screen" data-surface="S14" id="s14-panel-root"
      data-party-id="{{ party_id }}">
 
@@ -235,65 +269,39 @@
   {% set entry_node_id = script.entry_node | default('root') if script else 'root' %}
   {% set initial_node = script.nodes[entry_node_id] if (is_branching and script and script.nodes) else none %}
 
-  {# ── ST-CALL-STOP (R14): full-width banner above the 2-pane layout ───────── #}
+  {# ── R14 warn-with-ack banner (sticky, above two-pane, §R14 Phase 05) ──── #}
   {% if is_stop %}
-  <div class="s14-frame">
-    <div class="s14-stopwrap">
-      <div class="s14-stop">
-        <div class="s14-stop__head">
-          <span class="s14-stop__sign" aria-hidden="true">
-            <svg class="ico" width="20" height="20" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.3" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M8 3 2 13h12L8 3z"/><line x1="8" y1="7" x2="8" y2="10"/><circle cx="8" cy="12" r="0.4" fill="currentColor" stroke="none"/></svg>
-          </span>
-          <div>
-            <div class="s14-stop__title">KHÔNG GỌI THEO KỊCH BẢN — CẦN XÁC MINH</div>
-            <div class="s14-stop__sub mono">recommended = false · R14 AI Approach-Script Gate</div>
-          </div>
-        </div>
-        {% if ap and ap.reason_if_not_recommended %}
-        <div class="s14-stop__reason">
-          <div class="s14-stop__reason-k">Lý do</div>
-          {{ ap.reason_if_not_recommended }}
-        </div>
-        {% endif %}
-        {% if data_gaps %}
-        <div class="s14-stop__gaps">
-          {% for g in data_gaps %}
-          <span class="s14-gap">{{ g }}</span>
-          {% endfor %}
-        </div>
-        {% endif %}
-        <div class="s14-stop__act">
-          {# A-S14-011: create verify account task #}
-          <button class="btn btn--primary" type="button"
-                  onclick="htmx.ajax('GET','/modals/m05?party_id={{ party_id }}&prefill_title=X%C3%A1c%20minh%20lo%E1%BA%A1i%20t%C3%A0i%20kho%E1%BA%A3n%20(nghi%20B2B)&source=verify_account',{target:'#modal-root',swap:'innerHTML'})">
-            <svg class="ico" width="14" height="14" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.3" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><line x1="8" y1="2" x2="8" y2="14"/><line x1="2" y1="8" x2="14" y2="8"/></svg>
-            Tạo task xác minh tài khoản
-          </button>
-          <a href="/customers/{{ party_id }}" class="btn btn--ghost">Xem hồ sơ 360</a>
-        </div>
-      </div>
-
-      {# Trust footer always visible (R2) #}
-      <div class="s14-trust" aria-label="Trust metadata">
-        <span class="s14-trust__item">
-          Độ tin: <b class="s14-conf s14-conf--{{ conf_tone }}">{{ conf_label }}</b>
-        </span>
-        <span class="s14-trust__sep" aria-hidden="true">·</span>
-        <span class="s14-trust__item{% if refreshed_at %} js-s14-stale{% endif %}"
-              id="s14-trust-freshness"
-              title="{{ refreshed_at | format_datetime_ict if refreshed_at else '' }} ICT">
-          script {{ refreshed_at | format_datetime_ict if refreshed_at else "—" }}
-        </span>
-        <span class="s14-trust__sep" aria-hidden="true">·</span>
-        <span class="s14-trust__caveat">
-          <svg class="ico" width="12" height="12" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.3" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M8 3 2 13h12L8 3z"/><line x1="8" y1="7" x2="8" y2="10"/><circle cx="8" cy="12" r="0.4" fill="currentColor" stroke="none"/></svg>
-          AI gợi ý — dùng phán đoán của bạn
-        </span>
+  <div class="s14-r14-banner" id="s14-r14-banner">
+    <div class="s14-r14-banner__icon" aria-hidden="true">⛔</div>
+    <div class="s14-r14-banner__body">
+      <strong>KHÔNG GỌI THEO KỊCH BẢN — CẦN XÁC MINH</strong>
+      <div class="s14-r14-banner__sub mono">recommended = false · R14 AI Approach-Script Gate</div>
+      {% if ap and ap.reason_if_not_recommended %}
+      <div class="s14-r14-banner__reason">Lý do: {{ ap.reason_if_not_recommended }}</div>
+      {% endif %}
+      <div class="s14-r14-banner__ctas">
+        {# A-S14-011: create verify account task #}
+        <button class="btn btn--ghost btn--sm"
+                hx-get="/modals/m05?party_id={{ party_id }}&source=verify_account&prefill_title=X%C3%A1c+minh+lo%E1%BA%A1i+t%C3%A0i+kho%E1%BA%A3n"
+                hx-target="#modal-root" hx-swap="innerHTML">Tạo task xác minh</button>
+        <a class="btn btn--ghost btn--sm" href="/customers/{{ party_id }}">Xem hồ sơ 360</a>
+        {# Hidden input avoids inline JSON escaping issues with reason_if_not_recommended text #}
+        <input type="hidden" id="s14-r14-reason-val" name="reason_shown"
+               value="{{ ap.reason_if_not_recommended if ap and ap.reason_if_not_recommended else '' }}">
+        {# A-S14-027: R14 ack — 204 response, unlock is pure JS (Invariant §9) #}
+        <button class="btn btn--danger btn--sm" id="s14-r14-ack-btn"
+                hx-post="/customers/{{ party_id }}/r14-ack"
+                hx-include="#s14-r14-reason-val"
+                hx-on::after-request="s14UnlockR14()">
+          Tôi đã xác minh — vẫn tiếp tục
+        </button>
       </div>
     </div>
-  </div>{# /.s14-frame (STOP) — R14: hide rail per spec #}
+  </div>
+  {% endif %}
 
-  {% else %}
+  {# Two-pane content wrapper — s14-locked when is_stop (R14 warn-with-ack) #}
+  <div id="s14-content"{% if is_stop %} class="s14-locked"{% endif %}>
   {# ── Two-pane cockpit (script present+recommended, or no script showing rail) #}
   <div class="s14-frame">
     <div class="s14-body">
@@ -699,6 +707,9 @@
                       hx-get="/modals/m15?party_id={{ party_id }}&tab=contacts"
                       hx-target="#modal-root" hx-swap="innerHTML">Sửa</button>
             </div>
+            {% elif row.kind == 'custom_select' %}
+            {# Item 1 (Phase 06): custom field pill-select — inline POST → row swap #}
+            {% include "fragments/_s14_collect_row.html" %}
             {% else %}
             {# A-S14-020 (channel) / A-S14-021 (core) — inline write → row swap #}
             <div class="s14-crow" id="s14-crow-{{ row.key }}" data-field="{{ row.key }}">
@@ -744,8 +755,9 @@
       </aside>{# /.s14-rail #}
     </div>{# /.s14-body #}
   </div>{# /.s14-frame #}
+  </div>{# /#s14-content #}
 
-  {# ── OUTCOME BAR (sticky, §outcome_bar) — only when not STOP ─────────────── #}
+  {# ── OUTCOME BAR (sticky, §outcome_bar) — renders regardless of R14 state ── #}
   <div class="s14-outcome" role="group" aria-label="Ghi kết quả cuộc gọi">
     <div class="s14-outcome__inner">
       {# Hidden fields carry rail provenance so log-activity can bulk-resolve §11 #}
@@ -786,12 +798,22 @@
     </div>
   </div>
 
-  {% endif %}{# /is_stop #}
-
 </div>{# /#s14-panel-root #}
 
+{# ── A-S14-027: R14 unlock — loaded whenever banner is shown (script may be None) #}
+{% if is_stop %}
+<script>
+window.s14UnlockR14 = function () {
+  var banner  = document.getElementById('s14-r14-banner');
+  var content = document.getElementById('s14-content');
+  if (banner)  banner.style.display = 'none';
+  if (content) content.classList.remove('s14-locked');
+};
+</script>
+{% endif %}
+
 {# ── Inline JS: client-side interactions only (A-S14-001..005; §9 INVARIANT) ── #}
-{% if script and ap and not is_stop %}
+{% if script and ap %}
 <script>
 (function () {
   var PRIMARY_MSG  = {{ ap.opening_message | default('') | tojson }};
@@ -989,4 +1011,4 @@
   {% endif %}
 }());
 </script>
-{% endif %}{# /not is_stop #}
+{% endif %}

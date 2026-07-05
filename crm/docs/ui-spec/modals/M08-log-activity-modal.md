@@ -143,6 +143,63 @@ elements:
 
 **Outcomes dương** (triggers Lên lịch theo dõi): `answered`, `met`, `replied`
 
+## Outcome Enum (D2) — Phase 03
+
+Field `contact_outcome` (DB column, replaces free-text `outcome` for new rows) uses structured per-channel enums.
+
+### contact_outcome per channel_type
+
+| channel_type | Enum values |
+|---|---|
+| `call` | `answered`, `no_answer`, `busy`, `wrong_number`, `callback`, `refused` |
+| `zalo` / `fb` / `email` | `replied`, `no_reply`, `pending_reply`, `refused`, `blocked` |
+| `visit` | `met`, `not_met` |
+
+### outcome_reason values (D2 pilot)
+
+`outcome_reason` is nullable. Required by server when `contact_outcome = 'refused'`. Optional but shown when `contact_outcome = 'answered'`.
+
+> **Pilot note:** enum set is under field review — values may be extended or relabelled after 2-week NV field trial (design §8.3). Do not lock mart mappings until review is complete.
+
+| Value | Label (VI) |
+|---|---|
+| `budget` | Giá/ngân sách |
+| `timing` | Chưa tới lúc |
+| `product_fit` | Không hợp nhu cầu |
+| `competitor` | Đã mua chỗ khác |
+| `stock` | Hết hàng |
+| `trust` | Nghi ngại |
+| `no_need` | Hết nhu cầu |
+| `other` | Khác |
+
+### 2-step UI flow (log mode)
+
+1. Staff selects outcome pill → `contact_outcome` hidden input updated via `m08OnOutcome`.
+2. If outcome is in `['refused', 'answered']` → LÝ DO section appears below outcome pills.
+   - Label shows **"LÝ DO *"** (required) for `refused`, **"LÝ DO (tùy chọn)"** for `answered`.
+   - Staff selects reason pill → `outcome_reason` hidden input updated via `m08OnReason`.
+3. On submit: client validates `outcome_reason` is set when `contact_outcome = 'refused'` (alert + cancel). Server re-validates independently (returns HTTP 400 on violation).
+
+## Bulk-Resolve Context (from S14) — phase-02
+
+Khi M08 được mở từ outcome bar S14 (A-S14-009), caller truyền thêm hai query params:
+
+| Param | Type | Description |
+|-------|------|-------------|
+| `resolve_action_ids` | `str` | Comma-separated action_id values — mỗi cái sẽ được dismiss sau khi log |
+| `resolve_task_ids` | `str` | Comma-separated task_id values — mỗi cái sẽ được chuyển status→done |
+
+GET handler forwarded → `_m08_ctx` → template context.
+
+**Template effects:**
+- Hai `<input type="hidden">` ẩn (name=`resolve_action_ids` / `resolve_task_ids`) trong `<form>`.
+- Summary banner xanh nhạt hiện khi ít nhất một ID có mặt: `"✓ Sẽ đóng N task · M hành động"`.
+- Banner chỉ hiện ở mode `log` (ẩn ở `edit_note` / `note_only`).
+
+**POST behavior (A3):**
+- `act_data["custom_fields"]` được ghi snapshot `{resolve_task_ids: [...], resolve_action_ids: [...]}` **trước** khi gọi `activity_log.log_activity()`.
+- Sau đó `_bulk_resolve()` thực sự dismiss/close các IDs.
+
 ## Task Context Feature (khi `task_id` có)
 
 - Hiển thị banner xanh nhạt: `📋 Task: "[task.title]"`
@@ -178,10 +235,15 @@ elements:
 
 | Mode | POST endpoint | crm writes | Side effects |
 |------|---------------|------------|--------------|
-| `log` | `/customers/<party_id>/log-activity` | `crm_activity` | timeline.reload; nếu callback → `crm_task` nhắc; nếu complete_task → task.done |
+| `log` | `/customers/<party_id>/log-activity` | `crm_activity` (`contact_outcome`, `outcome_reason`) | timeline.reload; nếu callback → `crm_task` nhắc; nếu complete_task → task.done |
 | `log` + `save_as_note=1` | same | `crm_activity` + `crm_note` | timeline.reload + notes.reload |
 | `note_only` | `/customers/<party_id>/notes` | `crm_note` | notes.reload |
 | `edit_note` | `/customers/<party_id>/notes/<note_id>` | `crm_note` UPDATE | notes.reload |
+
+**D2 field notes:**
+- `contact_outcome`: structured per-channel enum; server rejects unknown values.
+- `outcome_reason`: nullable; server raises HTTP 400 when `contact_outcome='refused'` and `outcome_reason` is absent.
+- `last_contact` snapshot uses `contact_outcome` (preferred) falling back to legacy `outcome`.
 
 ## States
 
@@ -251,3 +313,7 @@ interactions:
     action: mutate
     effects: [create_callback_task.toggle]
 ```
+
+## Implementation Notes (Phase 06)
+
+- **Item 2 — Promote insight (`★ Đúc kết`)**: collapsible `<details>` section appended in `mode=log` only. Fields: `insight_type` (select), `insight_body` (textarea), `insight_confidence` (low/medium/high radio pills), `promote_insight` hidden flag (0/1 toggled by `details.toggle` event). POST handler reads params and logs a warning + skips silently — `party_insights` not wired into `register_activity_routes`. Wiring deferred; no factory change required now.

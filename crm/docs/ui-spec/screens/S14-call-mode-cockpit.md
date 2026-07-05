@@ -23,7 +23,7 @@ Phân vùng không gian tách bạch **"vì sao gọi"** (RIGHT rail — action 
 - **Full-screen** — route riêng `/customers/{id}/call`, vào từ S01 Worklist (nút "Vào chế độ gọi"). Thêm chrome topbar: `[← Worklist]` · queue counter `#n/N` · `[Khách kế →]`.
 - **Từ Task Detail (S15)** — contact-task bấm "Vào phiên gọi" (A-S15-006) mở phiên gọi customer-grained này với **task context**: reason của task đó được ghim làm PRIMARY; sau khi log outcome, quay lại S15 (chrome "Khách kế →" đổi thành "Quay lại task"). Cockpit vẫn là 1 phiên/khách, không phải 1 phiên/task.
 
-Khi `recommended=false` (nghi B2B gán nhầm / margin mâu thuẫn / chết-sâu margin âm) → **STOP state** (R14): ẩn talk-track + rail, chỉ chừa identity + alert + CTA xác minh tài khoản.
+Khi `recommended=false` (nghi B2B gán nhầm / margin mâu thuẫn / chết-sâu margin âm) → **R14-WARN state** (Phase 05): sticky banner cảnh báo đỏ + nội dung che mờ (`s14-locked`). Nút "Tôi đã xác minh" (A-S14-027) ẩn banner + mở khoá nội dung (pure JS, ghi audit `r14_ack`). Identity bar + alert row + outcome bar luôn hiển thị.
 
 ## Data sourcing
 
@@ -73,7 +73,7 @@ samples:
   collect: "• Zalo [+] • Email [+] • Sinh nhật [+] • SĐT phụ invalid → [Sửa]"
   trust_footer: "độ tin vừa · script 24/6 07:15 ICT · ⚠ AI gợi ý, dùng phán đoán"
   outcome_bar: "[ghi chú tạm…] [✓Gọi được][✗Không nghe][⏳Hẹn lại][🛒Đã mua]"
-  stop_banner: "⛔ KHÔNG GỌI THEO KỊCH BẢN — CẦN XÁC MINH · [Tạo task xác minh] [Xem hồ sơ 360]"
+  stop_banner: "⛔ KHÔNG GỌI THEO KỊCH BẢN — CẦN XÁC MINH · Lý do: ... · [Tạo task xác minh] [Xem hồ sơ 360] [Tôi đã xác minh — vẫn tiếp tục]"
 elements:
   "📞Gọi": A-S14-006
   "360": A-S14-007
@@ -196,19 +196,34 @@ elements:
 └────────────────────────────────────────────────────────────┘
 ```
 
-### STOP state (recommended=false) — thay LEFT+RIGHT
+### R14-WARN state (recommended=false) — banner + locked content (Phase 05)
 
 ```
-┌ ⛔ KHÔNG GỌI THEO KỊCH BẢN — CẦN XÁC MINH ──────────────────────────────┐
+┌ ⛔ KHÔNG GỌI THEO KỊCH BẢN — CẦN XÁC MINH (sticky banner) ─────────────┐
 │ Lý do: nghi tổ chức gán nhầm RETAIL; margin mâu thuẫn; chết 1073 ngày.  │
-│ [Tạo task xác minh tài khoản]   [Xem hồ sơ 360]                          │
-└─────────────────────────────────────────────────────────────────────────┘
+│ [Tạo task xác minh]  [Xem hồ sơ 360]  [Tôi đã xác minh — vẫn tiếp tục] │
+├──────────────────────────────────────┬──────────────────────────────────┤
+│ (dim) TALK_TRACK / TALKING_POINTS …  │ (dim) REASON_TO_CALL / SNAPSHOT … │
+│ opacity: 0.35, pointer-events: none  │ unlock → click btn_r14_ack above  │
+└──────────────────────────────────────┴──────────────────────────────────┘
+│ OUTCOME BAR (always accessible)                                          │
+└──────────────────────────────────────────────────────────────────────────┘
 ```
+
+## Implementation Notes (Phase 04)
+
+- **A2 — Queue counter wired**: `GET /customers/{id}/call` now accepts `queue_ids` (comma-joined party_id list, max 50) and `queue_pos` (int, default 0). Handler auto-corrects `queue_pos` by locating `party_id` in `queue_list.index()`. Template shows `#n/N` counter in topbar when `queue_total > 0` and "Khách kế →" links to next party with forwarded `queue_ids`. Queue nav is suppressed when `pinned_task_id` is set (S15 "Vào phiên gọi" returns to task, not next customer).
+
+## Implementation Notes (Phase 06)
+
+- **Item 1 — Custom field collect rows**: `skin_type` + `preferred_contact` added as `custom_select` collect rows. Shown when `party.custom` JSON doesn't yet have the field. Pill click → `POST /customers/{id}/custom-field-inline` → `_s14_collect_row.html` swap. Fields whitelist-validated server-side.
+- **Item 6 — Save toast**: `_s14_collect_row.html` appends self-removing `✓ Đã lưu` toast (2 s) when `saved=True` (returned by `custom-field-inline` handler).
+- **Item 7 — Back-button tooltips**: `call_cockpit.html` back buttons and "Khách kế →" link now carry `title` attributes for discoverability.
 
 ## States
 
 - **ST-CALL-NO-SCRIPT**: không có row `cache.wh_approach_script` cho customer_id → empty + CTA Worklist / 360.
-- **ST-CALL-STOP**: `recommended=false` (R14) → STOP banner; ẩn talk-track/points/objection/rail.
+- **ST-CALL-R14-WARN**: `recommended=false` (R14) → sticky banner cảnh báo đỏ (`#s14-r14-banner`) + nội dung che mờ (`#s14-content.s14-locked`); talk-track/points/objection/rail render nhưng bị dim + pointer-events: none. Nút "Tôi đã xác minh" (A-S14-027) ẩn banner + xoá class s14-locked (pure JS, POST 204 → audit log).
 - **ST-CALL-LOW-CONFIDENCE**: `confidence=low` → talk-track nhạt + nhãn "độ tin thấp, kiểm chứng".
 - **ST-CALL-NO-ACTIONS**: `insight.actions` rỗng → rail "Vì sao gọi" hiện caveat "Không có đề xuất — dùng kịch bản".
 - **ST-CALL-COLLECT-DONE**: sau khi bấm [+] ở dòng thu thập → dòng đó swap "✓ đã lưu" (client, không re-render panel).
@@ -280,6 +295,7 @@ interactions:
     action: open_overlay
     target: M08
     payload: { party_id: "$party.id", mode: "outcome", source: "call_cockpit" }
+    # phase-02: truyền resolve_action_ids / resolve_task_ids qua query string → M08 forward vào form ẩn.
   - id: A-S14-010
     element: btn_next_in_queue
     region: outcome_bar
@@ -339,6 +355,13 @@ interactions:
     trigger: click
     action: mutate
     effects: [reason.resolve_via_async_channel, activity_log.append_async_attempt]
+  - id: A-S14-027
+    element: btn_r14_ack
+    region: stop_banner
+    trigger: click
+    action: mutate
+    effects: [stop_banner.hide, s14_content.unlock, activity_log.write_r14_ack]
+    # POST /customers/{party_id}/r14-ack → 204; unlock is pure JS (Invariant §9, no panel re-render)
   - id: A-S14-LSN01
     listens_to: cache.refreshed
     action: mutate

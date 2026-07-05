@@ -18,6 +18,8 @@
 {% set note_type_val = note_type_val | default('general') %}
 {% set note_pinned = note_pinned | default(False) %}
 {% set note_visibility = note_visibility | default('team') %}
+{% set resolve_action_ids = resolve_action_ids | default('') %}
+{% set resolve_task_ids = resolve_task_ids | default('') %}
 
 {% if mode == 'edit_note' %}{% set modal_title = 'Sửa ghi chú' %}{% set save_url = '/customers/' ~ party_id ~ '/notes/' ~ note_id %}
 {% elif mode == 'note_only' %}{% set modal_title = 'Thêm ghi chú' %}{% set save_url = '/customers/' ~ party_id ~ '/notes' %}
@@ -70,6 +72,9 @@
       <input type="hidden" name="party_id" value="{{ party_id }}">
       {% if note_id %}<input type="hidden" name="note_id" value="{{ note_id }}">{% endif %}
       {% if task_id %}<input type="hidden" name="task_id" value="{{ task_id }}">{% endif %}
+      {# Bulk-resolve IDs from S14 outcome bar (phase-02) #}
+      {% if resolve_action_ids %}<input type="hidden" name="resolve_action_ids" value="{{ resolve_action_ids }}">{% endif %}
+      {% if resolve_task_ids   %}<input type="hidden" name="resolve_task_ids"   value="{{ resolve_task_ids }}">{% endif %}
 
       <div class="modal__body">
 
@@ -86,6 +91,20 @@
         <div class="caveat caveat--info">
           <span class="caveat__mark">📋</span>
           <span><b>Task:</b> {{ task_title or task_id }}</span>
+        </div>
+        {% endif %}
+
+        {# ── Bulk-resolve summary (S14 outcome bar, phase-02) ── #}
+        {% if mode not in ('edit_note', 'note_only') and (resolve_task_ids or resolve_action_ids) %}
+        {% set _n_tasks   = resolve_task_ids.split(',')   | select | list | length %}
+        {% set _n_actions = resolve_action_ids.split(',') | select | list | length %}
+        <div class="caveat caveat--info" style="font-size:var(--fs-caption)">
+          <span class="caveat__mark">✓</span>
+          <span>Sẽ đóng
+            {% if _n_tasks %}{{ _n_tasks }} task{% endif %}
+            {% if _n_tasks and _n_actions %} · {% endif %}
+            {% if _n_actions %}{{ _n_actions }} hành động{% endif %}
+          </span>
         </div>
         {% endif %}
 
@@ -136,7 +155,8 @@
         <input type="hidden" name="hinh_thuc" id="m08-ht" value="call">
         <input type="hidden" name="channel_identity_id" id="m08-chan-id" value="">
         <input type="hidden" name="channel_value" id="m08-chan-val" value="">
-        <input type="hidden" name="outcome" id="m08-out" value="">
+        {# contact_outcome replaces outcome for new rows (D2 Phase 03) #}
+        <input type="hidden" name="contact_outcome" id="m08-out" value="">
 
         {# Step 1 — HÌNH THỨC (custom select with icon) #}
         <div class="field">
@@ -236,10 +256,17 @@
             {% for val, lbl in [('answered','Đã nghe'),('no_answer','Không bắt'),('callback','Hẹn lại'),('refused','Từ chối')] %}
             <label class="radio-pill" onclick="m08OnOutcome('{{ val }}',this)">
               <span class="radio-pill__dot"></span>{{ lbl }}
-              <input type="radio" name="outcome" value="{{ val }}" hidden>
+              <input type="radio" name="contact_outcome" value="{{ val }}" hidden>
             </label>
             {% endfor %}
           </div>
+        </div>
+
+        {# Step 3b1 — LÝ DO (D2 Phase 03 — shown when refused or answered) #}
+        <div id="m08-reason-sec" class="field" style="display:none">
+          <span class="field__label" id="m08-reason-lbl">LÝ DO</span>
+          <div class="radioset" id="m08-reason-pills"></div>
+          <input type="hidden" name="outcome_reason" id="m08-reason-val" value="">
         </div>
 
         {# Step 3b — HẸN LẠI (call + callback only) #}
@@ -364,6 +391,67 @@
         </label>
         {% endif %}
 
+        {# Item 2 (Phase 06): promote insight from activity log #}
+        {% if mode not in ('edit_note', 'note_only') %}
+        <div class="m8-rule"></div>
+        <details class="m08-insight-promo" style="margin-top:0.5rem">
+          <summary style="cursor:pointer;font-weight:600;font-size:var(--fs-sm,0.875rem);user-select:none">
+            &#x2605; Đúc kết thành insight
+          </summary>
+          <div style="margin-top:0.75rem;display:flex;flex-direction:column;gap:var(--sp-3,0.75rem)">
+            <div class="field">
+              <span class="field__label">LOẠI INSIGHT</span>
+              <div class="inp-sel">
+                <select name="insight_type" id="m08-insight-type" class="inp">
+                  <option value="">— chọn —</option>
+                  <option value="preference">Sở thích</option>
+                  <option value="buying_pattern">Hành vi mua</option>
+                  <option value="pain_point">Vấn đề gặp phải</option>
+                  <option value="objection">Lý do từ chối</option>
+                  <option value="commitment">Cam kết</option>
+                  <option value="other">Khác</option>
+                </select>
+                <span class="inp-sel__chev" aria-hidden="true"><svg width="11" height="11" viewBox="0 0 12 12" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M2 4l4 4 4-4"/></svg></span>
+              </div>
+            </div>
+            <label class="field">
+              <span class="field__label">NỘI DUNG</span>
+              <textarea name="insight_body" id="m08-insight-body" rows="2" class="inp inp--area"
+                        placeholder="Tóm tắt insight từ cuộc gọi..."></textarea>
+            </label>
+            <div class="field">
+              <span class="field__label">ĐỘ TIN CẬY</span>
+              <div class="radioset" id="m08-insight-conf-pills">
+                {% for conf_val, conf_lbl in [('low','Thấp'),('medium','Trung bình'),('high','Cao')] %}
+                <label class="radio-pill" onclick="m08OnInsightConf('{{ conf_val }}',this)">
+                  <span class="radio-pill__dot"></span>{{ conf_lbl }}
+                  <input type="radio" name="insight_confidence" value="{{ conf_val }}" hidden>
+                </label>
+                {% endfor %}
+              </div>
+            </div>
+            <input type="hidden" name="promote_insight" value="0" id="m08-promote-flag">
+          </div>
+        </details>
+        <script>
+        (function () {
+          var det = document.querySelector('.m08-insight-promo');
+          if (det) {
+            det.addEventListener('toggle', function () {
+              var flag = document.getElementById('m08-promote-flag');
+              if (flag) flag.value = det.open ? '1' : '0';
+            });
+          }
+          window.m08OnInsightConf = function (val, pill) {
+            document.querySelectorAll('#m08-insight-conf-pills .radio-pill').forEach(function (p) {
+              p.classList.remove('radio-pill--on');
+            });
+            if (pill) pill.classList.add('radio-pill--on');
+          };
+        })();
+        </script>
+        {% endif %}
+
         {% endif %}
 
       </div>{# /.modal__body #}
@@ -371,7 +459,8 @@
       <div class="modal__actions">
         <button type="button" class="btn btn--ghost"
                 onclick="document.getElementById('modal-root').innerHTML=''">Hủy</button>
-        <button type="submit" class="btn btn--primary">
+        <button type="submit" class="btn btn--primary"
+                {% if mode not in ('edit_note', 'note_only') %}onclick="return m08ValidateSubmit()"{% endif %}>
           {% if mode in ('edit_note', 'note_only') %}Lưu ghi chú{% else %}Lưu hoạt động{% endif %}
         </button>
       </div>
@@ -434,9 +523,14 @@
     pills.innerHTML = (OUTCOMES[outcomeGroup(ht)]||[]).map(function(o) {
       return '<label class="radio-pill" onclick="m08OnOutcome(\''+o.v+'\',this)">'
            + '<span class="radio-pill__dot"></span>'+o.l
-           + '<input type="radio" name="outcome" value="'+o.v+'" hidden></label>';
+           + '<input type="radio" name="contact_outcome" value="'+o.v+'" hidden></label>';
     }).join('');
     document.getElementById('m08-out').value = '';
+    // Reset reason section when outcomes are rebuilt
+    var reasonSec = document.getElementById('m08-reason-sec');
+    var reasonVal = document.getElementById('m08-reason-val');
+    if (reasonSec) reasonSec.style.display = 'none';
+    if (reasonVal) reasonVal.value = '';
   }
 
   /* ── Auto-select primary channel when section opens ───── */
@@ -491,6 +585,21 @@
     m08UpdateBody(val, null);
   };
 
+  /* ── Outcome reason pills (D2 Phase 03) ──────────────── */
+  var REASON_PILLS = [
+    {v:'budget',      l:'Giá/ngân sách'},
+    {v:'timing',      l:'Chưa tới lúc'},
+    {v:'product_fit', l:'Không hợp nhu cầu'},
+    {v:'competitor',  l:'Đã mua chỗ khác'},
+    {v:'stock',       l:'Hết hàng'},
+    {v:'trust',       l:'Nghi ngại'},
+    {v:'no_need',     l:'Hết nhu cầu'},
+    {v:'other',       l:'Khác'},
+  ];
+  // Show reason section for these outcomes; required only for 'refused'
+  var REASON_SHOW_OUTCOMES = ['refused', 'answered'];
+  var REASON_REQUIRED_OUTCOMES_JS = ['refused'];
+
   /* ── Outcome change ───────────────────────────────────── */
   window.m08OnOutcome = function(val, pill) {
     m08CurOut = val;
@@ -514,6 +623,46 @@
     }
     m08UpdateBody(m08CurHT, val);
     m08SmartCompleteTask(val);
+    // D2 Phase 03: show/hide outcome reason section
+    var reasonSec = document.getElementById('m08-reason-sec');
+    var reasonPills = document.getElementById('m08-reason-pills');
+    var reasonVal = document.getElementById('m08-reason-val');
+    if (reasonSec && reasonPills) {
+      var showReason = REASON_SHOW_OUTCOMES.indexOf(val) >= 0;
+      reasonSec.style.display = showReason ? '' : 'none';
+      if (showReason) {
+        var required = REASON_REQUIRED_OUTCOMES_JS.indexOf(val) >= 0;
+        var lbl = document.getElementById('m08-reason-lbl');
+        if (lbl) lbl.textContent = required ? 'LÝ DO *' : 'LÝ DO (tùy chọn)';
+        reasonPills.innerHTML = REASON_PILLS.map(function(r) {
+          return '<label class="radio-pill" onclick="m08OnReason(\'' + r.v + '\',this)">'
+               + '<span class="radio-pill__dot"></span>' + r.l
+               + '<input type="radio" name="outcome_reason" value="' + r.v + '" hidden></label>';
+        }).join('');
+      }
+      if (reasonVal) reasonVal.value = '';
+    }
+  };
+
+  /* ── Outcome reason selection ─────────────────────────── */
+  window.m08OnReason = function(val, pill) {
+    var reasonVal = document.getElementById('m08-reason-val');
+    if (reasonVal) reasonVal.value = val;
+    document.querySelectorAll('#m08-reason-pills .radio-pill').forEach(function(p) { p.classList.remove('radio-pill--on'); });
+    if (pill) pill.classList.add('radio-pill--on');
+  };
+
+  /* ── Submit validation (D2 Phase 03) ─────────────────── */
+  window.m08ValidateSubmit = function() {
+    var outVal = document.getElementById('m08-out') ? document.getElementById('m08-out').value : '';
+    var reasonSec = document.getElementById('m08-reason-sec');
+    var reasonVal = document.getElementById('m08-reason-val') ? document.getElementById('m08-reason-val').value : '';
+    var reasonVisible = reasonSec && reasonSec.style.display !== 'none';
+    if (reasonVisible && REASON_REQUIRED_OUTCOMES_JS.indexOf(outVal) >= 0 && !reasonVal) {
+      alert('Vui lòng chọn lý do khi kết quả là "Từ chối".');
+      return false;
+    }
+    return true;
   };
 
   /* ── Smart default: complete_task checkbox ────────────── */

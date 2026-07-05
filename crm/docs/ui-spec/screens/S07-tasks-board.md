@@ -147,3 +147,8 @@ interactions:
     listens_to: filter_bar.cleared
     action: mutate
     effects: [board.reload]
+```
+
+## Implementation Notes (Phase 06)
+
+- **Item 5 — AUTO badge for `action_queue_claim` (Phase 06)**: `tasks_board.html` and `c360_tasks_panel.html` now show `AUTO` badge for both `source='action_queue'` and `source='action_queue_claim'`. `action_queue_claim` tooltip reads "Nhận từ hàng đợi (claim)".

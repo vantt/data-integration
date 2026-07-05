@@ -19,6 +19,7 @@ _CRM_TABLE_NAMES = [
     "crm_last_contact", "crm_party_identity", "crm_hug_voucher",
     "crm_campaign_target", "crm_task", "crm_action_state", "crm_activity_log",
     "crm_app_user",
+    "crm_note", "crm_tag", "crm_party_tag", "crm_party_insight", "crm_customer_profile",
 ]
 
 
@@ -59,7 +60,7 @@ CRM_WRITEBACK_TABLES: list[CrmWritebackTable] = [
         export_query="""
             SELECT a.activity_id, a.party_id, pi.identity_value AS customer_id,
                    a.activity_type, a.direction, a.channel, a.outcome,
-                   a.contact_outcome, a.callback_at, a.contact_duration_s,
+                   a.contact_outcome, a.outcome_reason, a.callback_at, a.contact_duration_s,
                    a.task_id, a.related_order_code, a.staff_user_id,
                    a.occurred_at, a.created_at
             FROM crm_activity_log a
@@ -116,6 +117,32 @@ CRM_WRITEBACK_TABLES: list[CrmWritebackTable] = [
             WHERE t.updated_at > '{cursor}'
         """,
     ),
+    CrmWritebackTable(
+        name="crm_note", mode="incremental_append", watermark_column="created_at",
+        export_query="""
+            SELECT note_id, party_id, note_type, body, author_user_id,
+                   pinned, pinned_until, visibility, task_id, campaign_id,
+                   source_activity_id, updated_at, updated_by_user_id, deleted_at, created_at
+            FROM crm_note
+            WHERE created_at > '{cursor}' AND visibility != 'private'
+        """),
+    CrmWritebackTable(
+        name="crm_tag", mode="snapshot",
+        export_query="SELECT tag_id, name, category, color, display_label FROM crm_tag"),
+    CrmWritebackTable(
+        name="crm_party_tag", mode="snapshot",
+        export_query="SELECT party_id, tag_id, tagged_by, tagged_at FROM crm_party_tag"),
+    CrmWritebackTable(
+        name="crm_party_insight", mode="incremental_append", watermark_column="created_at",
+        export_query="""
+            SELECT insight_id, party_id, insight_type, body, confidence,
+                   source_note_id, created_by, updated_at, deleted_at, created_at
+            FROM crm_party_insight
+            WHERE created_at > '{cursor}' AND deleted_at IS NULL
+        """),
+    CrmWritebackTable(
+        name="crm_customer_profile_custom", mode="snapshot",
+        export_query="SELECT party_id, custom, updated_at FROM crm_customer_profile"),
 ]
 
 
@@ -219,4 +246,19 @@ crm_app_user_export = _make_snapshot_asset(
 )
 crm_task_export = _make_incremental_asset(
     next(t for t in CRM_WRITEBACK_TABLES if t.name == "crm_task")
+)
+crm_note_export = _make_incremental_asset(
+    next(t for t in CRM_WRITEBACK_TABLES if t.name == "crm_note")
+)
+crm_tag_export = _make_snapshot_asset(
+    next(t for t in CRM_WRITEBACK_TABLES if t.name == "crm_tag")
+)
+crm_party_tag_export = _make_snapshot_asset(
+    next(t for t in CRM_WRITEBACK_TABLES if t.name == "crm_party_tag")
+)
+crm_party_insight_export = _make_incremental_asset(
+    next(t for t in CRM_WRITEBACK_TABLES if t.name == "crm_party_insight")
+)
+crm_customer_profile_custom_export = _make_snapshot_asset(
+    next(t for t in CRM_WRITEBACK_TABLES if t.name == "crm_customer_profile_custom")
 )

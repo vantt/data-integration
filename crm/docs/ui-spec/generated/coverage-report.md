@@ -2,7 +2,7 @@
 
 # Coverage Report (generated)
 
-Surfaces: 54 · Actions: 319 · Flows: 6
+Surfaces: 54 · Actions: 320 · Flows: 6
 
 ## Flow → Actions
 

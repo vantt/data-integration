@@ -1,0 +1,4 @@
+-- Migration 0036 DOWN: SQLite cannot DROP COLUMN — noop
+-- To fully rollback, restore from backup or recreate the table without these columns:
+--   value_at_stake_vnd INTEGER
+--   top_affinity_product TEXT

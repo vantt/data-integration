@@ -191,6 +191,18 @@ class TaskService:
         description = "\n".join(lines) if lines else None
         priority = max((getattr(a, "priority", 1) for a in actions), default=1)
 
+        # Capture action-queue context at claim time (migration 0036)
+        value_at_stake_vnd = sum(getattr(a, "value_at_stake_vnd", 0) or 0 for a in actions)
+        best_action = max(
+            actions,
+            key=lambda a: getattr(a, "value_at_stake_vnd", 0) or 0,
+            default=None,
+        )
+        top_affinity_product = (
+            (getattr(best_action, "top_affinity_product", "") or "").strip()
+            if best_action else ""
+        )
+
         now = utc_now()
         task = Task(
             task_id=str(uuid.uuid4()),
@@ -205,6 +217,8 @@ class TaskService:
             created_at=now,
             updated_at=now,
             task_kind="contact",  # claim always means outreach to a customer
+            value_at_stake_vnd=value_at_stake_vnd or None,  # store None if sum is 0
+            top_affinity_product=top_affinity_product or None,
         )
         self._task_repo.insert(task)
         if self._db:

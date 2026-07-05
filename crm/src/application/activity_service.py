@@ -9,7 +9,14 @@ import uuid
 from shared.timestamps import utc_now
 from typing import TYPE_CHECKING, Optional
 
-from domain.entities.activity import Activity, VALID_ACTIVITY_TYPES
+from domain.entities.activity import (
+    Activity,
+    VALID_ACTIVITY_TYPES,
+    CONTACT_OUTCOMES_BY_CHANNEL_TYPE,
+    VALID_CONTACT_OUTCOMES,
+    VALID_OUTCOME_REASONS,
+    REASON_REQUIRED_OUTCOMES,
+)
 from domain.ports.activity_repository import ActivityRepository
 
 if TYPE_CHECKING:
@@ -43,6 +50,24 @@ class ActivityService:
         if activity_type not in VALID_ACTIVITY_TYPES:
             raise ValueError(f"unknown activity_type {activity_type!r}")
 
+        # D2 Phase 03: validate contact_outcome + outcome_reason enum
+        contact_outcome = (activity_data.get("contact_outcome") or "").strip() or None
+        outcome_reason  = (activity_data.get("outcome_reason") or "").strip() or None
+        channel_type    = (activity_data.get("channel_type") or "").strip()
+
+        if contact_outcome:
+            valid_for_channel = CONTACT_OUTCOMES_BY_CHANNEL_TYPE.get(
+                channel_type, VALID_CONTACT_OUTCOMES
+            )
+            if contact_outcome not in valid_for_channel:
+                raise ValueError(
+                    f"contact_outcome {contact_outcome!r} not valid for channel_type {channel_type!r}"
+                )
+            if contact_outcome in REASON_REQUIRED_OUTCOMES and not outcome_reason:
+                raise ValueError("outcome_reason is required when contact_outcome is 'refused'")
+            if outcome_reason and outcome_reason not in VALID_OUTCOME_REASONS:
+                raise ValueError(f"unknown outcome_reason {outcome_reason!r}")
+
         now = utc_now()
         activity = Activity(
             activity_id=activity_data.get("activity_id") or str(uuid.uuid4()),
@@ -59,17 +84,21 @@ class ActivityService:
             staff_user_id=activity_data.get("staff_user_id"),
             custom_fields=activity_data.get("custom_fields"),
             task_id=activity_data.get("task_id") or None,
-            channel_type=activity_data.get("channel_type") or None,
+            channel_type=channel_type or None,
+            contact_outcome=contact_outcome,
+            outcome_reason=outcome_reason,
         )
         self._repo.insert(activity)
-        # Keep last_contact snapshot in sync whenever outcome is recorded.
-        if activity.outcome and self._last_contact_repo is not None:
+        # Keep last_contact snapshot in sync whenever an outcome is recorded.
+        # Prefer contact_outcome (D2 structured enum) over legacy free-text outcome.
+        effective_outcome = activity.contact_outcome or activity.outcome
+        if effective_outcome and self._last_contact_repo is not None:
             try:
                 self._last_contact_repo.upsert(
                     party_id=activity.party_id,
                     activity_id=activity.activity_id,
                     contacted_at=activity.occurred_at,
-                    result=activity.outcome,
+                    result=effective_outcome,
                     channel=activity.channel,
                     staff_user_id=activity.staff_user_id,
                 )

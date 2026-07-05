@@ -85,7 +85,7 @@
     {# Derive display state #}
     {% set is_terminal = t.status in ('done', 'cancelled') %}
     {% set is_overdue = (not is_terminal) and t.is_overdue_at(now_utc) %}
-    {% set is_auto = t.source == 'action_queue' %}
+    {% set is_auto = t.source in ('action_queue', 'action_queue_claim') %}
 
     {% set prio_label = t.priority_label %}
 

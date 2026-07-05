@@ -196,3 +196,23 @@ sources:
         description: "CRM tasks (incremental by updated_at). Grain: 1 row per task × update batch."
         meta:
           external_location: "read_parquet('{{ env_var('DBT_DATA_LAKE_PATH') }}/crm_export/crm_task/**/*.parquet', hive_partitioning=1, union_by_name=true)"
+      - name: crm_note
+        description: "CRM notes incremental (private excluded). Grain: 1 note × batch."
+        meta:
+          external_location: "read_parquet('{{ env_var('DBT_DATA_LAKE_PATH') }}/crm_export/crm_note/**/*.parquet', hive_partitioning=1, union_by_name=true)"
+      - name: crm_tag
+        description: "Tag taxonomy snapshot."
+        meta:
+          external_location: "read_parquet('{{ env_var('DBT_DATA_LAKE_PATH') }}/crm_export/crm_tag.parquet')"
+      - name: crm_party_tag
+        description: "Party-tag assignments snapshot."
+        meta:
+          external_location: "read_parquet('{{ env_var('DBT_DATA_LAKE_PATH') }}/crm_export/crm_party_tag.parquet')"
+      - name: crm_party_insight
+        description: "Rep-curated insights incremental (active rows only)."
+        meta:
+          external_location: "read_parquet('{{ env_var('DBT_DATA_LAKE_PATH') }}/crm_export/crm_party_insight/**/*.parquet', hive_partitioning=1, union_by_name=true)"
+      - name: crm_customer_profile_custom
+        description: "Customer profile custom JSON blob snapshot. Pivot in staging."
+        meta:
+          external_location: "read_parquet('{{ env_var('DBT_DATA_LAKE_PATH') }}/crm_export/crm_customer_profile_custom.parquet')"

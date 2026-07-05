@@ -15,6 +15,7 @@
 {% set party_extras = party_extras | default({}) %}
 {% set script_cids = script_cids | default(none) %}
 {% set total_count = counts.total | default(0) %}
+{% set queue_party_ids = queue_party_ids | default([]) %}
 
 {# ── Empty / all-done state ──────────────────────────────────────────────── #}
 {% if total_count == 0 %}
@@ -48,12 +49,18 @@
     {% if band.total_value > 0 %}
     <span class="wl-band__value">{{ band.total_value | fmt_vnd }}</span>
     {% endif %}
+    {# Item 3: B3 auto-expand badge — VIP/GOLD rows found in neglected band #}
+    {% if band.vip_count is defined and band.vip_count > 0 %}
+    <span class="bdg bdg--warn" title="{{ band.vip_count }} khách VIP/GOLD đang bị treo lâu">
+      &#x2B50; {{ band.vip_count }} VIP/GOLD
+    </span>
+    {% endif %}
     <span class="wl-band__chevron" aria-hidden="true"></span>
   </summary>
 
   <div class="wl-list wl-list--b{{ band.id }}">
     {% for row in band.rows %}
-    {{ wl_row(row, party_extras, script_cids) }}
+    {{ wl_row(row, party_extras, script_cids, queue_party_ids=queue_party_ids) }}
     {% endfor %}
 
     {# Overflow: lazy-load on <details> expand — avoids rendering thousands of hidden rows.

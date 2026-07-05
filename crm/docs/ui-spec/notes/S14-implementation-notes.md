@@ -115,6 +115,11 @@ Talking-point ticks, objection accordion, reason "đã nói", channel toggle are
 | A-S14-025 | reason "đã nói" tick | client JS toggle (mirror `s14ToggleTP`) |
 | A-S14-001..011 | (existing) | unchanged — keep current handlers/JS |
 
+## 11. Outcome bulk-resolve + async-resolve contract — IMPLEMENTED (phase-02)
+
+> **Status:** bulk-resolve UI wiring IMPLEMENTED (phase-02); async-resolve endpoint IMPLEMENTED.
+> See `test_bulk_resolve_endpoint.py` (5 endpoint-level tests) and `test_outcome_bulk_resolve.py` (23 unit tests).
+
 ## 11. Outcome bulk-resolve + async-resolve contract (Phase 04)
 
 ### Outcome bulk-resolve — extended `handle_log_activity`

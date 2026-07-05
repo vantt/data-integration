@@ -237,3 +237,33 @@ models:
         description: "Discount amount (always positive, B2B rate=100/empty-reason rows filtered out)"
       - name: reason
         description: "Raw reason string from Sapo payload — used for cost_type classification in fact_order_costs"
+
+  - name: stg_crm__note
+    description: "CRM notes (team-visible, non-deleted)."
+    columns:
+      - name: note_id
+        tests: [unique, not_null]
+      - name: party_id
+        tests: [not_null]
+
+  - name: stg_crm__party_tag
+    description: "Party-tag assignments enriched with tag taxonomy."
+    columns:
+      - name: party_id
+        tests: [not_null]
+      - name: tag_id
+        tests: [not_null]
+
+  - name: stg_crm__party_insight
+    description: "Rep-curated insights (active rows)."
+    columns:
+      - name: insight_id
+        tests: [unique, not_null]
+      - name: party_id
+        tests: [not_null]
+
+  - name: stg_crm__customer_profile_custom
+    description: "Custom profile fields (1 row per party)."
+    columns:
+      - name: party_id
+        tests: [unique, not_null]

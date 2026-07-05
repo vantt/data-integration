@@ -64,6 +64,8 @@ class WorklistRow:
     ref_id: str         # action_id or task_id
     payload: Any        # original entity (ActionQueueItem | Task)
     pending_date: Optional[date] = None  # pre-parsed pending_since; reused by sort keys
+    value_group: str = ""  # VIP/GOLD/HIGH/MID/LOW (item 3 — B3 auto-expand)
+    wake_badge: bool = False  # True when snoozed_until passed within last 24h (item 4)
 
     @property
     def should_show_neglect_badge(self) -> bool:
@@ -218,6 +220,29 @@ def rank_worklist(
         if pid and pid in _contacted:
             band = 4
         neglect = (today - pending).days if pending else 0
+        # Item 3: value_group for B3 VIP/GOLD auto-expand
+        value_group = str(getattr(a, "value_group", "") or "")
+        # Item 4: wake_badge — snoozed_until passed within last 24 hours
+        wake_badge = False
+        raw_snooze = getattr(a, "snoozed_until", None)
+        if raw_snooze:
+            try:
+                if isinstance(raw_snooze, str):
+                    snooze_dt = datetime.fromisoformat(
+                        raw_snooze.replace("Z", "+00:00")
+                    )
+                elif isinstance(raw_snooze, datetime):
+                    snooze_dt = raw_snooze if raw_snooze.tzinfo else raw_snooze.replace(tzinfo=timezone.utc)
+                else:
+                    snooze_dt = None
+                if snooze_dt is not None:
+                    if snooze_dt.tzinfo is None:
+                        snooze_dt = snooze_dt.replace(tzinfo=timezone.utc)
+                    now = datetime.now(timezone.utc)
+                    delta = (now - snooze_dt).total_seconds()
+                    wake_badge = 0 < delta <= 86400
+            except Exception:
+                wake_badge = False
         rows.append(WorklistRow(
             kind="action",
             band=band,
@@ -227,6 +252,8 @@ def rank_worklist(
             ref_id=str(getattr(a, "action_id", "")),
             payload=a,
             pending_date=pending,
+            value_group=value_group,
+            wake_badge=wake_badge,
         ))
 
     for t in tasks:
@@ -257,16 +284,25 @@ def rank_worklist(
     for band_id, band_rows in bands_map.items():
         band_rows.sort(key=_BAND_SORT_KEYS[band_id])
 
+    # Item 3: check band 3 for VIP/GOLD rows — auto-expand and add vip_count badge
+    _VIP_GROUPS = {"VIP", "GOLD"}
+    b3_vip_rows = [r for r in bands_map[3] if r.value_group in _VIP_GROUPS]
+    b3_vip_count = len(b3_vip_rows)
+
     # Build output structure — band 4 ("Đã liên hệ") renders above band 0 in template.
     bands = []
     for band_id in (4, 0, 1, 2, 3):
         band_rows = bands_map[band_id]
         total_val = sum(r.value for r in band_rows)
+        meta = dict(_BAND_META[band_id])  # copy to avoid mutating module-level constant
+        if band_id == 3 and b3_vip_count > 0:
+            meta["is_expanded"] = True
         bands.append({
-            **_BAND_META[band_id],
+            **meta,
             "rows": band_rows,
             "count": len(band_rows),
             "total_value": total_val,
+            "vip_count": b3_vip_count if band_id == 3 else 0,
         })
 
     value_total = sum(int(getattr(a, "value_at_stake_vnd", 0) or 0) for a in actions)

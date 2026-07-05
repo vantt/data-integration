@@ -150,6 +150,54 @@ def make_contact_modal_router(
             return HTMLResponse(f"Lỗi huỷ kích hoạt: {exc}", status_code=500)
         return redirect_to_customer(party_id)
 
+    @router.post("/customers/{party_id}/custom-field-inline", response_class=HTMLResponse)
+    async def post_custom_field_inline(
+        request: Request,
+        party_id: str,
+        field_key: str = Form(""),
+        value: str = Form(""),
+        inline: str = Form("0"),
+    ) -> Response:
+        """Item 1 (Phase 06): inline custom field save from S14 collect row.
+
+        Saves a single key→value pair into party.custom JSON blob and returns
+        the updated _s14_collect_row.html fragment (custom_select variant, saved=True).
+        """
+        field_key = field_key.strip()
+        value = value.strip()
+        if not field_key or not value:
+            return HTMLResponse("field_key and value are required", status_code=400)
+        # Only allow known safe field keys to prevent arbitrary key injection
+        _ALLOWED_KEYS = {"skin_type", "preferred_contact"}
+        if field_key not in _ALLOWED_KEYS:
+            return HTMLResponse(f"Unknown field_key: {field_key}", status_code=400)
+        try:
+            profile.upsert_profile(party_id, custom={field_key: value})
+        except Exception as exc:
+            log.warning("custom_field_inline %s %s: %s", party_id, field_key, exc)
+            return HTMLResponse("Lỗi lưu custom field", status_code=500)
+        # Return updated row fragment — show saved value + toast (Item 6)
+        _FIELD_META = {
+            "skin_type": ("Loại da", ["dầu", "khô", "hỗn hợp", "nhạy cảm", "thường"]),
+            "preferred_contact": ("Kênh ưu thích", ["phone", "zalo", "messenger", "email"]),
+        }
+        label, options = _FIELD_META.get(field_key, (field_key, []))
+        return templates.TemplateResponse(
+            "fragments/_s14_collect_row.html",
+            {
+                "request": request,
+                "party_id": party_id,
+                "row": {
+                    "key": field_key,
+                    "label": label,
+                    "kind": "custom_select",
+                    "options": options,
+                    "current": value,
+                },
+                "saved": True,
+            },
+        )
+
     @router.post("/customers/{party_id}/address", response_class=HTMLResponse)
     async def post_address(
         party_id: str,

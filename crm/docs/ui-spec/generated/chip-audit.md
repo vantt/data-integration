@@ -2,7 +2,7 @@
 
 # Chip Coverage Audit (generated)
 
-Surfaces: 40 · Tokens: 286 · Mapped: 163 · Unmapped: 123
+Surfaces: 40 · Tokens: 287 · Mapped: 163 · Unmapped: 124
 
 ## Unmapped Chips
 
@@ -261,6 +261,7 @@ Each unmapped chip is one of:
 | outcome_bar | `🛒Đã mua` |
 | outcome_bar | `ghi chú tạm…` |
 | stop_banner | `Tạo task xác minh` |
+| stop_banner | `Tôi đã xác minh — vẫn tiếp tục` |
 | stop_banner | `Xem hồ sơ 360` |
 | talking_points | `Omega3` |
 | talking_points | `Vitamin D` |

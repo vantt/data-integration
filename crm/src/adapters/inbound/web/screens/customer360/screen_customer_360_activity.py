@@ -61,6 +61,8 @@ def register_activity_routes(
         note_id: str = "",
         party_name: str = "",
         task_id: str = "",
+        resolve_action_ids: str = "",
+        resolve_task_ids: str = "",
     ) -> dict:
         # Normalize legacy mode names → unified 'log'.
         if mode not in ("log", "edit_note", "note_only"):
@@ -122,6 +124,8 @@ def register_activity_routes(
             "note_type_val": note_type_val,
             "note_pinned": note_pinned,
             "note_visibility": note_visibility,
+            "resolve_action_ids": resolve_action_ids,
+            "resolve_task_ids": resolve_task_ids,
         }
 
     @router.get("/modals/m08", response_class=HTMLResponse)
@@ -132,10 +136,13 @@ def register_activity_routes(
         note_id: str = "",
         party_name: str = "",
         task_id: str = "",
+        resolve_action_ids: str = "",
+        resolve_task_ids: str = "",
     ) -> Response:
         return templates.TemplateResponse(
             "fragments/modal_log_activity.html",
-            _m08_ctx(request, party_id, mode, note_id, party_name, task_id),
+            _m08_ctx(request, party_id, mode, note_id, party_name, task_id,
+                     resolve_action_ids, resolve_task_ids),
         )
 
     @router.get("/customers/{party_id}/modal/log-activity", response_class=HTMLResponse)
@@ -145,10 +152,13 @@ def register_activity_routes(
         mode: str = "activity",
         party_name: str = "",
         task_id: str = "",
+        resolve_action_ids: str = "",
+        resolve_task_ids: str = "",
     ) -> Response:
         return templates.TemplateResponse(
             "fragments/modal_log_activity.html",
-            _m08_ctx(request, party_id, mode, "", party_name, task_id),
+            _m08_ctx(request, party_id, mode, "", party_name, task_id,
+                     resolve_action_ids, resolve_task_ids),
         )
 
     @router.post("/customers/{party_id}/log-activity", response_class=HTMLResponse)
@@ -158,7 +168,9 @@ def register_activity_routes(
         hinh_thuc: str = Form(default="call"),
         channel_identity_id: str = Form(default=""),
         channel_value: str = Form(default=""),
-        outcome: str = Form(default=""),
+        outcome: str = Form(default=""),          # legacy field; kept for backward compat + auto-claim guard
+        contact_outcome: str = Form(default=""),  # D2 structured enum per channel_type
+        outcome_reason: str = Form(default=""),   # D2 nullable; required when contact_outcome='refused'
         body: str = Form(default=""),
         occurred_at: str = Form(default=""),
         related_order_code: str = Form(default=""),
@@ -173,6 +185,11 @@ def register_activity_routes(
         complete_task: str = Form(default=""),
         resolve_action_ids: str = Form(default=""),
         resolve_task_ids: str = Form(default=""),
+        # Item 2 (Phase 06): promote insight from activity log
+        promote_insight: str = Form(default="0"),
+        insight_type: str = Form(default=""),
+        insight_body: str = Form(default=""),
+        insight_confidence: str = Form(default=""),
     ) -> Response:
         current_user = getattr(request.state, "current_user", None)
         actor_id: Optional[str] = current_user.user_id if current_user else None
@@ -183,16 +200,30 @@ def register_activity_routes(
             "direction": "out",
             "channel": channel_value.strip() or None,
             "channel_type": hinh_thuc.strip() or None,
-            "outcome": outcome.strip() or None,
+            # D2 Phase 03: contact_outcome replaces outcome for new rows.
+            # Legacy outcome kept in act_data only when contact_outcome absent (backward compat).
+            "contact_outcome": contact_outcome.strip() or None,
+            "outcome_reason": outcome_reason.strip() or None,
             "body": body.strip() or None,
             "occurred_at": utc_occurred,
             "related_order_code": related_order_code.strip() or None,
             "staff_user_id": actor_id,
             "task_id": task_id.strip() or None,
         }
-        if outcome == "callback" and callback_at.strip():
+        # callback_at: check both new contact_outcome and legacy outcome for compat
+        if (contact_outcome == "callback" or outcome == "callback") and callback_at.strip():
             act_data["callback_at"] = _ict_local_to_utc(callback_at)
             act_data["create_callback_task"] = create_callback_task == "1"
+        # D4: persist resolve IDs in activity custom_fields snapshot (phase-02)
+        _bulk_action_preview = _parse_id_list(resolve_action_ids)
+        _bulk_task_preview = _parse_id_list(resolve_task_ids)
+        if _bulk_action_preview or _bulk_task_preview:
+            cf = act_data.get("custom_fields") or {}
+            if _bulk_task_preview:
+                cf["resolve_task_ids"] = _bulk_task_preview
+            if _bulk_action_preview:
+                cf["resolve_action_ids"] = _bulk_action_preview
+            act_data["custom_fields"] = cf
         try:
             activity = activity_log.log_activity(act_data)
         except ValueError as exc:
@@ -200,9 +231,18 @@ def register_activity_routes(
         except Exception as exc:
             log.error("log activity party %s: %s", party_id, exc)
             return HTMLResponse("Lỗi ghi log hoạt động", status_code=500)
+        # Item 2 (Phase 06): promote insight — party_insights not wired into this route;
+        # log warning and skip silently per spec constraint.
+        if promote_insight == "1" and insight_type.strip() and insight_body.strip():
+            log.warning(
+                "promote_insight requested for party %s (type=%s) but party_insights "
+                "service not in scope for register_activity_routes — skipped",
+                party_id, insight_type.strip(),
+            )
         # Auto-claim: create a claim task when contact is logged without prior claiming.
         # Skip when task_id is present — staff is already in the structured task flow.
-        if outcome.strip() and actor_id and task_svc is not None and not task_id.strip():
+        # Check contact_outcome (D2) OR legacy outcome field so both paths trigger claim.
+        if (contact_outcome.strip() or outcome.strip()) and actor_id and task_svc is not None and not task_id.strip():
             try:
                 party360 = profile.get_party_360(party_id)
                 customer_name = party360.display_name if party360 else ""
@@ -308,5 +348,39 @@ def register_activity_routes(
             task_svc=task_svc,
             actor_id=actor_id or "",
         )
+
+        return Response(status_code=204)
+
+    # ── A-S14-027: R14 warn-with-ack audit log ───────────────────────────────
+
+    @router.post("/customers/{party_id}/r14-ack", response_class=HTMLResponse)
+    async def handle_r14_ack(request: Request, party_id: str) -> Response:
+        """Log R14 override acknowledgment. Returns 204 — no panel re-render (Invariant §9).
+
+        The frontend performs a pure-JS unlock (hide banner + remove s14-locked class).
+        This endpoint only writes an audit activity so the override is traceable.
+        """
+        form = await request.form()
+        reason_shown = form.get("reason_shown", "")
+        current_user = getattr(request.state, "current_user", None)
+        actor_id: Optional[str] = current_user.user_id if current_user else None
+
+        if activity_log is not None:
+            try:
+                act_data: dict = {
+                    "party_id": party_id,
+                    "activity_type": "other",
+                    "direction": "internal",
+                    "subject": "R14 override: NV đã xác minh và tiếp tục gọi theo kịch bản",
+                    "body": None,
+                    "staff_user_id": actor_id,
+                    "custom_fields": {
+                        "r14_ack": True,
+                        "reason_shown": reason_shown[:200] if reason_shown else "",
+                    },
+                }
+                activity_log.log_activity(act_data)
+            except Exception as exc:
+                log.warning("r14_ack: activity write failed %s: %s", party_id, exc)
 
         return Response(status_code=204)

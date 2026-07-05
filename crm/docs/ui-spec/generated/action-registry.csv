@@ -167,6 +167,7 @@ A-S14-023,S14,btn_fix_invalid_contact,click,open_overlay,M15,,collect
 A-S14-024,S14,btn_reason_schedule,click,open_overlay,M05,,reason_to_call
 A-S14-025,S14,reason_mentioned_checkbox,click,mutate,,,reason_to_call
 A-S14-026,S14,btn_reason_resolve_async,click,mutate,,,reason_to_call
+A-S14-027,S14,btn_r14_ack,click,mutate,,,stop_banner
 A-S14-LSN01,S14,,cache.refreshed,mutate,,,
 A-S15-001,S15,btn_start,click,mutate,,,lifecycle
 A-S15-002,S15,btn_edit,click,open_overlay,M05,,lifecycle

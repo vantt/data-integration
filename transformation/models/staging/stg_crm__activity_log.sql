@@ -9,6 +9,7 @@ SELECT
     channel,
     outcome,
     contact_outcome,
+    outcome_reason,
     callback_at::TIMESTAMPTZ                    AS callback_at,
     contact_duration_s::INTEGER                 AS contact_duration_s,
     task_id,

@@ -6,7 +6,7 @@
                               .neglect_days, .ref_id, .payload
    party_extras dict       — {party_id: {preferred_identity, contact_pref_notes}}
 #}
-{% macro wl_row(row, party_extras, script_cids=none) %}
+{% macro wl_row(row, party_extras, script_cids=none, queue_party_ids=[]) %}
 {% set a = row.payload %}
 {% set pid = a.party_id %}
 {% set extras = party_extras.get(pid, {}) if pid else {} %}
@@ -69,6 +69,10 @@
       <span class="wl-neglect-badge" title="Chưa được xử lý trong {{ row.neglect_days }} ngày">
         đã chờ {{ row.neglect_days }} ngày
       </span>
+      {% endif %}
+      {# Item 4: wake badge — snoozed_until passed within last 24h #}
+      {% if row.wake_badge %}
+      <span class="bdg bdg--info" title="Hành động này vừa được đánh thức sau khi hoãn">&#x23F0; vừa thức dậy</span>
       {% endif %}
     </div>
     <div class="wl-row__why">{{ a.rationale_vi }}</div>
@@ -150,6 +154,12 @@
     <a href="/customers/{{ pid }}" class="btn btn--ghost" style="padding:8px 10px"
        onclick="event.stopPropagation()">Xem 360 {% include "icons/chevron.svg" %}</a>
     {% endif %}
+    {# A2: call-mode queue navigation — only when queue context is available #}
+    {% if pid and queue_party_ids %}
+    <a href="/customers/{{ pid }}/call?queue_ids={{ queue_party_ids | join(',') }}"
+       class="btn btn--ghost" style="padding:8px 10px"
+       onclick="event.stopPropagation()" title="Vào chế độ gọi với hàng đợi">📞 Gọi chế độ</a>
+    {% endif %}
   </div>
 </div>
 
@@ -199,6 +209,13 @@
       {% endif %}
     </div>
     {% if t.description %}<div class="wl-row__why">{{ t.description }}</div>{% endif %}
+    {# A1: claim-context badges — 💰 value + 🛍 top product for action_queue_claim tasks #}
+    {% if t.source == 'action_queue_claim' and (t.value_at_stake_vnd or t.top_affinity_product) %}
+    <div class="wl-row__products">
+      {% if t.value_at_stake_vnd %}<span class="bdg bdg--warn">💰 {{ t.value_at_stake_vnd | fmt_vnd }}</span>{% endif %}
+      {% if t.top_affinity_product %}<span class="wl-product-tag">🛍 {{ t.top_affinity_product }}</span>{% endif %}
+    </div>
+    {% endif %}
     {% for cpn in cp_notes %}
     <div class="wl-row__pref">💬 {{ cpn.body }}</div>
     {% endfor %}
@@ -256,6 +273,20 @@
             hx-target="#worklist-container" hx-swap="outerHTML"
             hx-include="#wl-filter-form"
             title="Trả việc về hàng đợi" onclick="event.stopPropagation()">Trả việc</button>
+    {% endif %}
+    {# A4: Snooze dropdown — action_queue_claim tasks only #}
+    {% if t.source == 'action_queue_claim' %}
+    <details class="wl-snooze" onclick="event.stopPropagation()">
+      <summary class="btn btn--ghost" style="padding:8px 10px;list-style:none;cursor:pointer"
+               title="Hoãn task này">⏰</summary>
+      <div class="wl-snooze__menu">
+        {% for snooze_days, snooze_label in [(1,'1 ngày'),(3,'3 ngày'),(7,'1 tuần')] %}
+        <button class="btn btn--ghost" style="padding:6px 10px;text-align:left;width:100%"
+                hx-patch="/tasks/{{ t.task_id }}/snooze?days={{ snooze_days }}"
+                hx-swap="none">{{ snooze_label }}</button>
+        {% endfor %}
+      </div>
+    </details>
     {% endif %}
 
     {% if pid %}

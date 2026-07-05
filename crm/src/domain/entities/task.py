@@ -82,6 +82,9 @@ class Task:
     completed_at: Optional[str] = None      # UTC ISO-8601 nullable
     task_kind: str = "contact"              # contact|internal|generic (set by migration/derive)
     channel: Optional[str] = None          # reserved: phone|zalo|messenger|email|store
+    # Action-queue claim context — set once at claim time (migration 0036)
+    value_at_stake_vnd: Optional[int] = None   # SUM of all actions' value_at_stake_vnd
+    top_affinity_product: Optional[str] = None  # product name from highest-value action
     # Denormalised display fields — populated by list queries via LEFT JOIN
     party_name: Optional[str] = None        # crm_party.display_name
     assignee_name: Optional[str] = None     # crm_app_user.full_name

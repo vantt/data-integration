@@ -273,6 +273,19 @@
             <span class="s15-prov__v mono s15-prov__v--val">{{ provenance_action.value_at_stake_vnd | fmt_vnd }}</span>
           </div>
           {% endif %}
+          {# A1: claim-context summary — persisted on task at claim time (migration 0036) #}
+          {% if task.source == 'action_queue_claim' and task.value_at_stake_vnd %}
+          <div class="s15-prov__row">
+            <span class="s15-prov__k">Tổng giá trị (claim)</span>
+            <span class="s15-prov__v mono s15-prov__v--val">💰 {{ task.value_at_stake_vnd | fmt_vnd }}</span>
+          </div>
+          {% endif %}
+          {% if task.source == 'action_queue_claim' and task.top_affinity_product %}
+          <div class="s15-prov__row">
+            <span class="s15-prov__k">Sản phẩm chính</span>
+            <span class="s15-prov__v">🛍 {{ task.top_affinity_product }}</span>
+          </div>
+          {% endif %}
         </div>
 
         {# Claim actions rollup #}

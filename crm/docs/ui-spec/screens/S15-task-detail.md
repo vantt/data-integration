@@ -193,6 +193,10 @@ elements:
 └──────────────────────────────────────────────────────────────────────────────┘
 ```
 
+## Implementation Notes (Phase 04)
+
+- **A1 — Provenance block: value + product (migration 0036)**: For `source=action_queue_claim` tasks, the provenance block now shows two additional rows when set: "Tổng giá trị (claim)" (`task.value_at_stake_vnd` SUM at claim time) and "Sản phẩm chính" (`task.top_affinity_product` from highest-value action). These are persisted at claim time, not recomputed at render. Old tasks (pre-migration) show Nothing for these fields.
+
 ## States
 
 - **ST-TASK-LOADING**: task fetch in-flight → skeleton.

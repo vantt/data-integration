@@ -59,6 +59,7 @@ class TaskQuerier(Protocol):
 class TaskWriter(Protocol):
     def transition_status(self, task_id: str, status: str) -> None: ...
     def assign_to(self, task_id: str, user_id: str) -> None: ...
+    def update_task(self, task_id: str, data: dict) -> Task: ...
 
 
 class ActionStateWriter(Protocol):
@@ -217,6 +218,23 @@ def make_worklist_router(
         today = today_ict()
         ranked = rank_worklist(all_actions, all_tasks, today, contacted_party_ids)
 
+        # Build ordered list of action party_ids for call-mode queue (A2).
+        # Computed before band slicing so all ranked action rows are included.
+        # Capped at 50 to keep the query-string manageable.
+        queue_party_ids: list[str] = []
+        _seen_queue_pids: set[str] = set()
+        for _band in ranked["bands"]:
+            for _row in _band["rows"]:
+                if _row.kind == "action":
+                    _pid = getattr(_row.payload, "party_id", None)
+                    if _pid and _pid not in _seen_queue_pids:
+                        _seen_queue_pids.add(_pid)
+                        queue_party_ids.append(str(_pid))
+                        if len(queue_party_ids) >= 50:
+                            break
+            if len(queue_party_ids) >= 50:
+                break
+
         # Screen adapter responsibility: cap band.rows to display_capacity before
         # passing to the template so the initial render only processes cap rows.
         # Overflow is loaded lazily via GET /worklist/band/{band_id}/more.
@@ -245,6 +263,8 @@ def make_worklist_router(
             # Team queue: unassigned tasks any user can pick up
             "unassigned_tasks": unassigned_tasks,
             "current_user_id": current_user_id,
+            # A2: ordered party_ids for call-mode queue navigation (up to 50)
+            "queue_party_ids": queue_party_ids,
         }
 
     # ── Full page ─────────────────────────────────────────────────────────────
@@ -343,6 +363,39 @@ def make_worklist_router(
             log.error("worklist: cancel task %s: %s", task_id, exc)
             return HTMLResponse("failed to cancel task", status_code=500)
         return HTMLResponse("", status_code=200)
+
+    # ── Task snooze: shift due_at by N days (ICT-anchored) ───────────────
+    # Resets status to "open" when task is "doing" so it re-enters the open queue.
+    # Returns 204 (no content) — client uses hx-swap="none" and optionally refreshes.
+    @router.patch("/tasks/{task_id}/snooze")
+    async def handle_snooze_task(request: Request, task_id: str) -> Response:
+        days_str = request.query_params.get("days", "1")
+        try:
+            days = max(1, min(int(days_str), 30))
+        except ValueError:
+            days = 1
+
+        # ICT = UTC+7 (Asia/Ho_Chi_Minh); store as UTC midnight of the target day
+        ict_offset = timezone(timedelta(hours=7))
+        today_ict = datetime.now(ict_offset).date()
+        new_due_date = today_ict + timedelta(days=days)
+        new_due_utc = datetime(
+            new_due_date.year, new_due_date.month, new_due_date.day,
+            0, 0, 0, tzinfo=ict_offset,
+        ).astimezone(timezone.utc)
+        new_due_str = new_due_utc.strftime("%Y-%m-%dT%H:%M:%SZ")
+
+        try:
+            current_task = tasks.get_task(task_id)
+            task_writer.update_task(task_id, {"due_at": new_due_str})
+            # Reset status to open only if currently "doing"
+            if current_task and current_task.status == "doing":
+                task_writer.transition_status(task_id, "open")
+        except Exception as exc:
+            log.warning("snooze_task %s: %s", task_id, exc)
+            return Response(status_code=500)
+
+        return Response(status_code=204)
 
     # ── Self-assign from team queue ───────────────────────────────────────
     # Removes row client-side via hx-swap="delete" after assign succeeds.

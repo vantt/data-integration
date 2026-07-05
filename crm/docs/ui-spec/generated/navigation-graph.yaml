@@ -1408,6 +1408,16 @@ edges:
       - reason.resolve_via_async_channel
       - activity_log.append_async_attempt
     region: reason_to_call
+  - id: A-S14-027
+    from: S14
+    element: btn_r14_ack
+    trigger: click
+    action: mutate
+    effects:
+      - stop_banner.hide
+      - s14_content.unlock
+      - activity_log.write_r14_ack
+    region: stop_banner
   - id: A-S14-LSN01
     from: S14
     listens_to: cache.refreshed

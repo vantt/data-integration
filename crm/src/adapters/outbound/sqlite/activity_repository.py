@@ -19,15 +19,17 @@ _INSERT = """
 INSERT INTO crm_activity_log (
   activity_id, party_id, activity_type, direction, channel,
   subject, body, outcome, related_order_code,
-  staff_user_id, occurred_at, created_at, custom_fields, task_id, channel_type
-) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+  staff_user_id, occurred_at, created_at, custom_fields, task_id, channel_type,
+  contact_outcome, outcome_reason
+) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
 """
 
 _LIST_BY_PARTY = """
 SELECT
   activity_id, party_id, activity_type, direction, channel,
   subject, body, outcome, related_order_code,
-  staff_user_id, occurred_at, created_at, custom_fields, task_id, channel_type
+  staff_user_id, occurred_at, created_at, custom_fields, task_id, channel_type,
+  contact_outcome, outcome_reason
 FROM crm_activity_log
 WHERE party_id = ?
 ORDER BY occurred_at DESC
@@ -42,6 +44,9 @@ LIMIT ?
 def _activity_from_row(row: sqlite3.Row) -> Activity:
     raw_cf = row["custom_fields"]
     custom_fields = json.loads(raw_cf) if raw_cf else None
+    # Use dict-style access with fallback for backward compat with older DB rows
+    # that pre-date migration 0035 (contact_outcome/outcome_reason columns absent).
+    keys = row.keys()
     return Activity(
         activity_id=row["activity_id"],
         party_id=row["party_id"],
@@ -58,6 +63,8 @@ def _activity_from_row(row: sqlite3.Row) -> Activity:
         custom_fields=custom_fields,
         task_id=row["task_id"],
         channel_type=row["channel_type"],
+        contact_outcome=row["contact_outcome"] if "contact_outcome" in keys else None,
+        outcome_reason=row["outcome_reason"] if "outcome_reason" in keys else None,
     )
 
 
@@ -92,6 +99,8 @@ class SQLiteActivityRepository:
             json.dumps(activity.custom_fields) if activity.custom_fields else None,
             activity.task_id,
             activity.channel_type,
+            activity.contact_outcome,
+            activity.outcome_reason,
         ))
         return activity
 

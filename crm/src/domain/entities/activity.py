@@ -31,6 +31,39 @@ VALID_ACTIVITY_TYPES = [
 DIRECTION_IN = "in"
 DIRECTION_OUT = "out"
 
+# ---------------------------------------------------------------------------
+# contact_outcome constants (D2 — per channel enum)
+# ---------------------------------------------------------------------------
+CONTACT_OUTCOMES_CALL = [
+    "answered", "no_answer", "busy", "wrong_number", "callback", "refused",
+]
+CONTACT_OUTCOMES_MESSAGING = [
+    "replied", "no_reply", "pending_reply", "refused", "blocked",
+]
+CONTACT_OUTCOMES_VISIT = ["met", "not_met"]
+
+VALID_CONTACT_OUTCOMES: list[str] = list(
+    dict.fromkeys(CONTACT_OUTCOMES_CALL + CONTACT_OUTCOMES_MESSAGING + CONTACT_OUTCOMES_VISIT)
+)
+
+CONTACT_OUTCOMES_BY_CHANNEL_TYPE: dict[str, list[str]] = {
+    "call":  CONTACT_OUTCOMES_CALL,
+    "zalo":  CONTACT_OUTCOMES_MESSAGING,
+    "fb":    CONTACT_OUTCOMES_MESSAGING,
+    "email": CONTACT_OUTCOMES_MESSAGING,
+    "visit": CONTACT_OUTCOMES_VISIT,
+}
+
+# ---------------------------------------------------------------------------
+# outcome_reason constants (D2 — nullable, required when refused)
+# ---------------------------------------------------------------------------
+VALID_OUTCOME_REASONS = [
+    "budget", "timing", "product_fit", "competitor",
+    "stock", "trust", "no_need", "other",
+]
+# Server enforces reason when contact_outcome is in this set
+REASON_REQUIRED_OUTCOMES: set[str] = {"refused"}
+
 
 # ---------------------------------------------------------------------------
 # Entity
@@ -54,3 +87,5 @@ class Activity:
     custom_fields: Optional[dict] = None   # structured metadata (JSON in DB)
     task_id: Optional[str] = None           # FK → crm_task (nullable) — links attempt to task
     channel_type: Optional[str] = None      # call|zalo|fb|email|visit|other — labels `channel` value
+    contact_outcome: Optional[str] = None   # enum per D2; replaces free-text outcome for new rows
+    outcome_reason: Optional[str] = None    # nullable; required when contact_outcome in REASON_REQUIRED_OUTCOMES

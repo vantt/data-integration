@@ -90,9 +90,12 @@ Khi rep lưu địa chỉ qua M15 → `address_source` tự động set `manual`
 
 Kịch bản tiếp cận do AI sinh (`cache.wh_approach_script`) có cờ `recommended`. Khi `recommended=false`
 (tài khoản nghi B2B gán nhầm RETAIL, dữ liệu margin mâu thuẫn `is_margin_negative=false` nhưng
-`avg_order_contribution_margin_pct<0`, hoặc khách chết-sâu kèm margin âm) → surface **phải** vào
-STOP state: ẩn talk-track/lời thoại/talking_points/objection, hiển thị cảnh báo + `reason_if_not_recommended`
-+ CTA tạo task xác minh tài khoản. Không cho copy/gọi theo kịch bản. Mirror gate ở tầng sinh (prompt template).
+`avg_order_contribution_margin_pct<0`, hoặc khách chết-sâu kèm margin âm) → surface vào
+**WARN state** (Phase 05): banner cảnh báo sticky đỏ + nội dung che mờ (`opacity:0.35`, `pointer-events:none`);
+nút "Tôi đã xác minh — vẫn tiếp tục" mở khoá + ghi audit activity `r14_ack` (POST 204, pure JS unlock, không re-render panel).
+Hiển thị `reason_if_not_recommended` + CTA tạo task xác minh tài khoản trong banner.
+
+Hard-block CHỈ khi tương lai có `consent='denied'` thật. Hiện tại default=contactable (không có consent data) — R14 warn-with-ack là đủ.
 
 ---
 

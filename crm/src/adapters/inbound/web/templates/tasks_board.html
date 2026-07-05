@@ -104,8 +104,8 @@
                 <div class="tcard" id="task-card-{{ t.task_id }}" draggable="true">
 
                   <div class="tcard__top">
-                    {% if t.source == "action_queue" %}
-                      <span class="auto-tag">AUTO</span>
+                    {% if t.source in ("action_queue", "action_queue_claim") %}
+                      <span class="auto-tag" title="{% if t.source == 'action_queue_claim' %}Nhận từ hàng đợi (claim){% else %}Tạo tự động từ hàng đợi{% endif %}">AUTO</span>
                     {% endif %}
                     <span class="bdg {{ task_status_css(t.status) }}">{{ t.status }}</span>
                     {% if t.task_kind %}

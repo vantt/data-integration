@@ -83,3 +83,8 @@ interactions:
     trigger: click
     action: mutate
     effects: [entity.delete_by_type, overlay.close, ui.toast.show]
+```
+
+## Implementation Notes (Phase 06)
+
+- **Item 6 — S14 collect inline toast**: `_s14_collect_row.html` appends a self-removing fixed-position toast (`✓ Đã lưu`, green, 2 s) when the server returns `saved=True`. Scoped to custom_select kind; does not use this O01 overlay (inline fragment swap pattern, not a modal/overlay). Documented here as the canonical toast reference.

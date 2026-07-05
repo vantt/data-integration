@@ -11,6 +11,7 @@ from the parent factory to avoid duplicating wiring.
 """
 from __future__ import annotations
 
+import json
 import logging
 from typing import Optional
 
@@ -44,6 +45,8 @@ def register_call_cockpit_route(
         request: Request,
         party_id: str,
         task_id: str = "",
+        queue_ids: str = "",
+        queue_pos: int = 0,
     ) -> Response:
         """Full-screen call cockpit shell.
 
@@ -117,8 +120,29 @@ def register_call_cockpit_route(
             pinned_task_id=pinned_task_id,
         )
 
+        # Item 1 (Phase 06): parse party.custom into a dict for collect row gating
+        party_custom: dict = {}
+        if party is not None:
+            raw_custom = getattr(party, "custom", None)
+            if raw_custom:
+                try:
+                    party_custom = (
+                        json.loads(raw_custom) if isinstance(raw_custom, str)
+                        else (raw_custom if isinstance(raw_custom, dict) else {})
+                    )
+                except Exception:
+                    party_custom = {}
+
         # Return target changes when entering from a task (S15 "Vào phiên gọi")
         return_target = f"/tasks/{pinned_task_id}" if pinned_task_id else None
+
+        # A2: call-mode queue navigation
+        queue_list = [q.strip() for q in queue_ids.split(",") if q.strip()] if queue_ids else []
+        queue_total = len(queue_list)
+        # Auto-correct queue_pos to this customer's actual position in the list
+        if party_id in queue_list:
+            queue_pos = queue_list.index(party_id)
+        queue_next_party_id = queue_list[queue_pos + 1] if queue_pos + 1 < queue_total else None
 
         return templates.TemplateResponse(
             "call_cockpit.html",
@@ -137,5 +161,12 @@ def register_call_cockpit_route(
                 "rail_secondary": rail_secondary,
                 "pinned_task_id": pinned_task_id,
                 "return_target": return_target,
+                # A2: queue context
+                "queue_ids": queue_ids,
+                "queue_total": queue_total,
+                "queue_pos": queue_pos,
+                "queue_next_party_id": queue_next_party_id,
+                # Item 1 (Phase 06): custom fields for collect row gating
+                "party_custom": party_custom,
             },
         )
