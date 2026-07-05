@@ -1398,6 +1398,7 @@ edges:
     action: mutate
     effects:
       - reason.toggle_mentioned
+      - outcome_bar.fold_secondary_id_into_bulk_resolve
     region: reason_to_call
   - id: A-S14-026
     from: S14

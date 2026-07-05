@@ -598,7 +598,7 @@
                    id="rail-item-{{ item.action_id or item.task_id }}"
                    data-action-id="{{ item.action_id or '' }}"
                    data-task-id="{{ item.task_id or '' }}">
-                <label class="s14-reason__check" title="Đánh dấu đã nói">
+                <label class="s14-reason__check" title="Đánh dấu đã nói — sẽ đóng cùng outcome cuộc gọi">
                   <input type="checkbox" onchange="s14ToggleReason(this)">
                   <span class="s14-said__box" aria-hidden="true">
                     <svg class="ico" width="11" height="11" viewBox="0 0 14 14" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" style="display:none" aria-hidden="true"><path d="M2 7l4 4L12 3"/></svg>
@@ -903,12 +903,33 @@ window.s14UnlockR14 = function () {
     if (inp) inp.focus();
   };
 
-  // ── A-S14-025: reason "đã nói" tick — client-side only ───────────────
+  // ── A-S14-025: reason "đã nói" tick ───────────────────────────────────
+  // Secondary rail items: ticking also folds action_id/task_id into the
+  // bulk-resolve hidden inputs, so outcome logged after the call closes
+  // exactly the items NV confirmed were actually discussed (phase-07 rail).
+  // Primary item is always included — no tick needed (rendered into the
+  // hidden inputs' default value server-side).
   window.s14ToggleReason = function (cb) {
     var card  = cb.closest('.s14-reason');
     var svg   = cb.parentElement ? cb.parentElement.querySelector('svg') : null;
     if (card) card.classList.toggle('s14-reason--said', cb.checked);
     if (svg)  svg.style.display = cb.checked ? '' : 'none';
+    if (!card || card.classList.contains('s14-reason--primary')) return;
+    s14SetResolveId('s14-resolve-action-ids', card.getAttribute('data-action-id'), cb.checked);
+    s14SetResolveId('s14-resolve-task-ids', card.getAttribute('data-task-id'), cb.checked);
+  };
+
+  window.s14SetResolveId = function (inputId, id, add) {
+    if (!id) return;
+    var input = document.getElementById(inputId);
+    if (!input) return;
+    var ids = input.value ? input.value.split(',').filter(Boolean) : [];
+    if (add) {
+      if (ids.indexOf(id) === -1) ids.push(id);
+    } else {
+      ids = ids.filter(function (x) { return x !== id; });
+    }
+    input.value = ids.join(',');
   };
 
   // ── Collect: enable/disable save button ──────────────────────────────

@@ -1,6 +1,6 @@
 # Plan — CRM UX & Data-Loop Improvements
 
-**Status:** DONE (all 6 phases implemented 2026-07-05)
+**Status:** DONE (all 6 phases implemented 2026-07-05; phase 07 follow-up added 2026-07-05)
 **Created:** 2026-07-05
 **Design source:** `crm/docs/ui-spec/notes/ux-action-queue-task-cockpit-data-loop-design.md` (decisions D1–D4, issues A1–A4, B1–B5, C-group)
 **Goal:** Đóng vòng lặp dữ liệu CRM → warehouse và nâng UX cho NV CSKH: đúng việc, đúng lúc, giữ ngữ cảnh, capture dữ liệu tối đa với friction thấp nhất.
@@ -15,8 +15,9 @@
 | 04 | `phase-04-cockpit-context-queue-snooze.md` | A1: denormalize `value_at_stake_vnd`+`top_affinity_product` vào task claim; A2: queue counter #n/N + "Khách kế →"; A4: snooze trực tiếp task claim | — | P1 |
 | 05 | `phase-05-r14-warn-with-ack.md` | D3: banner cảnh báo + nút "Tôi đã xác minh" + audit `r14_ack` vào `custom_fields` + metric override | 04 (cùng đụng template S14) | P1 |
 | 06 | `phase-06-capture-ux-quick-wins.md` | P2 UI: custom fields vào Collect cockpit, nút "★ Đúc kết" insight trong M08, B1 band Treo lâu, B2 badge snooze thức dậy, B4 badge nguồn task, toast Collect, tooltip back | 03, 05 (đụng M08 + S14 sau cùng) | P2 |
+| 07 | `phase-07-rail-secondary-bulk-resolve.md` | Follow-up phase-02: gom `rail_secondary` items (tick "đã nói") vào bulk-resolve set cùng `rail_primary` | 02, 06 (đụng cùng cockpit template) | P2 |
 
-**Execution order:** 01 ∥ 02 → 03 ∥ 04 → 05 → 06. (01 độc lập hoàn toàn — warehouse side.)
+**Execution order:** 01 ∥ 02 → 03 ∥ 04 → 05 → 06 → 07.
 
 ## Acceptance criteria (top-level)
 
@@ -39,8 +40,8 @@
 
 - **Phase-02 discovery:** backend bulk-resolve đã implement sẵn (helpers, POST handler, async-resolve endpoint, 23 unit tests) — phase chỉ còn 4 việc UI wiring. Effort thấp hơn dự kiến.
 - **Migration numbering:** phase-03 = `0035_activity_outcome_reason`, phase-04 = `0036_task_claim_context_fields` (đã sửa collision; renumber theo số trống thực tế lúc triển khai).
-- **Follow-up backlog (ngoài 6 phases):** outcome bar S14 hiện chỉ truyền IDs của rail PRIMARY vào bulk-resolve; aggregate thêm SECONDARY rail items để "đóng đủ N" trọn vẹn — chưa nằm trong phase nào, cần thêm khi làm phase-06 hoặc phase riêng.
-- **Chốt với user trước khi chạy production phase-01:** note `visibility='private'` loại hẳn khỏi export (recommended) hay mask body.
+- **Follow-up backlog:** RESOLVED bằng phase-07 (2026-07-05) — outcome bar S14 giờ gom `rail_secondary` items đã tick "đã nói" vào bulk-resolve cùng `rail_primary`.
+- **Chốt với user (2026-07-05):** note `visibility='private'` loại hẳn khỏi export (không mask body). Đã confirm, khớp default implementation.
 
 ## Reports
 

@@ -177,5 +177,5 @@ Endpoint `POST /customers/{party_id}/reason/resolve-async` đã IMPLEMENTED đ�
 
 ## Unresolved questions
 
-1. Secondary rail items' IDs — hiện chỉ `rail_primary` được đưa vào hidden inputs. Nếu 1 khách có 3 action items và NV muốn đóng tất cả sau 1 cuộc gọi, cần extend cockpit để aggregate IDs từ secondary rail vào cùng danh sách. Đây là P2 — để phase 06.
+1. ~~Secondary rail items' IDs~~ — RESOLVED 2026-07-05 ngoài phase 06, xem `phase-07-rail-secondary-bulk-resolve.md`: tick "đã nói" trên secondary item fold ID vào bulk-resolve; primary luôn included mặc định.
 2. `crm/docs/ui-spec/generated/` — sau khi sửa spec M08 cần regenerate. Kiểm tra convention qua `crm/docs/ui-spec/notes/` để biết cách trigger (dùng skill `/ui-spec` nếu có).

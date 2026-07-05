@@ -281,6 +281,6 @@ FROM {{ source('crm_export', 'crm_customer_profile_custom') }}
 
 ## Unresolved Questions
 
-1. **`visibility='private'` final call:** Recommendation là loại trừ hoàn toàn. Nếu business cần note metadata (type, author, timestamps) không có body, chuyển sang mask `body = NULL`. **Confirm với user trước production run đầu tiên.**
+1. **`visibility='private'` final call:** Đã confirm với user (2026-07-05) — loại trừ hoàn toàn, không mask body.
 2. **`crm_custom_field_def` export:** Hiện dùng static extraction 4 field_key seed. Nếu custom field mới được thêm thường xuyên, cân nhắc 5th export `crm_custom_field_def` + dynamic pivot ở mart layer (YAGNI cho đến khi có nhu cầu thực tế).
 3. **Soft-deleted insights trong production:** Insights bị xóa trước phase này không xuất hiện trong parquet (export filter `deleted_at IS NULL`). Nếu audit trail cần thiết, phải plan export riêng.

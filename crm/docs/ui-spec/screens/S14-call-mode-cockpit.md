@@ -230,7 +230,7 @@ elements:
 - **ST-CALL-CONSENT-WARN** (R1): `consent_contact='denied'` → chip đỏ ở alert_row **nhưng KHÔNG chặn** nút Gọi/Zalo (chỉ cảnh báo; rep tự chịu trách nhiệm — quyết định sản phẩm, nới nhẹ R14 gating trên kênh gọi).
 - Stale → dùng `ST-STALE-CACHE`; loading → `ST-LOADING`.
 
-**Outcome bar (bulk resolve):** A-S14-009 (btn_log_outcome → M08) resolve được NHIỀU task_id/action_id cùng lúc — M08 payload nhận danh sách khi có nhiều context items trong phiên.
+**Outcome bar (bulk resolve):** A-S14-009 (btn_log_outcome → M08) resolve được NHIỀU task_id/action_id cùng lúc — M08 payload nhận danh sách khi có nhiều context items trong phiên. `rail_primary` luôn nằm trong danh sách; mỗi `rail_secondary` item chỉ được gộp vào SAU KHI NV tick "đã nói" (A-S14-025) — tick vừa là ghi nhớ trực quan vừa là cơ chế chọn item để đóng cùng outcome.
 
 **Async resolve (low-stakes items):** A-S14-026 cho phép resolve rail item thấp stakes qua Zalo/email trực tiếp từ rail (tái dùng channel toggle) mà không cần mở cuộc gọi.
 
@@ -348,7 +348,8 @@ interactions:
     region: reason_to_call
     trigger: click
     action: mutate
-    effects: [reason.toggle_mentioned]
+    effects: [reason.toggle_mentioned, outcome_bar.fold_secondary_id_into_bulk_resolve]
+    # secondary items only; primary is always in the bulk-resolve set (server-rendered default)
   - id: A-S14-026
     element: btn_reason_resolve_async
     region: reason_to_call
