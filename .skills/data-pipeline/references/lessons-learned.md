@@ -4614,3 +4614,20 @@ The nullable field is the true source of truth: rows from `wh_action_queue` (cus
 4. Always use ASCII column aliases (`AS "Col_ascii"`) in SQL for Metabase native questions when the display name contains Vietnamese — alias separately in `column_settings` display name if needed.
 
 **Reference:** `docs/analytics-handbook/blueprints/metabase/finance_cashflow_budget.md`, `.skills/metabase-automation/scripts/deploy_from_markdown.js`. Fixed 2026-07-04.
+
+### L156 — Parallel subagents creating dbt models independently cause duplicate model names when both pick the same filename in different subdirectories
+
+**Group:** MODEL
+
+**Symptom:** Dagster fails at startup with `Compilation Error: dbt found two models with the name "mart_crm_activity_log"` — one in `models/marts/customer/`, one in `models/marts/crm/`. Neither subagent knew the other had created the same name.
+
+**Root cause:** Phase 03 (outcome reason enum) created `models/marts/crm/mart_crm_activity_log.sql` as a new CRM-specific mart. An existing `models/marts/customer/mart_crm_activity_log.sql` already existed but was outside Phase 03's ownership list. dbt model names are global (not scoped to subdirectory) — two files with the same stem name in any subdirectory conflict at compile time regardless of path.
+
+**Fix:** Merge the new fields (`outcome_reason`) into the pre-existing richer mart (`customer/`), delete the duplicate (`crm/`). The `customer` mart already referenced `stg_crm__activity_log` so `outcome_reason` was trivially addable.
+
+**Rules:**
+1. Before creating a new dbt model file, `grep -r "mart_<name>" transformation/models/` to check for existing files with the same stem — dbt names are global.
+2. In parallel implementation plans, include a "dbt model name uniqueness check" step in each phase's pre-flight, or have the orchestrating agent do a pre-scan before delegating.
+3. When adding columns to an existing mart (instead of creating a new one), prefer extending the richer, more established mart over creating a parallel thin view.
+
+**Reference:** `transformation/models/marts/customer/mart_crm_activity_log.sql`. Fixed 2026-07-05.
