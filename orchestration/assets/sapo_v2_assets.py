@@ -11,10 +11,17 @@ create races between concurrently executing in-process assets.
 from dagster import asset, Output, MetadataValue
 import sys
 import os
+import time
+import threading
 from datetime import datetime, timezone
 from orchestration.assets.utils import load_dlt_configuration, DLT_DIR
 from orchestration.ops.ingestion_health import record_run as _record_health
 from orchestration.ops.dlt_metrics import extract_rows_written, extract_loaded_packages
+
+# How often (seconds) to emit a heartbeat log while a long-running dlt pipeline
+# is blocking. Keeps the Dagster event log fresh so the stuck-run watchdog
+# (INACTIVITY_THRESHOLD=5 min) does not false-positive kill the step.
+_HEARTBEAT_INTERVAL_SEC = 120
 
 # Add dlt dir to path
 if DLT_DIR not in sys.path:
@@ -30,6 +37,37 @@ try:
     import run_sapo_v2_inventory_transactions_batch
 except ImportError as e:
     raise ImportError(f"Could not import dlt scripts from {DLT_DIR}. Error: {e}")
+
+
+def _run_dlt_with_heartbeat(run_fn, log_fn, label: str):
+    """Run a blocking dlt pipeline in a daemon thread, emitting heartbeat logs.
+
+    dlt's run() can block for minutes without producing any Dagster events.
+    When other steps in the same run finish first, the watchdog sees stale
+    last-event-time and kills the run as stuck. Heartbeat logs keep the
+    event log fresh so the watchdog (INACTIVITY_THRESHOLD=5 min) stays silent.
+    """
+    result: list = [None]
+    error: list = [None]
+
+    def _worker():
+        try:
+            result[0] = run_fn()
+        except Exception as exc:
+            error[0] = exc
+
+    thread = threading.Thread(target=_worker, daemon=True)
+    thread.start()
+    start = time.monotonic()
+    while thread.is_alive():
+        thread.join(timeout=_HEARTBEAT_INTERVAL_SEC)
+        if thread.is_alive():
+            elapsed = int(time.monotonic() - start)
+            log_fn(f"[heartbeat] {label} still running ({elapsed}s elapsed)...")
+
+    if error[0] is not None:
+        raise error[0]
+    return result[0]
 
 
 def _build_metadata(loaded_packages: list, rows_written) -> dict:
@@ -266,7 +304,13 @@ def ingest_sapo_v2_history_log_asset(context):
     try:
         try:
             os.chdir(DLT_DIR)
-            load_info = run_sapo_v2_history_log.run(argv=[])
+            # Run dlt in a thread with heartbeat logs so the stuck-run watchdog
+            # does not false-positive kill the step during long API polls.
+            load_info = _run_dlt_with_heartbeat(
+                run_fn=lambda: run_sapo_v2_history_log.run(argv=[]),
+                log_fn=context.log.info,
+                label="History Log Poll",
+            )
         finally:
             os.chdir(cwd)
 
