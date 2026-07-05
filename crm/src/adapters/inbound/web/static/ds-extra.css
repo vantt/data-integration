@@ -857,7 +857,8 @@
 .s14-rhead__ico { display: inline-flex; margin-right: 6px; color: var(--fg-tertiary); vertical-align: -1px; }
 
 /* ── CSS :has() sidebar-hide when cockpit panel active ────── */
-.detail-grid:has(#s14-panel-root) { grid-template-columns: 1fr; }
+/* !important needed: customer_360.html sets grid-template-columns via inline style */
+.detail-grid:has(#s14-panel-root) { grid-template-columns: 1fr !important; }
 .detail-grid:has(#s14-panel-root) .detail-sidebar { display: none; }
 
 /* ── Responsive: rail stacks below main at narrow width ─── */

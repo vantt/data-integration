@@ -16,7 +16,7 @@
   <link rel="stylesheet" href="/static/ds-precision.css?v=2">
   <link rel="stylesheet" href="/static/ds-app.css?v=2">
   <link rel="stylesheet" href="/static/ds-crm.css?v=2">
-  <link rel="stylesheet" href="/static/ds-extra.css?v=6">
+  <link rel="stylesheet" href="/static/ds-extra.css?v=7">
   <link rel="stylesheet" href="/static/ds-s15.css?v=2">
   <link rel="stylesheet" href="/static/app.css?v=2">
   <!-- beRich alternate theme (jade+gold jewel palette; activates via data-theme="berich|berich-dark") -->
@@ -616,6 +616,12 @@ function dvActivateTab(tabEl, url) {
     tablist.querySelectorAll('[role="tab"]').forEach(function(t) {
       t.setAttribute('aria-selected', t === tabEl ? 'true' : 'false');
     });
+  }
+  // Persist active tab in URL so refresh restores the same tab
+  var panelIdx = url.indexOf('/panels/');
+  if (panelIdx !== -1) {
+    var tabKey = url.slice(panelIdx + 8); // 8 = '/panels/'.length
+    history.pushState({tab: tabKey}, '', window.location.pathname + '?tab=' + tabKey);
   }
   var loading = document.getElementById('tab-loading');
   var panel   = document.getElementById('tab-panel');
