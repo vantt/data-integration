@@ -18,6 +18,7 @@
 
 | # | Phase | File | Phụ thuộc |
 |---|---|---|---|
+| 0 | Đánh giá + tái cơ cấu data storage: bind mount → named volume (benchmark trước, migrate chọn lọc; code-as-volume loại trừ — code prod đi bằng image) | [phase-00](phase-00-data-volume-restructure.md) | [runtime inventory](../reports/prod-runtime-inventory-260705-2000-containers-data-locations-report.md) |
 | 1 | Component self-containment (di chuyển Dockerfiles, thu hẹp build context) | [phase-01](phase-01-dockerfile-relocation.md) | Prereq A |
 | 2 | Cắt import crm → orchestration (inline Lark alert) | [phase-02](phase-02-cut-crm-orchestration-import.md) | — |
 | 3 | Cưỡng chế boundary bằng import-linter + CI | [phase-03](phase-03-import-linter-enforcement.md) | Phase 2 |
@@ -25,7 +26,7 @@
 | 5 | Dev/Prod compose split — **2 stacks cùng máy** (base = prod images, override = dev build+mounts, parameterize names/ports/hostnames) | [phase-05](phase-05-dev-prod-compose-split.md) | Phase 4, [runtime inventory](../reports/prod-runtime-inventory-260705-2000-containers-data-locations-report.md) |
 | 6 | Boundary doc + cập nhật docs/AGENTS.md | [phase-06](phase-06-boundary-doc.md) | Phase 1–5 |
 
-Phase 2+3 độc lập với 1+4+5, có thể làm song song. Phase 6 chốt cuối.
+Phase 0 chạy TRƯỚC TIÊN (ổn định tầng data trước khi các phase khác sửa compose; phase-05 seed script phụ thuộc kết quả Phase 0). Sau đó Phase 2+3 độc lập với 1+4+5, có thể làm song song. Phase 6 chốt cuối.
 
 ## Prerequisites
 

@@ -34,7 +34,7 @@
   - build sections (contexts Phase 1), source mounts, `image: <component>:dev` local tag.
 - **Modify** `.env.example` — sections: `# Stack identity` (STACK_PREFIX, COMPOSE_PROFILES), `# Ports`, `# Hostnames`, `# Image tags` (TAG_*), `# Secrets` (trỏ sang .env.docker giữ nguyên vai trò). Dev clone có `.env` riêng điền bộ dev.
 - **Modify** `orchestration/definitions.py` (hoặc cơ chế Dagster tương đương) — env gate `DAGSTER_SENSORS_ENABLED=false` → mọi sensor/schedule default STOPPED khi dev.
-- **Create** `tools/seed-dev-data.ps1` — copy snapshot tối thiểu sang dev clone: `app_data/data_lake/` (~1.1GB, LOẠI `backup/`), `app_data/input_source/` (49MB), `app_data/metabase_data/` (680MB — giữ dashboards). KHÔNG copy: `backups/` (12GB), `dagster_home/` (6.4GB — dev khởi tạo mới). CRM data: khởi tạo rỗng qua migrations, hoặc restore từ `crm_backups` nếu cần data thật (script backup/restore đã có).
+- **Create** `tools/seed-dev-data.ps1` — copy snapshot tối thiểu sang dev clone: `app_data/data_lake/` (~1.1GB, LOẠI `backup/`), `app_data/input_source/` (49MB), `app_data/metabase_data/` (680MB — giữ dashboards). KHÔNG copy: `backups/` (12GB), `dagster_home/` (6.4GB — dev khởi tạo mới). CRM data: khởi tạo rỗng qua migrations, hoặc restore từ `crm_backups` nếu cần data thật (script backup/restore đã có). **Lưu ý:** store nào đã chuyển sang named volume ở [Phase 0](phase-00-data-volume-restructure.md) thì seed bằng volume-to-volume tar-copy (`docker run --rm -v src:/s -v dst:/d alpine cp -a`), không copy dir — viết script SAU khi Phase 0 chốt phương án.
 - **Create/Modify** `docs/deployment-guide.md` — quy trình đầy đủ (xem Steps 6).
 
 ## Steps
