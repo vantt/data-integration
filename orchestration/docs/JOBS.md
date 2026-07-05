@@ -12,12 +12,14 @@ Jobs are collections of assets that execute together. Each job has:
 
 ## Active Jobs
 
-| Job                               | Schedule        | Assets                        | Purpose                  |
-| --------------------------------- | --------------- | ----------------------------- | ------------------------ |
-| `pipeline_sapov2_realtime_job`       | _/1 _ \* \* \*  | Webhooks + dbt OTP            | Real-time updates        |
-| `pipeline_sapov2_incremental_job`    | _/10 _ \* \* \* | History log + dbt OTP         | Gap filling              |
-| `pipeline_batch_nightly_job`    | 0 4 \* \* \*    | All ingestion + dbt + serving | Full reconciliation      |
-| `ingest_sheets_sync_job`         | Manual          | Targets + Marketing Spend     | Google Sheets (Raw Only) |
+| Job                                    | Schedule              | Assets                                    | Purpose                                    |
+| -------------------------------------- | -------------------- | ----------------------------------------- | ------------------------------------------ |
+| `pipeline_sapov2_realtime_job`         | */3 * * * *          | Webhooks + dbt OTP                        | Real-time updates                          |
+| `pipeline_sapov2_incremental_job`      | */10 0-2,4-23 * * *  | History log + dbt OTP                     | Gap filling                                |
+| `pipeline_batch_nightly_job`           | 0 3 * * *            | All ingestion + dbt + serving             | Full reconciliation                        |
+| `ingest_sheets_sync_job`               | Manual               | Targets + Marketing Spend + Team Config + US Prices + Overhead Class | Google Sheets (Raw Only) |
+| `budget_sheet_sync_job`                | 30 2 * * *           | budget_sheet_sync_asset                   | Budget Matrix → dbt seeds                  |
+| `budget_suggestion_writeback_job`      | 0 8 1 * *            | budget_suggestion_writeback_asset         | Write-back budget suggestions              |
 
 ---
 
@@ -160,20 +162,60 @@ graph TD
 
 ### ingest_sheets_sync_job
 
-**Purpose:** Manual sync of Targets and Marketing Spend from Google Sheets (Raw Ingestion Only).
+**Purpose:** Sync of Targets, Marketing Spend, Team Config, US Shipment Prices, and Overhead Classification from Google Sheets. Includes downstream dbt models that depend on these sources, plus serving_db and rill refresh.
 
 ```python
 ingest_sheets_sync_job = define_asset_job(
     name="ingest_sheets_sync_job",
-    selection=[
-        "sheets_targets_asset",
-        "sheets_marketing_spend_asset"
-    ],
-    description="Sync Google Sheets (Raw Only)"
+    selection=(
+        AssetSelection.assets(sheets_targets_asset)
+        | AssetSelection.assets(sheets_marketing_spend_asset)
+        | AssetSelection.assets(sheets_team_config_asset)
+        | AssetSelection.assets(sheets_us_shipment_prices_asset)
+        | AssetSelection.assets(sheets_overhead_classification_asset)
+    ).downstream()
+    | AssetSelection.assets(serving.build_serving_db)
+    | AssetSelection.assets(rill.build_rill_publish)
 )
 ```
 
-**Schedule:** Manual trigger only
+**Schedule:** Manual trigger only (or sensor-triggered on sheet edit)
+
+---
+
+### budget_sheet_sync_job
+
+**Purpose:** Daily sync of the Budget Sheet (BUDGET_ITEMS + ALLOCATION_POLICY tabs) into dbt seed CSVs. Scheduled 30 minutes before nightly dbt build so seeds are fresh at build time. Writes directly to transformation/seeds/ (not the gsheet_raw data lake). Validation is strict: fails loud on any sheet structure issues, missing recurring refs, or ALLOCATION_POLICY gaps/overlaps.
+
+```python
+budget_sheet_sync_job = define_asset_job(
+    name="budget_sheet_sync_job",
+    selection=AssetSelection.assets(
+        sheets_assets.budget_sheet_sync_asset,
+    ),
+)
+```
+
+**Schedule:** Daily at 02:30 ICT (30 min before nightly dbt build at 03:00 ICT)
+
+---
+
+### budget_suggestion_writeback_job
+
+**Purpose:** Monthly write-back of suggested budget values into the 'Gợi Ý' column of the BUDGET_ITEMS tab. Computes suggestions for next month: recurring items get rolling 3-month average, reserve items get required_monthly_adj, one-off items get 0 (except during their target month). The Budget column is never touched — enforced by assertions.
+
+**OPERATIONAL CAVEAT:** Requires `GOOGLE_SERVICE_ACCOUNT_BUDGET_WRITE_PATH` env var (Google service-account JSON key with EDITOR access on the sheet). This is higher privilege than the read-only budget_sheet_sync_asset. No such credential exists in this repo yet. Asset fails loud at RUNTIME only if missing (not at code-load). See gsheet_budget_sync.py module docstring for manual GCP setup steps.
+
+```python
+budget_suggestion_writeback_job = define_asset_job(
+    name="budget_suggestion_writeback_job",
+    selection=AssetSelection.assets(
+        sheets_assets.budget_suggestion_writeback_asset,
+    ),
+)
+```
+
+**Schedule:** Monthly on the 1st of month at 08:00 ICT (after ingest_monthly_job at 07:00 lands fresh MISA actuals)
 
 ---
 

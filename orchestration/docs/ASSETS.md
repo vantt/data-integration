@@ -29,10 +29,15 @@ Ingestion assets that extract data from Sapo or Google Sheets.
 
 Ingestion assets from Google Sheets.
 
-| Asset                          | Description                   | Schedule       |
-| ------------------------------ | ----------------------------- | -------------- |
-| `sheets_targets_asset`         | Google Sheet: Sales Targets   | Manual/Nightly |
-| `sheets_marketing_spend_asset` | Google Sheet: Marketing Spend | Manual/Nightly |
+| Asset                               | Description                                                | Schedule          |
+| ----------------------------------- | ---------------------------------------------------------- | ----------------- |
+| `sheets_targets_asset`              | Google Sheet: Sales Targets                                | Manual/Nightly    |
+| `sheets_marketing_spend_asset`      | Google Sheet: Marketing Spend                              | Manual/Nightly    |
+| `sheets_team_config_asset`          | Google Sheet: Team Configuration (teams + members)         | Manual/Nightly    |
+| `sheets_us_shipment_prices_asset`   | Google Sheet: US Export Prices (SKU-level)                 | Daily             |
+| `sheets_overhead_classification_asset` | Google Sheet: MISA Overhead Account Classification        | Daily             |
+| `budget_sheet_sync_asset`           | Google Sheet: Budget Matrix (BUDGET_ITEMS + ALLOCATION_POLICY) → dbt seeds | Daily (02:30 ICT) |
+| `budget_suggestion_writeback_asset` | Write-back of suggested budget values (Gợi Ý column)      | Monthly (08:00 ICT, day 1) |
 
 ### dbt_assets
 
@@ -94,6 +99,43 @@ Syncs Marketing Spend data from Google Sheets.
 
 - **Group**: `sheets_ingestion`
 - **Schedule**: Manual / Nightly
+
+#### sheets_team_config_asset
+
+Syncs Team Configuration from Google Sheets (2 tabs: teams definitions and team_members SCD2 membership).
+
+- **Group**: `sheets_ingestion`
+- **Schedule**: Manual / Nightly
+
+#### sheets_us_shipment_prices_asset
+
+Ingests SKU-level US export prices with effective_from date versioning. Used to enrich US CrossBorder orders whose Sapo net_revenue is 0.
+
+- **Group**: `sheets_ingestion`
+- **Schedule**: Daily
+
+#### sheets_overhead_classification_asset
+
+Syncs MISA overhead sub-account classification rules (treatment, pool_id, base_metric) that control allocation in the P&L. Overwrites a full snapshot parquet on each run — the sheet is the live master.
+
+- **Group**: `sheets_ingestion`
+- **Schedule**: Daily (nightly)
+
+#### budget_sheet_sync_asset
+
+Daily sync of the Budget Sheet (BUDGET_ITEMS + ALLOCATION_POLICY tabs). Unlike other sheets_* assets, writes directly to dbt seed CSVs (transformation/seeds/seed_cashflow_budget.csv, seed_cash_allocation_policy.csv) instead of the gsheet_raw data lake. Scheduled at 02:30 ICT, 30 minutes before the nightly dbt build so fresh seeds are in place. Validation is strict and fails loud: any bad sheet structure, missing recurring line ref, or ALLOCATION_POLICY gap/overlap aborts the entire sync.
+
+- **Group**: `sheets_ingestion`
+- **Schedule**: Daily (02:30 ICT)
+
+#### budget_suggestion_writeback_asset
+
+Monthly write-back of the 'Gợi Ý' (suggestion) column into BUDGET_ITEMS. Computes per-item suggestion for NEXT month only — Budget column is never touched. Suggestions: recurring = rolling 3-month avg actual, reserve = required_monthly_adj from reserve status (if has deadline), one_off = 0 (except item's own target_month).
+
+**OPERATIONAL CAVEAT**: Requires `GOOGLE_SERVICE_ACCOUNT_BUDGET_WRITE_PATH` env var pointing at a Google service-account JSON key with EDITOR access on the budget sheet. This is a higher privilege than the read-only budget_sheet_sync_asset (public "Anyone with link" read access is not enough). No such credential exists in this repo yet. Asset fails loud with RuntimeError at RUNTIME only (not at code-load time), so missing credentials cannot break the asset graph. See gsheet_budget_sync.py module docstring for manual GCP setup steps.
+
+- **Group**: `sheets_ingestion`
+- **Schedule**: Monthly (1st of month, 08:00 ICT) — after ingest_monthly_job (07:00 ICT) lands fresh MISA actuals
 
 ---
 

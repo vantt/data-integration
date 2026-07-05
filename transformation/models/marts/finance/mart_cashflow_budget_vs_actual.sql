@@ -13,8 +13,12 @@
 -- =================================================================================================
 
 WITH budget AS (
+    -- one_off/reserve are plan-side sinking funds ("để dành, khi nào đủ thì dùng") — they
+    -- never join to a MISA actuals line, so they're excluded from variance. They still
+    -- count in mart_cashflow_forecast (real outflow) and Tab B reserve tracking.
     SELECT cashflow_line, period_month, direction, SUM(planned_amount) AS planned_amount
     FROM {{ ref('fact_cashflow_budget') }}
+    WHERE item_type = 'recurring'
     GROUP BY 1, 2, 3
 ),
 

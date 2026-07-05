@@ -4,14 +4,19 @@
 
 ## Schedule Overview
 
-| Schedule                         | Cron           | Timezone         | Job                          |
-| -------------------------------- | -------------- | ---------------- | ---------------------------- |
-| `pipeline_sapo_v2_realtime_schedule`  | `*/3 * * * *`  | Asia/Ho_Chi_Minh | pipeline_sapo_v2_realtime_job     |
-| `pipeline_sapo_v2_incremental_schedule` | `*/10 0-2,4-23 * * *` | Asia/Ho_Chi_Minh | pipeline_sapo_v2_incremental_job  |
-| `pipeline_sapo_v2_hourly_schedule` | `25 0-2,4-23 * * *` | Asia/Ho_Chi_Minh | pipeline_sapo_v2_hourly_job |
-| `pipeline_batch_nightly_schedule` | `0 3 * * *`    | Asia/Ho_Chi_Minh | pipeline_batch_nightly_job  |
-| `maintain_purge_runs_schedule`    | `0 1 * * *`    | Asia/Ho_Chi_Minh | maintain_purge_runs_job      |
-| `maintain_backup_fallback_schedule` | `0 6 * * *`  | Asia/Ho_Chi_Minh | maintain_backup_platform_job |
+| Schedule                               | Cron                  | Timezone         | Job                                 |
+| -------------------------------- | -------------------- | ---------------- | -------------------------------------- |
+| `pipeline_sapo_v2_realtime_schedule`   | `*/3 * * * *`        | Asia/Ho_Chi_Minh | pipeline_sapo_v2_realtime_job      |
+| `pipeline_sapo_v2_incremental_schedule` | `*/10 0-2,4-23 * * *` | Asia/Ho_Chi_Minh | pipeline_sapo_v2_incremental_job   |
+| `pipeline_sapo_v2_hourly_schedule`     | `25 0-2,4-23 * * *`  | Asia/Ho_Chi_Minh | pipeline_sapo_v2_hourly_job        |
+| `pipeline_batch_nightly_schedule`      | `0 3 * * *`          | Asia/Ho_Chi_Minh | pipeline_batch_nightly_job         |
+| `ingest_weekly_schedule`               | `0 7 * * 1`          | Asia/Ho_Chi_Minh | ingest_weekly_job                  |
+| `ingest_monthly_schedule`              | `0 7 1 * *`          | Asia/Ho_Chi_Minh | ingest_monthly_job                 |
+| `ingest_monthly_repull_schedule`       | `0 7 10 * *`         | Asia/Ho_Chi_Minh | ingest_monthly_job (re-pull)       |
+| `budget_sheet_sync_schedule`           | `30 2 * * *`         | Asia/Ho_Chi_Minh | budget_sheet_sync_job              |
+| `budget_suggestion_writeback_schedule` | `0 8 1 * *`          | Asia/Ho_Chi_Minh | budget_suggestion_writeback_job    |
+| `maintain_purge_runs_schedule`         | `0 1 * * *`          | Asia/Ho_Chi_Minh | maintain_purge_runs_job            |
+| `maintain_backup_fallback_schedule`    | `0 6 * * *`          | Asia/Ho_Chi_Minh | maintain_backup_platform_job       |
 
 ---
 
@@ -77,6 +82,103 @@ def pipeline_batch_nightly_schedule(context):
 - After business hours (store closes ~22:00)
 - Before morning reporting (starts ~07:00)
 - Low system load period
+
+---
+
+### ingest_weekly_schedule
+
+**Purpose:** Weekly ingestion of MISA sales ledger.
+
+```python
+@schedule(job=ingest_weekly_job, cron_schedule="0 7 * * 1",
+          execution_timezone="Asia/Ho_Chi_Minh")
+def ingest_weekly_schedule(context):
+    ...
+```
+
+**Timing:** Every Monday at 07:00 AM (Vietnam time)
+
+**Assets:** MISA sales ledger download (browser automation)
+
+---
+
+### ingest_monthly_schedule
+
+**Purpose:** Monthly ingestion of MISA account ledger (first-of-month pull).
+
+```python
+@schedule(job=ingest_monthly_job, cron_schedule="0 7 1 * *",
+          execution_timezone="Asia/Ho_Chi_Minh")
+def ingest_monthly_schedule(context):
+    ...
+```
+
+**Timing:** 1st of month at 07:00 AM (Vietnam time)
+
+**Assets:** MISA account ledger download (browser automation)
+
+**Note:** This is the initial pull. MISA's books typically don't finalize until day 5-10 of the following month, so a re-pull schedule (below) catches late bookkeeping entries.
+
+---
+
+### ingest_monthly_repull_schedule
+
+**Purpose:** Re-pull MISA account ledger after books close (day 10 of month).
+
+```python
+@schedule(job=ingest_monthly_job, cron_schedule="0 7 10 * *",
+          execution_timezone="Asia/Ho_Chi_Minh")
+def ingest_monthly_repull_schedule(context):
+    ...
+```
+
+**Timing:** 10th of month at 07:00 AM (Vietnam time)
+
+**Assets:** MISA account ledger download (re-pull)
+
+**Note:** Reuses the existing `ingest_monthly_job`. The downloader defaults to "last month" and the ingest mechanism fully replaces (UPSERT by year/month) the target month's partition on each run, so re-running on day 10 is safe/idempotent — no double-counting, just fresher data once books are finalized.
+
+---
+
+### budget_sheet_sync_schedule
+
+**Purpose:** Daily sync of the Budget Sheet into dbt seed CSVs.
+
+```python
+@schedule(job=budget_sheet_sync_job, cron_schedule="30 2 * * *",
+          execution_timezone="Asia/Ho_Chi_Minh")
+def budget_sheet_sync_schedule(context):
+    ...
+```
+
+**Timing:** Daily at 02:30 AM (Vietnam time)
+
+**Assets:** `budget_sheet_sync_asset`
+
+**Why 02:30 AM:** 30 minutes before the nightly dbt build (03:00 ICT) so fresh budget seeds (BUDGET_ITEMS + ALLOCATION_POLICY) are in place before `dbt build` runs.
+
+**Note:** Unlike other sheets_* assets, this writes directly to dbt seed CSVs (transformation/seeds/seed_cashflow_budget.csv, seed_cash_allocation_policy.csv) instead of the gsheet_raw data lake. Validation is strict: the entire sync aborts (no seed files touched) if any sheet structure issues, missing recurring line refs, or ALLOCATION_POLICY gaps/overlaps are detected.
+
+---
+
+### budget_suggestion_writeback_schedule
+
+**Purpose:** Monthly write-back of suggested budget values into the BUDGET_ITEMS sheet.
+
+```python
+@schedule(job=budget_suggestion_writeback_job, cron_schedule="0 8 1 * *",
+          execution_timezone="Asia/Ho_Chi_Minh")
+def budget_suggestion_writeback_schedule(context):
+    ...
+```
+
+**Timing:** 1st of month at 08:00 AM (Vietnam time)
+
+**Assets:** `budget_suggestion_writeback_asset`
+
+**Why 08:00 on the 1st:** Runs after `ingest_monthly_job` (07:00 ICT on the 1st), so the suggestions (rolling 3-month avg for recurring items, required_monthly_adj for reserves) reflect the latest month's real MISA account-ledger actuals.
+
+**OPERATIONAL CAVEAT:** Requires `GOOGLE_SERVICE_ACCOUNT_BUDGET_WRITE_PATH` env var pointing at a Google service-account JSON key with EDITOR access on the budget sheet. This is higher privilege than the read-only `budget_sheet_sync_asset` (public "Anyone with link" is insufficient). No such credential exists in this repo yet. The asset fails loud with RuntimeError at RUNTIME only (not at code-load time), so missing credentials cannot break the asset graph. See gsheet_budget_sync.py module docstring for the exact manual GCP setup steps.
 
 ---
 

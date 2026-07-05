@@ -4,6 +4,8 @@
 **Cập nhật:** hàng tháng (đầu tháng mới)  
 **Nguồn dữ liệu:** Google Sheet Budget → dbt seed → DuckDB → Metabase
 
+> **Cấu trúc sheet:** nguồn sự thật là `scripts/budget/validate-budget-sheet.gs` — nếu guide này và file đó không khớp, tin file đó.
+
 ---
 
 ## 1. Xem report
@@ -42,69 +44,73 @@ Truy cập dashboard → chọn tab **"Budget vs Actual"**
 ### Quy trình chuẩn (đầu mỗi tháng)
 
 ```
-Bước 1: Cập nhật số kế hoạch tháng mới trong Google Sheet
-Bước 2: Xuất sheet → tải file CSV → thay file seed
-Bước 3: Chạy dbt seed + dbt build để refresh mart
+Bước 1: Cập nhật số kế hoạch tháng mới trong Google Sheet (cột Budget)
+Bước 2: Không cần làm gì thêm — sync tự chạy 02:30 hàng đêm
+Bước 3: (tuỳ chọn) Muốn thấy số NGAY thay vì chờ qua đêm → trigger sync thủ công
 Bước 4: Verify trên dashboard
 ```
+
+Google Sheet: `https://docs.google.com/spreadsheets/d/15hba6bzrTRXUDXBeUg5_DhefrETX9kLGG8SnPJZzTfA/edit`
 
 ---
 
 ### Bước 1 — Cập nhật Google Sheet
 
-Mở Google Sheet ngân sách → tab **BUDGET_ITEMS**
+Mở Google Sheet ngân sách → tab **BUDGET_ITEMS**. Đây là sheet dạng **matrix** (không phải danh sách dòng dài) — mỗi dòng là 1 khoản mục, mỗi tháng là 1 cặp cột.
 
-Cấu trúc mỗi dòng:
+**Cột A–F (cố định, không đổi theo tháng):**
 
-| Cột | Ví dụ | Ghi chú |
-|-----|-------|---------|
-| `cashflow_line` | Chi lương | Phải khớp với danh sách trong tab `__REF` |
-| `period_month` | 2026-08-01 | Ngày đầu tháng, format YYYY-MM-01 |
-| `direction` | outflow | `inflow` hoặc `outflow` |
-| `planned_amount` | 240000000 | VND, không có dấu phẩy |
-| `payment_week` | 1 | Tuần thanh toán trong tháng (1–4) hoặc `spread` |
-| `item_type` | recurring | `recurring` / `one_off` / `reserve` |
-| `item_label` | _(để trống)_ | Chỉ cần nếu `item_type=reserve` |
-| `item_target` | _(để trống)_ | Mục tiêu tích lũy reserve (VND) |
-| `target_month` | _(để trống)_ | Hạn đạt mục tiêu reserve |
-| `notes` | Tăng lương tháng 8 | Ghi chú tùy ý |
+| Cột | Tên | Ví dụ | Ghi chú |
+|-----|-----|-------|---------|
+| A | Dòng Tiền | Chi lương | `recurring` → phải chọn đúng tên có trong tab `__REF` (dropdown). `one_off`/`reserve` → tên mô tả tự do, ví dụ "Mua máy tính cho dev team" |
+| B | Chiều | Chi | `Thu` hoặc `Chi` |
+| C | Type | recurring | `recurring` / `one_off` / `reserve` |
+| D | Tháng Cần | _(để trống)_ | Hạn đạt mục tiêu — chỉ dùng cho `reserve` có deadline |
+| E | Tuần TT | 1 | Tuần thanh toán trong tháng: `1`/`2`/`3`/`4`/`spread` |
+| F | Tổng Cần | _(để trống)_ | Mục tiêu tích lũy (VND) — bắt buộc phải có nếu điền cột D |
 
-**Thao tác thêm tháng mới (ví dụ T8/2026):**
+**Từ cột G trở đi — cặp cột theo từng tháng:** mỗi tháng chiếm 2 cột liền nhau, header row 1 ghi tháng (`2026-08`):
 
-1. Copy 5 dòng recurring từ tháng trước (T7)
-2. Đổi cột `period_month` → `2026-08-01`
-3. Cập nhật `planned_amount` nếu có thay đổi
-4. Xóa `notes` không còn liên quan
-5. Nếu có chi phí một lần (one_off) → thêm dòng riêng với `item_type=one_off`
+| Cột | Ý nghĩa |
+|-----|---------|
+| **Gợi Ý** (ví dụ cột G) | Số gợi ý — hiện tại nhập tay hoặc để trống, KHÔNG được sync đọc. Tự động tính gợi ý (rolling avg thực tế 3 tháng) đã được xây dựng và lên lịch chạy ngày 1 hàng tháng, 08:00 ICT, nhưng **CHƯA kích hoạt** — cần kỹ thuật cấu hình quyền ghi Google Sheet (service account) trước. Trước khi đó, cột Gợi Ý vẫn cần finance tự ước lượng hoặc để trống. |
+| **Budget** (ví dụ cột H) | Số kế hoạch thật — **đây là cột duy nhất sync đọc**. Nhập số VND vào đây (có thể có dấu phẩy/₫, sync tự parse). |
 
----
+**Cập nhật số kế hoạch tháng mới:**
 
-### Bước 2 — Xuất CSV
-
-Trong Google Sheet:
-- **File → Download → Comma Separated Values (.csv)** (chỉ tab BUDGET_ITEMS)
-- Lưu đè vào: `transformation/seeds/seed_cashflow_budget.csv`
-
-> Nếu có thay đổi chính sách phân bổ → làm tương tự với tab ALLOCATION_POLICY → lưu vào `transformation/seeds/seed_cash_allocation_policy.csv`
+1. Kiểm tra sheet đã có sẵn cặp cột `[Gợi Ý][Budget]` cho tháng cần nhập chưa (thường đã pre-build sẵn 12 tháng) — nếu chưa có, tạo thêm 1 cặp cột mới ở cuối, header row 1 ghi đúng định dạng `YYYY-MM` (ví dụ `2026-08`)
+2. Với mỗi dòng khoản mục, điền số VND vào cột **Budget** của tháng đó (bỏ qua cột Gợi Ý)
+3. Nếu có chi phí một lần phát sinh (one_off) → thêm dòng riêng với `Type=one_off`, điền tên mô tả ở cột A
 
 ---
 
-### Bước 3 — Chạy dbt
+### Bước 2 — Không cần export gì cả
+
+Không còn bước "Download CSV → lưu đè seed". Sau khi finance sửa số trong sheet, sync tự động chạy:
+
+- **02:30 ICT mỗi đêm**: Dagster đọc sheet → validate → ghi lại 2 file seed (`seed_cashflow_budget.csv`, `seed_cash_allocation_policy.csv`)
+- **03:00 ICT**: `dbt build` chạy nightly, tự pick up seed mới, refresh toàn bộ mart
+- Nếu validate lỗi (ví dụ Dòng Tiền không khớp `__REF`) → sync **không ghi đè** seed cũ, dashboard giữ nguyên số hôm trước, không có gì bị mất
+
+**Muốn refresh ngay lập tức** (không đợi qua đêm) — 1 trong 2 cách:
+- Dagster UI (http://localhost:3000) → tìm asset **`sheets/budget_sheet_sync_asset`** → nút **Materialize**
+- Hoặc nhờ kỹ thuật chạy lệnh trong container: `python -m ingestion.src.gsheet_budget_sync` (thêm `--dry-run` để xem trước kết quả mà không ghi file)
+
+> Nếu có thay đổi chính sách phân bổ (tab ALLOCATION_POLICY) → cùng 1 lần sync xử lý luôn, không cần thao tác riêng.
+
+---
+
+### Bước 3 — Muốn thấy số ngay thay vì chờ qua đêm
+
+Nightly build (03:00 ICT) đã tự động lo phần dbt — finance **không cần chạy lệnh dbt nào**. Bước này chỉ dành cho trường hợp cần thấy số NGAY trong ngày (ví dụ đang họp, cần demo):
 
 ```bash
-# Vào container data_platform
+# Nhờ kỹ thuật chạy trong container data_platform
 docker exec -it data_platform bash
-
-# Chạy seed + toàn bộ finance mart
-dbt seed --select seed_cashflow_budget seed_cash_allocation_policy
 dbt build --select +fact_cashflow_budget+ +mart_cashflow_budget_vs_actual+ +mart_cashflow_forecast+ +mart_cashflow_reserve_status+ +mart_cash_surplus_allocation+
 ```
 
-Nếu thêm cột mới vào seed (hiếm gặp), cần full-refresh:
-```bash
-dbt seed --full-refresh --select seed_cashflow_budget
-dbt build --full-refresh --select fact_cashflow_budget+
-```
+Điều kiện: phải chạy sync sheet (Bước 2, cách "refresh ngay") **trước** thì seed mới có số mới để `dbt build` đọc.
 
 ---
 
@@ -125,28 +131,33 @@ Tab A → card **"Độ tuổi dữ liệu"** (góc phải dưới) hiển thị
 
 ### Q: Thêm dòng tiền mới (ví dụ "Thuê văn phòng") thì làm thế nào?
 
-1. Trong Google Sheet → tab **`__REF`** → thêm dòng mới ở cột B (Dòng Tiền), cột A (Chiều: Thu/Chi)
-2. Tab **BUDGET_ITEMS** → thêm dòng với `cashflow_line` = tên vừa tạo trong `__REF`
-3. Apps Script sẽ tự validate khi nhập — nếu tên không có trong `__REF` sẽ báo lỗi đỏ
-4. Chạy dbt như Bước 3
+Áp dụng cho khoản **`recurring`** (khoản định kỳ join với sổ cái MISA). Lưu ý: tab `__REF` KHÔNG phải chỗ được tự do thêm tên mới — nó là danh sách `cashflow_line` lấy từ taxonomy sổ cái MISA (`dim_gl_account`). Nếu thêm 1 tên mà MISA không biết, **sync sẽ reject toàn bộ budget sheet** (không chỉ dòng đó) — vì sync validate `recurring` phải khớp chính xác `__REF` để join actual.
+
+Quy trình đúng:
+
+1. Kiểm tra tên dòng tiền mới (ví dụ "Thuê văn phòng") đã tồn tại trong `dim_gl_account.cashflow_line` chưa — nếu chưa chắc, báo kỹ thuật/data team kiểm tra trước
+2. Nếu chưa có trong taxonomy MISA → nhờ kỹ thuật xác nhận/thêm vào `dim_gl_account` trước (đây là taxonomy MISA, không sửa được trực tiếp từ Google Sheet)
+3. Sau khi taxonomy đã có tên này → thêm dòng mới vào tab **`__REF`**: cột A = Chiều (Thu/Chi), cột B = tên dòng tiền (đúng chính tả taxonomy)
+4. Tab **BUDGET_ITEMS** → thêm dòng mới, cột A (Dòng Tiền) chọn đúng tên vừa thêm (dropdown), điền số vào cột Budget tháng cần
+5. Không cần chạy dbt thủ công — sync đêm 02:30 sẽ tự nhặt (hoặc trigger thủ công như §2 Bước 2 nếu cần thấy ngay)
+
+> Nếu chỉ là khoản chi một lần/để dành (không phải định kỳ trừ sổ MISA) → dùng `Type=one_off` hoặc `reserve` thay vì `recurring` — không cần đụng tới `__REF`, tên ở cột A là tự do (xem FAQ "Chi phí phát sinh đột ngột").
 
 ---
 
 ### Q: Chi phí phát sinh đột ngột (mua thiết bị, sửa chữa, v.v.)?
 
-Thêm dòng `item_type=one_off` vào đúng tháng phát sinh:
+Thêm 1 dòng mới trong tab **BUDGET_ITEMS** với `Type=one_off` (cột C), ví dụ:
 
-```
-cashflow_line:  Thanh toán nhà cung cấp
-period_month:   2026-08-01
-direction:      outflow
-planned_amount: 85000000
-payment_week:   2
-item_type:      one_off
-notes:          Mua máy tính cho dev team
-```
+| Cột | Giá trị |
+|-----|---------|
+| A — Dòng Tiền | Mua máy tính cho dev team |
+| B — Chiều | Chi |
+| C — Type | one_off |
+| E — Tuần TT | 2 |
+| cột Budget của tháng phát sinh | 85000000 |
 
-Dòng `one_off` chỉ xuất hiện 1 tháng, không lặp lại — dashboard sẽ hiển thị riêng trong bảng chi tiết.
+Dòng `one_off` chỉ điền số vào cột Budget của đúng tháng phát sinh, các tháng khác để trống — dashboard sẽ hiển thị riêng trong bảng chi tiết. Sync tự nhặt vào lần chạy đêm kế tiếp (hoặc trigger thủ công như Bước 2).
 
 ---
 
@@ -155,7 +166,7 @@ Dòng `one_off` chỉ xuất hiện 1 tháng, không lặp lại — dashboard s
 Dashboard sẽ tự hiện chênh lệch dương ở cột **Chênh lệch** và tỷ lệ > 100%.  
 Nếu muốn ghi nhận vào kế hoạch (để forecast chính xác hơn tháng sau):
 
-- Cập nhật `planned_amount` của tháng đó lên gần với thực tế
+- Cập nhật số ở cột **Budget** của tháng đó lên gần với thực tế
 - Hoặc để nguyên — chênh lệch là thông tin quản lý hữu ích
 
 ---
@@ -164,8 +175,8 @@ Nếu muốn ghi nhận vào kế hoạch (để forecast chính xác hơn thán
 
 1. Dashboard Tab A → xem bảng chênh lệch → xác định dòng hụt nhiều nhất
 2. Tab B → xem **Tiền mặt tự do** → đủ bù không?
-3. Nếu cần điều chỉnh kế hoạch tháng sau: cập nhật `planned_amount` của dòng bị ảnh hưởng
-4. Nếu cần tạm thời hoãn một khoản outflow: đổi `payment_week` sang tuần sau hoặc tháng sau
+3. Nếu cần điều chỉnh kế hoạch tháng sau: cập nhật số ở cột **Budget** của dòng bị ảnh hưởng
+4. Nếu cần tạm thời hoãn một khoản outflow: đổi cột **E — Tuần TT** sang tuần sau hoặc tháng sau
 
 ---
 
@@ -191,7 +202,7 @@ Tab **ALLOCATION_POLICY** trong Google Sheet:
 Kiểm tra theo thứ tự:
 1. Filter **Kỳ** đang chọn có data không? → bỏ filter, xem tất cả
 2. Card "Độ tuổi dữ liệu" → data MISA có tháng đó chưa?
-3. `dbt seed` đã chạy chưa? → chạy lại Bước 3
+3. Sync sheet đêm qua có chạy thành công không? → Dagster UI kiểm tra asset `sheets/budget_sheet_sync_asset` — nếu FAILED (thường do validate lỗi), số cũ vẫn còn, sửa lỗi trên sheet rồi trigger lại (xem §2 Bước 2)
 4. Nếu vẫn trống → kiểm tra Dagster UI: http://localhost:3000 (hoặc nhờ kỹ thuật kiểm tra pipeline)
 
 ---
@@ -207,10 +218,10 @@ Bỏ filter để xem tổng lũy kế từ đầu năm (hoặc từ T7/2026 n�
 
 | Thời điểm | Việc cần làm |
 |-----------|-------------|
-| **Ngày 1–3 hàng tháng** | Cập nhật budget tháng mới vào Google Sheet |
-| **Ngày 3–5** | Xuất CSV → chạy dbt seed + build |
-| **Ngày 5–10** | MISA sync xong → thực tế tháng trước đầy đủ → review dashboard |
-| **Cuối tháng** | Review chênh lệch, điều chỉnh kế hoạch tháng tới nếu cần |
+| **Ngày 1–3 hàng tháng** | Cập nhật budget tháng mới vào Google Sheet (cột Budget) — sửa lúc nào cũng được, không có deadline export |
+| **Mỗi đêm 02:30 → 03:00 ICT** | Tự động: sync sheet → seed → `dbt build`. Không cần finance làm gì — số mới nhất xuất hiện trên dashboard sáng hôm sau (T+1) |
+| **Ngày 5–10** | Sổ MISA của tháng trước thường chốt xong trong khoảng này → thực tế đầy đủ hơn, ít bị thiếu giao dịch cuối tháng → nên review dashboard sau mốc này để tránh nhìn số thực tế "còn thiếu" |
+| **Cuối tháng** | Review chênh lệch, điều chỉnh kế hoạch tháng tới nếu cần (sửa trực tiếp trên sheet, sync tự lo phần còn lại) |
 
 ---
 

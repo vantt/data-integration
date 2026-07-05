@@ -13,3 +13,4 @@ pandas
 pyarrow
 openpyxl
 psutil
+gspread

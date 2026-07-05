@@ -163,6 +163,26 @@ ingest_monthly_job = define_asset_job(
     ),
 )
 
+# Daily budget sheet sync — writes dbt seeds directly (not the gsheet_raw data lake),
+# scheduled 30 min before the nightly dbt build so seeds are fresh when `dbt build` runs.
+budget_sheet_sync_job = define_asset_job(
+    name="budget_sheet_sync_job",
+    selection=AssetSelection.assets(
+        sheets_assets.budget_sheet_sync_asset,
+    ),
+)
+
+# Monthly budget suggestion write-back (Phase 5) — computes + writes "Gợi Ý" cells for next
+# month only, never "Budget". HARD BLOCKER: requires GOOGLE_SERVICE_ACCOUNT_BUDGET_WRITE_PATH
+# (GCP service account w/ Editor access on the sheet) — fails loud at RUNTIME, not at code-load,
+# if unset. See gsheet_budget_sync.py module docstring for the manual GCP setup steps.
+budget_suggestion_writeback_job = define_asset_job(
+    name="budget_suggestion_writeback_job",
+    selection=AssetSelection.assets(
+        sheets_assets.budget_suggestion_writeback_asset,
+    ),
+)
+
 # 2.7 MISA sales-ledger file-drop sync job
 _misa_source = AssetSelection.assets(misa_amis_assets.misa_sales_file_drop_asset)
 ingest_filedrop_misa_job = define_asset_job(
@@ -471,6 +491,54 @@ def ingest_monthly_schedule(context):
     return RunRequest(run_key=None)
 
 
+# Day 10, 07:00 ICT — re-pull of ingest_monthly_job (currently: MISA account ledger).
+# MISA's books for a month typically don't close/finalize until day ~5-10 of the
+# following month, so the day-1 pull above often misses late bookkeeping entries.
+# The downloader defaults to "last month" and the ingest mechanism fully replaces
+# (UPSERT-by year/month) the target month's partition on each run, so re-running
+# on day 10 is safe/idempotent — no double-counting, just fresher data.
+@schedule(
+    job=ingest_monthly_job,
+    cron_schedule="0 7 10 * *",
+    execution_timezone="Asia/Ho_Chi_Minh",
+)
+def ingest_monthly_repull_schedule(context):
+    active = _has_active_run(context, "ingest_monthly_job")
+    if active:
+        return SkipReason(f"ingest_monthly_repull: previous run still active ({active[:8]})")
+    return RunRequest(run_key=None)
+
+
+# 02:30 ICT daily — 30 min before the nightly dbt build (03:00 ICT) so fresh budget
+# seeds are in place before `dbt build` runs.
+@schedule(
+    job=budget_sheet_sync_job,
+    cron_schedule="30 2 * * *",
+    execution_timezone="Asia/Ho_Chi_Minh",
+)
+def budget_sheet_sync_schedule(context):
+    active = _has_active_run(context, "budget_sheet_sync_job")
+    if active:
+        return SkipReason(f"budget_sheet_sync: previous run still active ({active[:8]})")
+    return RunRequest(run_key=None)
+
+
+# 1st of month, 08:00 ICT — after ingest_monthly_job (07:00 ICT) lands fresh MISA account-ledger
+# actuals, so recurring/reserve suggestions reflect the latest month's real numbers. Will raise
+# loud (RuntimeError, caught by health_alert_failure_sensor) every tick until a human completes
+# the GCP service-account setup described in gsheet_budget_sync.py — expected until then.
+@schedule(
+    job=budget_suggestion_writeback_job,
+    cron_schedule="0 8 1 * *",
+    execution_timezone="Asia/Ho_Chi_Minh",
+)
+def budget_suggestion_writeback_schedule(context):
+    active = _has_active_run(context, "budget_suggestion_writeback_job")
+    if active:
+        return SkipReason(f"budget_suggestion_writeback: previous run still active ({active[:8]})")
+    return RunRequest(run_key=None)
+
+
 _ICT = timezone(timedelta(hours=7))  # Asia/Ho_Chi_Minh, no pytz dependency
 
 # Fast path: fires immediately after purge succeeds (normally ~02:35).
@@ -699,6 +767,8 @@ defs = Definitions(
         ingest_sheets_sync_job,
         ingest_weekly_job,
         ingest_monthly_job,
+        budget_sheet_sync_job,
+        budget_suggestion_writeback_job,
         ingest_filedrop_shopee_job,
         ingest_filedrop_misa_job,
         ingest_filedrop_misa_account_ledger_job,
@@ -726,6 +796,9 @@ defs = Definitions(
         # cadence-based ingest (add assets to jobs above, not new schedules here)
         ingest_weekly_schedule,
         ingest_monthly_schedule,
+        ingest_monthly_repull_schedule,
+        budget_sheet_sync_schedule,
+        budget_suggestion_writeback_schedule,
         # health_*
         health_recon_daily_schedule,
         health_kpi_closure_schedule,
