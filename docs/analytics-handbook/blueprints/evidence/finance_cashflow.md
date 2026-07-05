@@ -43,8 +43,8 @@ docker compose restart evidence
 
 | Metabase feature | Evidence approximation | Why |
 |---|---|---|
-| `period_month` field filter (interactive) | Fixed windows: KPIs = latest closed month vs prior month; View 1 trends = 24-month rolling (widened from 12) | Evidence pages are a build-time snapshot, no live filter widget |
-| `waterfall` display | `BarChart swapXY` + `DataTable` | No waterfall component in Evidence |
+| `period_month` field filter (interactive) | `<Dropdown name=period_month>` (View 1) — scorecard/Sankey/waterfall-table/top-chi query templated with `${inputs.period_month.value}`, resolved client-side by the in-browser WASM DuckDB (no server round-trip, no rebuild needed to browse any month already in the build's data). Default = latest month (dropdown sorted DESC, first row auto-selected). View 1 trend charts still fixed 24-month rolling window (unaffected by the dropdown, by design — see in-page note). | Evidence has no server-side live filter widget like Metabase's field filter, but it does ship a client-side query engine that makes `${inputs.x}`-templated SQL genuinely interactive |
+| `waterfall` display | `SankeyDiagram` (thu → quỹ → chi) + `DataTable` for opening/closing balance | No waterfall component in Evidence, but `SankeyDiagram` exists (undocumented in internal viz vocabulary) and reads better than a bar-chart approximation for flow composition |
 | `combo` display (thu/chi bars + net line) | Grouped `BarChart` (thu/chi) + separate `LineChart` (net) | No combo/mixed-series component |
 | `pivot` display (cashflow_line × tháng) | Flat `DataTable` with `search=true` | No dynamic pivot component |
 | `heatmap` display (năm × tháng seasonality, View 2) | `BarChart` of `seasonality_index` (avg net_cash_flow per calendar month) + flat `DataTable` (nam, thang_so, dong_tien_rong) for raw lookup | No heatmap component in Evidence; bar + table conveys the same "which months run high/low" signal without color-intensity encoding |
@@ -84,9 +84,17 @@ full_width: true
 
 > **Scope:** GL cash accounts (111x tiền mặt / 112x tiền gửi ngân hàng) · Internal transfers giữa các tài khoản tiền luôn bị loại trừ khỏi thu/chi
 
+```sql period_month_options
+SELECT DISTINCT
+    strftime(period_month, '%Y-%m-01') AS period_month_value,
+    strftime(period_month, '%m/%Y')    AS period_month_label
+FROM main_marts.fact_cash_movement
+ORDER BY period_month DESC
+```
+
 ```sql cashflow_kpi
 WITH latest AS (
-    SELECT MAX(period_month) AS p FROM main_marts.fact_cash_movement
+    SELECT DATE '${inputs.period_month.value}' AS p
 ),
 cur AS (
     SELECT
@@ -129,9 +137,8 @@ FROM latest, cur, prev, bal_cur, bal_prev
 ```
 
 ```sql period_label
-SELECT '📅 Kỳ báo cáo: ' || strftime(MAX(period_month), '%m/%Y')
-       || '  ·  Kỳ trước: ' || strftime(MAX(period_month) - INTERVAL '1 month', '%m/%Y') AS label
-FROM main_marts.fact_cash_movement
+SELECT '📅 Kỳ báo cáo: ' || strftime(DATE '${inputs.period_month.value}', '%m/%Y')
+       || '  ·  Kỳ trước: ' || strftime(DATE '${inputs.period_month.value}' - INTERVAL '1 month', '%m/%Y') AS label
 ```
 
 ```sql yoy_companion
@@ -159,13 +166,12 @@ SELECT
              || ROUND((net_cash_flow - net_cash_flow_yoy) * 100.0 / NULLIF(ABS(net_cash_flow_yoy), 0), 1)::VARCHAR || '%)'
     END AS yoy_text
 FROM lagged
-ORDER BY period_month DESC
-LIMIT 1
+WHERE period_month = DATE '${inputs.period_month.value}'
 ```
 
 ```sql cashflow_waterfall
 WITH latest AS (
-    SELECT MAX(period_month) AS p FROM main_marts.fact_cash_movement
+    SELECT DATE '${inputs.period_month.value}' AS p
 ),
 opening AS (
     SELECT 0 AS sort_order, 'Số dư đầu kỳ' AS khoan_muc, COALESCE(SUM(b.opening_balance), 0) AS gia_tri
@@ -200,6 +206,37 @@ SELECT khoan_muc, gia_tri FROM (
     SELECT * FROM closing
 ) t
 ORDER BY sort_order
+```
+
+```sql cashflow_sankey
+WITH latest AS (
+    SELECT DATE '${inputs.period_month.value}' AS p
+),
+inflow AS (
+    SELECT
+        cashflow_line              AS source,
+        'Quỹ tiền mặt/ngân hàng'   AS target,
+        SUM(amount)                AS value
+    FROM main_marts.fact_cash_movement
+    CROSS JOIN latest
+    WHERE direction = 'inflow' AND NOT is_internal_transfer AND period_month = latest.p
+    GROUP BY cashflow_line
+    HAVING SUM(amount) > 0
+),
+outflow AS (
+    SELECT
+        'Quỹ tiền mặt/ngân hàng'   AS source,
+        cashflow_line              AS target,
+        SUM(amount)                AS value
+    FROM main_marts.fact_cash_movement
+    CROSS JOIN latest
+    WHERE direction = 'outflow' AND NOT is_internal_transfer AND period_month = latest.p
+    GROUP BY cashflow_line
+    HAVING SUM(amount) > 0
+)
+SELECT source, target, value FROM inflow
+UNION ALL
+SELECT source, target, value FROM outflow
 ```
 
 ```sql balance_trend
@@ -242,7 +279,7 @@ ORDER BY 1, 2, 3
 
 ```sql chi_breakdown
 WITH latest AS (
-    SELECT MAX(period_month) AS p FROM main_marts.fact_cash_movement
+    SELECT DATE '${inputs.period_month.value}' AS p
 )
 SELECT
     cashflow_line AS khoan_muc,
@@ -443,7 +480,17 @@ LIMIT 10
 
 <Tab label="📊 Tổng quan">
 
+<Dropdown
+    data={period_month_options}
+    name=period_month
+    value=period_month_value
+    label=period_month_label
+    title="Kỳ báo cáo"
+/>
+
 > <Value data={period_label} column="label" />
+
+<p style="font-size:0.75rem; color:#888;">Scorecard, Sankey và bảng đầu/cuối kỳ bên dưới đổi theo kỳ chọn ở dropdown. Riêng phần "Xu hướng theo tháng" (2 chart cuối trang) luôn hiện 24 tháng gần nhất tính theo ngày thật, không đổi theo dropdown.</p>
 
 <Grid cols={4}>
   <BigValue data={cashflow_kpi} value="cash_balance"   comparison="cash_balance_prev"   comparisonTitle="Tháng trước" title="Số dư quỹ (₫)"    fmt="#,##0" />
@@ -456,21 +503,21 @@ LIMIT 10
 
 ---
 
-<p style="font-weight:600; font-size:0.875rem; margin-bottom:0.5rem;">Cấu trúc dòng tiền — từ số dư đầu kỳ đến cuối kỳ (tháng mới nhất)</p>
+<p style="font-weight:600; font-size:0.875rem; margin-bottom:0.5rem;">Dòng tiền chảy vào/ra quỹ — theo cashflow_line (kỳ đã chọn)</p>
 
-<BarChart
-    data={cashflow_waterfall}
-    x="khoan_muc"
-    y="gia_tri"
-    swapXY=true
-    title=""
-    yAxisTitle="₫"
-    fmt="#,##0"
+<SankeyDiagram
+    data={cashflow_sankey}
+    linkLabels="value"
+    linkColor="gradient"
+    valueFmt="#,##0"
+    chartAreaHeight={380}
 />
+
+<p style="font-weight:600; font-size:0.875rem; margin:1rem 0 0.5rem;">Chi tiết số dư đầu kỳ → cuối kỳ</p>
 
 <DataTable data={cashflow_waterfall} rows=10 />
 
-<p style="font-size:0.75rem; color:#888;">Evidence không có biểu đồ waterfall gốc — thay bằng bar chart + bảng chi tiết (bản Metabase dùng waterfall thật).</p>
+<p style="font-size:0.75rem; color:#888;">Evidence không có biểu đồ waterfall gốc — thay bằng Sankey diagram (thu → quỹ → chi) + bảng chi tiết số dư đầu/cuối kỳ (bản Metabase dùng waterfall thật).</p>
 
 ---
 
@@ -518,7 +565,7 @@ LIMIT 10
 
 ---
 
-<p style="font-weight:600; font-size:0.875rem; margin-bottom:0.5rem;">Cơ cấu chi tiêu — hạng mục nào chiếm nhiều nhất? (tháng mới nhất)</p>
+<p style="font-weight:600; font-size:0.875rem; margin-bottom:0.5rem;">Cơ cấu chi tiêu — hạng mục nào chiếm nhiều nhất? (kỳ đã chọn)</p>
 
 <BarChart
     data={chi_breakdown}
