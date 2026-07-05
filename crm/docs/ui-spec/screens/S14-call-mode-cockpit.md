@@ -149,7 +149,7 @@ elements:
 ┌────────────────────────────────────────────────────────────────────────────┐
 │STOP_BANNER                                                                 │
 │when: recommended == false                                                  │
-│· !! KHÔNG GỌI THEO KỊCH BẢN — CẦN XÁC MINH · [Tạo task xác minh] [Xem hồ s…│
+│· !! KHÔNG GỌI THEO KỊCH BẢN — CẦN XÁC MINH · Lý do: ... · [Tạo task xác mi…│
 └────────────────────────────────────────────────────────────────────────────┘
 ```
 <!-- ui-layout:ascii:end -->
