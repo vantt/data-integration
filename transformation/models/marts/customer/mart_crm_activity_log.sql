@@ -19,6 +19,7 @@ SELECT
     a.channel,
     a.outcome,
     a.contact_outcome,
+    a.outcome_reason,
     a.occurred_at,
     a.logged_at,
     a.staff_user_id,
