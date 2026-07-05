@@ -589,6 +589,7 @@ def _register_web_routes(
         approach_repo=sqlite_repos["approach"],
         claimed_action_resolver=sqlite_repos["task"],
         action_state=sqlite_repos["action_state"],
+        party_insights=sqlite_repos["party"],
     ))
     app.include_router(make_tasks_board_router(
         templates=templates,

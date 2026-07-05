@@ -14,7 +14,7 @@ from fastapi.responses import HTMLResponse
 from fastapi.templating import Jinja2Templates
 
 from domain.entities.party import partition_identities_by_channel
-from domain.entities.profile import Note, PartyIdentity
+from domain.entities.profile import Note, PartyIdentity, PartyInsight
 
 from adapters.inbound.web.screens.customer360.outcome_resolve_helpers import (
     parse_id_list as _parse_id_list,
@@ -51,6 +51,7 @@ def register_activity_routes(
     task_svc=None,
     app_users=None,
     action_state=None,
+    party_insights=None,
 ) -> None:
     """Register M08 modal (GET x2) and activity log POST route on *router*."""
 
@@ -231,14 +232,27 @@ def register_activity_routes(
         except Exception as exc:
             log.error("log activity party %s: %s", party_id, exc)
             return HTMLResponse("Lỗi ghi log hoạt động", status_code=500)
-        # Item 2 (Phase 06): promote insight — party_insights not wired into this route;
-        # log warning and skip silently per spec constraint.
         if promote_insight == "1" and insight_type.strip() and insight_body.strip():
-            log.warning(
-                "promote_insight requested for party %s (type=%s) but party_insights "
-                "service not in scope for register_activity_routes — skipped",
-                party_id, insight_type.strip(),
-            )
+            if party_insights is not None:
+                try:
+                    import uuid as _uuid
+                    party_insights.add_insight(PartyInsight(
+                        insight_id=str(_uuid.uuid4()),
+                        party_id=party_id,
+                        insight_type=insight_type.strip(),
+                        body=insight_body.strip(),
+                        confidence=insight_confidence.strip() or "medium",
+                        created_by=actor_id,
+                        source_note_id=None,
+                        created_at=datetime.now(timezone.utc).strftime("%Y-%m-%dT%H:%M:%S.000Z"),
+                    ))
+                except Exception as exc:
+                    log.warning("promote_insight party %s: %s", party_id, exc)
+            else:
+                log.warning(
+                    "promote_insight requested for party %s (type=%s) but party_insights not wired",
+                    party_id, insight_type.strip(),
+                )
         # Auto-claim: create a claim task when contact is logged without prior claiming.
         # Skip when task_id is present — staff is already in the structured task flow.
         # Check contact_outcome (D2) OR legacy outcome field so both paths trigger claim.

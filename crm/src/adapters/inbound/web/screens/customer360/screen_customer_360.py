@@ -290,6 +290,7 @@ def make_customer_360_router(
         task_svc=task_svc,
         app_users=app_users,
         action_state=action_state,
+        party_insights=party_insights,
     )
     register_note_routes(
         router, templates,

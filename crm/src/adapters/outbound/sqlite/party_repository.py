@@ -10,6 +10,7 @@ import sqlite3
 from typing import Optional
 
 from domain.entities.party import Party, PartyIdentity
+from domain.entities.profile import PartyInsight
 from adapters.outbound.sqlite.party_repository_queries import (
     SQL_FIND_BY_IDENTITY,
     SQL_CREATE_PARTY,
@@ -180,6 +181,47 @@ class SQLitePartyRepository:
         self._conn.execute(
             SQL_UPDATE_IDENTITY_INFO,
             (display_label or None, contact_status or "active", 1 if is_preferred else 0, identity_id),
+        )
+        self._conn.commit()
+
+    # ── Insight CRUD ──────────────────────────────────────────────────────────
+
+    def list_by_party(self, party_id: str) -> list[PartyInsight]:
+        """Return active rep insights for *party_id*, newest first."""
+        rows = self._conn.execute(
+            "SELECT insight_id, party_id, insight_type, body, confidence, "
+            "created_by, source_note_id, created_at, updated_at, deleted_at "
+            "FROM crm_party_insight WHERE party_id = ? AND deleted_at IS NULL "
+            "ORDER BY created_at DESC",
+            (party_id,),
+        ).fetchall()
+        return [
+            PartyInsight(
+                insight_id=r["insight_id"],
+                party_id=r["party_id"],
+                insight_type=r["insight_type"],
+                body=r["body"],
+                confidence=r["confidence"],
+                created_by=r["created_by"],
+                source_note_id=r["source_note_id"],
+                created_at=r["created_at"],
+                updated_at=r["updated_at"],
+                deleted_at=r["deleted_at"],
+            )
+            for r in rows
+        ]
+
+    def add_insight(self, insight: PartyInsight) -> None:
+        """Insert a new rep insight row into crm_party_insight."""
+        self._conn.execute(
+            "INSERT INTO crm_party_insight "
+            "(insight_id, party_id, insight_type, body, confidence, created_by, source_note_id, created_at) "
+            "VALUES (?, ?, ?, ?, ?, ?, ?, ?)",
+            (
+                insight.insight_id, insight.party_id, insight.insight_type,
+                insight.body, insight.confidence, insight.created_by,
+                insight.source_note_id, insight.created_at,
+            ),
         )
         self._conn.commit()
 
