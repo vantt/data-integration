@@ -22,7 +22,11 @@ DATA_LAKE_ROOT = os.environ.get("DBT_DATA_LAKE_PATH", "/app/var/data_lake")
 CRM_EXPORT = Path(DATA_LAKE_ROOT) / "crm_export"
 
 
-# Minimal column schemas matching the CRM export queries
+# Minimal column schemas matching the CRM export queries.
+# NOTE: keep in sync with export_query columns in orchestration/assets/crm_writeback_assets.py
+# (CRM_WRITEBACK_TABLES) — a column added there but not here reproduces the exact bug this
+# script exists to prevent (dbt "column not found" on every realtime/incremental tick until
+# the nightly crm_writeback job first runs for that table).
 _SNAPSHOT_SCHEMAS: dict[str, dict[str, list]] = {
     "crm_last_contact": {
         "party_id":             [],
@@ -53,25 +57,75 @@ _SNAPSHOT_SCHEMAS: dict[str, dict[str, list]] = {
         "converted_revenue_vnd": [],
         "converted_at":          [],
     },
+    "crm_tag": {
+        "tag_id":        [],
+        "name":          [],
+        "category":      [],
+        "color":         [],
+        "display_label": [],
+    },
+    "crm_party_tag": {
+        "party_id":  [],
+        "tag_id":    [],
+        "tagged_by": [],
+        "tagged_at": [],
+    },
+    "crm_customer_profile_custom": {
+        "party_id":   [],
+        "custom":     [],
+        "updated_at": [],
+    },
 }
 
-# Incremental table: date-partitioned glob — needs at least one parquet in any date= dir
-_INCREMENTAL_SCHEMA = {
-    "activity_id":        [],
-    "party_id":           [],
-    "customer_id":        [],
-    "activity_type":      [],
-    "direction":          [],
-    "channel":            [],
-    "outcome":            [],
-    "contact_outcome":    [],
-    "callback_at":        [],
-    "contact_duration_s": [],
-    "task_id":            [],
-    "related_order_code": [],
-    "staff_user_id":      [],
-    "occurred_at":        [],
-    "created_at":         [],
+# Incremental tables: date-partitioned glob — each needs at least one parquet in any date= dir
+_INCREMENTAL_SCHEMAS: dict[str, dict[str, list]] = {
+    "crm_activity_log": {
+        "activity_id":        [],
+        "party_id":           [],
+        "customer_id":        [],
+        "activity_type":      [],
+        "direction":          [],
+        "channel":            [],
+        "outcome":            [],
+        "contact_outcome":    [],
+        "outcome_reason":     [],
+        "callback_at":        [],
+        "contact_duration_s": [],
+        "task_id":            [],
+        "related_order_code": [],
+        "staff_user_id":      [],
+        "occurred_at":        [],
+        "created_at":         [],
+    },
+    "crm_note": {
+        "note_id":            [],
+        "party_id":           [],
+        "note_type":          [],
+        "body":               [],
+        "author_user_id":     [],
+        "pinned":             [],
+        "pinned_until":       [],
+        "visibility":         [],
+        "task_id":            [],
+        "campaign_id":        [],
+        "source_activity_id": [],
+        "updated_at":         [],
+        "updated_by_user_id": [],
+        "deleted_at":         [],
+        "created_at":         [],
+    },
+    "crm_party_insight": {
+        "insight_id":     [],
+        "party_id":       [],
+        "insight_type":   [],
+        "body":           [],
+        "confidence":     [],
+        "source_note_id": [],
+        "created_by":     [],
+        "updated_at":     [],
+        "deleted_at":     [],
+        "created_at":     [],
+    },
 }
 
 
@@ -88,13 +142,14 @@ def ensure_placeholders() -> None:
         pd.DataFrame(schema).to_parquet(path, index=False)
         print(f"   [+] Created placeholder: {path}")
 
-    # Incremental table: needs a file matching the date=*/ glob
-    inc_path = CRM_EXPORT / "crm_activity_log" / "date=19700101" / "placeholder.parquet"
-    if inc_path.exists():
-        print(f"   [=] Already present: {inc_path}")
-    else:
+    # Incremental tables: each needs a file matching its date=*/ glob
+    for table, schema in _INCREMENTAL_SCHEMAS.items():
+        inc_path = CRM_EXPORT / table / "date=19700101" / "placeholder.parquet"
+        if inc_path.exists():
+            print(f"   [=] Already present: {inc_path}")
+            continue
         inc_path.parent.mkdir(parents=True, exist_ok=True)
-        pd.DataFrame(_INCREMENTAL_SCHEMA).to_parquet(inc_path, index=False)
+        pd.DataFrame(schema).to_parquet(inc_path, index=False)
         print(f"   [+] Created placeholder: {inc_path}")
 
 
