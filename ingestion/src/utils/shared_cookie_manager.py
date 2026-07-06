@@ -47,6 +47,28 @@ else:
         fcntl.flock(f.fileno(), fcntl.LOCK_UN)
 
 
+# Login-error screenshots accumulate unbounded (one per failed login) since /tmp
+# isn't cleared between container restarts if the container stays up for days.
+SCREENSHOT_MAX_AGE_DAYS = 7
+
+
+def _prune_old_screenshots(logs_dir: str, max_age_days: int = SCREENSHOT_MAX_AGE_DAYS) -> None:
+    """Delete login-error screenshots older than max_age_days. Best-effort, never raises."""
+    try:
+        cutoff = time.time() - max_age_days * 86400
+        for name in os.listdir(logs_dir):
+            if not name.endswith(".png"):
+                continue
+            path = os.path.join(logs_dir, name)
+            try:
+                if os.path.getmtime(path) < cutoff:
+                    os.remove(path)
+            except OSError:
+                pass
+    except OSError:
+        pass
+
+
 class SharedCookieManager:
     """
     Thread-safe and process-safe cookie manager with file persistence.
@@ -405,6 +427,7 @@ class SharedCookieManager:
                     # when multiple pipelines fail login concurrently.
                     logs_dir = os.path.join(tempfile.gettempdir(), "data_integration_logs")
                     os.makedirs(logs_dir, exist_ok=True)
+                    _prune_old_screenshots(logs_dir)
                     ts = datetime.now(timezone.utc).strftime("%Y%m%dT%H%M%SZ")
                     error_shot = os.path.join(logs_dir, f"{self.source}_login_error_{ts}.png")
                     page.screenshot(path=error_shot, full_page=True)
