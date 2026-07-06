@@ -453,16 +453,21 @@ def make_worklist_router(
 
         action = next((a for a in all_actions if a.action_id == action_id), None)
         if action is None:
-            return HTMLResponse("", status_code=200)
+            # Stale action_id: already claimed by someone else (or TTL-cache/dbt
+            # refresh moved it) between page render and click. Not an error —
+            # re-render so the container reflects current truth instead of the
+            # 200-body-swaps-outerHTML path wiping #worklist-container blank.
+            return await _render_worklist_fragment(request)
 
         party_id = getattr(action, "party_id", None)
         if not party_id:
-            notice = (
-                '<div class="wl-claimed-notice" style="padding:10px 14px;'
-                'color:var(--coral-600,#dc2626);font-size:0.875rem">'
-                '⚠ Chưa xác định được khách hàng trong hệ thống</div>'
+            log.warning("worklist: claim action %s has no resolvable party_id", action_id)
+            # Non-2xx so htmx does not swap #worklist-container (same silent-failure
+            # convention as the 401/500 branches below) — swapping a 200 here would
+            # replace the whole container with just this notice, losing its id.
+            return HTMLResponse(
+                "Chưa xác định được khách hàng trong hệ thống", status_code=422
             )
-            return HTMLResponse(notice, status_code=200)
 
         # Collect all action items for this customer (claim covers all of them)
         customer_actions = [a for a in all_actions if getattr(a, "party_id", None) == party_id]
