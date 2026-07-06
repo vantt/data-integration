@@ -51,23 +51,6 @@ elements:
 ```
 <!-- ui-layout:ascii:end -->
 
-```
-┌ MODAL — Xác nhận gộp khách ────────────────────────┐
-│  Merge Party B → Party A (surviving)          [✕]  │
-├────────────────────────────────────────────────────┤
-│  Party A (giữ lại):   Nguyễn Văn A  +84901234567  │
-│  Party B (gộp vào):   NVA           +84901234567  │
-│                                                    │
-│  Sẽ chuyển: 1 identity, 3 activity, 0 task       │
-│  ⚠ Party B sẽ bị ẩn (is_merged=true)             │
-│  ✓ Snapshot undo sẽ được lưu tự động              │
-│                                                    │
-│  [✓] Tôi xác nhận muốn gộp 2 khách này           │
-├────────────────────────────────────────────────────┤
-│  [Hủy]                           [Xác nhận Merge] │
-└────────────────────────────────────────────────────┘
-```
-
 ## States
 
 - default: Form hiển thị, checkbox unchecked

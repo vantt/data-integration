@@ -51,35 +51,7 @@ elements:
 
 ### Tab: Custom Fields (default)
 
-```
-┌─ C01 SIDEBAR ─┬──────────────────────────────────────────────────────────────┐
-│               │  TOPBAR: Cài đặt                                             │
-│               ├────────────────┬─────────────────────────────────────────────┤
-│               │  SETTINGS NAV  │  SETTINGS CONTENT                           │
-│               │  > Custom Fields│  Custom Fields                   [+ Thêm]  │
-│               │    Tags         │  ┌────────────────────────────────────────┐ │
-│               │    Người dùng   │  │ Tên field    Loại     Bắt buộc  [Edit] │ │
-│               │                 │  │ Da nhạy cảm  bool     không    [Edit]  │ │
-│               │                 │  │ Nguồn KH     select   không    [Edit]  │ │
-│               │                 │  └────────────────────────────────────────┘ │
-└───────────────┴────────────────┴─────────────────────────────────────────────┘
-```
-
 ### Tab: Tags
-
-```
-┌─ C01 SIDEBAR ─┬──────────────────────────────────────────────────────────────┐
-│               │  TOPBAR: Cài đặt                                             │
-│               ├────────────────┬─────────────────────────────────────────────┤
-│               │  SETTINGS NAV  │  SETTINGS CONTENT                           │
-│               │    Custom Fields│  Tags                           [+ Tạo tag] │
-│               │  > Tags         │  ┌──────────────────────────────────────────┐│
-│               │    Người dùng   │  │Nhãn     Tên(slug)  Category  Màu  [•][✕]││
-│               │                 │  │[VIP]    vip-repeat vip_tier   ●   [✏][✕]││
-│               │                 │  │[Deal]   deal       behavioral —   [✏][✕]││
-│               │                 │  └──────────────────────────────────────────┘│
-└───────────────┴────────────────┴─────────────────────────────────────────────┘
-```
 
 **Columns:**
 - **Nhãn** — chip colored via `.chip--{color}` DS modifier (moss/coral/amber/default)

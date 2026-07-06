@@ -54,21 +54,6 @@ elements:
 ```
 <!-- ui-layout:ascii:end -->
 
-```
-┌─ C01 SIDEBAR ─┬─────────────────────────────────────────────────────────────┐
-│               │  TOPBAR: Tasks   [+ Tạo task]  [Assignee ▼][Priority ▼]    │
-│               │  Filter: [Party 🔍] [Campaign ▼] [Status ▼]  [List|Board]  │
-│               ├─────────────────────────────────────────────────────────────┤
-│               │  BOARD (kanban columns)                                     │
-│               │  ┌─── OPEN ───────┐ ┌── DOING ──────┐ ┌── DONE ──────┐   │
-│               │  │ [AUTO] CALL_NOW │ │ Follow-up A   │ │ Gọi T. B ✓   │   │
-│               │  │ Nguyễn V. A    │ │ Trần T. B     │ │ 12/06        │   │
-│               │  │ Due: hôm nay   │ │ Due: 15/06    │ │              │   │
-│               │  │                │ │               │ │              │   │
-│               │  └────────────────┘ └───────────────┘ └──────────────┘   │
-└───────────────┴─────────────────────────────────────────────────────────────┘
-```
-
 ## States
 
 - ST-TASKS-EMPTY: Không có task nào trong filter → empty state

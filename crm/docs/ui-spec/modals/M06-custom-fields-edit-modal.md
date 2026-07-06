@@ -55,25 +55,6 @@ elements:
 ```
 <!-- ui-layout:ascii:end -->
 
-```
-┌ MODAL — Thông tin bổ sung ──────────────────────────┐
-│  Chỉnh sửa thông tin bổ sung                  [✕]  │
-├─────────────────────────────────────────────────────┤
-│  ── Sức khoẻ & Da liễu ──────────────────────────   │
-│  Da nhạy cảm    [✓ Có / ✗ Không]  (bool)           │
-│  Loại da        [Da dầu ▼]         (select)         │
-│                                                     │
-│  ── Nguồn & Marketing ───────────────────────────   │
-│  Nguồn KH       [Facebook ▼]       (select)        │
-│  Ngày sinh      [dd/mm/yyyy]       (date)           │
-│                                                     │
-│  ── Nội bộ ──────────────────────────────────────   │
-│  Ghi chú nội bộ [________________] (text)          │
-├─────────────────────────────────────────────────────┤
-│  [Hủy]                                    [Lưu]   │
-└─────────────────────────────────────────────────────┘
-```
-
 ## Render Rules
 
 - Query: `SELECT * FROM crm_custom_field_def WHERE entity_type='customer' ORDER BY section, sort_order`

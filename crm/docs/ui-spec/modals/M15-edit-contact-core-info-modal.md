@@ -66,67 +66,9 @@ elements:
 
 ## Layout — Tab: Liên lạc
 
-```
-┌ MODAL — Chỉnh sửa thông tin ──────────────────────┐
-│  Nguyễn Văn A                                [✕]  │
-│  [Liên lạc]  [Địa chỉ]  [Thông tin cơ bản]       │
-├───────────────────────────────────────────────────┤
-│  Danh sách kênh liên lạc:                         │
-│  ┌─────────────────────────────────────────────┐  │
-│  │ 📞 Số chính   +84901234567      [✎] [✗]    │  │
-│  │    Trạng thái: ● active                      │  │
-│  ├─────────────────────────────────────────────┤  │
-│  │ 💬 Zalo       zalo_handle_123   [✎] [✗]    │  │
-│  │    Trạng thái: ● active                      │  │
-│  ├─────────────────────────────────────────────┤  │
-│  │ 📘 Facebook   fb_handle         [✎] [✗]    │  │
-│  │    Trạng thái: ○ invalid                     │  │
-│  └─────────────────────────────────────────────┘  │
-│  [+ Thêm kênh liên lạc]                           │
-│                                                   │
-│  Add form (khi click +):                          │
-│  Loại:  [Zalo ▼]  -- phone_secondary / zalo /    │
-│          facebook / email                         │
-│  Giá trị: [___________]                           │
-│  Nhãn:    [VD: Số công ty] (optional)            │
-│  Ưu tiên: [○ Không ● Có]                         │
-├───────────────────────────────────────────────────┤
-│  [Hủy]                                  [Lưu]   │
-└───────────────────────────────────────────────────┘
-```
-
 ## Layout — Tab: Địa chỉ
 
-```
-├───────────────────────────────────────────────────┤
-│  Địa chỉ đầy đủ  [123 Nguyễn Huệ____________]   │
-│  Phường/Xã       [Bến Nghé________________]      │
-│  Quận/Huyện      [Quận 1_________________]       │
-│  Tỉnh/Thành phố  [TP. Hồ Chí Minh________]      │
-│                                                   │
-│  Ghi chú địa chỉ [Địa chỉ sàn bị mask,___]      │
-│                  [đã xác nhận qua điện thoại]    │
-│                                                   │
-│  Nguồn: sapo_sync (tự động) / manual (đã xác nhận)│
-│  → Lưu sẽ set address_source = 'manual'          │
-├───────────────────────────────────────────────────┤
-│  [Hủy]                                  [Lưu]   │
-└───────────────────────────────────────────────────┘
-```
-
 ## Layout — Tab: Thông tin cơ bản
-
-```
-├───────────────────────────────────────────────────┤
-│  Tên hiển thị *  [Nguyễn Văn A___________]       │
-│  Email           [email@domain.com________]      │
-│  Ngày sinh       [dd/mm/yyyy]                    │
-│  Giới tính       [Nam ▼]  -- Nam / Nữ / Khác    │
-│  Đồng ý LH       [● N/A  ○ Cho phép  ○ Không cho phép] │
-├───────────────────────────────────────────────────┤
-│  [Hủy]                                  [Lưu]   │
-└───────────────────────────────────────────────────┘
-```
 
 - `Giới tính` maps to `party.gender`; options: `male`, `female`, `other`, `unknown`
 - `Đồng ý LH` maps to `party.consent_contact` (enum: `na` default / `allowed` / `denied`); `denied` = R1 rule enforced; `na` = chưa xác nhận, không bị R1 gating nhưng không được chủ động outreach

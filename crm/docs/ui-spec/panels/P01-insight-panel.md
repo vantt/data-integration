@@ -67,44 +67,6 @@ elements:
 ```
 <!-- ui-layout:ascii:end -->
 
-```
-┌ ACTION QUEUE ──────────────────────────────────────────────────────────┐
-│ MODE A — SESSION CHECKLIST (≥2 unresolved)                            │
-│  [2 việc] · Tích chọn xong rồi bấm Hoàn tất                         │
-│  ☑ CALL_NOW  💰 2.400.000đ                                           │
-│    "Sắp hết hàng yêu thích — gọi ngay"                              │
-│    [2025-06-15]  [ORD-123 ↗]  [−10%]                                │
-│  ☑ REORDER_NUDGE  "Chu kỳ mua đến — nhắc tái đơn"                   │
-│  ─────────── [📞 Gọi ngay]  [Hoàn tất (2) ✓] ────────────────────   │
-│                                                                        │
-│ MODE B — INDIVIDUAL CARD (1 unresolved)                               │
-│  ┌ CALL_NOW  💰 2.400.000đ ─────────────────────────────────────┐   │
-│  │ "Sắp hết hàng yêu thích — gọi ngay"                         │   │
-│  │ [2025-06-15]  [ORD-123 ↗]  [−10%]                           │   │
-│  │ [📞 Gọi ngay]  [🕐 Đặt Lịch]    resolved → [Đã xử lý ✓]   │   │
-│  └──────────────────────────────────────────────────────────────┘   │
-├ RFM & SEGMENTS ────────────────────────────────────────────────────────┤
-│  R: Recency 28 ngày  |  F: Frequency 8 đơn  |  M: Monetary 2.350.000đ │
-│  [GOLD] [active] [ON_TRACK] [CHANNEL_XYZ] [discount sensitive]        │
-├ VALUE METRICS ─────────────────────────────────────────────────────────┤
-│  ┌──────────────────────────┬─────────────┬─────────────┐             │
-│  │ Lifetime value (hero×2)  │ Total orders│ Avg order   │             │
-│  │ 18.400.000 ₫             │ 8           │ 2.300.000 ₫ │             │
-│  ├───────────┬──────────────┬─────────────┬─────────────┤             │
-│  │ Gross marg│ Cancel rate  │ Avg cycle   │ Channel     │             │
-│  │ 34.2%     │ 5%           │ 32d         │ POS         │             │
-│  └───────────┴──────────────┴─────────────┴─────────────┘             │
-├ SIGNALS ───────────────────────────────────────────────────────────────┤
-│  Customer status: active  |  Next purchase: ON_TRACK (2025-07-15)     │
-│  Discount sensitivity: LOW  |  Top affinity: Sữa rửa mặt             │
-├ REP INSIGHTS ────────────────────────────── 👤 [+ Thêm insight]       │
-│  [Persona]    Mua cho shop Q7 — cần báo giá sỉ       [cao]           │
-│  [Quyết định] Hay do dự, cần follow up ≥3 lần        [tb]            │
-├ FRESHNESS ──────────────────────────────────────────────────────────────┤
-│  Cache insight: 07:15 ICT hôm nay  ·  R2 · CRM không tính lại insight │
-└────────────────────────────────────────────────────────────────────────┘
-```
-
 ## Action Queue Modes
 
 Action queue merges `wh_action_queue` UNION `wh_sku_action_queue` (SKU branch: grain customer × SKU).

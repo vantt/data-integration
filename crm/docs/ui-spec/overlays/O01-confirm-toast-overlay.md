@@ -44,15 +44,6 @@ elements:
 ```
 <!-- ui-layout:ascii:end -->
 
-```
-     ┌ OVERLAY ──────────────────────────────┐
-     │  ⚠ Xóa ghi chú này?                  │
-     │  Hành động không thể hoàn tác.        │
-     ├───────────────────────────────────────┤
-     │  [Hủy]              [Xóa]            │
-     └───────────────────────────────────────┘
-```
-
 ## Trigger
 
 Mở từ destructive action buttons trên P05 (xóa note), S13 (xóa custom field def).

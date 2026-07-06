@@ -52,25 +52,6 @@ elements:
 ```
 <!-- ui-layout:ascii:end -->
 
-```
-┌ MODAL — Định nghĩa custom field ──────────────────┐
-│  Tạo custom field mới                        [✕]  │
-├───────────────────────────────────────────────────┤
-│  Áp dụng cho *    [● Khách hàng  ○ Đơn hàng]    │
-│  Field name (slug) *  [da_nhay_cam__________]    │
-│  Nhãn hiển thị *      [Da nhạy cảm__________]   │
-│  Section (nhóm)       [Sức khoẻ & Da liễu___]   │
-│  Thứ tự hiển thị      [1]                        │
-│  Loại dữ liệu *       [Boolean (Có/Không) ▼]    │
-│  -- Text / Số / Ngày / Boolean / Chọn / Đa chọn  │
-│  Bắt buộc             [○ Có  ● Không]            │
-│  (options — chỉ hiện khi loại = select):         │
-│  Tùy chọn             [+ Thêm tùy chọn]          │
-├───────────────────────────────────────────────────┤
-│  [Hủy]                                  [Lưu]   │
-└───────────────────────────────────────────────────┘
-```
-
 ## Field Notes
 
 - `entity_type`: bắt buộc. Quyết định field hiện ở M06 (customer) hay trong order detail (order)

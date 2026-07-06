@@ -66,43 +66,6 @@ elements:
 ```
 <!-- ui-layout:ascii:end -->
 
-```
-┌─ C01 SIDEBAR ──┬──────────────────────────────────────────────────────────────┐
-│  [≡] CRM       │  TOPBAR (pagehead)                                           │
-│  > Worklist ●  │  Worklist hôm nay        [Làm mới ↺]  [+ Tạo task]          │
-│    Khách hàng  ├──────────────────────────────────────────────────────────────┤
-│    Inbox    3  │  KPI STRIP                                                   │
-│    Tasks       │  [ Task mở: N ] [ Hành động AQ: N ] [ Giá trị: Ntr ] [ Khẩn: N ] │
-│    Segments    ├──────────────────────────────────────────────────────────────┤
-│    Chiến dịch  │  FILTER BAR                                                  │
-│    Ads         │  Ưu tiên:[↕] Loại:[↕] Phân khúc:[↕] Hạng KH:[↕] Sản phẩm:[↕] Tìm:[________]          │
-│    Cài đặt     │  [💰 Giá trị cao] [✅ Ẩn đã liên hệ] [📋 Có kịch bản]      │
-│                ├──────────────────────────────────────────────────────────────┤
-│  [User: NV A]  │  TASK LIST (5 urgency bands, collapsible)                    │
-│                │                                                              │
-│                │  ▼ ✅ Đã liên hệ  (2)              ← band 4, collapsed      │
-│                │  ▼ 🔴 Quá hạn     (3)              ← band 0, open           │
-│                │  ┌──────────────────────────────────────────────────────┐    │
-│                │  │ [P1] Nguyễn Văn A                 quá hạn 2 ngày    │    │
-│                │  │   "Sắp hết hàng yêu thích — gọi ngay"               │    │
-│                │  │   🛍 Fine Japan A / ↩ B   💬 Chỉ Zalo sau 8pm       │    │
-│                │  │   📵 2h trước · Không bắt    → lịch sử              │    │
-│                │  │   [Dời hạn] [Dọn] [📞 Gọi] [Mở hồ sơ >]           │    │
-│                │  └──────────────────────────────────────────────────────┘    │
-│                │  ▼ 🟡 Hôm nay / Khẩn  (5)          ← band 1, open           │
-│                │  ┌──────────────────────────────────────────────────────┐    │
-│                │  │ CALL_NOW  Trần Thị B   📋 Có kịch bản               │    │
-│                │  │   "Chưa mua 92 ngày, GOLD"   💰 1.800.000đ          │    │
-│                │  │   ✅ 3h trước · Đã nghe → lịch sử                   │    │
-│                │  │   [📋 Gọi] [⏰ snooze] [✕ Bỏ qua] [Xem 360 >]      │    │
-│                │  └──────────────────────────────────────────────────────┘    │
-│                │  ▼ 🟢 Đúng hạn     (8)              ← band 2, open           │
-│                │  ▶ 🔵 Cần chú ý    (4)              ← band 3, collapsed      │
-│                │                                                              │
-│                │  FRESHNESS: cache cập nhật lúc 07:15 ICT ✓                  │
-└────────────────┴──────────────────────────────────────────────────────────────┘
-```
-
 ## Row Detail
 
 ### Action rows (from `wh_action_queue`)

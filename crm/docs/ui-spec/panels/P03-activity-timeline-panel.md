@@ -45,24 +45,6 @@ elements:
 ```
 <!-- ui-layout:ascii:end -->
 
-```
-┌ TOOLBAR ──────────────────────────────────────────────────────────┐
-│  Activity Timeline   [+ Ghi log]  [Filter type ▼]                │
-├ TIMELINE ─────────────────────────────────────────────────────────┤
-│                                                                    │
-│  ● 13/06/2026 10:32 ICT  [call]                                   │
-│    NV A: "Khách xác nhận sẽ đặt tuần tới. Gợi ý SP mới."        │
-│    Đơn liên quan: —                                               │
-│                                                                    │
-│  ● 01/06/2026 15:00 ICT  [chat]                                   │
-│    CSKH B: Đóng conversation PSID_abc — "Đã giải quyết"          │
-│                                                                    │
-│  ● 15/05/2026 09:00 ICT  [note]                                   │
-│    NV C: "Khách thích SP X, không thích chiết khấu thấp"         │
-│                                                                    │
-└────────────────────────────────────────────────────────────────────┘
-```
-
 ## States
 
 - ST-LOADING: Timeline fetch in-flight

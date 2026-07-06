@@ -55,24 +55,6 @@ elements:
 ```
 <!-- ui-layout:ascii:end -->
 
-```
-┌─ C01 SIDEBAR ─┬────────────────────────────────────┬───────────────────────┐
-│               │  TOPBAR                             │  CUSTOMER SIDEBAR     │
-│               │  [← Inbox]  PSID_abc  🟡 Pending   │  ┌─────────────────┐  │
-│               │  Assignee: CSKH B  [Đổi NV]        │  │ Chưa link khách │  │
-│               │  [Đóng hội thoại]  [Ghi note]       │  │ [🔍 Tìm khách]  │  │
-│               ├────────────────────────────────────┤  └─────────────────┘  │
-│               │  MESSAGE THREAD                     │  (sau khi link:)      │
-│               │  ┌──────────────────────────────┐   │  ┌─────────────────┐  │
-│               │  │ [Khách] "Tôi muốn hỏi..."    │   │  │ Nguyễn Văn A    │  │
-│               │  │              10:32 ICT        │   │  │ GOLD · active   │  │
-│               │  │ [NV] "Dạ, đơn số ..."        │   │  │ Mua gần: 3 ngày │  │
-│               │  │              10:35 ICT        │   │  │ [Mở hồ sơ đầy] │  │
-│               │  └──────────────────────────────┘   │  └─────────────────┘  │
-│               │  INPUT BAR (disabled — read-only v1)│                       │
-└───────────────┴────────────────────────────────────┴───────────────────────┘
-```
-
 ## States
 
 - ST-CONV-NO-PARTY: party_id=null → sidebar link-party CTA

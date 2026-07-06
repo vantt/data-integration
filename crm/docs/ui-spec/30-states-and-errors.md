@@ -196,8 +196,8 @@ hidden. Activity log and outcome summary remain visible.
 ### ST-CALL-NO-SCRIPT
 Không có row `cache.wh_approach_script` cho `customer_id` → empty state + CTA quay lại Worklist / Xem 360.
 
-### ST-CALL-STOP
-`recommended=false` (R14) → STOP banner: ẩn talk-track/talking_points/objection, hiện lý do + CTA tạo task xác minh tài khoản.
+### ST-CALL-R14-WARN
+`recommended=false` (R14) → sticky banner cảnh báo đỏ (`#s14-r14-banner`) + nội dung che mờ (`#s14-content.s14-locked`, talk-track/points/objection/rail dim + pointer-events:none). Nút "Tôi đã xác minh" (A-S14-027) ẩn banner + xoá `s14-locked` (pure JS, POST 204 → audit `r14_ack`). Identity bar/alert row/outcome bar luôn hiển thị.
 
 ### ST-CALL-LOW-CONFIDENCE
 `confidence=low` → talk-track hiển thị nhạt + nhãn "độ tin thấp, kiểm chứng".

@@ -52,22 +52,6 @@ elements:
 ```
 <!-- ui-layout:ascii:end -->
 
-```
-┌ MODAL — Tạo chiến dịch ───────────────────────────┐
-│  Tạo chiến dịch mới                          [✕]  │
-├───────────────────────────────────────────────────┤
-│  Tên chiến dịch * [React-Jul-2026__________]     │
-│  Mục tiêu *       [Reactivation ▼]               │
-│  Kênh *           [Messenger ▼]                  │
-│  Segment *        [Reactivation tháng 7 ▼]       │
-│                   → 34 khách (3 bị loại consent) │
-│  Giao cho         [NV A, NV B ▼] (multi)        │
-│  Ngày bắt đầu *   [01/07/2026]                  │
-├───────────────────────────────────────────────────┤
-│  [Hủy]                         [Tạo & Kích hoạt] │
-└───────────────────────────────────────────────────┘
-```
-
 ## States
 
 - default: Form trống

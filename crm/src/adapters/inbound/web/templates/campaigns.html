@@ -133,7 +133,8 @@
       {% if campaign.status == "draft" %}
       <button class="btn btn--primary"
               hx-post="/campaigns/{{ campaign.campaign_id }}/activate"
-              hx-target="body">
+              hx-target="body"
+              hx-confirm="Xác nhận kích hoạt chiến dịch &quot;{{ campaign.name }}&quot;? Chiến dịch sẽ bắt đầu chạy ngay.">
         {% include "icons/bolt.svg" %} Kích hoạt
       </button>
       {% endif %}

@@ -90,46 +90,6 @@ elements:
 
 6 bước tuần tự; các section phụ hiện/ẩn theo JS.
 
-```
-┌ MODAL — Ghi nhận tiếp xúc ────────────────────────────────────────┐
-│  Ghi nhận tiếp xúc · Nguyễn Văn A                           [✕]  │
-├────────────────────────────────────────────────────────────────────┤
-│  [banner contact_pref nếu có]                                     │
-│                                                                    │
-│  [task context banner nếu task_id có]                             │
-│  📋 Task: "Follow-up sau cuộc gọi"                                │
-│                                                                    │
-│  HÌNH THỨC *                                                       │
-│  [📞 Cuộc gọi                                              ▾]    │
-│                                                                    │
-│  SỐ ĐIỆN THOẠI  (section động theo hình thức)                     │
-│  [● 0901234567 (chính)]  [Dùng số khác]                           │
-│                                                                    │
-│  KẾT QUẢ *  (set động theo hình thức)                             │
-│  [Đã nghe] [Không bắt] [Hẹn lại] [Từ chối]                      │
-│                                                                    │
-│  [HẸN GỌI LẠI LÚC] — hiện nếu kết quả = Hẹn lại + call          │
-│  [datetime-local]  ☑ Tạo task nhắc tự động                       │
-│                                                                    │
-│  [LÊN LỊCH THEO DÕI] — hiện nếu kết quả dương (Đã nghe/Gặp được/Đã phản hồi)
-│  ☐ Lên lịch theo dõi → [date]  [+7 ngày] [+14 ngày] [+30 ngày]  │
-│                                                                    │
-│  NỘI DUNG  (placeholder + required thay đổi theo hình thức/kết quả)
-│  [textarea]                                                        │
-│                                                                    │
-│  ☐ Lưu thành ghi chú hồ sơ — thông tin lâu dài, tách khỏi timeline
-│    [LOẠI GHI CHÚ ▼]  [HIỂN THỊ ▼]  [GHIM ●/○]                  │
-│                                                                    │
-│  ──────────────────────────────────────────────────────────       │
-│  THỜI GIAN                    ĐƠN LIÊN QUAN                       │
-│  [datetime-local, ICT now]    [ORD-… tùy chọn]                   │
-│                                                                    │
-│  [☐/☑ Đánh dấu task "Follow-up…" hoàn thành] — chỉ khi task_id  │
-├────────────────────────────────────────────────────────────────────┤
-│  [Hủy]                                       [Lưu hoạt động]     │
-└────────────────────────────────────────────────────────────────────┘
-```
-
 ## Hình Thức & Outcome Sets
 
 | Hình thức | Kênh hiện | Outcomes |
@@ -211,25 +171,6 @@ GET handler forwarded → `_m08_ctx` → template context.
 - Khi save + checkbox checked → `crm_task.status = done`, `completed_at = now`
 
 ## Layout — Mode: note_only / edit_note
-
-```
-┌ MODAL — Thêm ghi chú / Sửa ghi chú ──────────────────────────────┐
-│  [title] · [party_name]                                      [✕]  │
-├────────────────────────────────────────────────────────────────────┤
-│  LOẠI GHI CHÚ  [Chung ▼]                                          │
-│  -- Chung / Sở thích / Ưu tiên liên lạc / Cảnh báo / Kết quả /  │
-│     Nội bộ                                                         │
-│                                                                    │
-│  NỘI DUNG *                                                        │
-│  [textarea]                                                        │
-│                                                                    │
-│  GHIM GHI CHÚ  [● Không ghim  ○ Ghim]                            │
-│                                                                    │
-│  HIỂN THỊ  [Team ▼]  (Team / Manager / Riêng tư)                 │
-├────────────────────────────────────────────────────────────────────┤
-│  [Hủy]                                         [Lưu ghi chú]     │
-└────────────────────────────────────────────────────────────────────┘
-```
 
 ## Save Effects
 

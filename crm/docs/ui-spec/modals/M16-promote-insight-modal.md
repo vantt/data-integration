@@ -58,32 +58,6 @@ elements:
 
 ## Layout — Create / Promote
 
-```
-┌ MODAL — Đúc kết insight ──────────────────────────┐
-│  Insight: Nguyễn Văn A                      [✕]  │
-├───────────────────────────────────────────────────┤
-│  Loại insight *                                   │
-│  [Persona ▼]                                      │
-│  -- Persona          (đặc điểm/vai trò thực)     │
-│  -- Hành vi mua      (pattern mua hàng)          │
-│  -- Phong cách QĐ    (cách ra quyết định)        │
-│  -- Sự kiện đời sống (life event ảnh hưởng MH)  │
-│  -- Mối quan hệ      (mua cho ai, liên quan ai)  │
-│  -- Tiềm năng Advocate (hay share, giới thiệu)  │
-│                                                   │
-│  Nội dung *                                       │
-│  [Mua cho shop tại Q7, không phải cá nhân._____]  │
-│  [Cần báo giá sỉ thay vì giá lẻ.______________]  │
-│                                                   │
-│  Độ tin cậy   [● Cao  ○ Trung bình  ○ Thấp]     │
-│                                                   │
-│  [Nếu promote từ note] Nguồn:                    │
-│  Ghi chú #45: "Gọi lần 3: nói đang mua cho..."  │
-├───────────────────────────────────────────────────┤
-│  [Hủy]                          [Lưu insight]   │
-└───────────────────────────────────────────────────┘
-```
-
 ## Insight Types
 
 | Value | Nhãn VI | Ví dụ |

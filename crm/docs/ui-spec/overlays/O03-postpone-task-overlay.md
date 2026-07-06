@@ -43,15 +43,6 @@ elements:
 ```
 <!-- ui-layout:ascii:end -->
 
-```
-  ┌─────────────────────────────┐
-  │  Hoãn đến:                  │
-  │  [27/06/2026]  [14:30]      │
-  │                             │
-  │  [Huỷ]         [Xác nhận]  │
-  └─────────────────────────────┘
-```
-
 - Date: `<input type="date">` pre-filled từ ICT date của `task.due_at`
 - Time: `<input type="time">` pre-filled từ ICT time của `task.due_at`
 - Dismiss on scrim click hoặc Esc

@@ -94,33 +94,6 @@ elements:
 ```
 <!-- ui-layout:ascii:end -->
 
-```
-┌──────────────────────────────────────────────┬─── SIDEBAR (30%) ─────────────┐
-│ TOPBAR: [← Quay lại]  Nguyễn Văn A           │ ⚠ Cảnh báo (conditional)     │
-│ [Gán NV ▼]  [+ Tag]  [Ghi log]  [Tạo task]  ├───────────────────────────────┤
-├──────────────────────────────────────────────┤ THÔNG TIN CƠ BẢN          [✎] │
-│  MAIN (70%) — tabbar + lazy panels           │ tên, badges, phone,            │
-│  [Value & Behavior|Ghi chú|Đơn|Timeline|Tasks|Chat|Gọi]│ sapo-id, sapo-code, │
-│                                              │ sex, owner, consent            │
-│  (P01 / P05 / P02 / P03 / P04 / P06 / S14↗) ├───────────────────────────────┤
-│                                              │ HEAD LINE                      │
-│                                              │ LTV  ·  Đơn  ·  AOV  ·  Recency│
-│                                              ├───────────────────────────────┤
-│                                              │ LIÊN LẠC                  [+] │
-│                                              │ 📞 0901234567 (chính)          │
-│                                              │ 💬 zalo_id                     │
-│                                              │ ✉ email                        │
-│                                              │ 📍 Q.1, TP.HCM · region        │
-│                                              ├───────────────────────────────┤
-│                                              │ DATES                          │
-│                                              │ First Order · Last Order       │
-│                                              │ Tenure                         │
-│                                              ├───────────────────────────────┤
-│                                              │ TAGS                      [✎] │
-│                                              │ [VIP] [repeat]                 │
-└──────────────────────────────────────────────┴───────────────────────────────┘
-```
-
 ## Sidebar Sections
 
 ### Cảnh báo (warning notes)

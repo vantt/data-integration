@@ -117,81 +117,11 @@ elements:
 
 ### Frame chung (header + lifecycle + close_bar)
 
-```
-┌ HEADER ──────────────────────────────────────────────────────────────────────┐
-│ [← Quay lại]  "Follow-up sau cuộc gọi"  [P1] [Quá hạn 2 ngày]             │
-│ [status chip]  Đến hạn: 20/06/2026  Giao: NV A  [Nguyễn Văn A ↗ 360]     │
-│ Nguồn: AUTO / action_queue  · Lý do: "Sắp hết hàng yêu thích"             │
-├ LIFECYCLE ───────────────────────────────────────────────────────────────────┤
-│ open → doing → done → cancelled                                             │
-│ [▷ Bắt đầu]  [✎ Sửa]  [⏳ Hoãn]  [✕ Huỷ]                                │
-├──────────────────────────────────────────────────────────────────────────────┤
-│                       BODY (adapts by task_kind)                            │
-│                       (see per-kind layouts below)                           │
-├ ACTIVITY LOG ────────────────────────────────────────────────────────────────┤
-│  Timeline hoạt động của task (M08 logs với task_id, contact attempts)       │
-│  [activity entry 1]  [activity entry 2]  ...                                │
-├ CLOSE BAR (sticky) ──────────────────────────────────────────────────────────┤
-│ [ghi chú nhanh…]        [✓ Ghi log & hoàn thành]                           │
-└──────────────────────────────────────────────────────────────────────────────┘
-```
-
 ### Body — task_kind = contact
-
-```
-┌ BODY CONTACT ────────────────────────────────────────────────────────────────┐
-│ PROVENANCE                                                                   │
-│  Nguồn: action_queue · action_id: AQ-2024-0391                              │
-│  Lý do: "Sắp hết hàng yêu thích — chu kỳ 45d, chưa mua 52d"               │
-│  Giá trị ước tính: 1.800.000đ                                               │
-│                                                                              │
-│ KHÁCH HÀNG                                                                  │
-│  Nguyễn Văn A  [GOLD]  SĐT: 0901234567  Kênh ưu tiên: Zalo                │
-│  [▶ Vào phiên gọi]   ← navigate S14 (customer-grained shared session)       │
-│  "xử lý cùng N việc khác trong phiên gọi này"                              │
-│                                                                              │
-│ LỊCH SỬ THỬ LIÊN LẠC (contact attempts cho task này)                       │
-│  12/06 10:30  Cuộc gọi  — Không bắt                                        │
-│  13/06 14:00  Zalo      — Chưa phản hồi                                    │
-└──────────────────────────────────────────────────────────────────────────────┘
-```
 
 ### Body — task_kind = internal
 
-```
-┌ BODY INTERNAL ───────────────────────────────────────────────────────────────┐
-│ FACTS KHÁCH (tối thiểu)                                                      │
-│  Nguyễn Văn A  [GOLD]  SĐT: 0901234567  LTV: 8.2tr                        │
-│  [Xem 360 >]  [✎ Sửa thông tin]  [+ Tag]                                  │
-│                                                                              │
-│ CHECKLIST                                                                    │
-│  ☑ Tra cứu lịch sử đơn hàng                                                │
-│  ☐ Xác nhận địa chỉ giao hàng                                              │
-│  ☐ Gửi báo giá                                                             │
-│                                                                              │
-│ GHI CHÚ NỘI BỘ                                                              │
-│  [_____________________________________________]                             │
-└──────────────────────────────────────────────────────────────────────────────┘
-```
-
 ### Body — task_kind = generic
-
-```
-┌ BODY GENERIC ────────────────────────────────────────────────────────────────┐
-│ MÔ TẢ                                                                        │
-│  Cập nhật bảng giá Q3 trên hệ thống                                        │
-│                                                                              │
-│ CHECKLIST                                                                    │
-│  ☑ Thu thập bảng giá từ kế toán                                            │
-│  ☐ Upload lên Sapo                                                          │
-│                                                                              │
-│ LINKS                                                                        │
-│  [https://drive.google.com/…]                                               │
-│                                                                              │
-│ GHI CHÚ                                                                     │
-│  [_____________________________________________]                             │
-└──────────────────────────────────────────────────────────────────────────────┘
-```
 
 ## Implementation Notes (Phase 04)
 

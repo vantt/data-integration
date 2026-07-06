@@ -50,22 +50,6 @@ elements:
 ```
 <!-- ui-layout:ascii:end -->
 
-```
-┌ MODAL — Gán phụ trách ────────────────────────────┐
-│  Gán phụ trách: Nguyễn Văn A               [✕]   │
-├───────────────────────────────────────────────────┤
-│  Phụ trách hiện tại: NV A                        │
-│                                                   │
-│  Chọn NV mới:  [NV A ▼]                          │
-│  ○ NV A (hiện tại)                               │
-│  ○ NV B                                          │
-│  ○ CSKH B                                        │
-│  ○ Manager C                                     │
-├───────────────────────────────────────────────────┤
-│  [Hủy]                               [Lưu]      │
-└───────────────────────────────────────────────────┘
-```
-
 ## States
 
 - default: Current owner preselected

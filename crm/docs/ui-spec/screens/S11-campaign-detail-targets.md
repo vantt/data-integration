@@ -60,25 +60,6 @@ elements:
 ```
 <!-- ui-layout:ascii:end -->
 
-```
-┌─ C01 SIDEBAR ─┬──────────────────────────────────────────────────────────────┐
-│               │  TOPBAR: [← Chiến dịch]  Win-back Q3  [Sửa] [Kích hoạt]    │
-│               ├──────────────────────────────────────────────────────────────┤
-│               │  SUMMARY BAR                                                 │
-│               │  Targets: 87 | Sent: 43 | Converted: 13 | Rate: 14.9%       │
-│               │  Revenue attributed: 28.500.000đ                             │
-│               ├──────────────────────────────────────────────────────────────┤
-│               │  TARGET LIST  [Filter: status ▼] [Assignee ▼]               │
-│               │  ┌──────────────────────────────────────────────────────── │
-│               │  │ Khách         Status      Assignee   Order code           │
-│               │  ├────────────────────────────────────────────────────────  │
-│               │  │ Nguyễn V. A   converted   NV A       ORD-20060901        │
-│               │  │ Trần T. B     queued       NV B       —                   │
-│               │  │ Lê Văn C      sent         NV A       —                   │
-│               │  └──────────────────────────────────────────────────────── │
-└───────────────┴──────────────────────────────────────────────────────────────┘
-```
-
 ## States
 
 - ST-CAMPAIGN-NO-TARGETS: Segment có 0 member → warning
@@ -86,6 +67,8 @@ elements:
 - ST-LOADING: Target list loading
 
 ## Interactions
+
+`btn_activate_campaign` (A-S11-008) fires a native browser confirm ("Xác nhận kích hoạt chiến dịch...? Chiến dịch sẽ bắt đầu chạy ngay.") before mutating — same pattern as A-M15-006 deactivate-channel, not the O01 overlay (O01 is delete-only in this corpus and has no wired backend route beyond that use).
 
 ```yaml crm-contract
 interactions:

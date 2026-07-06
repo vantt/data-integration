@@ -57,27 +57,6 @@ elements:
 ```
 <!-- ui-layout:ascii:end -->
 
-```
-┌─ C01 SIDEBAR ─┬──────────────────────────────────────────────────────────────┐
-│               │  TOPBAR: [← Segments]  Tên segment: [___________]  [Lưu]    │
-│               │  Loại: ● Dynamic  ○ Static                                   │
-│               ├──────────────────────────────────────────────────────────────┤
-│               │  RULE EDITOR (60%)              │  PREVIEW PANEL (40%)       │
-│               │  ┌────────────────────────────┐ │  Kết quả dự kiến:          │
-│               │  │ Điều kiện (AND/OR)         │ │  34 khách                  │
-│               │  │ ┌──────────────────────┐   │ │  (3 bị loại do consent)    │
-│               │  │ │ value_group = GOLD ✕ │   │ │                            │
-│               │  │ └──────────────────────┘   │ │  [Preview danh sách]       │
-│               │  │ ┌──────────────────────┐   │ │  Nguyễn Văn A   GOLD       │
-│               │  │ │ customer_status =    │   │ │  Trần Thị B     GOLD       │
-│               │  │ │   at_risk         ✕  │   │ │  ...                       │
-│               │  │ └──────────────────────┘   │ │                            │
-│               │  │ [+ Thêm điều kiện]         │ │                            │
-│               │  └────────────────────────────┘ │                            │
-│               │  ACTIONS BAR: [Hủy]  [Lưu & Materialize]                    │
-└───────────────┴──────────────────────────────────────────────────────────────┘
-```
-
 ## States
 
 - ST-BUILDER-PREVIEW-LOADING: Preview query in-flight

@@ -52,23 +52,6 @@ elements:
 ```
 <!-- ui-layout:ascii:end -->
 
-```
-┌─ C01 SIDEBAR ─┬──────────────────────────────────────────────────────────────┐
-│               │  TOPBAR: Dedup Review   Pending: 12  [Filter: match_rule ▼]  │
-│               ├───────────────────────┬──────────────────────────────────────┤
-│               │  CANDIDATE LIST (35%) │  DETAIL PANE (65%)                   │
-│               │  ┌─────────────────┐  │  ┌──────────────┬───────────────┐    │
-│               │  │ ● Nguyễn V. A   │  │  │  Party A     │  Party B      │    │
-│               │  │   vs NVA        │  │  │  Sapo: 1234  │  Sapo: 5678   │    │
-│               │  │   exact_phone   │  │  │  SĐT: +849.. │  SĐT: +849..  │    │
-│               │  ├─────────────────┤  │  │  Email: —    │  Email: a@x   │    │
-│               │  │ ● Trần T. B     │  │  │  Đơn: 15     │  Đơn: 3       │    │
-│               │  │   vs Tran B     │  │  └──────────────┴───────────────┘    │
-│               │  │   fuzzy_name    │  │  Match rule: exact_phone             │
-│               │  └─────────────────┘  │  [Merge A←B]  [Reject]  [Bỏ qua]    │
-└───────────────┴───────────────────────┴──────────────────────────────────────┘
-```
-
 ## States
 
 - ST-DEDUP-NO-PENDING: Không có candidate pending → empty state

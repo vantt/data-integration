@@ -51,25 +51,6 @@ elements:
 ```
 <!-- ui-layout:ascii:end -->
 
-```
-┌─ C01 SIDEBAR ─┬──────────────────────────────────────────────────────────────┐
-│               │  TOPBAR: Inbox   [All ▼] [Open|Pending|Closed]  [Gán cho tôi]│
-│               ├─────────────────────────┬────────────────────────────────────┤
-│               │  CONV LIST (40%)        │  PREVIEW PANE (60%)                │
-│               │  ┌──────────────────┐   │  (chọn conversation để xem trước)  │
-│               │  │ ● PSID_abc  🟡   │   │                                    │
-│               │  │   Chưa link khách│   │  Chọn một hội thoại                │
-│               │  │   "Hỏi đơn hàng" │   │  để xem nội dung                   │
-│               │  │   2 phút trước   │   │                                    │
-│               │  ├──────────────────┤   │                                    │
-│               │  │ Nguyễn Văn A  ✓  │   │                                    │
-│               │  │   Đã link         │   │                                    │
-│               │  │   "Cảm ơn shop"  │   │                                    │
-│               │  │   15 phút trước  │   │                                    │
-│               │  └──────────────────┘   │                                    │
-└───────────────┴─────────────────────────┴────────────────────────────────────┘
-```
-
 ## States
 
 - ST-INBOX-EMPTY: Không có conversation trong filter hiện tại

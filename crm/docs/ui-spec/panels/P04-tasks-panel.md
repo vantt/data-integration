@@ -56,23 +56,6 @@ elements:
 ```
 <!-- ui-layout:ascii:end -->
 
-```
-┌ TOOLBAR ──────────────────────────────────────────────────────────┐
-│  Tasks   [+ Tạo task]   [Filter: open/all ▼]                     │
-├ TASK LIST ────────────────────────────────────────────────────────┤
-│  ● [AUTO] Follow-up sau cuộc gọi               P2  NV A          │
-│    Quá hạn 2 ngày · "Khách cân nhắc SP X, hẹn lại"              │
-│    [Ghi log]  [Xong nhanh]  [···]                                │
-├───────────────────────────────────────────────────────────────────┤
-│  ⟳ Win-back — Gửi catalogue mới                P1  NV A          │
-│    Đến hạn: hôm nay                                               │
-│    [Ghi log]  [Xong nhanh]  [···]                                │
-├───────────────────────────────────────────────────────────────────┤
-│  ✓ Gọi giới thiệu SP X              Done: 13/06  NV A            │
-│    "Đã nghe · Khách đặt đơn ORD-2406"                            │
-└────────────────────────────────────────────────────────────────────┘
-```
-
 ## Task Item Structure
 
 - **Line 1**: `[indicator] [AUTO?] [title]  [priority] [assignee]`

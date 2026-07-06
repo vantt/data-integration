@@ -53,25 +53,6 @@ elements:
 ```
 <!-- ui-layout:ascii:end -->
 
-```
-┌ MODAL — Tạo tag mới ──────────────────────────────┐
-│  Tạo tag mới                                 [✕]  │
-├───────────────────────────────────────────────────┤
-│  Tag name (slug) *   [vip-repeat____________]    │
-│  Nhãn hiển thị *     [VIP Repeat____________]   │
-│  Phân loại *         [Phân tầng VIP ▼]          │
-│  -- Hành vi mua      (behavioral)               │
-│  -- Đặc điểm KH      (demographic)              │
-│  -- Sở thích SP      (preference)               │
-│  -- Phân tầng VIP    (vip_tier)                 │
-│  -- Rủi ro           (risk)                     │
-│  -- Nguồn gốc        (source)                   │
-│  Màu (optional)      [● Xanh  ○ Đỏ  ○ Vàng ...]│
-├───────────────────────────────────────────────────┤
-│  [Hủy]                               [Tạo tag]  │
-└───────────────────────────────────────────────────┘
-```
-
 ## Tag Category Enum
 
 | Value | Nhãn VI | Dùng cho |

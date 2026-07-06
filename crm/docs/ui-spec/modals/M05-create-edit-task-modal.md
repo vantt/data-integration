@@ -61,23 +61,6 @@ elements:
 ```
 <!-- ui-layout:ascii:end -->
 
-```
-┌ MODAL — Tạo / Sửa task ───────────────────────────┐
-│  Tạo task mới                                [✕]  │
-├───────────────────────────────────────────────────┤
-│  Tiêu đề *   [Follow-up sau cuộc gọi________]    │
-│  Khách hàng  [Nguyễn Văn A ▼] (optional)         │
-│  Loại việc   [Liên hệ ▼]  ← chỉ hiện khi máy   │
-│              không chắc; auto-set+ẩn khi chắc    │
-│  Due date *  [20/06/2026]   Giờ [10:00]          │
-│  Priority    [P2 — Cao ▼]                        │
-│  Giao cho    [NV A ▼]                            │
-│  Ghi chú     [_____________________________]    │
-├───────────────────────────────────────────────────┤
-│  [Hủy]                               [Lưu task]  │
-└───────────────────────────────────────────────────┘
-```
-
 ## States
 
 - default: Form trống hoặc prefilled từ action_queue

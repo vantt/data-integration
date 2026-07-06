@@ -70,6 +70,7 @@ export const CSS6 = `
    Renders directly inside gc-sample text flow (inline-block). */
 .gc-inline-chip {
   display: inline-block;
+  max-width: 100%;
   border: 1px solid #cbd5e1;
   border-radius: 4px;
   padding: 0 4px;
@@ -79,7 +80,8 @@ export const CSS6 = `
   background: transparent;
   vertical-align: baseline;
   transition: background .1s, border-color .1s;
-  white-space: nowrap;
+  white-space: normal;
+  overflow-wrap: break-word;
   user-select: none;
 }
 .gc-inline-chip:hover {

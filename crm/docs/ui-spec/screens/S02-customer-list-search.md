@@ -56,24 +56,6 @@ elements:
 ```
 <!-- ui-layout:ascii:end -->
 
-```
-┌─ C01 SIDEBAR ─────┬──────────────────────────────────────────────────────┐
-│                   │  TOPBAR                                               │
-│                   │  [🔍 C02 Global Search: SĐT / Tên / Email...]        │
-│                   │  Filter: [Value Group ▼] [Status ▼] [Owner ▼] [Tag ▼]│
-│                   ├──────────────────────────────────────────────────────┤
-│                   │  RESULT LIST                             [+ Tạo mới] │
-│                   │  ┌────────────────────────────────────────────────── │
-│                   │  │ Họ tên          SĐT         Group   Status  Owner │
-│                   │  ├──────────────────────────────────────────────────  │
-│                   │  │ Nguyễn Văn A   0901234567  GOLD    active  NV A   │
-│                   │  │ Trần Thị B     0912345678  VIP     at_risk NV B   │
-│                   │  │ Lê Văn C       0923456789  NEW     active  —      │
-│                   │  └────────────────────────────────────────────────── │
-│                   │  Trang 1/10  [< Trước]  [Sau >]                      │
-└───────────────────┴──────────────────────────────────────────────────────┘
-```
-
 ## States
 
 - ST-CUSTOMER-SEARCH-EMPTY: Không tìm thấy → gợi ý tạo party mới

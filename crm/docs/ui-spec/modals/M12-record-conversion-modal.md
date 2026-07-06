@@ -51,22 +51,6 @@ elements:
 ```
 <!-- ui-layout:ascii:end -->
 
-```
-┌ MODAL — Ghi nhận chuyển đổi ──────────────────────┐
-│  Ghi chuyển đổi: Nguyễn Văn A               [✕]  │
-├───────────────────────────────────────────────────┤
-│  Chiến dịch: Win-back Q3                         │
-│                                                   │
-│  Mã đơn hàng *  [ORD-____________]               │
-│  → Doanh thu:   (tự tính từ wh_order_hdr)        │
-│                                                   │
-│  Hoặc: [✓] Đơn chưa có — ghi nhận thủ công      │
-│  Doanh thu ước tính  [__________] đ              │
-├───────────────────────────────────────────────────┤
-│  [Hủy]                        [Ghi nhận]         │
-└───────────────────────────────────────────────────┘
-```
-
 ## States
 
 - default: Order code input empty

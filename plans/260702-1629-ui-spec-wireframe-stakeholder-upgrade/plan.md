@@ -1,6 +1,6 @@
 # UI-Spec Wireframe — Stakeholder Upgrade
 
-**Status:** ALL 8 PHASES DONE (2026-07-02). Uncommitted. Pending: user review of generated ASCII → then remove hand-drawn ASCII (decision: generated-only after review).
+**Status:** DONE — tất cả 8 phases committed. Follow-ups 2026-07-03/05: chip audit (155→163 mappings), visual QA tool, VR-ASCII-DRIFT rule, elements: map all 39 surfaces, hand-drawn ASCII removed từ 40 surfaces + rebuild (2026-07-05), S11 activate-confirm, chip-overflow fix. Còn: scope tiếp "wireframe render đẹp hơn" — chờ user cho pain point cụ thể.
 **Branch:** feature/task-detail-cockpit-backend (tooling changes only, no CRM runtime code)
 **Skill root:** `.agents/skills/ui-spec/` (source of truth — NOT `.claude/skills`)
 **Spec root:** `crm/docs/ui-spec/` (54 surfaces, 311 interactions)
@@ -33,13 +33,14 @@
 - DONE 2026-07-03: `elements:` maps migrated to all 39 remaining surfaces — 149 chip→action mappings total; VR-ELEMENT-REF clean. Skill know-how consolidated into `references/ui-layout-authoring.md` + SKILL.md/METHODOLOGY.md pointers. VR-ASCII-DRIFT rule + build-order fix (ascii before wireframe) landed.
 - DONE 2026-07-03: Visual QA loop encoded into skill — `tools/wireframe/screenshot.mjs` (headless capture, browser discovery, 20KB blank-guard) + §11 in ui-layout-authoring.md (mandatory triggers, 7-item checklist, representative-surface criteria) + SKILL.md command entry. End-to-end proven: agent captured S14/S03/M01 and self-judged against checklist.
 - RESOLVED 2026-07-03: all 7 spec gaps closed (8 interactions added, A-P02-003/S07-008..010/S11-008/S15-011/M15-008/M13-005; actions 311→319, mapped chips 155→163). Detection now mechanical: `chip-audit.mjs` (build phase 7.5) writes `generated/chip-audit.md` listing unmapped sample chips per surface.
-- Product follow-up: S11 `Kích hoạt` is direct mutate (guard status==draft); O01 confirm-overlay pattern is delete-only in this corpus — decide if campaign activation needs a confirm step.
-- Minor polish: long chip (S03 tab_bar) overflows cell edge slightly — wrap/max-width tweak.
+- RESOLVED 2026-07-05: S11 `Kích hoạt` needs confirm — added `hx-confirm` (native browser confirm, same pattern as A-M15-006 deactivate-channel) to `campaigns.html` activate button; not routed through O01 (O01 has no wired backend route beyond delete_note — extending it was out of scope). S11 spec doc updated with a one-line interaction note.
+- RESOLVED 2026-07-05: chip overflow fixed — `.gc-inline-chip` in `styles-phase6.mjs` changed from `white-space: nowrap` to `white-space: normal` + `max-width: 100%` + `overflow-wrap: break-word` so long chips (e.g. S03 tab_bar) wrap inside the cell instead of overflowing.
+- OPEN 2026-07-05: user wants further wireframe render polish beyond the above ("đẹp hơn nữa") — scope not yet specified; next step is to get concrete pain points from user (spacing, density, color, typography, or something else) before starting.
 
 - Phase 6b (2026-07-02, post-user-feedback): grid cells redesigned for stakeholders (gridCellHtml: label + dominant sample + name-only pills; listeners/counts/guards hidden, tooltip keeps contract); fixed grid-template-areas quoting bug that collapsed the grid to a stack; children sub-layouts render as stacked mini-sections inside parent cell (floating children excluded). Screenshot-verified S14/S03/M01.
 
-- Hand-drawn ASCII still present below generated blocks in all 40 migrated surfaces — remove after user reviews (prioritized diff review: S03, S14, S06, S09, S11).
-- S11 `conversion_stats`: kept as separate declared region (display-only, SSE-updated); revisit if domain says it belongs inside summary_bar.
+- RESOLVED 2026-07-05: hand-drawn ASCII removed from all 40 migrated surfaces (35 single-block files scripted; 6 multi-block files — M08/M15/M16/S13/S14/S15 — edited per-heading, headings kept since each carries explanatory prose beyond just introducing the block). Verified zero stray box-drawing chars remain outside the generated `ui-layout:ascii:start/end` markers. Rebuilt (`build.mjs`): 54 surfaces/320 actions, ascii regenerated 40/40, wireframe-v2.html regenerated. `validate.mjs`: 1 pre-existing unrelated warning (S14 `ST-CALL-R14-WARN` state typo), otherwise clean.
+- DECIDED 2026-07-05: S11 `conversion_stats` stays as its own declared region (display-only, SSE-updated) — not merged into `summary_bar` (user: không cần).
 - Judgment calls resolved 2026-07-02: S03 topbar = left-column-only (matches hand ASCII); M08 `when:` rewritten to canonical `crm_note(note_type='contact_pref', pinned=true)`.
 
 - Phase 4: modal error entries in `- error: ERR-*` form (no ST- prefix) skipped by states extractor — normalize spec format or extend regex during phase 8 migration.

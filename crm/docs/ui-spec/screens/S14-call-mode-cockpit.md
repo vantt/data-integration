@@ -156,59 +156,9 @@ elements:
 
 ### Embedded trong S03 (tab "Gọi") — sidebar tĩnh S03 ẩn, cockpit full-width
 
-```
-┌ IDENTITY BAR ───────────────────────────────────────────────────────────┐
-│ Hoàng Thức [GOLD][active] ·Miền Trung   ☎0983***35 [📞Gọi][💬Zalo] [360] │
-├ ⚠ CẦN LƯU Ý (alert_row) ────────────────────────────────────────────────┤
-│ [sắp churn 11d] [cancel 32%] [SĐT phụ invalid] [liên hệ 3 ngày trước]   │
-├──────────────────────────────────────┬──────────────────────────────────┤
-│ LEFT — NÓI GÌ (hot path)             │ RIGHT — VÌ SAO & BỐI CẢNH        │
-│ ┌ Talk-track [📞Gọi][💬Zalo] ─────┐  │ ▸ VÌ SAO GỌI (reason_to_call)    │
-│ │ "Dạ em chào anh Thức…"  [📋Copy]│  │  ★ PRIMARY (call trigger)         │
-│ └──────────────────────────────────┘  │  ┌ REORDER · GT~1.2tr    [☐đã nói]│
-│ ⏱ Gọi 1-2 ngày, giờ hành chính        │  │ Quá chu kỳ 11d · Shark…    │ │
-│ ĐIỂM NÓI (tick khi đã nói)   2/3      │  │ #DH2093 · 24/5 [⏱Đặt lịch][✉]│ │
-│                                       │  └────────────────────────────┘ │
-│                                       │  ▾ SECONDARY "tranh thủ nếu thuận"│
-│                                       │  ┌ WIN_BACK · GT~0.8tr  [☐đã nói]│
-│                                       │  │ Chưa mua 45d         [✉Zalo]  │ │
-│                                       │  └────────────────────────────┘ │
-│  ☑ Nhắc chu kỳ  ☑ Ưu đãi  ☐ Combo    │ ▸ SNAPSHOT                       │
-│  Gợi thêm: [Omega3] [Vitamin D]       │  LTV 8.2tr·3 đơn·45d·gần 11d    │
-│ XỬ LÝ TỪ CHỐI  [🔍 khách vừa nói gì?] │  Chân dung: khách lẻ 3 đơn…     │
-│  ▸ "Chưa cần mua"  ▸ "Giá sao?"       │ ▸ THU THẬP CÒN THIẾU (collect)  │
-│ ⛔ GUARDRAILS: không giảm sâu · …     │  • Zalo  [__________] [+]        │
-│                                       │  • Email [__________] [+]        │
-│                                       │  • Sinh nhật [__/__/__] [+]      │
-│                                       │  • SĐT phụ invalid → [Sửa]       │
-├──────────────────────────────────────┴──────────────────────────────────┤
-│ TRUST: độ tin vừa · script 24/6 07:15 ICT · ⚠ AI gợi ý, dùng phán đoán  │
-├ OUTCOME BAR (sticky) ────────────────────────────────────────────────────┤
-│ [ghi chú tạm…]  [✓Gọi được][✗Không nghe][⏳Hẹn lại][🛒Đã mua]           │
-└──────────────────────────────────────────────────────────────────────────┘
-```
-
 ### Full-screen (route `/customers/{id}/call`) — thêm topbar, lõi giữ nguyên
 
-```
-┌ TOPBAR ────────────── [← Worklist]   #9/31   [Khách kế →] ┐
-│  … NGUYÊN KHỐI cockpit ở trên (identity_bar → outcome_bar) …│
-└────────────────────────────────────────────────────────────┘
-```
-
 ### R14-WARN state (recommended=false) — banner + locked content (Phase 05)
-
-```
-┌ ⛔ KHÔNG GỌI THEO KỊCH BẢN — CẦN XÁC MINH (sticky banner) ─────────────┐
-│ Lý do: nghi tổ chức gán nhầm RETAIL; margin mâu thuẫn; chết 1073 ngày.  │
-│ [Tạo task xác minh]  [Xem hồ sơ 360]  [Tôi đã xác minh — vẫn tiếp tục] │
-├──────────────────────────────────────┬──────────────────────────────────┤
-│ (dim) TALK_TRACK / TALKING_POINTS …  │ (dim) REASON_TO_CALL / SNAPSHOT … │
-│ opacity: 0.35, pointer-events: none  │ unlock → click btn_r14_ack above  │
-└──────────────────────────────────────┴──────────────────────────────────┘
-│ OUTCOME BAR (always accessible)                                          │
-└──────────────────────────────────────────────────────────────────────────┘
-```
 
 ## Implementation Notes (Phase 04)
 

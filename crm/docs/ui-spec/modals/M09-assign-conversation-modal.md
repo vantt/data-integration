@@ -51,21 +51,6 @@ elements:
 ```
 <!-- ui-layout:ascii:end -->
 
-```
-┌ MODAL — Gán NV xử lý ─────────────────────────────┐
-│  Gán NV: PSID_abc                            [✕]  │
-├────────────────────────────────────────────────────┤
-│  NV hiện tại: CSKH B                              │
-│                                                    │
-│  Gán cho:  [CSKH B ▼]                            │
-│  ○ CSKH A                                        │
-│  ● CSKH B (hiện tại)                             │
-│  ○ CSKH C                                        │
-├────────────────────────────────────────────────────┤
-│  [Hủy]                                   [Gán]   │
-└────────────────────────────────────────────────────┘
-```
-
 ## States
 
 - default: Current assignee preselected

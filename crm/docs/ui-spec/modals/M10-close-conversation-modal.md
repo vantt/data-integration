@@ -50,20 +50,6 @@ elements:
 ```
 <!-- ui-layout:ascii:end -->
 
-```
-┌ MODAL — Đóng hội thoại ───────────────────────────┐
-│  Đóng hội thoại với Nguyễn Văn A             [✕]  │
-├───────────────────────────────────────────────────┤
-│  Kết quả xử lý:                                  │
-│  [Đã giải quyết thắc mắc về đơn hàng_________]  │
-│  [___________________________________________]   │
-│                                                   │
-│  [✓] Ghi vào activity timeline của khách         │
-├───────────────────────────────────────────────────┤
-│  [Hủy]                       [Đóng hội thoại]   │
-└───────────────────────────────────────────────────┘
-```
-
 ## States
 
 - default: Textarea trống, checkbox checked by default (nếu party linked)

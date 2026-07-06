@@ -44,19 +44,6 @@ elements:
 ```
 <!-- ui-layout:ascii:end -->
 
-```
-     ┌ OVERLAY — Quick Preview ───────────────────┐
-     │  Nguyễn Văn A                    [✕]       │
-     │  +84901234567  •  GOLD  •  active          │
-     │  ──────────────────────────────────────    │
-     │  Mua gần nhất: 12/06/2026                 │
-     │  Affinity: Sữa rửa mặt gentle             │
-     │  Action queue: 2 items (CALL_NOW, REORDER) │
-     │  ──────────────────────────────────────    │
-     │  [Mở hồ sơ đầy đủ →]                      │
-     └────────────────────────────────────────────┘
-```
-
 ## Trigger
 
 Hover (300ms delay) hoặc click vào customer name chip trong task rows.
