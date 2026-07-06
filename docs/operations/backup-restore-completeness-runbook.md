@@ -126,7 +126,7 @@ The five properties and the gate chain are **identical**. What changes is *what 
 ## 2.3 What to reuse vs build
 - **Reuse:** manifest+checksum verification, ephemeral isolated env, fail-loud Dagster wiring, the socket-isolated sidecar pattern, exit-code contract.
 - **Existing assets to fold in:** `scripts/backup/backup.sh` (already copies `data_lake`/`dagster_home`/`crm_data` — but raw, **WAL-unsafe**: replace its DB legs with gated snapshots), the `system_backup.py` Dagster op, lessons **L50/L51/L56/L58/L68**.
-- **Detailed plan:** `plans/260624-2010-warehouse-pipeline-dr-verified-restore/` (source-of-truth + parquet-first strategy). Coordinate backup **security/encryption** with `plans/260624-1958-pipeline-hardening-followups/` (out of scope here).
+- **Detailed plan:** `plans/260624-2010-warehouse-pipeline-dr-verified-restore/` (source-of-truth + parquet-first strategy). Coordinate backup **security/encryption** with `plans/archive/260624-1958-pipeline-hardening-followups/` (out of scope here).
 
 ---
 

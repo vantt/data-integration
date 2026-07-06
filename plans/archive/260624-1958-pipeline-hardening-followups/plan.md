@@ -1,6 +1,6 @@
 # Pipeline Hardening — Follow-ups
 
-**Created:** 2026-06-24 | **Branch:** main | **Predecessor:** [260624-1158-pipeline-health-remediation](../archive/260624-1158-pipeline-health-remediation/plan.md) (DONE, archived)
+**Created:** 2026-06-24 | **Status:** DONE — archived. Secret rotation + remaining infra items deferred indefinitely (out of scope for this plan). | **Branch:** main | **Predecessor:** [260624-1158-pipeline-health-remediation](../archive/260624-1158-pipeline-health-remediation/plan.md) (DONE, archived)
 
 Unfinished / deferred items split out from the completed health-remediation plan. Execute per-item with approval.
 
@@ -10,7 +10,7 @@ Unfinished / deferred items split out from the completed health-remediation plan
 - [ ] **Local git hygiene** (optional) — token still in local object store: `git reflog expire --expire=now --all && git gc --prune=now`. (Origin already clean.)
 
 ## Activation — code done, needs an infra step
-- [ ] **Apply `evidence` non-root** — `Dockerfile.evidence` already has the non-root USER (committed); needs an image rebuild to take effect (`docker compose up -d --build evidence`).
+- [?] **Apply `evidence` non-root** — `Dockerfile.evidence` has `USER 1001` (committed); rebuild status unverified. Run `docker compose up -d --build evidence` if not done.
 - [ ] **Non-root `data_platform` / `crm` / `rill`** — skipped during hardening: they write to named volumes (monitoring_db, crm_data) owned by root → non-root needs a uid + volume-ownership strategy. Design + test carefully (must not break Dagster/CRM writes).
 
 ## Deferred (user decision)

@@ -1,6 +1,6 @@
 # Plan — CRM CSRF guard (deferred from audit M4)
 
-**Status:** NOT DONE — deployed + log-only rollout running (started 2026-07-06 15:03 ICT), waiting on a real-traffic observation window before enforcing (see "Next step") · **Priority:** Medium→High (was Low; CF Access now live, see below) · **Created:** 2026-06-23
+**Status:** NOT DONE — deployed + log-only rollout running, observation window reset multiple times by unrelated `crm` recreates (latest: 2026-07-06 17:21:55 ICT), currently ~3h clean (0 real-traffic hits, only the plan's own `evil.example` test probe) — needs several more days undisturbed before enforcing (see "Next step") · **Priority:** Medium→High (was Low; CF Access now live, see below) · **Created:** 2026-06-23
 (updated 2026-06-24: deferred — naive header guard would break /hug kiosk external POSTs; inventory + classification required)
 (updated 2026-07-06: un-deferred. CF Access (`plans/archive/260626-1712-cf-access-crm`) made CRM internet-facing with real per-user auth — the original "LAN-only, no-auth app" deferral reason is void. A malicious page can now trick a logged-in staff browser into a cross-site POST that rides the CF Access cookie through the tunnel. Re-audited routes with real evidence, resolved all 4 open questions below, implementing header-independent Origin/Host guard.)
 
@@ -54,8 +54,20 @@ Re-tested + audited against project conventions and personal dev rules. 2 real f
 2. Comments in `docker-compose.yml`, `.env`, and `csrf_guard.py` embedded this plan's ID (`260623-2318-crm-csrf-guard`) — violates the personal rule "don't put plan IDs in code comments, explain the invariant directly" (stable-code-artifacts rule). Removed all 3; comments now describe behavior only (`plan.md` itself is the only place the plan ID belongs).
 No other clean-code issues found: SRP/naming/DRY/YAGNI all check out (see prior review pass). Full suite reruns clean after both fixes: 749 passed, 9 pre-existing failures unchanged.
 
+## Enforce flip-flop (2026-07-06 15:40-15:46 ICT)
+User asked to flip `CRM_CSRF_ENFORCE=true` immediately (skip observation window). Did so, verified live (cross-origin → 403, same-origin → 200), then user reconsidered ("thôi khoan enforce") — reverted to `false`/log-only, verified live (cross-origin → 200 again). Both flips required `docker compose up -d crm` (recreate) to pick up the `.env` change.
+
+**Caveat surfaced by this back-and-forth:** `docker compose up`/recreate starts a NEW container with an EMPTY log history (unlike a plain restart, which keeps the same container + log file). Every recreate today (fresh deploy, enforce-on, enforce-off) reset the observation clock. Container is now at `CRM_CSRF_ENFORCE=false`, started 2026-07-06 15:46 ICT, log history empty from this point.
+
+## Status check (2026-07-06 20:26 ICT)
+Observation window reset **again**, unintentionally: `docker inspect crm` shows `StartedAt` = 2026-07-06 17:21:55 ICT, not the 15:46 recreate above — an unrelated later commit (`da6bc8d4` "bind admin port to localhost, fix stale env comment") touched `docker-compose.yml` and forced another `crm` recreate. `CRM_CSRF_ENFORCE` confirmed still `false` (log-only, unaffected).
+
+Checked `docker compose logs crm --since 5h`: **1 hit** —
+`csrf_guard: cross-origin POST /customers/nonexistent/tags (source='evil.example' host='127.0.0.1:3007') — would block`.
+This is the plan's own manual verification probe from the Deployment section above (`Origin: https://evil.example`), not real traffic — zero hits from actual Hug/staff usage so far. But the continuous log-only window is only **~3h old** (since 17:21:55), not the "few days" the exit criterion below calls for — clock keeps getting reset by unrelated `crm` recreates. **Still NOT DONE.**
+
 ## Next step (not yet done)
-Let it run log-only for one real-traffic cycle (few days of normal Hug/staff usage), then:
+Let it run log-only for one real-traffic cycle (few days of normal Hug/staff usage) **without recreating the `crm` container** (crash-restarts are fine — same container, log preserved; `docker compose up`/`--build` is not — resets log history), then:
 ```
 docker compose logs crm --since 72h | grep "csrf_guard:.*would block"
 ```

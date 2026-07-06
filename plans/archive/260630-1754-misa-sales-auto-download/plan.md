@@ -2,7 +2,7 @@
 
 **Goal:** Automate download of `So_chi_tiet_ban_hang` Excel from MISA AMIS web, drop into existing `run-misa-sales-file-drop` pipeline.
 
-**Status:** BLOCKED — MISA login requires OTP via phone (2FA). Resume when phone available.
+**Status:** DONE — Implementation complete 2026-07-01. 2FA resolved via headed login + cookie reuse (same Sapo pattern). Wired into Dagster `ingest_weekly_job` (Mon 07:00).
 
 ---
 
@@ -83,10 +83,9 @@ Based on discovery findings, implement:
 
 | File | Status |
 |------|--------|
-| `ingestion/run-misa-sales-download.py` | TO CREATE |
-| `ingestion/src/misa_amis/misa-sales-web-downloader.py` | TO CREATE (if complex enough to modularize) |
+| `ingestion/run-misa-sales-download.py` | DONE (commit 060eaefd, 2026-07-01) |
+| `ingestion/src/misa_amis/misa_sales_web_downloader.py` | DONE (700 LOC, cookie reuse + headed fallback) |
 | `ingestion/.cookies/misa_amis_cookies.json` | auto-created on first run |
-| Exploration script (scratchpad) | READY — waiting for phone |
 
 ## References
 
