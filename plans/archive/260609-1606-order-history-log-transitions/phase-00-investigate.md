@@ -1,6 +1,8 @@
 # Phase 0 — Investigate
 
-**Priority:** P1 (blocks P1, P3) · **Status:** pending · **Effort:** 2h
+**Priority:** P1 (blocks P1, P3) · **Status:** done (2026-06-09) · **Effort:** 2h
+
+**Output:** `plans/reports/investigate-260609-1725-history-log-deep-dive.md` — full findings below are confirmed by that report (status domain, dup rate, coverage %, single-event order count).
 
 ## Context links
 - Raw glob: `sapo_raw/order/ingest_method=history_log/**/*.parquet`
@@ -55,5 +57,6 @@ raw parquet schema, Sapo API log granularity, coverage gap vs `fact_orders`.
 Feed confirmed status domain + dup rate into phase-01. Feed coverage method into phase-03.
 
 ## Unresolved questions
-- Does live `get_logs.description` contain status-change phrasing per event? (needs creds probe)
-- Are there statuses beyond the 4 observed (draft/finalized/completed/cancelled)?
+- Does live `get_logs.description` contain status-change phrasing per event? (needs creds probe) — still open, not resolved by report.
+- Are there statuses beyond the 4 observed (draft/finalized/completed/cancelled)? — report confirms 5th observed: `finalized`. No others found in sample.
+- Dec 2025 partition (6 events/2 orders) — initial test run or genuine start? — still open, carried to phase-03.

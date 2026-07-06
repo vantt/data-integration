@@ -1,4 +1,8 @@
-{{ config(materialized='table', tags=['mart', 'sapo', 'history_log']) }}
+{{ config(
+    tags=['mart', 'sapo', 'history_log'],
+    options={'format': 'parquet'},
+    location="{{ get_rolling_location() }}"
+) }}
 
 WITH transitions AS (
     SELECT

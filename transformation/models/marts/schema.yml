@@ -61,6 +61,28 @@ models:
       Grain: (order_id, snapshot_seq). transition_type classifies each event:
       created, cancelled, completed, shipped, payment_received, or updated.
       days_since_prev_event is NULL for the first snapshot (creation).
+      APPROXIMATE: derived from snapshot diffing, not true event log — see
+      plans/archive/260609-1606-order-history-log-transitions/plan.md.
+    tests:
+      - dbt_utils.unique_combination_of_columns:
+          arguments:
+            combination_of_columns: [order_id, snapshot_seq]
+    columns:
+      - name: order_id
+        description: "Sapo order identifier."
+        tests: [not_null]
+      - name: snapshot_seq
+        description: "1-indexed sequence of distinct captured snapshots per order."
+        tests: [not_null]
+      - name: transition_type
+        description: "Classified transition: created, cancelled, completed, shipped, payment_received, updated."
+        tests:
+          - not_null
+          - accepted_values:
+              arguments:
+                values: [created, cancelled, completed, shipped, payment_received, updated]
+      - name: days_since_prev_event
+        description: "Days between this snapshot and the prior one for the same order. NULL on first snapshot (creation)."
 
   # US Shipment
   - name: fact_us_shipment_economics

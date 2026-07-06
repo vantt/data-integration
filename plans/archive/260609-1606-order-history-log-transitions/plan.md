@@ -1,10 +1,16 @@
 ---
 title: "Order Status Transition Pipeline from Sapo history_log"
 description: "Recover approximate order status transitions from history_log payload snapshots → lifecycle metrics mart + Metabase cards"
-status: pending
-# (updated 2026-06-24: untouched by 260623 audit work; stg_sapo_order_history and fact_order_status_transitions not yet built)
+status: done
+# (updated 2026-07-06: all 5 phases complete. P0-P2 done via commit 8ac17b70, 2026-06-10 —
+#  models built under different names than originally planned: int_order_snapshots_ranked
+#  (not stg_sapo_order_history), fact_order_transitions (not fact_order_status_transitions).
+#  P3 (coverage) + P4 (Metabase deploy) done 2026-07-06 in this session, plus 2 fixes discovered
+#  along the way: missing marts/schema.yml tests (added), and fact_order_transitions using
+#  materialized='table' instead of the project-default external/parquet (fixed) — that's why it
+#  was invisible to bootstrap_serving_views.py/Metabase despite existing since 2026-06-10.)
 priority: P2
-effort: 11h
+effort: 0h remaining — done
 branch: main
 tags: [dbt, sapo, history-log, order-lifecycle, metabase]
 created: 2026-06-09
@@ -39,11 +45,11 @@ Metabase: order lifecycle cards (avg time-to-complete / time-to-cancel / cancel 
 
 | # | Phase | File | Status | Effort |
 |---|-------|------|--------|--------|
-| 0 | Investigate raw + API log fields + coverage | [phase-00](phase-00-investigate.md) | pending | 2h |
-| 1 | dbt staging `stg_sapo_order_history` | [phase-01](phase-01-staging.md) | pending | 2h |
-| 2 | dbt mart `fact_order_status_transitions` | [phase-02](phase-02-mart-transitions.md) | pending | 3h |
-| 3 | Coverage & backfill analysis | [phase-03](phase-03-coverage-backfill.md) | pending | 2h |
-| 4 | Metabase lifecycle cards | [phase-04](phase-04-metabase.md) | pending | 2h |
+| 0 | Investigate raw + API log fields + coverage | [phase-00](phase-00-investigate.md) | done | 2h |
+| 1 | dbt staging `stg_sapo_order_history` → built as `int_order_snapshots_ranked` | [phase-01](phase-01-staging.md) | done (renamed) | 2h |
+| 2 | dbt mart `fact_order_status_transitions` → built as `fact_order_transitions` | [phase-02](phase-02-mart-transitions.md) | done (renamed) | 3h |
+| 3 | Coverage & backfill analysis | [phase-03](phase-03-coverage-backfill.md) | done — 99.0% coverage, no backfill needed | 2h |
+| 4 | Metabase lifecycle cards | [phase-04](phase-04-metabase.md) | done — dashboard ID 146 deployed, 4 cards live | 2h |
 
 ## Dependencies
 - P0 blocks P1 (schema confirms parse fields) and P3 (coverage method).

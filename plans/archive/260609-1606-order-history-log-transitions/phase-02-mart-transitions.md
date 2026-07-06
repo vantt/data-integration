@@ -1,6 +1,28 @@
 # Phase 2 — dbt Mart `fact_order_status_transitions`
 
-**Priority:** P1 (blocks P4) · **Status:** pending · **Effort:** 3h · **Blocked by:** P1
+**Priority:** P1 (blocks P4) · **Status:** done (2026-06-10, commit 8ac17b70) · **Effort:** 3h · **Blocked by:** P1
+
+**Deviation from plan:** built as `transformation/models/marts/sales/fact_order_transitions.sql`
+(not `fact_order_status_transitions`). Column naming differs: `transition_type` (created/cancelled/
+completed/shipped/payment_received/updated) replaces `is_initial_observation`+`is_terminal`;
+`days_since_prev_event` replaces `dwell_seconds` (days not seconds). No surrogate key column.
+
+**Gaps found + fixed 2026-07-06:**
+1. `marts/schema.yml` had only a bare `description:` for this model, no `columns:`/`tests:` block —
+   added `unique_combination_of_columns(order_id, snapshot_seq)`, `not_null` on order_id/snapshot_seq/
+   transition_type, `accepted_values` on transition_type. All 5 tests pass.
+2. **Root cause of the P4 blocker**: the model's `config()` explicitly set `materialized='table'`,
+   overriding the `marts:` block's project-wide default (`+materialized: external`,
+   `dbt_project.yml`) that every other mart inherits. This meant it was a plain DuckDB table in
+   the dbt dev warehouse only — never exported to `export/marts/rolling/`, so
+   `bootstrap_serving_views.py` (which scans that folder) never saw it and Metabase never got a
+   view for it. Fixed: config now matches `fact_orders.sql`'s pattern
+   (`options={'format':'parquet'}, location="{{ get_rolling_location() }}"`, no materialized
+   override). Re-ran `dbt run` — confirmed parquet now lands in `rolling/fact_order_transitions/`.
+
+Serving views rebuilt (Metabase stopped → `bootstrap_serving_views.py` → Metabase restarted) —
+`fact_order_transitions` now has both `main.fact_order_transitions` and
+`main_marts.fact_order_transitions` views. P4 unblocked.
 
 ## Context links
 - Input: `stg_sapo_order_history` (phase-01)

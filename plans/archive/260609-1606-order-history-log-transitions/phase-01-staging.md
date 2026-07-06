@@ -1,6 +1,13 @@
 # Phase 1 — dbt Staging `stg_sapo_order_history`
 
-**Priority:** P1 (blocks P2) · **Status:** pending · **Effort:** 2h · **Blocked by:** P0
+**Priority:** P1 (blocks P2) · **Status:** done (2026-06-10, commit 8ac17b70) · **Effort:** 2h · **Blocked by:** P0
+
+**Deviation from plan:** built as `transformation/models/intermediate/sapo/int_order_snapshots_ranked.sql`
+(intermediate view, not `staging/stg_sapo_order_history.sql`). Dedup key used
+`entity_id + sync_metadata.original_event_id` (Sapo log id) instead of `entity_id + event_timestamp
++ payload_hash` — simpler, same effect. Also folds in the `snapshot_seq` + `LAG(...)` ranking that
+phase-02 speced, so P1+P2 boundary shifted: this model now owns dedup AND ranking; `fact_order_transitions.sql`
+owns only transition-type classification.
 
 ## Context links
 - Pattern to mirror: `transformation/models/staging/src_sapo_orders_v2.sql` (dedup + JSON extract)
