@@ -173,15 +173,20 @@ services:
     mem_limit: 2g
     cpus: 1
     ports:
-      - "3007:8090"
+      # Bound to localhost only — the Cloudflare Tunnel (cloudflared Windows service)
+      # connects via http://127.0.0.1:3007 on the same host. No LAN/external exposure
+      # needed; a wide bind here would let anyone on the LAN skip CF Access entirely.
+      - "127.0.0.1:3007:8090"
     environment:
       - CRM_DATA_DIR=/data
       - CRM_OLAP_PATH=/app/var/data_lake/serving/olap.duckdb
       - CRM_CACHE_DB=/data/cache.db
       - CRM_PORT=8090
       # Shared secret for POST /admin/refresh (X-Refresh-Token header). Dagster
-      # uses this to trigger reverse-ETL on demand. MUST be set in .env.docker — no default.
-      - CRM_REFRESH_TOKEN=${CRM_REFRESH_TOKEN:?CRM_REFRESH_TOKEN must be set in .env.docker}
+      # uses this to trigger reverse-ETL on demand. MUST be set in root .env — this is
+      # compose ${VAR} substitution, NOT env_file (that's .env.docker, a different var
+      # of the same name kept in sync for the Dagster side that sends the header).
+      - CRM_REFRESH_TOKEN=${CRM_REFRESH_TOKEN:?CRM_REFRESH_TOKEN must be set in root .env}
       # Shared secret for /api/* mutation routes (X-CRM-Token header). Enforced when set.
       - CRM_API_TOKEN=${CRM_API_TOKEN:?CRM_API_TOKEN must be set in root .env}
       - TZ=Asia/Ho_Chi_Minh
