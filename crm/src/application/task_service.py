@@ -30,6 +30,30 @@ if TYPE_CHECKING:
 
 log = logging.getLogger(__name__)
 
+# Short VN labels for action_type — small local duplicate of
+# adapters/inbound/web/badge_catalog.py's _ACTION_TYPE_SHORT_LABEL. Not imported
+# from there: task_service.py is application layer and must not depend on the
+# web adapter (see commit 9906994f, clean-arch violation fixes).
+_ACTION_TYPE_SHORT_LABEL: dict[str, str] = {
+    "call_now":         "Gọi ngay",
+    "reorder_overdue":  "Đứt liệu trình",
+    "reorder_nudge":    "Nhắc tái đặt",
+    "reorder_preempt":  "Đặt trước",
+    "progress_check":   "Hỏi tiến độ",
+    "usage_followup":   "Hỗ trợ trải nghiệm",
+    "win_back":         "Tái kích hoạt",
+    "second_order":     "Đơn hàng 2",
+    "high_cancel_risk": "Rủi ro huỷ",
+    "upsell":           "Upsell",
+    "cross_sell":       "Cross-sell",
+    "collect_feedback": "Thu thập phản hồi",
+}
+
+
+def _action_type_short_label(action_type: Optional[str]) -> str:
+    """Short VN label for an action_type code; falls back to the raw code for unknowns."""
+    return _ACTION_TYPE_SHORT_LABEL.get((action_type or "").strip().lower(), action_type or "")
+
 
 class TaskService:
     """Handles task creation, assignment, status transitions,
@@ -46,6 +70,22 @@ class TaskService:
         self._cache_repo = cache_repo
         self._db = db
         self._party_repo = party_repo
+
+    def _customer_fallback_label(self, action) -> str:
+        """Customer label for task titles when rationale_vi is empty.
+
+        Never falls back to action.customer_key (an internal MD5 surrogate key) —
+        uses customer_name, then phone (via party_repo), then a neutral placeholder.
+        """
+        name = (getattr(action, "customer_name", "") or "").strip()
+        if name:
+            return name
+        party_id = getattr(action, "party_id", None)
+        if party_id and self._party_repo is not None:
+            party = self._party_repo.get_by_id(party_id)
+            if party and party.primary_phone:
+                return party.primary_phone
+        return "(chưa xác định)"
 
     # ------------------------------------------------------------------
     # Manual CRUD
@@ -302,8 +342,8 @@ class TaskService:
             return existing, False
 
         rationale = (getattr(action, "rationale_vi", None) or "").strip()
-        label = rationale[:80] if rationale else getattr(action, "customer_key", action_id)
-        title = f"[{action.action_type}] {label}"
+        label = rationale[:80] if rationale else self._customer_fallback_label(action)
+        title = f"[{_action_type_short_label(action.action_type)}] {label}"
 
         action_party_id = getattr(action, "party_id", None)
         action_type = getattr(action, "action_type", None)
@@ -400,8 +440,8 @@ class TaskService:
         if rationale:
             label = rationale[:80]
         else:
-            label = action.customer_key
-        title = f"[{action.action_type}] {label}"
+            label = self._customer_fallback_label(action)
+        title = f"[{_action_type_short_label(action.action_type)}] {label}"
 
         kind, _ = derive_task_kind(
             source=TASK_SOURCE_ACTION_QUEUE,

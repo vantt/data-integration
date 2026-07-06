@@ -51,6 +51,15 @@ def _setup_cache_tables(cache_conn: sqlite3.Connection) -> None:
             customer_key  TEXT PRIMARY KEY,
             customer_id   INTEGER
         );
+
+        -- list_all_action_queue() LEFT JOINs wh_customer_tier (strategic_tier/value_group
+        -- filter columns, added 68a6a028) — must exist or the query 500s and falls back to [].
+        CREATE TABLE IF NOT EXISTS wh_customer_tier (
+            customer_key    TEXT PRIMARY KEY,
+            customer_id     INTEGER,
+            strategic_tier  TEXT,
+            value_group     TEXT
+        );
     """)
     cache_conn.commit()
 

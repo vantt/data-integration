@@ -39,6 +39,11 @@ class TaskGenerator(Protocol):
     def generate_tasks_from_action_queue(self) -> int: ...
 
 
+class DismissalReader(Protocol):
+    """AI-11: read-only access to active B5 (party_id, action_type) dismissals."""
+    def list_active_dismissals(self) -> list: ...
+
+
 # ── Helpers ───────────────────────────────────────────────────────────────────
 
 def _group_by_status(tasks: list[Task]) -> dict[str, list[Task]]:
@@ -70,6 +75,7 @@ def make_tasks_board_router(
     task_creator: TaskCreator,
     task_generator: Optional[TaskGenerator] = None,
     user_querier: Optional[UserQuerier] = None,
+    dismissal_reader: Optional[DismissalReader] = None,
 ) -> APIRouter:
     """Return APIRouter wired with all Tasks Board routes."""
     router = APIRouter()
@@ -95,6 +101,23 @@ def make_tasks_board_router(
                 "task_status_css": _task_status_css,
                 "users": users,
             },
+        )
+
+    # ── AI-11: manager transparency view for B5 dismissals ───────────────
+    # Read-only list of active (party_id, action_type) dismissals — so a manager
+    # can see who dismissed what, when, and until when, countering "dismiss to
+    # avoid work" concerns without adding an approval step for the rep.
+
+    @router.get("/tasks/dismissed", response_class=HTMLResponse)
+    async def handle_dismissed_actions(request: Request) -> Response:
+        try:
+            dismissals = dismissal_reader.list_active_dismissals() if dismissal_reader else []
+        except Exception as exc:
+            log.error("dismissed actions: list: %s", exc)
+            dismissals = []
+        return templates.TemplateResponse(
+            "dismissed_actions.html",
+            {"request": request, "dismissals": dismissals},
         )
 
     @router.get("/tasks/modal/create", response_class=HTMLResponse)

@@ -5,12 +5,13 @@ Used as Jinja2 globals/filters. All functions are pure.
 """
 from __future__ import annotations
 
-from .badge_catalog import bdg_lookup, bdg_mod_cls, bdg_full_cls, bdg_hint
+from .badge_catalog import bdg_lookup, bdg_mod_cls, bdg_full_cls, bdg_hint, bdg_label
 
 __all__ = [
     "action_type_badge_class", "task_status_css", "task_status_chip_class",
     "conv_status_bdg", "campaign_status_bdg", "target_status_bdg",
     "status_badge_class", "customer_label", "bdg_cls_filter", "bdg_tip_filter",
+    "bdg_label_filter",
     "order_status_tone", "payment_tone", "ship_tone", "verdict_tone", "verdict_word",
 ]
 
@@ -57,6 +58,11 @@ def bdg_cls_filter(key: str, domain: str) -> str:
 def bdg_tip_filter(key: str, domain: str) -> str:
     """Vietnamese tooltip text for a domain+key."""
     return bdg_hint(domain, key)
+
+
+def bdg_label_filter(key: str, domain: str) -> str:
+    """Short VN label for a domain+key — used as the primary badge TEXT."""
+    return bdg_label(domain, key)
 
 
 # Tone filters — return CSS modifier suffix ('good'|'warn'|'bad'|'accent'|'')

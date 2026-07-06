@@ -77,7 +77,7 @@ class TestContactOutcomeConstants:
 
 class TestOutcomeReasonConstants:
     def test_valid_reasons_count(self):
-        assert len(VALID_OUTCOME_REASONS) == 8
+        assert len(VALID_OUTCOME_REASONS) == 11
 
     def test_refused_in_required_set(self):
         assert "refused" in REASON_REQUIRED_OUTCOMES
@@ -87,7 +87,8 @@ class TestOutcomeReasonConstants:
 
     def test_known_reasons_present(self):
         for r in ("budget", "timing", "product_fit", "competitor",
-                  "stock", "trust", "no_need", "other"):
+                  "stock", "trust", "no_need", "other",
+                  "still_stocked", "wait_promo", "irritation"):
             assert r in VALID_OUTCOME_REASONS
 
     def test_unknown_reason_not_in_list(self):

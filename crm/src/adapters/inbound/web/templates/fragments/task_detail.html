@@ -17,8 +17,10 @@
 {% set _kind_label = {'contact': 'Liên hệ', 'internal': 'Nội bộ', 'generic': 'Chung'} %}
 {% set _status_label = {'open': 'Đang mở', 'doing': 'Đang làm', 'done': 'Hoàn thành', 'cancelled': 'Đã huỷ'} %}
 {% set _outcome_label = {
-  'answered': 'Đã nghe', 'no_answer': 'Không bắt máy', 'callback': 'Hẹn gọi lại', 'refused': 'Từ chối',
-  'replied': 'Đã phản hồi', 'pending': 'Chưa phản hồi', 'no_reply': 'Không phản hồi',
+  'answered': 'Đã nghe', 'no_answer': 'Không bắt máy', 'busy': 'Máy bận', 'wrong_number': 'Sai số',
+  'callback': 'Hẹn gọi lại', 'refused': 'Từ chối',
+  'replied': 'Đã phản hồi', 'pending': 'Chưa phản hồi', 'pending_reply': 'Chờ phản hồi',
+  'no_reply': 'Không phản hồi', 'blocked': 'Đã chặn',
   'met': 'Gặp được', 'not_met': 'Không gặp được', 'async_sent': 'Đã gửi',
 } %}
 {% set _channel_label = {
@@ -446,7 +448,8 @@
             {% if entry.channel %}
             <div class="s15-tl-text">{{ _channel_label.get(entry.channel_type, 'Liên hệ') }}: {{ entry.channel }}</div>
             {% endif %}
-            <div class="s15-tl-text">Kết quả: {{ _outcome_label.get(entry.outcome, entry.outcome) if entry.outcome else '—' }}</div>
+            {% set _entry_outcome = entry.outcome or entry.contact_outcome %}
+            <div class="s15-tl-text">Kết quả: {{ _outcome_label.get(_entry_outcome, _entry_outcome) if _entry_outcome else '—' }}</div>
             {% if entry.body %}
             <div class="s15-tl-note">{{ entry.body }}</div>
             {% endif %}

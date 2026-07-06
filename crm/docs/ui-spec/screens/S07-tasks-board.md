@@ -6,7 +6,7 @@ platforms: [desktop]
 hosts: []
 status: active
 design_ref: ""
-rules: [R8, R11]
+rules: [R8, R11, R15]
 regions: [topbar, sidebar, board]
 ---
 
@@ -137,3 +137,4 @@ interactions:
 ## Implementation Notes (Phase 06)
 
 - **Item 5 — AUTO badge for `action_queue_claim` (Phase 06)**: `tasks_board.html` and `c360_tasks_panel.html` now show `AUTO` badge for both `source='action_queue'` and `source='action_queue_claim'`. `action_queue_claim` tooltip reads "Nhận từ hàng đợi (claim)".
+- **AI-11 — Dismissed actions manager view (R15)**: read-only `GET /tasks/dismissed` (`dismissed_actions.html`), linked from the Tasks Board pagehead. Lists active `crm_action_dismissal` rows (party, action_type, dismissed_by, dismissed_at, dismissed_until). Not part of the formal interaction contract above — plain navigational link, no mutation.

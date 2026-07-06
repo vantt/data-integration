@@ -288,13 +288,24 @@
         {# Hidden input avoids inline JSON escaping issues with reason_if_not_recommended text #}
         <input type="hidden" id="s14-r14-reason-val" name="reason_shown"
                value="{{ ap.reason_if_not_recommended if ap and ap.reason_if_not_recommended else '' }}">
+        {# AI-3: script_id per D4 registry — no unique per-generation id exists (file
+           keyed by customer_id), but ApproachScript.template_version identifies WHICH
+           generation template/logic produced the rationale — exactly what D3.4's
+           "override rate by rationale type" analysis needs to group by. Falls back to
+           '' for legacy hand-pasted scripts with no meta block. #}
+        <input type="hidden" id="s14-r14-script-id-val" name="script_id"
+               value="{{ meta_rec.template_version if meta_rec and meta_rec.template_version else '' }}">
         {# A-S14-027: R14 ack — 204 response, unlock is pure JS (Invariant §9) #}
         <button class="btn btn--danger btn--sm" id="s14-r14-ack-btn"
                 hx-post="/customers/{{ party_id }}/r14-ack"
-                hx-include="#s14-r14-reason-val"
-                hx-on::after-request="s14UnlockR14()">
+                hx-include="#s14-r14-reason-val, #s14-r14-script-id-val"
+                hx-on::after-request="if(event.detail.successful){s14UnlockR14();}else{s14R14AckError();}">
           Tôi đã xác minh — vẫn tiếp tục
         </button>
+        {# AI-4: inline error shown only on failed audit POST — banner stays locked #}
+        <span class="s14-r14-banner__err" id="s14-r14-ack-err" style="display:none;color:var(--coral-700,#b91c1c);font-size:var(--fs-caption,0.75rem);">
+          Lỗi ghi nhận xác minh — thử lại.
+        </span>
       </div>
     </div>
   </div>
@@ -808,6 +819,11 @@ window.s14UnlockR14 = function () {
   var content = document.getElementById('s14-content');
   if (banner)  banner.style.display = 'none';
   if (content) content.classList.remove('s14-locked');
+};
+// AI-4: audit POST failed — keep banner locked, surface a minimal inline error.
+window.s14R14AckError = function () {
+  var err = document.getElementById('s14-r14-ack-err');
+  if (err) err.style.display = '';
 };
 </script>
 {% endif %}

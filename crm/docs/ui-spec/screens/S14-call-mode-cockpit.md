@@ -162,7 +162,8 @@ elements:
 
 ## Implementation Notes (Phase 04)
 
-- **A2 — Queue counter wired**: `GET /customers/{id}/call` now accepts `queue_ids` (comma-joined party_id list, max 50) and `queue_pos` (int, default 0). Handler auto-corrects `queue_pos` by locating `party_id` in `queue_list.index()`. Template shows `#n/N` counter in topbar when `queue_total > 0` and "Khách kế →" links to next party with forwarded `queue_ids`. Queue nav is suppressed when `pinned_task_id` is set (S15 "Vào phiên gọi" returns to task, not next customer).
+- **A2 — Queue counter wired**: `GET /customers/{id}/call` now accepts `queue_ids` (comma-joined party_id list, max 50) and `queue_pos` (int, default 0). Handler auto-corrects `queue_pos` by locating `party_id` in `queue_list.index()`. Template shows `#n/N` counter in topbar when `queue_total > 0` and "Khách kế →" links to next party with forwarded `queue_ids`. Queue nav is suppressed when `pinned_task_id` is set (S15 "Vào phiên gọi" returns to task, not next customer). When `queue_total == 0` (no queue context at all) the whole "Khách kế" control — including the `/customers` fallback link — does not render; only end-of-a-real-queue (`queue_total > 0` but `queue_next_party_id` is `None`) still shows the fallback link, since that case legitimately means "queue finished, browse customers".
+- **A2 scope — full-page cockpit only**: the `#n/N` queue counter and "Khách kế →" control live in `call_cockpit.html` (topbar chrome), which only renders on the S01 → full-page cockpit entry path (`GET /customers/{id}/call`). The embedded S03 "Gọi" tab renders `fragments/c360_call_cockpit_panel.html` directly (no topbar, no queue context — a C360 tab visit is not a queue session). This is by design, not a gap.
 
 ## Implementation Notes (Phase 06)
 

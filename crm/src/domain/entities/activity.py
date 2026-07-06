@@ -60,6 +60,14 @@ CONTACT_OUTCOMES_BY_CHANNEL_TYPE: dict[str, list[str]] = {
 VALID_OUTCOME_REASONS = [
     "budget", "timing", "product_fit", "competitor",
     "stock", "trust", "no_need", "other",
+    # Cosmetics-retail specifics — distinct signals with distinct follow-up actions:
+    # still_stocked: khách còn hàng chưa dùng hết → điều chỉnh chu kỳ gợi ý mua lại,
+    #   khác 'timing' (bận/để sau, không nói gì về lượng hàng còn).
+    # wait_promo: khách chờ khuyến mãi → trigger liên hệ lại khi có promo,
+    #   khác 'budget' (không đủ ngân sách ở mọi mức giá).
+    # irritation: kích ứng/không hợp da → tín hiệu chất lượng cần escalate,
+    #   không upsell cùng dòng sản phẩm; khác 'product_fit' (không đúng nhu cầu).
+    "still_stocked", "wait_promo", "irritation",
 ]
 # Server enforces reason when contact_outcome is in this set
 REASON_REQUIRED_OUTCOMES: set[str] = {"refused"}

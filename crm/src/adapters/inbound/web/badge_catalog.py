@@ -134,9 +134,42 @@ _CATALOG: dict[str, dict[str, BadgeDef]] = {
 }
 
 
+# Short VN label for the PRIMARY badge text (distinct from `hint`, the hover tooltip).
+# Only action_type needs this today — worklist rows showed the raw mart code
+# ("CALL_NOW") as the badge text, which the hint alone doesn't fix since hint is
+# tooltip-only. Kept as a parallel dict (not a 3rd BadgeDef field) so the other
+# domains don't need a label they don't use.
+_ACTION_TYPE_SHORT_LABEL: dict[str, str] = {
+    "call_now":         "Gọi ngay",
+    "reorder_overdue":  "Đứt liệu trình",
+    "reorder_nudge":    "Nhắc tái đặt",
+    "reorder_preempt":  "Đặt trước",
+    "progress_check":   "Hỏi tiến độ",
+    "usage_followup":   "Hỗ trợ trải nghiệm",
+    "win_back":         "Tái kích hoạt",
+    "second_order":     "Đơn hàng 2",
+    "high_cancel_risk": "Rủi ro huỷ",
+    "upsell":           "Upsell",
+    "cross_sell":       "Cross-sell",
+    "collect_feedback": "Thu thập phản hồi",
+}
+
+
 def bdg_lookup(domain: str, key: str) -> BadgeDef:
     """Return BadgeDef for domain+key; falls back to neutral on miss."""
     return _CATALOG.get(domain, {}).get((key or "").strip().lower(), _NEUTRAL)
+
+
+def bdg_label(domain: str, key: str) -> str:
+    """Short VN label for badge TEXT (not the hover tooltip — see bdg_hint).
+
+    Only 'action_type' has short labels; other domains/unknown keys fall back to
+    the raw key so existing badge text (order_status, payment_status, ...) is
+    unaffected.
+    """
+    if domain == "action_type":
+        return _ACTION_TYPE_SHORT_LABEL.get((key or "").strip().lower(), key or "")
+    return key or ""
 
 
 def bdg_mod_cls(domain: str, key: str) -> str:

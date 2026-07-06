@@ -6,7 +6,7 @@ platforms: [desktop]
 hosts: []
 status: active
 design_ref: ""
-rules: [R2, R6, R8]
+rules: [R2, R6, R8, R15]
 regions: [topbar, sidebar, main, kpi_strip, filter_bar, task_list]
 ---
 
@@ -46,14 +46,14 @@ samples:
   topbar: "Worklist hôm nay  [Làm mới ↺]  [+ Tạo task]"
   kpi_strip: "[ Task mở: N ] [ Hành động AQ: N ] [ Giá trị: Ntr ] [ Khẩn: N ]"
   filter_bar: "Ưu tiên:[↕] Loại:[↕] Sản phẩm:[↕]  [💰 Giá trị cao] [✅ Ẩn đã liên hệ] [📋 Có kịch bản]"
-  task_list: "▼ 🔴 Quá hạn (3) · [P1] Nguyễn Văn A quá hạn 2 ngày · 🛍 Fine Japan · [Dời hạn][Dọn][📞 Gọi][Mở hồ sơ >]"
+  task_list: "▼ 🔴 Quá hạn (3) · [P1] Nguyễn Văn A quá hạn 2 ngày · 🛍 Fine Japan · [📅 Dời hạn][Hủy][📞 Gọi][Xem 360 >]"
 elements:
   "Làm mới ↺": A-S01-020
   "+ Tạo task": A-S01-004
   "✅ Ẩn đã liên hệ": A-S01-013
   "📋 Có kịch bản": A-S01-010
-  "Dời hạn": A-S01-019
-  "Dọn": A-S01-018
+  "📅 Dời hạn": A-S01-019
+  "Hủy": A-S01-018
   "📞 Gọi": A-S01-007
 ```
 
@@ -70,8 +70,10 @@ elements:
 
 ### Action rows (from `wh_action_queue`)
 
-- Action type badge (CALL_NOW, WIN_BACK, UPSELL, …)
-- Tên khách + số điện thoại key
+- Action type badge — short VN label as text (e.g. "Gọi ngay" for CALL_NOW; full mart
+  code stays in the hover tooltip only, via `bdg_label`/`bdg_tip` filters)
+- Tên khách; nếu thiếu → SĐT ưu tiên (nếu có) hoặc "(chưa xác định)" — KHÔNG BAO GIỜ
+  hiển thị `customer_key` (MD5 surrogate key nội bộ)
 - `rationale_vi` (lý do từ action_queue)
 - Product affinity tags: `top_affinity_product` + `last_purchased_product`
 - `contact_pref` note inline (pinned, note_type='contact_pref')
@@ -94,8 +96,11 @@ elements:
 - Due date
 - Overdue badge (quá hạn N ngày) — band 0 tasks only
 - [📞/💬 contact_btn → M08]
-- Overdue-only extra controls: [Dời hạn → M05] [Dọn → cancel + delete row]
-- [Mở hồ sơ >] → navigate S03
+- Overdue-only extra controls: [📅 Dời hạn → M05] [Hủy → cancel + delete row]
+  (📅 icon distinguishes the M05 reschedule button from the ⏰ snooze dropdown
+  when both appear on the same claimed-and-overdue row)
+- [Xem 360 >] → navigate S03 (renamed from "Mở hồ sơ" to match action rows —
+  both link to the same destination)
 
 ### Band structure
 
@@ -300,7 +305,7 @@ interactions:
 
 - **A1 claim-context badges (Phase 04)**: `action_queue_claim` task rows show 💰 `value_at_stake_vnd` (SUM across all actions) and 🛍 `top_affinity_product` (from highest-value action) when set. Values persisted at claim time (migration 0036) — no recalculation at render.
 - **A4 snooze dropdown (Phase 04)**: `action_queue_claim` task rows include a `⏰` snooze `<details>` dropdown with 1/3/7-day options. `PATCH /tasks/{id}/snooze?days=N` shifts `due_at` to today_ICT + N days, resets status to "open" when "doing". Returns 204.
-- **A2 call-mode queue (Phase 04)**: Action rows include "📞 Gọi chế độ" link pointing to `/customers/{pid}/call?queue_ids=<50-id list>`. `queue_party_ids` built from ranked action rows (before band slicing, capped at 50) and threaded through template context.
+- **A2 call-mode queue (Phase 04)**: Action rows include a "📞 Gọi" link (shortened from "📞 Gọi chế độ" in phase-09 R9; tooltip "Vào chế độ gọi với hàng đợi" unchanged) pointing to `/customers/{pid}/call?queue_ids=<50-id list>`. `queue_party_ids` built from ranked action rows (before band slicing, capped at 50) and threaded through template context.
 - **filter_assignee deferred**: `Task.assignee_user_id` exists in `crm_task` but no auth middleware surfaces `user_id` to the request lifecycle. "Của tôi" toggle is NOT rendered until auth context is wired. No spec action ID assigned.
 - **Filter bar is inline**: Filters HTMX GET `/worklist/fragment` directly (no C05 emit/listen round-trip). LSN06/LSN07 describe the conceptual contract with C05 and are kept for future compatibility.
 - **Last-contact data**: `WorklistQueryService.get_map_for_parties()` is always called (non-optional). Empty dict returned when `last_contact` repo not configured. All rows show the last-contact strip when data is available.

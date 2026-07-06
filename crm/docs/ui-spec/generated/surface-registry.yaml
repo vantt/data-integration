@@ -12,6 +12,7 @@ surfaces:
       - R2
       - R6
       - R8
+      - R15
     regions:
       - topbar
       - sidebar
@@ -125,6 +126,7 @@ surfaces:
     rules:
       - R8
       - R11
+      - R15
     regions:
       - topbar
       - sidebar

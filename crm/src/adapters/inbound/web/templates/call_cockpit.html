@@ -66,8 +66,12 @@
     {% if queue_total and queue_total > 0 %}
     <span class="s14-queue-count" title="Vị trí trong hàng đợi gọi">#{{ queue_pos + 1 }}/{{ queue_total }}</span>
     {% endif %}
-    {# "Khách kế →" available when queue has a next customer and NOT pinned to a specific task #}
-    {% if not pinned_task_id %}
+    {# "Khách kế →" only when there IS queue context (queue_total > 0) and NOT pinned to a specific task.
+       queue_total == 0 means no queue at all — the control (and its fallback) must not render,
+       since a "Khách kế" link to /customers would be misleading with no queue to speak of.
+       queue_total > 0 but queue_next_party_id is None means end of a real queue — the fallback
+       link to /customers is still meaningful there ("browse customers, queue is done"). #}
+    {% if not pinned_task_id and queue_total and queue_total > 0 %}
       {% if queue_next_party_id %}
       <a class="s14-nextlink btn btn--ghost btn--sm"
          href="/customers/{{ queue_next_party_id }}/call?queue_ids={{ queue_ids }}&queue_pos={{ queue_pos + 1 }}"
@@ -81,7 +85,7 @@
       </a>
       {% else %}
       <a class="s14-nextlink btn btn--ghost btn--sm" href="/customers"
-         title="Khách tiếp theo trong hàng đợi hôm nay">
+         title="Hết hàng đợi hôm nay — quay lại danh sách khách hàng">
         Khách kế
         <svg class="ico" width="13" height="13" viewBox="0 0 16 16" fill="none"
              stroke="currentColor" stroke-width="1.3" stroke-linecap="round"

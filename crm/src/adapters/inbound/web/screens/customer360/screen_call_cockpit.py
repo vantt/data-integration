@@ -94,6 +94,7 @@ def register_call_cockpit_route(
                         "recommended": scr.recommended,
                         "confidence": scr.confidence,
                         "refreshed_at": scr.refreshed_at,
+                        "template_version": scr.template_version,
                     }
             except Exception as exc:
                 log.warning("call_cockpit: approach script %s: %s", party_id, exc)

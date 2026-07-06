@@ -1,6 +1,6 @@
 # Plan — CRM UX & Data-Loop Improvements
 
-**Status:** DONE (all 6 phases implemented 2026-07-05; phase 07 follow-up added 2026-07-05)
+**Status:** DONE — phases 01–09 tất cả DONE (phase 08+09 triển khai 2026-07-06 sau đánh giá lại). Còn treo: AI-8 (theo dõi nightly 2 đêm), AI-9 (consumer đầu tiên — cần plan riêng), AI-12 (pilot outcome_reason đến 2026-07-20) — không phải lỗi, chỉ là việc time-gated/ngoài scope kỹ thuật ngay lúc này. Full CRM suite: 785 passed, 0 failed (1 test loại trừ thuộc workstream khác).
 **Created:** 2026-07-05
 **Design source:** `crm/docs/ui-spec/notes/ux-action-queue-task-cockpit-data-loop-design.md` (decisions D1–D4, issues A1–A4, B1–B5, C-group)
 **Goal:** Đóng vòng lặp dữ liệu CRM → warehouse và nâng UX cho NV CSKH: đúng việc, đúng lúc, giữ ngữ cảnh, capture dữ liệu tối đa với friction thấp nhất.
@@ -16,6 +16,8 @@
 | 05 | `phase-05-r14-warn-with-ack.md` | D3: banner cảnh báo + nút "Tôi đã xác minh" + audit `r14_ack` vào `custom_fields` + metric override | 04 (cùng đụng template S14) | P1 |
 | 06 | `phase-06-capture-ux-quick-wins.md` | P2 UI: custom fields vào Collect cockpit, nút "★ Đúc kết" insight trong M08, B1 band Treo lâu, B2 badge snooze thức dậy, B4 badge nguồn task, toast Collect, tooltip back | 03, 05 (đụng M08 + S14 sau cùng) | P2 |
 | 07 | `phase-07-rail-secondary-bulk-resolve.md` | Follow-up phase-02: gom `rail_secondary` items (tick "đã nói") vào bulk-resolve set cùng `rail_primary` | 02, 06 (đụng cùng cockpit template) | P2 |
+| 08 | `phase-08-reassessment-fixes.md` | ✅ DONE 06/07 — async_sent→enum, 8 test đỏ fixed, script_id r14-ack (dùng template_version), unlock-on-fail, spec stale fixed, tests 04/05 thêm, B5 dismiss TTL 30d + manager view S07. Treo: AI-8/9/12 (time-gated/plan riêng) | 01–07 | P0–P2 |
+| 09 | `phase-09-worklist-label-clarity.md` | ✅ DONE 06/07 — badge action_type dùng label ngắn VN, bỏ hiển thị customer_key hash (fallback SĐT/"(chưa xác định)"), Dọn→Hủy, icon 📅 phân biệt Dời hạn khỏi ⏰, Mở hồ sơ→Xem 360, Gọi chế độ→Gọi | — | P1 |
 
 **Execution order:** 01 ∥ 02 → 03 ∥ 04 → 05 → 06 → 07.
 
@@ -43,6 +45,14 @@
 - **Follow-up backlog:** RESOLVED bằng phase-07 (2026-07-05) — outcome bar S14 giờ gom `rail_secondary` items đã tick "đã nói" vào bulk-resolve cùng `rail_primary`.
 - **Chốt với user (2026-07-05):** note `visibility='private'` loại hẳn khỏi export (không mask body). Đã confirm, khớp default implementation.
 
+## Review notes (2026-07-06 — đánh giá lại)
+
+- Pipeline writeback từng fail vĩnh viễn dù plan DONE (placeholder schemas thiếu 5 bảng, fix `a40974e8` sáng 06/07) — bài học: DONE cần bằng chứng pipeline chạy, không chỉ code merge.
+- AC#3 chưa trọn: async-resolve còn ghi free-text `outcome='async_sent'`. AC#5: r14-ack thiếu `script_id`. AC#6: M08 spec stale 1 đoạn. Test suite 9 failed + 1 error. → phase-08.
+- Vòng lặp dữ liệu khép đến staging nhưng CHƯA có consumer — mắt xích "dữ liệu nhập → gợi ý tốt hơn" chưa quay (AI-9).
+
 ## Reports
 
 `plans/260705-1146-crm-ux-data-loop-improvements/reports/`
+
+- `plan-goal-reassessment-260706-1611-crm-ux-data-loop-report.md` — đánh giá lại toàn diện 2026-07-06 (nguồn phase-08)

@@ -31,7 +31,11 @@ def _task(priority=0, title="T", description=""):
 
 def test_parse_filters_defaults():
     f = parse_filters({})
-    assert f == {"assignee": "me", "priority": "all", "types": [], "q": "", "min_value": 0, "product": "", "hide_contacted": False, "has_script": False}
+    # strategic_tier/value_group/adv added by the two-row filter bar (68a6a028) —
+    # keep this assertion in sync with parse_filters' actual return shape.
+    assert f == {"assignee": "me", "priority": "all", "types": [], "q": "", "min_value": 0,
+                 "product": "", "hide_contacted": False, "has_script": False,
+                 "strategic_tier": "", "value_group": "", "adv": ""}
 
 
 def test_parse_filters_type_comma_list_and_trim():

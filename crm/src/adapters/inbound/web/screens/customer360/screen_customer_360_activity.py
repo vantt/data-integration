@@ -344,7 +344,12 @@ def register_activity_routes(
             "direction": "out",
             "channel": ch or None,
             "channel_type": ch or None,
-            "outcome": "async_sent",
+            # D2/AI-1: write structured contact_outcome instead of legacy free-text
+            # outcome='async_sent'. channel is zalo/email → messaging group, which
+            # includes 'pending_reply' (see CONTACT_OUTCOMES_BY_CHANNEL_TYPE).
+            # Old rows with outcome='async_sent' are still read/rendered (read-path
+            # unchanged) — no backfill.
+            "contact_outcome": "pending_reply",
             "body": note.strip() or None,
             "staff_user_id": actor_id,
             "task_id": task_id.strip() or None,
@@ -376,6 +381,7 @@ def register_activity_routes(
         """
         form = await request.form()
         reason_shown = form.get("reason_shown", "")
+        script_id = form.get("script_id", "")
         current_user = getattr(request.state, "current_user", None)
         actor_id: Optional[str] = current_user.user_id if current_user else None
 
@@ -390,6 +396,7 @@ def register_activity_routes(
                     "staff_user_id": actor_id,
                     "custom_fields": {
                         "r14_ack": True,
+                        "script_id": script_id[:200] if script_id else "",
                         "reason_shown": reason_shown[:200] if reason_shown else "",
                     },
                 }

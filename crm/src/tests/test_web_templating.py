@@ -14,6 +14,7 @@ needed) wired with the same filters/globals as composition.py.
 from __future__ import annotations
 
 import pathlib
+from types import SimpleNamespace
 
 import jinja2
 import pytest
@@ -24,7 +25,7 @@ from adapters.inbound.web.format_helpers import (
     format_ict, truncate_str, join_nonempty,
     fmt_pct, fmt_vnd_signed, order_status_tone, payment_tone, ship_tone,
     verdict_tone, verdict_word, fmt_date_key, days_since, recency_days_label,
-    bdg_cls_filter, bdg_tip_filter,
+    bdg_cls_filter, bdg_tip_filter, bdg_label_filter,
 )
 from adapters.inbound.web.badge_catalog import bdg_lookup
 from application.worklist_ranking import WorklistRow, rank_worklist
@@ -72,6 +73,7 @@ def _make_env() -> jinja2.Environment:
     env.filters["recency_days_label"] = recency_days_label
     env.filters["bdg_cls"] = bdg_cls_filter
     env.filters["bdg_tip"] = bdg_tip_filter
+    env.filters["bdg_label"] = bdg_label_filter
     # globals
     env.globals["bdg_lookup"] = bdg_lookup
     return env
@@ -160,6 +162,11 @@ def _base_ctx(**overrides) -> dict:
         "available_types": [],
         "active_filter_count": 0,
         "filters": {"assignee": "me", "priority": "all", "types": [], "q": "", "min_value": 0},
+        # Starlette's Request.url is a URL object with a `.query` attr; production
+        # rendering always has this via fastapi.templating.Jinja2Templates.TemplateResponse
+        # (which injects `request` into context). The overflow "Xem thêm" link
+        # (_wl_bands.html) reads request.url.query, so tests need a stub too.
+        "request": SimpleNamespace(url=SimpleNamespace(query="")),
     }
     ctx.update(overrides)
     return ctx
@@ -320,8 +327,12 @@ class TestWorlistFilterBar:
         assert "Khẩn" in html
 
     def test_action_type_chips_rendered_for_available_types(self):
+        # The "Loại" (type) select lives in row 2, which only renders when
+        # adv=1 (WlfTwoRow redesign, 68a6a028) — must open it to see the options.
         html = _render_fragment(self._ctx(
             available_types=["CALL_NOW", "WIN_BACK", "REORDER_PREEMPT"],
+            filters={"assignee": "me", "priority": "all", "types": [], "q": "",
+                     "min_value": 0, "adv": "1"},
         ))
         # Filter bar renders a <select> with <option value="<action_type>"> per type.
         assert 'value="CALL_NOW"' in html
@@ -337,8 +348,10 @@ class TestWorlistFilterBar:
         assert "Xóa filter" not in html
 
     def test_active_filter_badge_and_clear_all_shown_when_filters_active(self):
+        # "badge--primary" was the pre-WlfTwoRow badge class (removed in 68a6a028);
+        # the current design's sole active-filter signal is the "Xóa filter" button,
+        # gated by active_filter_count > 0.
         html = _render_fragment(self._ctx(active_filter_count=2))
-        assert "badge--primary" in html
         assert "Xóa filter" in html
 
     def test_all_new_action_types_have_chips(self):
@@ -346,7 +359,11 @@ class TestWorlistFilterBar:
         types = ["CALL_NOW", "REORDER_NUDGE", "REORDER_PREEMPT",
                  "WIN_BACK", "SECOND_ORDER", "HIGH_CANCEL_RISK",
                  "UPSELL", "CROSS_SELL", "COLLECT_FEEDBACK"]
-        html = _render_fragment(self._ctx(available_types=types))
+        html = _render_fragment(self._ctx(
+            available_types=types,
+            filters={"assignee": "me", "priority": "all", "types": [], "q": "",
+                     "min_value": 0, "adv": "1"},
+        ))
         for t in types:
             assert f'value="{t}"' in html, f"select option for {t!r} not found"
 
@@ -377,7 +394,10 @@ class TestActionTypeBadges:
         html = self._render_action_row(action_type)
         # Template renders: class="{{ a.action_type | bdg_cls('action_type') }}"
         # bdg_full_cls returns 'bdg bdg--<mod>' for known types; 'bdg' (neutral) for unknowns
-        assert f'>{action_type}<' in html, f"action_type {action_type!r} label not in output"
+        # Badge TEXT is now the short VN label (phase-09 R3), not the raw mart code.
+        from adapters.inbound.web.badge_catalog import bdg_label
+        short_label = bdg_label("action_type", action_type)
+        assert f'>{short_label}<' in html, f"action_type {action_type!r} short label not in output"
         # Assert the badge span contains a modifier class (bdg--warn or bdg--bad)
         # Grab the span that carries the action_type value and check it has a modifier
         from adapters.inbound.web.badge_catalog import bdg_lookup
@@ -395,6 +415,54 @@ class TestActionTypeBadges:
         assert expected_class in html, (
             f"Expected class {expected_class!r} for {action_type!r} not found in rendered HTML"
         )
+
+
+# ── Phase-09: worklist label clarity (R1/R3/R4) ─────────────────────────────
+
+class TestActionRowLabelClarity:
+    """Action rows show short VN badge labels + never leak the raw customer_key hash."""
+
+    _HASH_KEY = "d8835eb2200423e5d3295fc7257379f3"  # 32-char MD5-style surrogate key
+
+    def _render_action_row(self, **action_overrides) -> str:
+        from datetime import date
+        a = _action("a-clarity", **action_overrides)
+        result = rank_worklist([a], [], today=date(2026, 6, 23))
+        ctx = _base_ctx(**result, party_extras={})
+        return _render_fragment(ctx)
+
+    @pytest.mark.parametrize("action_type,expected_label", [
+        ("CALL_NOW", "Gọi ngay"),
+        ("REORDER_NUDGE", "Nhắc tái đặt"),
+    ])
+    def test_badge_shows_short_label_not_raw_code(self, action_type, expected_label):
+        html = self._render_action_row(action_type=action_type)
+        assert f'>{expected_label}<' in html
+        assert f'>{action_type}<' not in html
+
+    def test_no_customer_name_falls_back_to_placeholder_not_hash(self):
+        """customer_key must never leak into the rendered row when name/phone are absent."""
+        html = self._render_action_row(customer_name="", customer_key=self._HASH_KEY)
+        assert self._HASH_KEY not in html
+        assert "(chưa xác định)" in html
+
+    def test_no_customer_name_falls_back_to_phone_when_available(self):
+        from datetime import date
+        pref_id = SimpleNamespace(identity_type="phone", identity_value="0901234567")
+        a = _action("a-clarity-phone", customer_name="", customer_key=self._HASH_KEY,
+                    party_id="party-1")
+        result = rank_worklist([a], [], today=date(2026, 6, 23))
+        ctx = _base_ctx(**result, party_extras={
+            "party-1": {"preferred_identity": pref_id, "contact_pref_notes": []},
+        })
+        html = _render_fragment(ctx)
+        assert "0901234567" in html
+        assert self._HASH_KEY not in html
+
+    def test_customer_name_present_uses_name_not_phone_or_hash(self):
+        html = self._render_action_row(customer_name="Nguyễn Văn A", customer_key=self._HASH_KEY)
+        assert "Nguyễn Văn A" in html
+        assert self._HASH_KEY not in html
 
 
 # ── Band collapse/expand and overflow ("Xem thêm") ──────────────────────────

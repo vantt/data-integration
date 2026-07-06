@@ -198,8 +198,8 @@ Each unmapped chip is one of:
 | kpi_strip | ` Khẩn: N ` |
 | kpi_strip | ` Task mở: N ` |
 | sidebar | `≡` |
-| task_list | `Mở hồ sơ >` |
 | task_list | `P1` |
+| task_list | `Xem 360 >` |
 
 ### S02
 

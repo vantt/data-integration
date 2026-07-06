@@ -121,16 +121,21 @@ Field `contact_outcome` (DB column, replaces free-text `outcome` for new rows) u
 
 > **Pilot note:** enum set is under field review — values may be extended or relabelled after 2-week NV field trial (design §8.3). Do not lock mart mappings until review is complete.
 
-| Value | Label (VI) |
-|---|---|
-| `budget` | Giá/ngân sách |
-| `timing` | Chưa tới lúc |
-| `product_fit` | Không hợp nhu cầu |
-| `competitor` | Đã mua chỗ khác |
-| `stock` | Hết hàng |
-| `trust` | Nghi ngại |
-| `no_need` | Hết nhu cầu |
-| `other` | Khác |
+| Value | Label (VI) | Ghi chú |
+|---|---|---|
+| `budget` | Giá/ngân sách | |
+| `wait_promo` | Chờ khuyến mãi | Khác `budget`: đủ tiền, chờ giá tốt → trigger liên hệ lại khi có promo |
+| `timing` | Chưa tới lúc | Bận/để sau — không nói gì về lượng hàng còn |
+| `still_stocked` | Chưa dùng hết | Lý do #1 replenishment call → điều chỉnh chu kỳ gợi ý mua lại |
+| `product_fit` | Không hợp nhu cầu | |
+| `irritation` | Kích ứng/không hợp da | Tín hiệu chất lượng → escalate; không upsell cùng dòng |
+| `competitor` | Đã mua chỗ khác | |
+| `stock` | Hết hàng | Phía mình hết hàng/chờ hàng |
+| `trust` | Nghi ngại | |
+| `no_need` | Hết nhu cầu | |
+| `other` | Khác | |
+
+> 3 giá trị `still_stocked` / `wait_promo` / `irritation` pre-seed 2026-07-06 theo kinh nghiệm CSKH mỹ phẩm (giảm dồn vào `other` trong pilot). Pilot review ~2026-07-20 vẫn giữ.
 
 ### 2-step UI flow (log mode)
 
@@ -257,4 +262,4 @@ interactions:
 
 ## Implementation Notes (Phase 06)
 
-- **Item 2 — Promote insight (`★ Đúc kết`)**: collapsible `<details>` section appended in `mode=log` only. Fields: `insight_type` (select), `insight_body` (textarea), `insight_confidence` (low/medium/high radio pills), `promote_insight` hidden flag (0/1 toggled by `details.toggle` event). POST handler reads params and logs a warning + skips silently — `party_insights` not wired into `register_activity_routes`. Wiring deferred; no factory change required now.
+- **Item 2 — Promote insight (`★ Đúc kết`)**: collapsible `<details>` section appended in `mode=log` only. Fields: `insight_type` (select), `insight_body` (textarea), `insight_confidence` (low/medium/high radio pills), `promote_insight` hidden flag (0/1 toggled by `details.toggle` event). POST handler wires `party_insights` (`SQLitePartyRepository`, injected via `composition.py`) into `register_activity_routes`: when `promote_insight == "1"` and both `insight_type` and `insight_body` are non-empty, it calls `party_insights.add_insight(...)`, inserting a new row into `crm_party_insight` (party_id, insight_type, insight_body, insight_confidence, created_at). Wired as of commit `5dce0c37` — no longer a no-op. If `party_insights` were ever omitted from the factory call, the handler falls back to a warning log and silently skips (defensive, not the current runtime path).

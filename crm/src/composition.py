@@ -101,7 +101,7 @@ from adapters.inbound.web.format_helpers import (
     campaign_status_bdg, target_status_bdg, customer_label, status_badge_class,
     fmt_pct, fmt_vnd_signed, order_status_tone, payment_tone, ship_tone,
     verdict_tone, verdict_word, fmt_date_key, days_since, recency_days_label,
-    bdg_cls_filter, bdg_tip_filter,
+    bdg_cls_filter, bdg_tip_filter, bdg_label_filter,
 )
 from adapters.inbound.web.badge_catalog import bdg_lookup
 from adapters.inbound.web.screens.modals.screen_modals import init_modals, router as modals_router
@@ -404,6 +404,7 @@ def _configure_templates(app: FastAPI):  # returns Jinja2Templates
     templates.env.filters["recency_days_label"] = recency_days_label
     templates.env.filters["bdg_cls"] = bdg_cls_filter
     templates.env.filters["bdg_tip"] = bdg_tip_filter
+    templates.env.filters["bdg_label"] = bdg_label_filter
     templates.env.globals["bdg_lookup"] = bdg_lookup
     static_dir = _resolve_static_dir()
     if static_dir:
@@ -605,6 +606,7 @@ def _register_web_routes(
         task_creator=services["task"],
         task_generator=services["task"],
         user_querier=sqlite_repos["app_user"],
+        dismissal_reader=sqlite_repos["action_state"],
     ))
     app.include_router(make_inbox_router(
         templates=templates,

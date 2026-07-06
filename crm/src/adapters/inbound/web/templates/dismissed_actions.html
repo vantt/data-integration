@@ -1,0 +1,69 @@
+{# @surface  S07 · Tasks Board — Dismissed actions (manager transparency view, AI-11)
+   @source   crm/docs/ui-spec/20-domain-rules.md#r15
+   @kind     SCREEN #}
+{% extends "base.html" %}
+
+{% block title %}Đã bỏ qua — CRM{% endblock %}
+
+{% block content %}
+<div class="crm-page page-enter" data-surface="S07">
+
+  {# ── Page head ─────────────────────────────────────────────────────────── #}
+  <div class="crm-pagehead">
+    <div>
+      <div class="caption crm-pagehead__eyebrow">TASKS</div>
+      <h1 class="crm-pagehead__title">Việc đã bỏ qua (dismiss)</h1>
+      <p class="crm-pagehead__sub">
+        Danh sách khách/việc đang bị ẩn khỏi hàng đợi do NV bấm "Bỏ qua" — tự hiện lại
+        sau 30 ngày. Xem để biết ai bỏ qua gì, khi nào, còn ẩn đến ngày nào.
+      </p>
+    </div>
+    <div class="crm-pagehead__aside">
+      <a href="/tasks" class="btn">← Bảng công việc</a>
+    </div>
+  </div>
+
+  {# ── Table or empty state ──────────────────────────────────────────────── #}
+  {% if dismissals|length == 0 %}
+    <div class="state">
+      <div class="state__inner">
+        <div class="state__title">Không có việc nào đang bị bỏ qua</div>
+        <p class="state__sub">Mọi dismiss đã hết hạn 30 ngày hoặc chưa ai bỏ qua việc nào.</p>
+      </div>
+    </div>
+  {% else %}
+    <div class="tbl-wrap">
+      <table class="tbl">
+        <thead>
+          <tr>
+            <th>Khách hàng</th>
+            <th>Loại việc</th>
+            <th>Người bỏ qua</th>
+            <th>Bỏ qua lúc</th>
+            <th>Ẩn đến</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for d in dismissals %}
+          <tr>
+            <td>
+              <a href="/customers/{{ d.party_id }}" class="ghost-link">{{ d.party_display }}</a>
+            </td>
+            <td>
+              <span class="{{ d.action_type | bdg_cls('action_type') }}"
+                    data-tooltip="{{ d.action_type | bdg_tip('action_type') or d.action_type }}">
+                {{ d.action_type | bdg_label('action_type') }}
+              </span>
+            </td>
+            <td>{{ d.dismissed_by_display }}</td>
+            <td class="mono muted">{{ d.dismissed_at | format_datetime_ict }}</td>
+            <td class="mono muted">{{ d.dismissed_until | format_datetime_ict }}</td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  {% endif %}
+
+</div>{# /.crm-page #}
+{% endblock %}

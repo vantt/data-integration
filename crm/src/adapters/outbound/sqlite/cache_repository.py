@@ -7,9 +7,12 @@ Money = INTEGER (VND); realized_margin_pct (H010-corrected).
 date_key is ICT YYYYMMDD — passed through as-is, never recomputed.
 
 Cross-schema JOINs: list_all_action_queue() and _fetch_actions() intentionally JOIN
-crm.* tables (crm_party_identity, crm_action_state, crm_task). Both DBs are ATTACHed
-to the same connection via CRMDatabase. Schema changes to crm_task or crm_party_identity
-must be reflected in the SQL in this file.
+crm.* tables (crm_party_identity, crm_action_state, crm_task). list_all_action_queue()
+additionally JOINs crm_action_dismissal (B5 party+action_type TTL dismiss, migration
+0038) — _fetch_actions() (C360 reason rail) intentionally does NOT, since it reports
+per-episode crm_action_state.status only. Both DBs are ATTACHed to the same connection
+via CRMDatabase. Schema changes to crm_task or crm_party_identity must be reflected in
+the SQL in this file.
 """
 
 from __future__ import annotations
@@ -134,10 +137,18 @@ class SQLiteCacheRepository:
     def list_all_action_queue(self) -> list[ActionQueueItem]:
         """Return actionable rows from wh_action_queue UNION wh_sku_action_queue.
 
-        Filters out: dismissed, snoozed-until-future, and actions with open crm_task.
-        Falls back to customer-level queue only if wh_sku_action_queue is absent
-        (e.g. before the first dbt run that materialises mart_customer_sku_action_queue).
-        Returns [] when all tables are absent.
+        Filters out: dismissed (per-episode crm_action_state OR active B5
+        (party_id, action_type) TTL dismissal in crm_action_dismissal), snoozed-
+        until-future, and actions with open crm_task. Falls back to customer-level
+        queue only if wh_sku_action_queue is absent (e.g. before the first dbt run
+        that materialises mart_customer_sku_action_queue). Returns [] when all
+        tables are absent.
+
+        B5 (migration 0038): crm_action_dismissal survives the warehouse
+        regenerating a new action_id for the same (party, action_type) across
+        weekly refreshes — the per-episode crm_action_state.status filter above
+        cannot, since it is keyed on the old action_id. Both filters apply
+        independently; either one hides the row.
         """
         # NOTE: wh_action_queue or wh_sku_action_queue schema changes must be applied
         # in BOTH list_all_action_queue() and _fetch_actions().
@@ -163,9 +174,13 @@ class SQLiteCacheRepository:
                   AND pi.identity_value = CAST(ps.customer_id AS TEXT)
             LEFT JOIN crm_action_state s ON s.action_id = a.action_id
             LEFT JOIN cache.wh_customer_tier ct ON ct.customer_key = a.customer_key
+            LEFT JOIN crm_action_dismissal ad
+                   ON ad.party_id = pi.party_id
+                  AND ad.action_type = a.action_type
             WHERE COALESCE(s.status, 'open') != 'dismissed'
               AND (COALESCE(s.status, 'open') != 'snoozed'
                    OR s.snoozed_until < date('now', '+7 hours'))  -- snoozed_until is an ICT date; date('now','+7h') = today in ICT
+              AND (ad.party_id IS NULL OR ad.dismissed_until <= strftime('%Y-%m-%dT%H:%M:%fZ','now'))
               AND NOT EXISTS (
                   -- Hide when an active claim task exists, OR when a done/cancelled claim task
                   -- was created after the last contact (same contact cycle — customer already handled).
@@ -205,9 +220,13 @@ class SQLiteCacheRepository:
                   AND pi.identity_value = CAST(ps.customer_id AS TEXT)
             LEFT JOIN crm_action_state s ON s.action_id = sa.action_id
             LEFT JOIN cache.wh_customer_tier ct ON ct.customer_key = sa.customer_key
+            LEFT JOIN crm_action_dismissal ad
+                   ON ad.party_id = pi.party_id
+                  AND ad.action_type = sa.action_type
             WHERE COALESCE(s.status, 'open') != 'dismissed'
               AND (COALESCE(s.status, 'open') != 'snoozed'
                    OR s.snoozed_until < date('now', '+7 hours'))
+              AND (ad.party_id IS NULL OR ad.dismissed_until <= strftime('%Y-%m-%dT%H:%M:%fZ','now'))
               AND NOT EXISTS (
                   SELECT 1 FROM crm_task t
                   WHERE t.source = 'action_queue_claim'

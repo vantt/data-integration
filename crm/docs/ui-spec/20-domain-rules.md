@@ -97,6 +97,23 @@ Hiển thị `reason_if_not_recommended` + CTA tạo task xác minh tài khoản
 
 Hard-block CHỈ khi tương lai có `consent='denied'` thật. Hiện tại default=contactable (không có consent data) — R14 warn-with-ack là đủ.
 
+## R15 — Dismiss TTL by (party_id, action_type)
+
+Dismiss action queue item (`PATCH /worklist/actions/{action_id}/dismiss` và các đường dismiss
+khác dùng chung `ActionStatePort.dismiss()`) ghi nhớ theo cặp **(party_id, action_type)**,
+KHÔNG chỉ theo `action_id` — vì warehouse sinh `action_id` mới mỗi tuần cho cùng một action
+ngữ nghĩa (cùng khách + cùng loại việc), dismiss theo `action_id` cũ sẽ mất hiệu lực và việc
+tái xuất hiện, làm NV mất niềm tin vào nút dismiss.
+
+Ghi vào `crm_action_dismissal` (PK `party_id, action_type`) với `dismissed_until = dismissed_at + 30 ngày`.
+Sau khi hết hạn, action **tự hiện lại bình thường** — không có badge đặc biệt (khác snooze-wake B2).
+`SQLiteCacheRepository.list_all_action_queue()` lọc bỏ action có dismissal còn hiệu lực
+(`dismissed_until > now`) song song với filter `crm_action_state.status != 'dismissed'` hiện có
+(giữ nguyên cho C360 reason rail per-episode, không đổi).
+
+Manager có view đọc-only liệt kê dismissal đang hiệu lực (khách, loại việc, ai bỏ qua, khi nào,
+ẩn đến ngày nào) — minh bạch, chống dismiss né việc.
+
 ---
 
 ```yaml crm-contract
@@ -143,4 +160,7 @@ rules:
   - id: R14
     name: AI Approach-Script Gate
     surfaces: [S14]
+  - id: R15
+    name: Dismiss TTL by (party_id, action_type)
+    surfaces: [S01, S07]
 ```
