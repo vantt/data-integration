@@ -43,11 +43,12 @@ def get_sapo_client() -> Any:
         # if the SSO flow changes — the strategy waits for the redirect, not the landing URL.
         login_url = f"{base_url}/orders"
 
-    # Default selectors
+    # Default selectors — match accounts.sapo.vn/login markup post-2026-07 redesign
+    # (old #pos-login-form wrapper no longer exists on the page).
     default_selectors = {
-        'username': '#pos-login-form #username',
-        'password': '#pos-login-form #password',
-        'submit': '#pos-login-form button.btn-login'
+        'username': '#phoneNumber',
+        'password': '#password',
+        'submit': "button[type='submit']"
     }
     
     # Merge with user config

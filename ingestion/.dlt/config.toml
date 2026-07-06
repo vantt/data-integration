@@ -14,9 +14,11 @@ headless = true
 login_url = "https://accounts.sapo.vn/login?domain=fwg" # cấu hình nếu muốn Overview
 
 [sources.sapo.login_selectors]
-username = "#pos-login-form #username"
-password = "#pos-login-form #password"
-submit = "#pos-login-form button.btn-login"
+# Sapo redesigned accounts.sapo.vn/login (2026-07) — old #pos-login-form wrapper is gone.
+# Current markup: <input id="phoneNumber">, <input id="password">, <button type="submit"> (no id/stable class).
+username = "#phoneNumber"
+password = "#password"
+submit = "button[type='submit']"
 
 [sources.sapo_webhook_source]
 worker_url = "https://webhook-receiver.admin-1d2.workers.dev/"
