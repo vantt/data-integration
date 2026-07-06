@@ -11,9 +11,16 @@ Defaults: --hours 24 (match Band-4 window), --dry-run False.
 from __future__ import annotations
 
 import argparse
+import os
 import sqlite3
+import sys
 import uuid
 from datetime import datetime, timedelta, timezone
+
+# Ensure crm/src is on sys.path when run directly from crm/ops or the repo root.
+sys.path.insert(0, os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", "src"))
+
+from adapters.outbound.sqlite.party_repository import SQLitePartyRepository  # noqa: E402
 
 _CRM_DB = "/data/crm.db"
 _CACHE_DB = "/data/cache.db"
@@ -38,7 +45,7 @@ def _candidates(conn: sqlite3.Connection, cutoff: str) -> list[sqlite3.Row]:
             act.staff_user_id,
             au.user_id    AS assignee_user_id,
             au.full_name  AS assignee_name,
-            COALESCE(pi.identity_value, lc.party_id) AS customer_name
+            pi.identity_value AS identity_name
         FROM crm_last_contact lc
         LEFT JOIN crm_activity_log act ON act.activity_id = lc.last_activity_id
         LEFT JOIN crm_app_user     au  ON au.user_id      = act.staff_user_id
@@ -63,25 +70,27 @@ def _candidates(conn: sqlite3.Connection, cutoff: str) -> list[sqlite3.Row]:
 
 def _backfill(dry_run: bool, hours: int) -> None:
     conn = _connect()
+    party_repo = SQLitePartyRepository(conn)
     now = datetime.now(timezone.utc)
     cutoff = (now - timedelta(hours=hours)).strftime("%Y-%m-%dT%H:%M:%S.000Z")
 
     rows = _candidates(conn, cutoff)
     print(f"Candidates (contacted in last {hours}h, no claim task): {len(rows)}")
 
-    created = skipped = 0
+    created = 0
     for row in rows:
         party_id       = row["party_id"]
-        customer_name  = row["customer_name"] or party_id
+        if row["identity_name"]:
+            customer_name = row["identity_name"]
+        else:
+            party = party_repo.get_by_id(party_id)
+            customer_name = (party.display_name if party else None) or party_id
         assignee_id    = row["assignee_user_id"]
-        assignee_name  = row["assignee_name"] or "?"
+        # No resolvable staff → land in the team queue (unassigned, open) rather than
+        # drop the follow-up. TaskService.list_unassigned() already surfaces these.
+        assignee_name  = row["assignee_name"] or "team queue (unassigned)"
         contacted_at   = row["last_contacted_at"]
         result         = row["last_contact_result"] or "?"
-
-        if not assignee_id:
-            print(f"  SKIP {party_id}: staff_user_id={row['staff_user_id']!r} → no crm_app_user match")
-            skipped += 1
-            continue
 
         print(
             f"  {'DRY ' if dry_run else ''}CREATE  {party_id}  '{customer_name}'"
@@ -108,7 +117,7 @@ def _backfill(dry_run: bool, hours: int) -> None:
         conn.commit()
 
     conn.close()
-    print(f"\nDone — created: {created}, skipped (no assignee): {skipped}")
+    print(f"\nDone — created: {created}")
     if dry_run:
         print("(dry-run, nothing written)")
 

@@ -22,6 +22,7 @@ from domain.entities.task import (
 )
 from domain.ports.task_repository import TaskRepository
 from domain.ports.cache_repository import CacheRepository
+from domain.ports.party_repository import PartyRepository
 from application.task_kind import derive_task_kind
 
 if TYPE_CHECKING:
@@ -39,10 +40,12 @@ class TaskService:
         task_repo: TaskRepository,
         cache_repo: CacheRepository,
         db: Optional[CRMDatabase] = None,
+        party_repo: Optional[PartyRepository] = None,
     ) -> None:
         self._task_repo = task_repo
         self._cache_repo = cache_repo
         self._db = db
+        self._party_repo = party_repo
 
     # ------------------------------------------------------------------
     # Manual CRUD
@@ -186,6 +189,9 @@ class TaskService:
 
         count = len(actions)
         customer_name = getattr(actions[0], "customer_name", None) if actions else None
+        if not customer_name and self._party_repo is not None:
+            party = self._party_repo.get_by_id(party_id)
+            customer_name = party.display_name if party else None
         title = f"Gọi {customer_name or party_id} · {count} hành động"
         lines = [f"[{a.action_type}] {(getattr(a, 'rationale_vi', '') or '').strip()}" for a in actions]
         description = "\n".join(lines) if lines else None
