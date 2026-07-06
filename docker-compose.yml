@@ -199,6 +199,9 @@ services:
       - CF_TEAM_DOMAIN=${CF_TEAM_DOMAIN:-}
       - CF_ROLE_CLAIM=${CF_ROLE_CLAIM:-role}
       - CF_ROLE_MAP=${CF_ROLE_MAP:-{}}
+      # Cross-origin state-changing request guard — false=log-only, true=block. Flip to
+      # true once a log-review cycle confirms no legitimate caller is flagged.
+      - CRM_CSRF_ENFORCE=${CRM_CSRF_ENFORCE:-false}
     networks:
       - caddy_net
     volumes:

@@ -88,6 +88,7 @@ from adapters.inbound.http.dataquality_handler import make_dataquality_router
 from adapters.inbound.http.approach_script_handler import make_approach_script_router
 from adapters.inbound.http.script_nav_handler import make_script_nav_router
 from adapters.inbound.http.cf_access_middleware import CFAccessMiddleware
+from adapters.inbound.http.csrf_guard import CSRFGuardMiddleware
 
 # ── Outbound: File ────────────────────────────────────────────────────────────
 from adapters.outbound.file.approach_script_file_repository import FileApproachScriptRepository
@@ -316,7 +317,7 @@ def _build_services(sqlite_repos: SqliteRepos) -> Services:
         "tag": TagService(sqlite_repos["tag"], db),
         "cf": CustomFieldService(sqlite_repos["cf"], db),
         "activity": ActivityService(sqlite_repos["activity"], sqlite_repos["last_contact"], db),
-        "task": TaskService(sqlite_repos["task"], sqlite_repos["cache"], db),
+        "task": TaskService(sqlite_repos["task"], sqlite_repos["cache"], db, sqlite_repos["party"]),
         "conv": ConversationService(sqlite_repos["conv"], sqlite_repos["party"], db),
         "segment": SegmentService(sqlite_repos["segment"]),
         "campaign": CampaignService(
@@ -356,8 +357,14 @@ def _make_sync_parties_runner():
 
 
 def _configure_middleware(app: FastAPI, app_user_svc: AppUserService) -> None:
-    """Add CFAccessMiddleware to the FastAPI application."""
+    """Add CFAccessMiddleware + CSRFGuardMiddleware to the FastAPI application.
+
+    Starlette runs the LAST-added middleware FIRST (outermost), so CSRFGuardMiddleware
+    is added after CFAccessMiddleware to reject cross-origin mutations before spending
+    a JWT verification on them.
+    """
     app.add_middleware(CFAccessMiddleware, user_svc=app_user_svc)
+    app.add_middleware(CSRFGuardMiddleware)
 
 
 def _configure_templates(app: FastAPI):  # returns Jinja2Templates

@@ -17,3 +17,7 @@ python-multipart==0.0.20
 qrcode==8.0
 PyJWT==2.9.0
 cryptography==43.0.3
+# Test-only, but installed straight into the image (matches crm/sync/requirements.txt
+# convention — no separate dev-requirements file in this repo).
+pytest==8.3.4
+httpx==0.28.1
