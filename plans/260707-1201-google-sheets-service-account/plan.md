@@ -1,6 +1,6 @@
 # Google Sheets Service Account — Centralized Read/Write
 
-**Status:** ALL 3 PHASES DONE (2026-07-07). Phase 3: `sheet_writeback.py` + `fetch.py` (budget read path) migrated to shared SA credential — the budget sheet's public CSV export also broke when link-sharing was turned off, so this fix was required (not just the write side, as originally scoped). First real, non-dry-run write succeeded for 2026-08 (8 cells), re-run confirmed idempotent, Budget column untouched (verified by reading the live sheet). 42/42 tests pass.
+**Status:** ALL 3 PHASES DONE + COMMITTED (2026-07-07, commit `af41ffd9`). Phase 3: `sheet_writeback.py` + `fetch.py` (budget read path) migrated to shared SA credential — the budget sheet's public CSV export also broke when link-sharing was turned off, so this fix was required (not just the write side, as originally scoped). First real, non-dry-run write succeeded for 2026-08 (8 cells), re-run confirmed idempotent, Budget column untouched (verified by reading the live sheet). 42/42 tests pass. Follow-up: audited `.env.docker`/`.env.local` and found 3-4 sheet URLs missing (readers were silently running on hardcoded fallback defaults, not real config) — added all 6 sheets' URLs to both files; hardcoded fallbacks kept in code as a safety net, but real config now exists everywhere.
 **Created:** 2026-07-07
 **Context:** Split out of `plans/260705-1459-budget-cashflow-workable-loop` Phase 5 (pre-fill suggestions write-back), which needs Editor-level Sheets API credentials — that plan has since been merged into `plans/260702-1727-misa-cashflow-budget-planner` as Phase 10 (2026-07-07). Merges with a previously deferred security item — `plans/archive/260624-1958-pipeline-hardening-followups/phase-01-gsheets-service-account.md` — that already wanted a service account for 5 read-only sheets (public-link exposure). One credential, one auth helper, covers both needs instead of solving them twice.
 
@@ -37,11 +37,12 @@ Phase 2 và 3 độc lập sau khi Phase 1 xong — làm song song được (kh�
 - [x] `budget_suggestion_writeback_schedule` chạy thành công 1 lần thật (không phải dry-run) — verify cột "Gợi ý" ghi đúng, cột Budget không bị đụng.
 - [x] Container (Windows-native + Docker) đều đọc được key path. (Docker verified live; Windows-native path set in .env.local, not run-tested since Docker is primary env)
 
-## Rủi ro chính
+## Rủi ro chính (đã xử lý)
 
-- Mỗi reader hiện parse 1 format cụ thể (csv vs xlsx, gid cụ thể) — Sheets API trả values khác format hơn CSV/xlsx export → phải test từng reader giữ nguyên column names/dtypes.
-- Ghi nhầm cột Budget khi activate Phase 3 → mất số finance đã nhập — mitigation đã có trong `sheet_writeback.py` (resolve cột theo header "Gợi ý" exact match) + dry-run diff trước lần chạy thật đầu tiên.
-- Quyền Editor cho SA trên budget sheet là bề mặt rủi ro mới — scope đúng 1 sheet, không share Editor lên 5 sheet kia.
+- Mỗi reader hiện parse 1 format cụ thể (csv vs xlsx, gid cụ thể) — Sheets API trả values khác format hơn CSV/xlsx export → đã test từng reader trước/sau, giữ nguyên column names; 1 khác biệt vô hại phát hiện (overhead_classification: cột trống trailing đặt tên `''` thay vì `Unnamed: N` của pandas — không ảnh hưởng vì code chỉ đọc cột theo tên cụ thể).
+- Ghi nhầm cột Budget khi activate Phase 3 → mitigation có sẵn trong `sheet_writeback.py` (`_assert_gio_column`) đã verify hoạt động đúng trên lần ghi thật đầu tiên.
+- Quyền Editor cho SA trên budget sheet — verify bằng `list_permissions()` thật (không chỉ giả định), xác nhận role `writer` đúng scope 1 sheet.
+- **Phát sinh ngoài dự kiến:** tắt "Anyone with link" cũng làm hỏng luôn đường đọc CSV công khai của chính budget sheet (không chỉ 5 sheet đọc-only) — `gsheet_budget_sync/fetch.py._fetch_tab_csv` bị 401. Đã migrate luôn sang SA auth, không chỉ phần ghi như phạm vi ban đầu.
 
 ## Liên quan
 

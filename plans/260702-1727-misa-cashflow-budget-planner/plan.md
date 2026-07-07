@@ -1,6 +1,6 @@
 # MISA Cashflow Report + Budget Planner
 
-**Status:** DONE — Wave 1 (report + budget layer, P03-P05: 2026-07-02/04) và Wave 2 (workable loop close, P06-P10: 2026-07-05/07) đều hoàn thành. 1 open item còn treo (Phase 10 activation — chờ plan `260707-1201-google-sheets-service-account`).
+**Status:** DONE — Wave 1 (report + budget layer, P03-P05: 2026-07-02/04) và Wave 2 (workable loop close, P06-P10: 2026-07-05/07) đều hoàn thành. Phase 10 kích hoạt xong (2026-07-07) — không còn open item nào.
 **Created:** 2026-07-02
 **Merged (2026-07-07):** `plans/260705-1459-budget-cashflow-workable-loop` sáp nhập vào đây làm Phase 6-10 (đóng các gap vận hành phát sinh sau khi Wave 1 chạy thật) — cùng 1 sản phẩm, 1 vòng đời, tách plan riêng trước đây chỉ vì lý do thời điểm.
 **Split (2026-07-07, trước khi merge):** Phases 1-2 (full-ledger ingestion + GL modeling — hạ tầng) đã tách sang `plans/archive/260707-1207-misa-gl-infrastructure/`.
@@ -39,7 +39,7 @@ Phase 8+9 độc lập với 6+7, làm song song được.
 - ✅ **Phase 03 Report**: dashboard Metabase "Finance Cashflow" (ID 113) deployed từ blueprint. waterfall+pivot native v0.60.2. June recon khớp tuyệt đối (thu 464.4M/chi 434.0M/ròng +30.4M).
 - ✅ **Phase 04 Budget**: seed + 6 dbt models + serving views DONE (2026-07-04). Dashboard "Finance Budget vs Actual" (ID 114) deployed — 15 cards, 2 tabs, Apps Script dynamic dropdown, variance + forecast. Blueprint garbled SQL fixed (2026-07-04).
 - ✅ **Phase 06-09**: code xong, review DONE_WITH_CONCERNS → 3 finding đã fix, regression test 8/8 pass (2026-07-05).
-- ⚠️ **Phase 10**: code xong nhưng CHƯA kích hoạt — chờ service account (xem "Open items" dưới).
+- ✅ **Phase 10**: kích hoạt xong (2026-07-07) — service account thiết lập qua `plans/260707-1201-google-sheets-service-account` (3 phase, commit `af41ffd9`). Ghi thật đầu tiên tháng 2026-08: 8 ô "Gợi Ý", verify Budget column không bị đụng, re-run idempotent.
 
 **Insight thật (6 tháng, từ hạ tầng GL):** dòng tiền âm 3/6 tháng (Jan −100M, Feb −70M, May −23M); dương Mar +85M, Jun +30M; số dư quỹ 72M–165M.
 
@@ -86,7 +86,7 @@ Phase-04 (budget) mở rộng CÙNG dashboard: thêm cột Kế hoạch|Chênh l
 ## Open items cần hành động của người (không phải lỗi code)
 
 1. ~~Sheet ALLOCATION_POLICY thiếu dòng `remainder`~~ → **DONE (2026-07-07)**: verified row 9 "Tiền Mặt Tự Do", rule_type=`remainder`, value trống, hiệu lực từ 2026-07-01. Sync đầu tiên vẫn fail thêm 1 lỗi khác (bug code, không phải hành động người): cell `pct_remaining` value "20%" — Google Sheets export CSV theo display format (Percent) nên `%` leak vào text export; `_parse_vnd()` (`ingestion/src/gsheet_budget_sync/fetch.py`) chưa strip `%` nên parse ra `None`. Đã fix (strip `%` trong `_parse_vnd`) + verify: dry-run sạch, `ALLOCATION_POLICY: 9 row(s)` không lỗi, dòng "Mua Laptop 3" parse đúng `value=20`. Sync đầu tiên giờ chạy được.
-2. **Phase 10 (pre-fill gợi ý) code xong nhưng CHƯA kích hoạt** — cần Google service account (Editor quyền trên sheet này). Việc setup service account đã tách thành plan riêng **`plans/260707-1201-google-sheets-service-account`** (gộp chung với nhu cầu chuẩn hóa đọc cho 5 sheet public-link khác, dùng 1 SA credential cho tất cả). Chi tiết code Phase 10: `plans/reports/impl-260705-2010-phase5-prefill-suggestions-report.md`. Tới khi plan kia xong Phase 1+3, `budget_suggestion_writeback_schedule` sẽ fail loud mỗi lần chạy (by design, không silent).
+2. ~~Phase 10 (pre-fill gợi ý) code xong nhưng CHƯA kích hoạt~~ → **DONE (2026-07-07)**: service account thiết lập qua `plans/260707-1201-google-sheets-service-account` (3 phase). `budget_suggestion_writeback_schedule` giờ chạy thật, không còn fail-loud. Chi tiết code Phase 10: `plans/reports/impl-260705-2010-phase5-prefill-suggestions-report.md`.
 
 ## Rủi ro chính
 
