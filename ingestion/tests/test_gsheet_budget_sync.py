@@ -20,6 +20,7 @@ import pytest
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), "..", "src"))
 
 import gsheet_budget_sync as sync  # noqa: E402
+from ingestion.src import gsheet_auth  # noqa: E402 — dotted, matches sync's own import (module identity for monkeypatch)
 
 
 # ---------------------------------------------------------------------------
@@ -288,27 +289,20 @@ def test_merge_historical_with_no_existing_seed_file(tmp_path):
 # Sheet-level abort cases (structural failures)
 # ---------------------------------------------------------------------------
 
-def test_fetch_tab_csv_rejects_html_response(monkeypatch):
-    class _FakeResp:
-        content = b"<HTML><BODY>Temporary Redirect</BODY></HTML>"
+def test_fetch_tab_csv_wraps_sheets_api_error(monkeypatch):
+    """Any failure from the shared Sheets-API fetch (permission denied, network, etc.)
+    must surface as a ValidationError naming the tab — not propagate the raw exception."""
+    def _raise(*a, **k):
+        raise RuntimeError("permission denied")
 
-        def raise_for_status(self):
-            pass
+    monkeypatch.setattr(gsheet_auth, "fetch_tab_as_dataframe", _raise)
 
-    monkeypatch.setattr(sync.requests, "get", lambda *a, **k: _FakeResp())
-
-    with pytest.raises(sync.ValidationError, match="HTML"):
+    with pytest.raises(sync.ValidationError, match="BUDGET_ITEMS"):
         sync._fetch_tab_csv("https://example.com/edit", "0", "BUDGET_ITEMS")
 
 
 def test_fetch_tab_csv_rejects_empty_sheet(monkeypatch):
-    class _FakeResp:
-        content = b""
-
-        def raise_for_status(self):
-            pass
-
-    monkeypatch.setattr(sync.requests, "get", lambda *a, **k: _FakeResp())
+    monkeypatch.setattr(gsheet_auth, "fetch_tab_as_dataframe", lambda *a, **k: pd.DataFrame())
 
     with pytest.raises(sync.ValidationError, match="rỗng"):
         sync._fetch_tab_csv("https://example.com/edit", "0", "BUDGET_ITEMS")
@@ -527,13 +521,13 @@ Chi Không Tồn Tại,Chi,recurring,,,,,"1,000 ₫"
 # --- _write_cells_via_sheets_api (credential/dependency guard rails) --------
 
 def test_write_cells_via_sheets_api_requires_env_var(monkeypatch):
-    monkeypatch.delenv(sync.GOOGLE_SERVICE_ACCOUNT_BUDGET_WRITE_PATH_ENV, raising=False)
-    with pytest.raises(RuntimeError, match=sync.GOOGLE_SERVICE_ACCOUNT_BUDGET_WRITE_PATH_ENV):
+    monkeypatch.delenv(gsheet_auth.GOOGLE_SHEETS_SERVICE_ACCOUNT_KEY_PATH_ENV, raising=False)
+    with pytest.raises(RuntimeError, match=gsheet_auth.GOOGLE_SHEETS_SERVICE_ACCOUNT_KEY_PATH_ENV):
         sync._write_cells_via_sheets_api([{"sheet_row": 4, "col": 6, "value": 1, "cashflow_line": "x", "item_type": "recurring"}])
 
 
 def test_write_cells_via_sheets_api_requires_key_file_to_exist(monkeypatch, tmp_path):
     missing_key = tmp_path / "does_not_exist.json"
-    monkeypatch.setenv(sync.GOOGLE_SERVICE_ACCOUNT_BUDGET_WRITE_PATH_ENV, str(missing_key))
+    monkeypatch.setenv(gsheet_auth.GOOGLE_SHEETS_SERVICE_ACCOUNT_KEY_PATH_ENV, str(missing_key))
     with pytest.raises(RuntimeError, match="không tồn tại"):
         sync._write_cells_via_sheets_api([{"sheet_row": 4, "col": 6, "value": 1, "cashflow_line": "x", "item_type": "recurring"}])

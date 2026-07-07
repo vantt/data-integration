@@ -139,6 +139,9 @@ if [ -d "${PROJECT_ROOT}/app_data" ]; then
     log "Backing up app_data from ${APP_DATA_SRC}..."
     if cp -a "$APP_DATA_SRC" "$APP_DATA_DST" 2>&1; then
         BACKUP_DATA_OK=true
+        # Exclude GCP service-account key — backup archives live outside app_data's
+        # access controls, don't propagate the credential there.
+        rm -rf "${APP_DATA_DST}/secrets"
         prune_dagster_history "${APP_DATA_DST}/dagster_home"
         SIZE=$(du -sh "$APP_DATA_DST" 2>/dev/null | cut -f1 || echo "unknown")
         log "app_data backed up: ${SIZE}"

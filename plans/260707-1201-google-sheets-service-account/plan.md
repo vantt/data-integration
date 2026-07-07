@@ -1,6 +1,6 @@
 # Google Sheets Service Account — Centralized Read/Write
 
-**Status:** Not started — blocked on human GCP step (Phase 1).
+**Status:** ALL 3 PHASES DONE (2026-07-07). Phase 3: `sheet_writeback.py` + `fetch.py` (budget read path) migrated to shared SA credential — the budget sheet's public CSV export also broke when link-sharing was turned off, so this fix was required (not just the write side, as originally scoped). First real, non-dry-run write succeeded for 2026-08 (8 cells), re-run confirmed idempotent, Budget column untouched (verified by reading the live sheet). 42/42 tests pass.
 **Created:** 2026-07-07
 **Context:** Split out of `plans/260705-1459-budget-cashflow-workable-loop` Phase 5 (pre-fill suggestions write-back), which needs Editor-level Sheets API credentials — that plan has since been merged into `plans/260702-1727-misa-cashflow-budget-planner` as Phase 10 (2026-07-07). Merges with a previously deferred security item — `plans/archive/260624-1958-pipeline-hardening-followups/phase-01-gsheets-service-account.md` — that already wanted a service account for 5 read-only sheets (public-link exposure). One credential, one auth helper, covers both needs instead of solving them twice.
 
@@ -30,12 +30,12 @@ Phase 2 và 3 độc lập sau khi Phase 1 xong — làm song song được (kh�
 
 ## Acceptance criteria
 
-- [ ] 1 SA key tồn tại, không commit vào git, đường dẫn qua env var (không hardcode).
-- [ ] Budget sheet share Editor cho SA; 5 sheet còn lại share Viewer cho SA; tất cả tắt "Anyone with link".
-- [ ] 5 reader đọc qua SA auth, row count + columns giống hệt trước khi đổi (test từng reader trước/sau).
-- [ ] `config.toml` không còn sheet URL/ID thật (chuyển ra secrets/env).
-- [ ] `budget_suggestion_writeback_schedule` chạy thành công 1 lần thật (không phải dry-run) — verify cột "Gợi ý" ghi đúng, cột Budget không bị đụng.
-- [ ] Container (Windows-native + Docker) đều đọc được key path.
+- [x] 1 SA key tồn tại, không commit vào git, đường dẫn qua env var (không hardcode).
+- [x] Budget sheet share Editor cho SA; 5 sheet còn lại share Viewer cho SA; tất cả tắt "Anyone with link".
+- [x] 5 reader đọc qua SA auth, row count + columns giống hệt trước khi đổi (test từng reader trước/sau).
+- [x] `config.toml` không còn sheet URL/ID thật (chuyển ra secrets/env).
+- [x] `budget_suggestion_writeback_schedule` chạy thành công 1 lần thật (không phải dry-run) — verify cột "Gợi ý" ghi đúng, cột Budget không bị đụng.
+- [x] Container (Windows-native + Docker) đều đọc được key path. (Docker verified live; Windows-native path set in .env.local, not run-tested since Docker is primary env)
 
 ## Rủi ro chính
 

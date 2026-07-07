@@ -23,13 +23,13 @@ Environment:
   DBT_DATA_LAKE_PATH not required by the default (read-only) sync mode but IS required by
     --write-suggestions (reads fact_cash_movement / mart_cashflow_reserve_status).
   SOURCES__SPREADSHEET_URL__BUDGET   Google Sheet URL (optional, has a working default)
-  GOOGLE_SERVICE_ACCOUNT_BUDGET_WRITE_PATH   GCP service-account JSON key path, Editor access —
-    required ONLY by --write-suggestions (not --dry-run). See sheet_writeback.py for setup steps.
+  GOOGLE_SHEETS_SERVICE_ACCOUNT_KEY_PATH   Shared GCP service-account JSON key path (Editor
+    access on this sheet specifically) — required ONLY by --write-suggestions (not --dry-run).
+    See plans/260707-1201-google-sheets-service-account/phase-01-service-account-setup.md.
 """
 import os
 
 import pandas as pd
-import requests  # noqa: F401 — re-exported so tests can monkeypatch sync.requests.get
 
 from .fetch import (  # noqa: F401 — re-exported for `sync.X` compatibility
     SHEET_URL, SEEDS_DIR, GID_BUDGET_ITEMS, GID_ALLOCATION_POLICY, GID_REF,
@@ -50,8 +50,7 @@ from .duckdb_actuals import (  # noqa: F401
     _fetch_recurring_actuals_from_duckdb, _fetch_reserve_status_from_duckdb,
 )
 from .sheet_writeback import (  # noqa: F401
-    GOOGLE_SERVICE_ACCOUNT_BUDGET_WRITE_PATH_ENV, _col_num_to_a1, _to_a1_cell,
-    _fmt_suggestion_value, _write_cells_via_sheets_api,
+    _col_num_to_a1, _to_a1_cell, _fmt_suggestion_value, _write_cells_via_sheets_api,
 )
 
 def fetch_transform_and_save(dry_run: bool = False) -> int:

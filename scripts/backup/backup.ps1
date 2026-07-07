@@ -77,7 +77,9 @@ try {
         Log "Backing up app_data..."
         # /MIR = mirror, /MT:4 = 4 threads, /R:1 = 1 retry, /W:1 = 1s wait
         # /NFL /NDL /NJH /NJS = minimal output
-        robocopy $appDataSrc $appDataDst /MIR /MT:4 /R:1 /W:1 /NFL /NDL /NJH /NJS /NP
+        # /XD secrets = exclude app_data/secrets (GCP service-account key) — backup
+        # archives live outside app_data's access controls, don't propagate the credential there
+        robocopy $appDataSrc $appDataDst /MIR /MT:4 /R:1 /W:1 /NFL /NDL /NJH /NJS /NP /XD secrets
         # robocopy returns 0-7 for success, 8+ for errors
         if ($LASTEXITCODE -ge 8) {
             Log "ERROR: robocopy failed with exit code $LASTEXITCODE"

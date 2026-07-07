@@ -23,10 +23,10 @@ submit = "button[type='submit']"
 [sources.sapo_webhook_source]
 worker_url = "https://webhook-receiver.admin-1d2.workers.dev/"
 
-[sources.spreadsheet_url]
-marketing_spend = "https://docs.google.com/spreadsheets/d/1wQpT4lCZWrPE7fnbRNTKiNDRFzVT2u_WhN-9uY9u3lc/edit?usp=sharing"
-targets = "https://docs.google.com/spreadsheets/d/1ZHt2iAD88OGgSRopVOkqEgusja-JpP4XqtiH4anhax4/edit?usp=sharing"
-us_shipment_prices = "https://docs.google.com/spreadsheets/d/1PWPQzzML_-i9yUrjGyhUcW0ABkrGEtXE2k49EaW4gwc/edit?gid=304875363"
+# Sheet URLs are NOT read from here — each gsheet_*.py reader resolves its URL from
+# SOURCES__SPREADSHEET_URL__<NAME> env var (see .env.docker/.env.local), with a hardcoded
+# fallback default in the script itself. This section previously tracked real sheet IDs
+# in git; removed as part of plans/260707-1201-google-sheets-service-account phase-02.
 
 [sources.facebook_ads]
 access_token = "REPLACE_ME_OR_SET_ENV_VAR" # Required if not in environment

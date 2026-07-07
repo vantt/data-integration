@@ -14,13 +14,15 @@ Tabs (single spreadsheet, 3 gids):
 
 Environment:
   SOURCES__SPREADSHEET_URL__BUDGET   Google Sheet URL (optional, has a working default)
+  GOOGLE_SHEETS_SERVICE_ACCOUNT_KEY_PATH   Shared GCP service-account JSON key path — see
+    plans/260707-1201-google-sheets-service-account/phase-01-service-account-setup.md.
 """
 import os
-import io
 from datetime import datetime, timezone, timedelta
 
-import requests
 import pandas as pd
+
+from ingestion.src import gsheet_auth
 
 
 def _load_dotenv_local():
@@ -57,7 +59,6 @@ GID_BUDGET_ITEMS = "0"
 GID_ALLOCATION_POLICY = "1662021004"
 GID_REF = "2061002942"
 
-_HTTP_TIMEOUT = 30
 _ICT = timezone(timedelta(hours=7))  # Asia/Ho_Chi_Minh, no DST — matches definitions.py convention
 
 
@@ -65,31 +66,15 @@ class ValidationError(Exception):
     """Raised on any validation failure. Caller must not write seeds when this is raised."""
 
 
-def _get_csv_url(sheet_url: str, gid: str) -> str:
-    base = sheet_url.split("/edit")[0].split("/view")[0]
-    return f"{base}/export?format=csv&gid={gid}"
-
-
 def _fetch_tab_csv(sheet_url: str, gid: str, tab_name: str) -> pd.DataFrame:
-    """Download one tab as CSV and return a raw (header=None, all-string) DataFrame."""
-    url = _get_csv_url(sheet_url, gid)
+    """Fetch one tab via the shared Sheets-API service account. Returns a raw
+    (header=None, all-string) DataFrame — same shape the old public-CSV-export path
+    returned, so budget_transform/policy_transform/merge/suggestions need zero changes.
+    """
     try:
-        resp = requests.get(url, timeout=_HTTP_TIMEOUT, allow_redirects=True)
-        resp.raise_for_status()
+        df = gsheet_auth.fetch_tab_as_dataframe(sheet_url, gid)
     except Exception as e:
-        raise ValidationError(f"Không tải được tab {tab_name} ({url}): {e}")
-
-    content = resp.content.decode("utf-8", errors="replace")
-    if content[:200].strip().lower().startswith("<html"):
-        raise ValidationError(
-            f"Tab {tab_name}: server trả về HTML thay vì CSV — kiểm tra quyền chia sẻ sheet "
-            f"hoặc gid ({gid}) có đúng không"
-        )
-
-    try:
-        df = pd.read_csv(io.StringIO(content), header=None, dtype=str, keep_default_na=False)
-    except pd.errors.EmptyDataError:
-        raise ValidationError(f"Tab {tab_name}: sheet rỗng — abort, không đè seed cũ")
+        raise ValidationError(f"Không tải được tab {tab_name} ({sheet_url}, gid={gid}): {e}")
 
     df = df.fillna("")
     if df.shape[0] == 0 or df.shape[1] == 0:

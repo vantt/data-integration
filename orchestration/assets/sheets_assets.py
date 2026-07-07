@@ -327,14 +327,14 @@ def budget_suggestion_writeback_asset(context):
                   mart_cashflow_reserve_status; target-only/open-ended -> no write
       one_off   : 0, except the item's own target_month (finance enters that one manually)
 
-    HARD EXTERNAL BLOCKER: requires GOOGLE_SERVICE_ACCOUNT_BUDGET_WRITE_PATH env var pointing
-    at a Google service-account JSON key with EDITOR access on the budget sheet — a materially
-    higher privilege than the read-only budget_sheet_sync_asset (public "Anyone with link" read
-    access is not enough to write). No such credential exists in this repo yet (see
-    gsheet_budget_sync.py module docstring for the exact manual GCP setup steps). This asset is
-    intentionally safe to register/import with zero credentials configured — it fails loud with
-    a clear RuntimeError only at RUNTIME (inside gsheet_budget_sync.write_suggestions_to_sheet),
-    never at Dagster code-load time, so a missing credential cannot break the asset graph.
+    Requires GOOGLE_SHEETS_SERVICE_ACCOUNT_KEY_PATH env var pointing at the shared GCP
+    service-account JSON key, with EDITOR access on this sheet specifically — a materially
+    higher privilege than the read-only budget_sheet_sync_asset (Viewer access is not enough
+    to write). See plans/260707-1201-google-sheets-service-account/phase-01-service-account-setup.md
+    for the credential setup. This asset is intentionally safe to register/import with zero
+    credentials configured — it fails loud with a clear RuntimeError only at RUNTIME (inside
+    gsheet_budget_sync.write_suggestions_to_sheet), never at Dagster code-load time, so a
+    missing credential cannot break the asset graph.
 
     Scheduled 1st of month 08:00 ICT — after ingest_monthly_job (07:00 ICT) lands fresh MISA
     account-ledger actuals, so the rolling-avg/required_monthly_adj suggestions reflect the

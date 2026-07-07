@@ -18,6 +18,8 @@ import re
 import pandas as pd
 from datetime import datetime, timezone
 
+import gsheet_auth
+
 # Load .env.local if exists (for local development)
 def _load_dotenv_local():
     """Load environment variables from .env.local if it exists."""
@@ -55,33 +57,6 @@ SHEET_URL = os.environ.get(
 # --- Validation rules ---
 VALID_REVENUE_TYPES = {"member", "platform", "channel_name"}
 EMAIL_PATTERN = re.compile(r"^[^@\s]+@[^@\s]+\.[^@\s]+$")
-
-
-def _get_xlsx_url(sheet_url):
-    """Convert Google Sheets URL to XLSX export URL (all sheets)."""
-    if "/edit" in sheet_url:
-        base_url = sheet_url.split("/edit")[0]
-        return f"{base_url}/export?format=xlsx"
-    return sheet_url
-
-
-def _fetch_sheets_from_xlsx(sheet_url):
-    """Download XLSX and return dict of {sheet_name: DataFrame}.
-
-    This is more reliable than CSV export with sheet= parameter,
-    which doesn't work consistently with Google Sheets.
-    """
-    xlsx_url = _get_xlsx_url(sheet_url)
-    print(f"Downloading XLSX from: {xlsx_url}")
-
-    xlsx = pd.ExcelFile(xlsx_url)
-    print(f"Found sheets: {xlsx.sheet_names}")
-
-    sheets = {}
-    for name in xlsx.sheet_names:
-        sheets[name] = pd.read_excel(xlsx, sheet_name=name)
-
-    return sheets
 
 
 def _validate_teams(df):
@@ -263,8 +238,9 @@ def fetch_and_save_team_config():
     sheet_name_members = os.environ.get("TEAM_CONFIG_SHEET_MEMBERS", "team_members")
 
     try:
-        # Download XLSX (all sheets) - more reliable than CSV with sheet= parameter
-        sheets = _fetch_sheets_from_xlsx(SHEET_URL)
+        print(f"Fetching via Sheets API (all tabs): {SHEET_URL}")
+        sheets = gsheet_auth.fetch_workbook_tabs(SHEET_URL)
+        print(f"Found sheets: {list(sheets.keys())}")
 
         # 1. Validate TEAMS tab
         if sheet_name_teams not in sheets:

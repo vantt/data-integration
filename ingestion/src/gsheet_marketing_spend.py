@@ -5,6 +5,8 @@ from datetime import datetime, timezone
 import requests
 import io
 
+import gsheet_auth
+
 
 def _load_dotenv_local():
     """Load environment variables from .env.local if it exists (for local dev)."""
@@ -42,18 +44,9 @@ SHEET_URL = os.environ.get("SOURCES__SPREADSHEET_URL__MARKETING_SPEND", "https:/
 
 def fetch_and_save_marketing_spend():
     print(f"Starting Marketing Spend Ingestion...")
-    
-    # 1. Fetch CSV
-    # Transform URL to export format
-    if "/edit" in SHEET_URL:
-        # Strip everything after /edit (including query params) and append export format
-        base_url = SHEET_URL.split("/edit")[0]
-        csv_url = f"{base_url}/export?format=csv"
-    else:
-        csv_url = SHEET_URL
-        
-    print(f"Downloading from: {csv_url}")
-    
+
+    print(f"Fetching via Sheets API (gid=0): {SHEET_URL}")
+
     # --- MAPPING LOGIC START ---
     base_dir = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
     seeds_dir = os.path.join(base_dir, 'transformation', 'seeds')
@@ -105,7 +98,9 @@ def fetch_and_save_marketing_spend():
     # --- MAPPING LOGIC END ---
 
     try:
-        df = pd.read_csv(csv_url)
+        raw = gsheet_auth.fetch_tab_as_dataframe(SHEET_URL, gid="0")
+        raw.columns = raw.iloc[0]
+        df = raw[1:].reset_index(drop=True)
         print(f"Fetched {len(df)} rows from Google Sheet.")
         
         # 2. Clean and Standardize Columns

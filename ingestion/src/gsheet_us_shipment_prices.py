@@ -16,11 +16,11 @@ Environment:
 import sys
 import os
 import re
-import io
 import shutil
-import requests
 import pandas as pd
 from datetime import datetime
+
+import gsheet_auth
 
 
 def _load_dotenv_local():
@@ -70,15 +70,6 @@ _COL_RETAIL_PRICE = "Giá niêm yết"
 _COL_FG_CARE = "Xuất FG Care"
 _COL_MARGIN_PCT = "Tỷ lệ lợi nhuận"
 _COL_EFFECTIVE_FROM = "effective_from"
-
-_HTTP_TIMEOUT = 30
-
-
-def _get_csv_url(sheet_url: str) -> str:
-    """Convert any Google Sheets URL to CSV export URL for the price list tab."""
-    base = sheet_url.split("/edit")[0].split("/view")[0]
-    return f"{base}/export?format=csv&gid={_SHEET_GID}"
-
 
 def _parse_vnd(value) -> float | None:
     """Strip VND formatting (spaces, commas) and parse as float."""
@@ -180,17 +171,10 @@ def fetch_and_save_us_shipment_prices():
     """Main ingestion function for US Shipment Prices sheet."""
     print("Starting US Shipment Prices Ingestion (gsheet_us_shipment_prices)...")
 
-    csv_url = _get_csv_url(SHEET_URL)
-    print(f"Downloading from: {csv_url}")
-
-    try:
-        resp = requests.get(csv_url, timeout=_HTTP_TIMEOUT, allow_redirects=True)
-        resp.raise_for_status()
-    except Exception as e:
-        print(f"Failed to download sheet: {e}")
-        raise
-
-    df = pd.read_csv(io.StringIO(resp.content.decode("utf-8")))
+    print(f"Fetching via Sheets API (gid={_SHEET_GID}): {SHEET_URL}")
+    raw = gsheet_auth.fetch_tab_as_dataframe(SHEET_URL, gid=_SHEET_GID)
+    raw.columns = raw.iloc[0]
+    df = raw[1:].reset_index(drop=True)
     print(f"Downloaded {len(df)} rows.")
 
     # Strip column names (handles leading/trailing spaces from Google Sheets export)

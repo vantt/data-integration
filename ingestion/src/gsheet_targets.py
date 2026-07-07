@@ -4,6 +4,8 @@ import re
 import pandas as pd
 from datetime import datetime, timezone
 
+import gsheet_auth
+
 
 def _load_dotenv_local():
     """Load environment variables from .env.local if it exists (for local dev)."""
@@ -171,16 +173,11 @@ def _print_validation_report(issues, total_rows, valid_count):
 def fetch_and_save_targets():
     print(f"Starting Target Ingestion (gsheet_targets)...")
 
-    # 1. Fetch CSV
-    if "/edit" in SHEET_URL:
-        csv_url = SHEET_URL.replace("/edit?usp=sharing", "/export?format=csv")
-        csv_url = csv_url.replace("/edit", "/export?format=csv")
-    else:
-        csv_url = SHEET_URL
-
-    print(f"Downloading from: {csv_url}")
+    print(f"Fetching via Sheets API (gid=0): {SHEET_URL}")
     try:
-        df = pd.read_csv(csv_url)
+        raw = gsheet_auth.fetch_tab_as_dataframe(SHEET_URL, gid="0")
+        raw.columns = raw.iloc[0]
+        df = raw[1:].reset_index(drop=True)
         print(f"Downloaded {len(df)} rows.")
 
         # 2. Validate raw data before any transformation
