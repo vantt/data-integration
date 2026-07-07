@@ -522,56 +522,8 @@
 - **Common Misunderstandings:** Do not use this metric outside the documented scope; do not compare it with a similarly named metric from another domain when business definition or grain differs.
 - **Pitfalls / Edge Cases:** Check null handling, canceled/returned statuses, duplicate keys, and joins that can multiply measures before publishing reports.
 
-## Context: Cash Flow
-
-> **Description:** Cash movement tracking.
-> **dbt Source:** [`fact_payments`](../../../transformation/models/marts/sales/fact_payments.sql)
-
-> **Grain:** See metric-level grain notes
-
-### Context Overview
-
-| Category | Foundational Analytical Questions | Related Metrics | Data Ready | Needs Added |
-|----------|-----------------------------------|-----------------|------------|-------------|
-| Cash Flow | Is actual cash movement positive or negative by period? | 19. Net Cash Flow | [`fact_payments`](../../../transformation/models/marts/sales/fact_payments.sql) | None documented |
-
-### Analytical Questions
-
-#### Q1. Cash Flow Readiness
-
-- **Question:** Is actual cash movement positive or negative by period?
-- **Definition:** This question defines whether `Cash Flow` is healthy, drifting, or needs deeper investigation based on the metrics in this context.
-- **Nature:** cash flow, lagging/value.
-- **Why It Matters:** It gives the reader the business reason for the metric set before they inspect individual KPIs.
-- **Tradeoffs / Caveats:** Read the answer together with each metric scope, grain, and source; planned metrics are not official reporting sources until implemented.
-- **Insight / Action Enabled:** When the signal deteriorates, the owner should verify data freshness, break down by the relevant dimension, and trigger the related playbook action.
-- **Related Metrics:** 19. Net Cash Flow
-
-### Metrics
-
-#### 19. Net Cash Flow
-
-- **Business Definition:** Difference between Cash Inflow and Cash Outflow.
-- **Logic (SQL):**
-  ```sql
-  SELECT
-      DATE(payment_date),
-      SUM(CASE WHEN type = 'inflow' THEN amount ELSE 0 END) AS cash_in,
-      SUM(CASE WHEN type = 'outflow' THEN amount ELSE 0 END) AS cash_out,
-      (SUM(CASE WHEN type = 'inflow' THEN amount ELSE 0 END) -
-       SUM(CASE WHEN type = 'outflow' THEN amount ELSE 0 END)) AS net_movement
-  FROM fact_payments
-  GROUP BY 1
-  ```
-
 <!-- ============================================================ -->
 <!-- COST_LEDGER_SECTION_START — owned by Phase 05 Cost Ledger agent -->
-
-- **Business Logic:** Calculate at the grain and scope documented for this context or metric-level dbt source; apply valid-status filters before aggregation to avoid canceled orders, duplicate records, or join-grain inflation.
-- **Formula:** See `Logic (SQL)` for the reusable calculation expression; the the business formula follows the metric definition and source grain above.
-- **Unit:** VND
-- **Common Misunderstandings:** Do not use this metric outside the documented scope; do not compare it with a similarly named metric from another domain when business definition or grain differs.
-- **Pitfalls / Edge Cases:** Check null handling, canceled/returned statuses, duplicate keys, and joins that can multiply measures before publishing reports.
 
 ## Context: Cost Ledger — Per-Order Costs
 
