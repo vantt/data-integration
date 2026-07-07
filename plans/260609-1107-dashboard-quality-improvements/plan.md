@@ -48,7 +48,7 @@ Define one drill-down path: Company → Channel → COGS/Discount/Fees → Produ
 - [ ] Add COGS coverage % to top of every margin report
 - [ ] Standardise margin taxonomy across all profitability dashboards:
   - Gross Revenue → Net Revenue → COGS → Gross Profit → Platform Fees → Channel Net Profit → (Operating Expenses*) → Net Profit*
-  - *mark unavailable until `fact_gl_entries` exists — see `plans/260609-1107-gl-accounting-entries/`
+  - *mark unavailable until Net Profit/EBITDA ship — see `plans/260706-1519-balance-sheet-liquidity-ratios/plan.md` Phase 5 (superseded `plans/archive/260609-1107-gl-accounting-entries/`)
 
 ---
 
