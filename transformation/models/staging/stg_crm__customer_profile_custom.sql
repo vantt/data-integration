@@ -4,6 +4,7 @@
 -- When adding new field_key to crm_custom_field_def, add json_extract_string here.
 SELECT
     party_id,
+    customer_id::INTEGER                                AS customer_id,
     custom                                              AS custom_json,
     updated_at::TIMESTAMPTZ                             AS updated_at,
     json_extract_string(custom, '$.skin_type')          AS skin_type,

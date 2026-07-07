@@ -63,17 +63,21 @@ _SNAPSHOT_SCHEMAS: dict[str, dict[str, list]] = {
         "category":      [],
         "color":         [],
         "display_label": [],
+        "is_archived":   [],
     },
     "crm_party_tag": {
-        "party_id":  [],
-        "tag_id":    [],
-        "tagged_by": [],
-        "tagged_at": [],
+        "party_id":    [],
+        "customer_id": [],
+        "tag_id":      [],
+        "tagged_by":   [],
+        "tagged_at":   [],
+        "source":      [],
     },
     "crm_customer_profile_custom": {
-        "party_id":   [],
-        "custom":     [],
-        "updated_at": [],
+        "party_id":    [],
+        "customer_id": [],
+        "custom":      [],
+        "updated_at":  [],
     },
 }
 
@@ -100,6 +104,7 @@ _INCREMENTAL_SCHEMAS: dict[str, dict[str, list]] = {
     "crm_note": {
         "note_id":            [],
         "party_id":           [],
+        "customer_id":        [],
         "note_type":          [],
         "body":               [],
         "author_user_id":     [],
@@ -117,6 +122,7 @@ _INCREMENTAL_SCHEMAS: dict[str, dict[str, list]] = {
     "crm_party_insight": {
         "insight_id":     [],
         "party_id":       [],
+        "customer_id":    [],
         "insight_type":   [],
         "body":           [],
         "confidence":     [],

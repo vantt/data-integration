@@ -17,7 +17,7 @@
 ## Requirements
 
 1. Sửa 4 export query trong `CRM_WRITEBACK_TABLES` — thêm `LEFT JOIN crm_party_identity pi ON pi.party_id = X.party_id AND pi.identity_type = 'sapo_customer'` + `pi.identity_value AS customer_id` vào SELECT, đúng pattern `crm_last_contact` (L37-45).
-2. Sửa 4 staging model — thêm `customer_id::INTEGER AS customer_id` vào SELECT, pass-through (không filter NULL — party chưa link Sapo vẫn giữ trong staging, filter NULL ở mart layer nếu cần).
+2. Sửa 4 staging model — thêm `customer_id::INTEGER AS customer_id` vào SELECT, pass-through (không filter NULL — party chưa link Sapo vẫn giữ trong staging, filter NULL ở mart layer nếu cần). Riêng `crm_party_tag`: export + staging thêm cột `source` (xem quyết định §4 master plan — phase-02 filter `source='crm_user'`).
 3. `schema.yml`: KHÔNG thêm `not_null` cho `customer_id` (nullable hợp lệ — party có thể chưa link Sapo, vd khách mới tạo qua Lark chưa từng mua hàng).
 4. `crm_note`/`crm_party_insight` là `incremental_append` — dữ liệu batch cũ (trước fix) không có `customer_id`. Xóa cursor file tương ứng (`{DATA_LAKE}/crm_export/crm_note_cursor.json`, `crm_party_insight_cursor.json`) để re-export từ `_DEFAULT_CURSOR` (epoch) — volume nhỏ (feature mới ~1 ngày), an toàn re-export toàn bộ.
 5. `crm_party_tag`/`crm_customer_profile_custom` là `snapshot` — re-run asset tự ghi đè file, không cần thao tác gì thêm.
@@ -42,11 +42,15 @@ CrmWritebackTable(
 CrmWritebackTable(
     name="crm_party_tag", mode="snapshot",
     export_query="""
-        SELECT pt.party_id, pi.identity_value AS customer_id, pt.tag_id, pt.tagged_by, pt.tagged_at
+        SELECT pt.party_id, pi.identity_value AS customer_id, pt.tag_id, pt.tagged_by, pt.tagged_at,
+               pt.source
         FROM crm_party_tag pt
         LEFT JOIN crm_party_identity pi
                ON pi.party_id = pt.party_id AND pi.identity_type = 'sapo_customer'
     """),
+# LƯU Ý cột source: tồn tại sau khi 260619-0830 phase 01 (migration ACL) đã apply.
+# Nếu plan này chạy TRƯỚC 260619: export `'crm_user' AS source` (literal — đúng thực tế
+# vì khi đó mọi tag đều do user gán), đổi lại thành pt.source khi 260619 land.
 CrmWritebackTable(
     name="crm_party_insight", mode="incremental_append", watermark_column="created_at",
     export_query="""
@@ -84,12 +88,13 @@ SELECT
     t.display_label                       AS tag_display_label,
     t.color                               AS tag_color,
     pt.tagged_by,
-    pt.tagged_at::TIMESTAMPTZ             AS tagged_at
+    pt.tagged_at::TIMESTAMPTZ             AS tagged_at,
+    pt.source                             AS source          -- 'crm_user' | 'sapo_v2_sync' | ...
 FROM {{ source('crm_export', 'crm_party_tag') }} pt
 LEFT JOIN {{ source('crm_export', 'crm_tag') }} t USING (tag_id)
 ```
 
-Áp dụng tương tự cho 3 file còn lại.
+Áp dụng tương tự cho 3 file còn lại (riêng cột `source` chỉ có ở `stg_crm__party_tag` — 3 bảng kia không có khái niệm sync source).
 
 ## Tests & Validation
 

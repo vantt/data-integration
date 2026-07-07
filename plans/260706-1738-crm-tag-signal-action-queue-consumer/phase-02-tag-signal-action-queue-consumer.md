@@ -15,6 +15,7 @@
 1. Tag `vip_tier` → OR vào điều kiện VIP trong CASE logic hiện có (không tạo action_type mới, chỉ mở rộng điều kiện trigger).
 2. Tag `risk` → action_type mới `MANUAL_RISK_REVIEW`, priority_rank đề xuất = 2 (ngay sau CALL_NOW=1), KHÔNG chặn các action_type khác.
 3. 1 party có thể có nhiều tag cùng category → aggregate bằng `bool_or`/`MAX`, không nhân dòng.
+4. **Chỉ tin tag người gán: filter `source = 'crm_user'`** (cập nhật 2026-07-06, khớp thiết kế với `260619-0830-crm-tag-acl-sync` revised). Lý do: (a) `MANUAL_RISK_REVIEW` rationale nói "NV đánh giá rủi ro" — chữ MANUAL là lời hứa đây là phán đoán con người, tag sync không được giả dạng; (b) 260619 sẽ sync tag từ Sapo group — nếu không filter, ~160 khách wholesale (mapping vip_tier tiềm năng) tự động boost vào queue outreach, ngược chính sách loại B2B khỏi outreach. Cột `source` đã thêm vào export/staging ở phase-01. Mở cho sync tags sau khi thấy chất lượng mapping (chỉ cần sửa 1 WHERE).
 
 ## Requirements
 
@@ -52,6 +53,10 @@
 
 -- Gộp tag risk/vip_tier theo customer_id (1 dòng/customer, aggregate qua bool_or).
 -- Party chưa link Sapo (customer_id NULL) bị loại — vô hình với action queue by design.
+-- source='crm_user': chỉ tag người gán được tính là signal. Tag sync từ Sapo
+-- (source='sapo_v2_sync', plan 260619) là dữ liệu phân loại, không phải phán đoán NV —
+-- MANUAL_RISK_REVIEW hứa với người dùng đây là đánh giá con người, và wholesale sync
+-- tags không được boost khách B2B vào queue outreach.
 SELECT
     customer_id,
     bool_or(tag_category = 'vip_tier')                                   AS has_vip_tag,
@@ -64,6 +69,7 @@ SELECT
 FROM {{ ref('stg_crm__party_tag') }}
 WHERE customer_id IS NOT NULL
   AND tag_category IN ('risk', 'vip_tier')
+  AND source = 'crm_user'
 GROUP BY customer_id
 ```
 
@@ -93,6 +99,7 @@ Theo đúng convention phase-09 đã thiết lập — xem `badge_catalog.py:74-
 | Renumber priority_rank 1-7 làm lệch thứ tự hiển thị hiện tại NV đã quen | Thông báo NV trước khi deploy; rank chỉ ảnh hưởng THỨ TỰ trong queue, không ẩn/hiện gì |
 | `has_vip_tag`/`has_risk_tag` NULL (LEFT JOIN không match) thay vì FALSE → `OR NULL` không hoạt động như mong đợi trong SQL 3-value logic | Dùng `COALESCE(has_vip_tag, false)` khi tham chiếu, hoặc đảm bảo `int_crm_party_tag_flags` luôn trả `false` thay `NULL` (bool_or trên tập rỗng → NULL trong DuckDB, cần `COALESCE` ở mart) |
 | 1 party có tag risk VÀ vip_tier cùng lúc → thứ tự CASE quyết định action_type nào thắng | Theo thiết kế: VIP nhánh đứng trước risk nhánh trong CASE hiện có → VIP thắng nếu đồng thời đủ điều kiện reorder/churn; risk chỉ thắng khi KHÔNG khớp nhánh VIP nào — chấp nhận, ghi rõ trong code comment |
+| 260619 chạy sau plan này → tag sync đổ vào `crm_party_tag` với category có thể trùng risk/vip_tier | Đã chặn bằng filter `source='crm_user'` trong int model (Requirements §4); phía 260619 phase-02 cũng tránh seed mapping vào category `risk`/`vip_tier` (trừ tag VIP sẵn có) — defense-in-depth 2 lớp |
 | Rollback | Revert 2 file mart + badge_catalog + task_service; xóa `int_crm_party_tag_flags.sql`; dbt build lại |
 
 ## Unresolved Questions

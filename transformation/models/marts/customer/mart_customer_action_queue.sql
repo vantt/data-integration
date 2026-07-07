@@ -8,62 +8,81 @@
 -- Automatically discovered as a serving view by sapo_serving_db Dagster asset.
 -- action_type drives the detailView Actions tab and CS/Sales daily workflow.
 
-WITH customers AS (
+WITH tag_flags AS (
+    SELECT * FROM {{ ref('int_crm_party_tag_flags') }}
+),
+
+customers AS (
     SELECT
-        customer_key,
-        customer_id,
-        customer_code,
-        full_name,
-        phone,
-        email,
-        value_group,
-        customer_status,
-        next_purchase_signal,
-        discount_sensitivity,
-        lifetime_value,
-        order_count,
-        avg_order_spend,
-        avg_days_between_orders,
-        cancel_rate,
-        recency_days,
-        last_order_date,
-        predicted_next_purchase_date,
-        channel_preference,
-        product_affinity,
-        last_purchased_product,
-        last_purchased_sku,
-        top_affinity_product,
-        top_affinity_sku,
-        second_affinity_product,
-        payment_behavior,
-        lifetime_contribution_margin,
-        is_margin_negative,
+        d.customer_key,
+        d.customer_id,
+        d.customer_code,
+        d.full_name,
+        d.phone,
+        d.email,
+        d.value_group,
+        d.customer_status,
+        d.next_purchase_signal,
+        d.discount_sensitivity,
+        d.lifetime_value,
+        d.order_count,
+        d.avg_order_spend,
+        d.avg_days_between_orders,
+        d.cancel_rate,
+        d.recency_days,
+        d.last_order_date,
+        d.predicted_next_purchase_date,
+        d.channel_preference,
+        d.product_affinity,
+        d.last_purchased_product,
+        d.last_purchased_sku,
+        d.top_affinity_product,
+        d.top_affinity_sku,
+        d.second_affinity_product,
+        d.payment_behavior,
+        d.lifetime_contribution_margin,
+        d.is_margin_negative,
         -- Contactable = has a usable phone (no Zalo OA fallback exists). Drives CS/Sales reachability.
-        (phone IS NOT NULL AND phone <> '') AS is_contactable
-    FROM {{ ref('dim_customers') }}
-    WHERE customer_type = 'RETAIL'
-      AND customer_id != 'Unknown'
-      AND order_count > 0
+        (d.phone IS NOT NULL AND d.phone <> '') AS is_contactable,
+        -- COALESCE'd here (single reference site — not inside int_crm_party_tag_flags):
+        -- bool_or() returns NULL over an empty group, and this LEFT JOIN also produces
+        -- NULL for customers with zero rows in tag_flags. Either way `OR NULL` in the
+        -- classified CASE below would silently drop that customer instead of just
+        -- skipping the tag-driven condition — COALESCE keeps 3-value logic sane.
+        COALESCE(tf.has_vip_tag, false)  AS has_vip_tag,
+        COALESCE(tf.has_risk_tag, false) AS has_risk_tag,
+        tf.risk_tag_labels
+    FROM {{ ref('dim_customers') }} d
+    LEFT JOIN tag_flags tf ON TRY_CAST(d.customer_id AS INTEGER) = tf.customer_id
+    WHERE d.customer_type = 'RETAIL'
+      AND d.customer_id != 'Unknown'
+      AND d.order_count > 0
 ),
 
 classified AS (
     SELECT
         *,
-        -- High-value tiers (VIP/GOLD/SILVER). BRONZE excluded by design: low/negative
-        -- contribution margin — not worth high-touch outreach (see is_margin_negative gate).
+        -- High-value tiers (VIP/GOLD/SILVER) OR manually-tagged vip_tier (has_vip_tag).
+        -- BRONZE excluded by design: low/negative contribution margin — not worth
+        -- high-touch outreach (see is_margin_negative gate).
         CASE
             -- Đang nguội (At Risk) → gọi tay ngay
-            WHEN value_group IN ('VALUE_VIP', 'VALUE_GOLD', 'VALUE_SILVER') AND customer_status = 'At Risk'
+            WHEN (value_group IN ('VALUE_VIP', 'VALUE_GOLD', 'VALUE_SILVER') OR has_vip_tag) AND customer_status = 'At Risk'
                 THEN 'CALL_NOW'
             -- Quá hạn nhịp mua → nhắc tái mua
-            WHEN value_group IN ('VALUE_VIP', 'VALUE_GOLD', 'VALUE_SILVER') AND next_purchase_signal = 'OVERDUE'
+            WHEN (value_group IN ('VALUE_VIP', 'VALUE_GOLD', 'VALUE_SILVER') OR has_vip_tag) AND next_purchase_signal = 'OVERDUE'
                 THEN 'REORDER_NUDGE'
             -- Sắp tới hạn nhịp mua → nhắc TRƯỚC khi khách quên (giữ on-track)
-            WHEN value_group IN ('VALUE_VIP', 'VALUE_GOLD', 'VALUE_SILVER') AND next_purchase_signal = 'DUE_SOON'
+            WHEN (value_group IN ('VALUE_VIP', 'VALUE_GOLD', 'VALUE_SILVER') OR has_vip_tag) AND next_purchase_signal = 'DUE_SOON'
                 THEN 'REORDER_PREEMPT'
             -- Đã churn → cần offer win-back
-            WHEN value_group IN ('VALUE_VIP', 'VALUE_GOLD', 'VALUE_SILVER') AND customer_status = 'Churned'
+            WHEN (value_group IN ('VALUE_VIP', 'VALUE_GOLD', 'VALUE_SILVER') OR has_vip_tag) AND customer_status = 'Churned'
                 THEN 'WIN_BACK'
+            -- NV đã gắn tag rủi ro thủ công → cần xác minh trước khi tiếp cận. Đặt SAU nhóm
+            -- VIP (tín hiệu giá trị thắng nếu đồng thời đủ điều kiện VIP) nhưng TRƯỚC
+            -- SECOND_ORDER/HIGH_CANCEL_RISK (tín hiệu người đáng tin hơn heuristic tự động).
+            WHEN has_risk_tag
+                THEN 'MANUAL_RISK_REVIEW'
             WHEN order_count = 1 AND recency_days BETWEEN 15 AND 45
                 THEN 'SECOND_ORDER'
             WHEN cancel_rate > 0.5 AND order_count >= 3
@@ -108,18 +127,26 @@ SELECT
     classified.lifetime_contribution_margin,
     classified.is_margin_negative,
     classified.action_type,
+    -- Passthrough risk signal — independent of which action_type CASE branch wins.
+    -- A customer can be both VIP (action_type=CALL_NOW/...) and manually risk-tagged;
+    -- without these columns the risk flag would be silently swallowed by the VIP branch.
+    classified.has_risk_tag AS has_manual_risk_flag,
+    CASE WHEN classified.has_risk_tag THEN classified.risk_tag_labels ELSE NULL END AS risk_tag_labels,
     CASE action_type
-        WHEN 'CALL_NOW'         THEN 1
-        WHEN 'REORDER_NUDGE'    THEN 2
-        WHEN 'REORDER_PREEMPT'  THEN 3
-        WHEN 'WIN_BACK'         THEN 4
-        WHEN 'SECOND_ORDER'     THEN 5
-        WHEN 'HIGH_CANCEL_RISK' THEN 6
+        WHEN 'CALL_NOW'            THEN 1
+        WHEN 'MANUAL_RISK_REVIEW'  THEN 2
+        WHEN 'REORDER_NUDGE'       THEN 3
+        WHEN 'REORDER_PREEMPT'     THEN 4
+        WHEN 'WIN_BACK'            THEN 5
+        WHEN 'SECOND_ORDER'        THEN 6
+        WHEN 'HIGH_CANCEL_RISK'    THEN 7
         ELSE 9
     END AS priority_rank,
     CASE action_type
         WHEN 'CALL_NOW'
             THEN 'VIP/Gold chưa mua ' || recency_days || ' ngày — gọi điện ngay'
+        WHEN 'MANUAL_RISK_REVIEW'
+            THEN 'NV đánh giá rủi ro: ' || risk_tag_labels || ' — cần xác minh trước khi tiếp cận'
         WHEN 'REORDER_NUDGE'
             THEN 'Quá hạn tái mua ' || (recency_days - COALESCE(avg_days_between_orders, recency_days)) || ' ngày — nhắn nhở'
         WHEN 'REORDER_PREEMPT'
@@ -134,6 +161,8 @@ SELECT
     END AS action_rationale,
     CASE action_type
         WHEN 'CALL_NOW'      THEN ROUND(COALESCE(avg_order_spend, 0) * 2)::BIGINT
+        -- Rủi ro liên quan tổng giá trị khách (không phải 1 đơn) → dùng lifetime_value.
+        WHEN 'MANUAL_RISK_REVIEW' THEN ROUND(COALESCE(lifetime_value, 0))::BIGINT
         WHEN 'REORDER_NUDGE' THEN ROUND(COALESCE(avg_order_spend, 0))::BIGINT
         WHEN 'REORDER_PREEMPT' THEN ROUND(COALESCE(avg_order_spend, 0))::BIGINT
         WHEN 'WIN_BACK'      THEN ROUND(COALESCE(avg_order_spend, 0) * 3)::BIGINT

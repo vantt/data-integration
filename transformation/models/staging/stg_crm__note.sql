@@ -3,6 +3,7 @@
 SELECT
     note_id,
     party_id,
+    customer_id::INTEGER                         AS customer_id,
     note_type,
     body,
     author_user_id,

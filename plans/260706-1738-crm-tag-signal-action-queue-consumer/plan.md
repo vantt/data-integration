@@ -16,6 +16,7 @@ Phase-01 (05/07) xây 4 export + staging model CRM (`stg_crm__note`, `stg_crm__p
 1. **Tag `vip_tier` boost priority như VIP tự động** — khách NV gắn tay `vip_tier` được xử lý như `value_group='VALUE_VIP'` trong CASE logic action_type (dù RFM tự động chưa kịp phản ánh) — vẫn nhận `CALL_NOW`/`REORDER_NUDGE` ưu tiên cao.
 2. **Tag `risk` thêm action_type mới `MANUAL_RISK_REVIEW`** (tách biệt khỏi `HIGH_CANCEL_RISK` tự động dựa `cancel_rate`) — tín hiệu NGƯỜI đánh giá, hiện riêng để NV thấy lý do khác; KHÔNG chặn khách khỏi các nhắc nhở khác.
 3. **Sửa customer_id resolution cho CẢ 4 export** (không chỉ `crm_party_tag`) — cùng pattern, cùng file, chi phí thêm rất nhỏ, tránh phải quay lại đúng chỗ này khi làm thread "recommender" (skin_type/insight preference) sau này.
+4. **Chỉ tin tag người gán (`source='crm_user'`)** — bổ sung 2026-07-06 khi khớp thiết kế với `260619-0830-crm-tag-acl-sync` (sync tag từ Sapo group vào `crm_party_tag`). Không filter thì tag sync giả dạng phán đoán NV (MANUAL_RISK_REVIEW) và wholesale boost nhầm vào queue outreach. Phase-01 export thêm cột `source` (fallback literal `'crm_user'` nếu 260619 chưa land); phase-02 filter trong int model. **Plan này vẫn độc lập vận hành với 260619** — chạy trước hay sau đều đúng.
 
 ## Phases
 

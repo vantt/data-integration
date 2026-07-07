@@ -3,6 +3,7 @@
 SELECT
     insight_id,
     party_id,
+    customer_id::INTEGER                         AS customer_id,
     insight_type,
     body,
     confidence,

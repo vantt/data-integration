@@ -47,6 +47,7 @@ _ACTION_TYPE_SHORT_LABEL: dict[str, str] = {
     "upsell":           "Upsell",
     "cross_sell":       "Cross-sell",
     "collect_feedback": "Thu thập phản hồi",
+    "manual_risk_review": "Cần xác minh",
 }
 
 

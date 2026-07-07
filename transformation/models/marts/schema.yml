@@ -339,6 +339,30 @@ models:
       - name: tier_generated_at
         data_type: timestamp with time zone
 
+  - name: int_crm_party_tag_flags
+    description: >
+      Aggregates CRM party tags (risk, vip_tier categories) to 1 row per customer_id.
+      Only source='crm_user' tags count as signal (sync-origin tags from
+      260619-0830-crm-tag-acl-sync are classification data, not human judgment —
+      see model SQL comment). Archived tags (crm_tag.is_archived, 260706-0833
+      Governance Admin) are excluded — archiving a tag retires it from the action
+      queue, not just from CRM pickers. Consumed by mart_customer_action_queue to
+      extend VIP eligibility and drive the MANUAL_RISK_REVIEW action_type.
+    columns:
+      - name: customer_id
+        description: "Sapo customer_id (INTEGER), resolved via crm_party_identity in stg_crm__party_tag."
+        tests: [unique, not_null]
+      - name: has_vip_tag
+        description: "TRUE if customer has any non-archived vip_tier tag from a human (crm_user) assignment."
+      - name: vip_tag_labels
+        description: "Comma-concatenated display labels of vip_tier tags."
+      - name: has_risk_tag
+        description: "TRUE if customer has any non-archived risk tag from a human (crm_user) assignment."
+      - name: risk_tag_labels
+        description: "Comma-concatenated display labels of risk tags."
+      - name: tags_updated_at
+        description: "Latest tagged_at timestamp across this customer's qualifying tags."
+
   - name: mart_customer_action_queue
     description: >
       Actionable outreach queue: one row per RETAIL customer needing outreach.
@@ -407,6 +431,17 @@ models:
       - name: action_type
         data_type: varchar
         tests: [not_null]
+      - name: has_manual_risk_flag
+        data_type: boolean
+        description: >
+          TRUE if customer has a human-assigned (source='crm_user') risk tag,
+          regardless of which action_type won the CASE (e.g. still TRUE for a
+          VIP customer whose action_type is CALL_NOW/WIN_BACK, not just
+          MANUAL_RISK_REVIEW). Prevents the risk signal from being silently
+          dropped when a higher-priority VIP branch wins the CASE.
+      - name: risk_tag_labels
+        data_type: varchar
+        description: "Comma-concatenated display labels of the customer's risk tags. NULL when has_manual_risk_flag is FALSE."
       - name: priority_rank
         data_type: integer
         tests: [not_null]

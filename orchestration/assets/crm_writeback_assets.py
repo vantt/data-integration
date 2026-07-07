@@ -39,6 +39,26 @@ class CrmWritebackTable:
     watermark_column: str = "created_at"
 
 
+def _dedup_identity_join(fk_alias: str) -> str:
+    """LEFT JOIN clause against a de-duplicated crm_party_identity.
+
+    Defensive against fan-out: a dedup-merge bug elsewhere could leave more
+    than one crm_party_identity row per party_id with identity_type =
+    'sapo_customer'. A plain LEFT JOIN on party_id would then duplicate
+    every row of the exporting table. Collapse to exactly one row per
+    party via ROW_NUMBER() before joining.
+
+    NOTE: the literal "crm_party_identity" must appear unqualified here so
+    _qualify_for_attach() can prefix it with crm_src. after ATTACH.
+    """
+    return f"""LEFT JOIN (
+                SELECT party_id, identity_value,
+                       ROW_NUMBER() OVER (PARTITION BY party_id ORDER BY identity_value) AS rn
+                FROM crm_party_identity
+                WHERE identity_type = 'sapo_customer'
+            ) pi ON pi.party_id = {fk_alias}.party_id AND pi.rn = 1"""
+
+
 CRM_WRITEBACK_TABLES: list[CrmWritebackTable] = [
     CrmWritebackTable(
         name="crm_last_contact",
@@ -48,9 +68,7 @@ CRM_WRITEBACK_TABLES: list[CrmWritebackTable] = [
                    lc.last_contacted_at, lc.last_contact_result,
                    lc.channel AS last_contact_channel, lc.updated_at
             FROM crm_last_contact lc
-            LEFT JOIN crm_party_identity pi
-                   ON pi.party_id = lc.party_id AND pi.identity_type = 'sapo_customer'
-        """,
+            """ + _dedup_identity_join("lc"),
     ),
     CrmWritebackTable(
         name="crm_activity_log",
@@ -64,8 +82,7 @@ CRM_WRITEBACK_TABLES: list[CrmWritebackTable] = [
                    a.task_id, a.related_order_code, a.staff_user_id,
                    a.occurred_at, a.created_at
             FROM crm_activity_log a
-            LEFT JOIN crm_party_identity pi
-                   ON pi.party_id = a.party_id AND pi.identity_type = 'sapo_customer'
+            """ + _dedup_identity_join("a") + """
             WHERE a.created_at > '{cursor}'
         """,
     ),
@@ -87,9 +104,7 @@ CRM_WRITEBACK_TABLES: list[CrmWritebackTable] = [
                    ct.status, ct.assigned_user_id, ct.last_touch_at,
                    ct.converted_order_code, ct.converted_revenue_vnd, ct.converted_at
             FROM crm_campaign_target ct
-            LEFT JOIN crm_party_identity pi
-                   ON pi.party_id = ct.party_id AND pi.identity_type = 'sapo_customer'
-        """,
+            """ + _dedup_identity_join("ct"),
     ),
     CrmWritebackTable(
         name="crm_app_user",
@@ -112,37 +127,47 @@ CRM_WRITEBACK_TABLES: list[CrmWritebackTable] = [
                    t.due_at, t.completed_at,
                    t.created_at, t.updated_at
             FROM crm_task t
-            LEFT JOIN crm_party_identity pi
-                   ON pi.party_id = t.party_id AND pi.identity_type = 'sapo_customer'
+            """ + _dedup_identity_join("t") + """
             WHERE t.updated_at > '{cursor}'
         """,
     ),
     CrmWritebackTable(
         name="crm_note", mode="incremental_append", watermark_column="created_at",
         export_query="""
-            SELECT note_id, party_id, note_type, body, author_user_id,
-                   pinned, pinned_until, visibility, task_id, campaign_id,
-                   source_activity_id, updated_at, updated_by_user_id, deleted_at, created_at
-            FROM crm_note
-            WHERE created_at > '{cursor}' AND visibility != 'private'
+            SELECT n.note_id, n.party_id, pi.identity_value AS customer_id,
+                   n.note_type, n.body, n.author_user_id,
+                   n.pinned, n.pinned_until, n.visibility, n.task_id, n.campaign_id,
+                   n.source_activity_id, n.updated_at, n.updated_by_user_id, n.deleted_at, n.created_at
+            FROM crm_note n
+            """ + _dedup_identity_join("n") + """
+            WHERE n.created_at > '{cursor}' AND n.visibility != 'private'
         """),
     CrmWritebackTable(
         name="crm_tag", mode="snapshot",
-        export_query="SELECT tag_id, name, category, color, display_label FROM crm_tag"),
+        export_query="SELECT tag_id, name, category, color, display_label, is_archived FROM crm_tag"),
     CrmWritebackTable(
         name="crm_party_tag", mode="snapshot",
-        export_query="SELECT party_id, tag_id, tagged_by, tagged_at FROM crm_party_tag"),
+        export_query="""
+            SELECT pt.party_id, pi.identity_value AS customer_id, pt.tag_id, pt.tagged_by, pt.tagged_at,
+                   pt.source AS source
+            FROM crm_party_tag pt
+            """ + _dedup_identity_join("pt")),
     CrmWritebackTable(
         name="crm_party_insight", mode="incremental_append", watermark_column="created_at",
         export_query="""
-            SELECT insight_id, party_id, insight_type, body, confidence,
-                   source_note_id, created_by, updated_at, deleted_at, created_at
-            FROM crm_party_insight
-            WHERE created_at > '{cursor}' AND deleted_at IS NULL
+            SELECT i.insight_id, i.party_id, pi.identity_value AS customer_id,
+                   i.insight_type, i.body, i.confidence,
+                   i.source_note_id, i.created_by, i.updated_at, i.deleted_at, i.created_at
+            FROM crm_party_insight i
+            """ + _dedup_identity_join("i") + """
+            WHERE i.created_at > '{cursor}' AND i.deleted_at IS NULL
         """),
     CrmWritebackTable(
         name="crm_customer_profile_custom", mode="snapshot",
-        export_query="SELECT party_id, custom, updated_at FROM crm_customer_profile"),
+        export_query="""
+            SELECT cp.party_id, pi.identity_value AS customer_id, cp.custom, cp.updated_at
+            FROM crm_customer_profile cp
+            """ + _dedup_identity_join("cp")),
 ]
 
 
