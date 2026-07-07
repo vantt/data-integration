@@ -88,7 +88,7 @@ Khi rep lưu địa chỉ qua M15 → `address_source` tự động set `manual`
 
 ## R14 — AI Approach-Script Gate (recommended=false)
 
-Kịch bản tiếp cận do AI sinh (`cache.wh_approach_script`) có cờ `recommended`. Khi `recommended=false`
+Kịch bản tiếp cận do AI sinh (approach-script JSON, đọc qua `ApproachScriptRepository`) có cờ `recommended`. Khi `recommended=false`
 (tài khoản nghi B2B gán nhầm RETAIL, dữ liệu margin mâu thuẫn `is_margin_negative=false` nhưng
 `avg_order_contribution_margin_pct<0`, hoặc khách chết-sâu kèm margin âm) → surface vào
 **WARN state** (Phase 05): banner cảnh báo sticky đỏ + nội dung che mờ (`opacity:0.35`, `pointer-events:none`);

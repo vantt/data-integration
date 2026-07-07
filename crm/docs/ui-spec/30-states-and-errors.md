@@ -194,7 +194,7 @@ hidden. Activity log and outcome summary remain visible.
 ## S14 — Call Mode / Strategy Cockpit States
 
 ### ST-CALL-NO-SCRIPT
-Không có row `cache.wh_approach_script` cho `customer_id` → empty state + CTA quay lại Worklist / Xem 360.
+Không có kịch bản cho `customer_id` (file `{data_dir}/approach_scripts/{customer_id}.json` không tồn tại) → empty state + CTA quay lại Worklist / Xem 360.
 
 ### ST-CALL-R14-WARN
 `recommended=false` (R14) → sticky banner cảnh báo đỏ (`#s14-r14-banner`) + nội dung che mờ (`#s14-content.s14-locked`, talk-track/points/objection/rail dim + pointer-events:none). Nút "Tôi đã xác minh" (A-S14-027) ẩn banner + xoá `s14-locked` (pure JS, POST 204 → audit `r14_ack`). Identity bar/alert row/outcome bar luôn hiển thị.

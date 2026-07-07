@@ -16,7 +16,7 @@ regions: [topbar, identity_bar, alert_row, strategy_summary, snapshot, talk_trac
 
 **Operating console** cho Sales Rep trong lúc gọi — không chỉ show kịch bản mà gom đủ bối cảnh tác nghiệp vào đúng khoảnh khắc cuộc gọi. Tổ chức theo **3 pha**: TRƯỚC bấm gọi (ai / vì sao / cảnh giác) → TRONG khi nói (talk-track / điểm nói / xử lý từ chối) → SAU khi cúp máy (log outcome / hẹn lại).
 
-Phân vùng không gian tách bạch **"vì sao gọi"** (RIGHT rail — action queue chiến lược, đọc trước khi quay số) khỏi **"nói gì"** (LEFT main — talk-track chiến thuật, tick dần khi nói). Kịch bản đọc từ `cache.wh_approach_script` (keyed by `customer_id`; R2 — CRM không tính lại, chỉ đọc + hiển thị `refreshed_at`).
+Phân vùng không gian tách bạch **"vì sao gọi"** (RIGHT rail — action queue chiến lược, đọc trước khi quay số) khỏi **"nói gì"** (LEFT main — talk-track chiến thuật, tick dần khi nói). Kịch bản đọc qua `ApproachScriptRepository` (hiện tại: file JSON `{data_dir}/approach_scripts/{customer_id}.json`; tương lai có thể swap sang cache table — cùng port; R2 — CRM không tính lại, chỉ đọc + hiển thị `refreshed_at`).
 
 **Hai host, một component:** lõi cockpit (`#s14-panel-root`) dùng chung cho cả:
 - **Embedded** — tab "Gọi" trong S03 (`/customers/{id}/panels/call_cockpit`). Khi tab active, sidebar tĩnh của S03 bị ẩn (CSS `:has(#s14-panel-root)`) để cockpit chiếm full-width.
@@ -27,9 +27,9 @@ Khi `recommended=false` (nghi B2B gán nhầm / margin mâu thuẫn / chết-sâ
 
 ## Data sourcing
 
-Panel nạp (tất cả **cache SQLite, rẻ**): `party` (Party360), `identities` (crm_party_identity), `insight` (CacheInsight — RFM + action queue), `warning_notes`, `resolved_action_ids`, `script` (wh_approach_script), `meta`.
+Panel nạp (tất cả **cache SQLite, rẻ**): `party` (Party360), `identities` (crm_party_identity), `insight` (CacheInsight — RFM + action queue), `warning_notes`, `resolved_action_ids`, `script` (ApproachScriptRepository — file JSON), `meta`.
 
-- **Kịch bản** (LEFT + guardrails): `cache.wh_approach_script` — profile_read, value_assessment, opportunity, risk, approach{opening_message, fallback_message, talking_points[], cross_sell[], objection_handling[], do_not[], timing}, confidence, data_gaps, recommended. Pilot: JSON tĩnh cho tới khi batch ghi cache. Freshness: `refreshed_at` (R6 — ICT).
+- **Kịch bản** (LEFT + guardrails): approach-script JSON (`ApproachScriptRepository`) — profile_read, value_assessment, opportunity, risk, approach{opening_message, fallback_message, talking_points[], cross_sell[], objection_handling[], do_not[], timing}, confidence, data_gaps, recommended. Pilot: JSON tĩnh cho tới khi batch ghi cache. Freshness: `refreshed_at` (R6 — ICT).
 - **Vì sao gọi** (reason_to_call): `insight.actions` (ActionQueueItem: action_type, rationale_vi, value_at_stake_vnd, last_order_code, last_purchase_date, estimated_depletion_date) + `resolved_action_ids` + **open/doing CONTACT-TASKS** (`crm_task` kind=contact, party_id=current). Rail tổ chức thành 1 lý do PRIMARY (call trigger chín muồi nhất) + SECONDARY "tranh thủ nếu thuận" (sắp xếp theo ripeness). Read-context — claim/dismiss vẫn thuộc P01 (không rebuild ở cockpit). Outcome bar resolve NHIỀU task_id/action_id cùng lúc (bulk); item nào backed bởi contact-task thì outcome **cập nhật luôn `task.status`** (đồng bộ với S15 — một nguồn sự thật).
 - **Snapshot** (cache-first, DuckDB-fallback): dùng `insight.insight` (LTV `lifetime_contribution_margin`, AOV `avg_order_spend`, số đơn, chu kỳ `avg_days_between_orders`, recency). Nếu `insight` thiếu (None) → fallback `dim_metrics` (olap.duckdb, on-demand) để không rỗng. KHÔNG bê RFM grid / discount buckets / profitability — đó là P01.
 - **Identity/kênh** (identity_bar + collect): `crm_party_identity` — kênh `is_preferred`, `contact_status` (active/invalid/unreachable), `display_label`.
@@ -171,9 +171,16 @@ elements:
 - **Item 6 — Save toast**: `_s14_collect_row.html` appends self-removing `✓ Đã lưu` toast (2 s) when `saved=True` (returned by `custom-field-inline` handler).
 - **Item 7 — Back-button tooltips**: `call_cockpit.html` back buttons and "Khách kế →" link now carry `title` attributes for discoverability.
 
+## Implementation Notes (Phase 02 — 260706-0833 CRM Health Profile + Tag Governance)
+
+- **Row 1 — `health_domain` collect row (`kind='tag_multiselect'`)**: shown when the party has zero `crm_party_tag` rows with `category='health_domain'` (checked via `load_health_domain_collect_context()` in `crm/src/application/health_domain_collect.py`, called from both `screen_call_cockpit.py` full-screen route and `screen_customer_360_panels.py` embedded panel route). Chips render the 8 canonical `health_domain` tags (`crm_tag WHERE category='health_domain' AND is_archived=0`, seeded migration 0041), ordered by attach-count desc. Multi-select toggle (`s14TagChipToggle`) enables a single **Lưu** button (`s14TagMultiSave`) that POSTs to the new inline endpoint. On success the row swaps to "✓ <label1>, <label2>" (fragment variant C in `_s14_collect_row.html`) and the gap clears (won't reappear once the party has ≥1 health_domain tag).
+- **Row 2 — `health_context_raw` collect row (`kind='custom_text'`)**: shown when `party.custom.health_context_raw` is empty. Free-text input, `maxlength=200` (enforced both client-side and server-side), placeholder "huyết áp cao, hay mệt...". Reuses the existing `POST /customers/{id}/custom-field-inline` endpoint from Phase 06 (no new endpoint) — `health_context_raw` added to that handler's field whitelist. Saved state renders via fragment variant B (now covers `custom_select` and `custom_text`), 2 s self-removing toast.
+- **New endpoint — `POST /customers/{party_id}/tags/inline`** (`crm/src/adapters/inbound/web/screens/modals/screen_modal_tags.py`): body `category` (Form) + `tag_names` (repeated Form field). **Hard whitelist**: `category` must be in `INLINE_ALLOWED_CATEGORIES = {"health_domain", "health_concern"}` — any other category → `400` before any DB lookup/write (prevents assigning sensitive categories like `risk`/`vip_tier` through this fast inline path; those still require the full M03 tag modal). Looks up `crm_tag` by `name` + `category`, attaches via `TagService.attach_tag(..., source="crm_user")` (now writes `crm_party_tag.source` explicitly rather than relying on the column default), returns the `_s14_collect_row.html` fragment with `saved=True`.
+- **`skin_type` / `preferred_contact` unchanged**: both keep their Phase 06 `custom_select` behaviour untouched; the two new rows are additive only.
+
 ## States
 
-- **ST-CALL-NO-SCRIPT**: không có row `cache.wh_approach_script` cho customer_id → empty + CTA Worklist / 360.
+- **ST-CALL-NO-SCRIPT**: không có file approach-script cho customer_id → empty + CTA Worklist / 360.
 - **ST-CALL-R14-WARN**: `recommended=false` (R14) → sticky banner cảnh báo đỏ (`#s14-r14-banner`) + nội dung che mờ (`#s14-content.s14-locked`); talk-track/points/objection/rail render nhưng bị dim + pointer-events: none. Nút "Tôi đã xác minh" (A-S14-027) ẩn banner + xoá class s14-locked (pure JS, POST 204 → audit log).
 - **ST-CALL-LOW-CONFIDENCE**: `confidence=low` → talk-track nhạt + nhãn "độ tin thấp, kiểm chứng".
 - **ST-CALL-NO-ACTIONS**: `insight.actions` rỗng → rail "Vì sao gọi" hiện caveat "Không có đề xuất — dùng kịch bản".

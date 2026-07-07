@@ -22,7 +22,7 @@ Layout 2 cột: cột trái (70%) = main + tab bar chứa 7 tab (Insight P01, Gh
 Timeline P03, Tasks P04, Chat P06, **Gọi** — call cockpit embedded từ S14); cột phải (30%) = sidebar tĩnh
 với các block: Cảnh báo, Thông Tin Cơ Bản, Head Line, Liên Lạc, Dates, Tags.
 
-Tab "Gọi" tải `c360_call_cockpit_panel.html` — kịch bản tiếp cận AI từ `cache.wh_approach_script`.
+Tab "Gọi" tải `c360_call_cockpit_panel.html` — kịch bản tiếp cận AI qua `ApproachScriptRepository` (file JSON per customer).
 Khi R14 gate `recommended=false` → panel vào STOP state. Button "Gọi ngay" trong action cards thử click
 tab "Gọi" trước, fallback sang mở M08 nếu không tìm thấy tab.
 
