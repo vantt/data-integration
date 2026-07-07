@@ -2,9 +2,12 @@
    @source   crm/docs/ui-spec/modals/M03-tag-management-modal.md
    @kind     MODAL
    M03 Tag Management modal — served at GET /modals/m03?party_id=...
-   Data: party_id (str), all_tags (list[Tag]), party_tag_ids (set[str]), party_name (str).
+   Data: party_id (str), all_tags (list[Tag]), party_tag_ids (set[str]), party_name (str),
+         available_categories (list[tuple[str, str]] — (slug, Vietnamese label), excludes
+         risk/vip_tier, used by the inline create-tag category dropdown).
    Tag fields: tag_id, name, display_label, category, color.
-   POST target: /customers/{party_id}/tags.
+   POST targets: /customers/{party_id}/tags (bulk save),
+                  /customers/{party_id}/tags/create (inline provisional create + attach).
    Response swaps back into #modal-root via hx-target="#modal-root".
 #}
 
@@ -86,12 +89,41 @@
           </span>
         </div>
 
-        <button type="button" class="ghost-link"
-                hx-get="/settings/tags/modal/create"
-                hx-target="#modal-root"
-                hx-swap="innerHTML">
-          {% include "icons/plus.svg" %} Tạo tag mới
-        </button>
+        {# ── Create new tag inline (rep-facing free text — provisional) ──
+           Creates crm_tag(is_provisional=1) + attaches to this party right
+           away; ops confirms/renames/assigns-category later via Tag
+           Governance Admin (/settings/tags). Category left blank → L2
+           (unknown domain). Sensitive categories (risk, vip_tier) are not
+           offered here — those stay admin-curated via M14. #}
+        <div class="field" id="m03-create-section">
+          <button type="button" class="ghost-link" id="m03-create-toggle"
+                  onclick="document.getElementById('m03-create-form').style.display='flex';
+                           this.style.display='none'">
+            {% include "icons/plus.svg" %} Tạo tag mới
+          </button>
+          <div id="m03-create-form" class="stack stack-2" style="display:none">
+            <input type="text" class="inp" id="m03-create-name"
+                   placeholder="Tên tag mới (vd: huyết áp cao)" autocomplete="off"
+                   onkeydown="if(event.key==='Enter'){event.preventDefault();}">
+            <div class="inp-sel">
+              <select id="m03-create-category" class="inp">
+                <option value="">— Chưa rõ (ops phân loại sau) —</option>
+                {% for cat_value, cat_label in available_categories %}
+                <option value="{{ cat_value }}">{{ cat_label }}</option>
+                {% endfor %}
+              </select>
+              <span class="inp-sel__chev">{% include 'icons/chevdown.svg' %}</span>
+            </div>
+            <button type="button" class="btn btn--ghost btn--xs"
+                    hx-post="/customers/{{ party_id }}/tags/create"
+                    hx-target="#modal-root" hx-swap="innerHTML"
+                    hx-vals='js:{name: document.getElementById("m03-create-name").value,
+                                  category: document.getElementById("m03-create-category").value}'>
+              Tạo &amp; gắn tag
+            </button>
+            <span class="field__hint">Tag mới ở trạng thái chờ duyệt — vẫn dùng được ngay, ops sẽ chuẩn hóa sau.</span>
+          </div>
+        </div>
 
       </div>{# .modal__body #}
 

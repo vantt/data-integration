@@ -35,6 +35,7 @@ from adapters.outbound.sqlite.dedup_repository import SQLiteDedupRepository
 from adapters.outbound.sqlite.profile_repository import SQLiteProfileRepository
 from adapters.outbound.sqlite.custom_field_repository import SQLiteCustomFieldRepository
 from adapters.outbound.sqlite.tag_note_repository import SQLiteTagRepository, SQLiteNoteRepository
+from adapters.outbound.sqlite.tag_governance_repository import SQLiteTagGovernanceRepository
 from adapters.outbound.sqlite.cache_repository import SQLiteCacheRepository
 from adapters.outbound.sqlite.action_state_repository import SQLiteActionStateRepository
 from adapters.outbound.sqlite.activity_repository import SQLiteActivityRepository
@@ -61,6 +62,7 @@ from application.party_seed_service import PartySeedService
 from application.profile_service import ProfileService
 from application.note_service import NoteService
 from application.tag_service import TagService
+from application.tag_governance_service import TagGovernanceService
 from application.custom_field_service import CustomFieldService
 from application.activity_service import ActivityService
 from application.task_service import TaskService
@@ -74,6 +76,7 @@ from application.customer_list_query_service import CustomerListQueryService
 # ── Inbound: HTTP API handlers ────────────────────────────────────────────────
 from adapters.inbound.http.health_handler import create_health_router
 from adapters.inbound.http.admin_handler import create_admin_router
+from adapters.inbound.http.admin_approach_scripts_handler import create_admin_approach_scripts_router
 from adapters.inbound.http.dedup_handler import make_dedup_router
 from adapters.inbound.http.customer360_handler import make_customer360_router
 from adapters.inbound.http.insight_handler import make_insight_router
@@ -139,6 +142,7 @@ class SqliteRepos(TypedDict):
     profile: SQLiteProfileRepository
     cf: SQLiteCustomFieldRepository
     tag: SQLiteTagRepository
+    tag_governance: SQLiteTagGovernanceRepository
     note: SQLiteNoteRepository
     activity: SQLiteActivityRepository
     last_contact: SQLiteLastContactRepository
@@ -166,6 +170,7 @@ class Services(TypedDict):
     profile: ProfileService
     note: NoteService
     tag: TagService
+    tag_governance: TagGovernanceService
     cf: CustomFieldService
     activity: ActivityService
     task: TaskService
@@ -239,6 +244,7 @@ def _build_sqlite_repos(db: CRMDatabase) -> SqliteRepos:
         "profile": SQLiteProfileRepository(db),
         "cf": SQLiteCustomFieldRepository(db),
         "tag": SQLiteTagRepository(db),
+        "tag_governance": SQLiteTagGovernanceRepository(db),
         "note": SQLiteNoteRepository(db),
         "activity": SQLiteActivityRepository(db),
         "last_contact": SQLiteLastContactRepository(db),
@@ -306,6 +312,7 @@ def _build_duckdb_repos(olap: str) -> DuckdbRepos:
 def _build_services(sqlite_repos: SqliteRepos) -> Services:
     """Instantiate all application services from SQLite repository objects."""
     db = sqlite_repos["db"]
+    tag_svc = TagService(sqlite_repos["tag"], db)
     return {
         "merge": MergeService(sqlite_repos["party"], sqlite_repos["dedup"]),
         "profile": ProfileService(
@@ -314,7 +321,8 @@ def _build_services(sqlite_repos: SqliteRepos) -> Services:
             db,
         ),
         "note": NoteService(sqlite_repos["note"], db),
-        "tag": TagService(sqlite_repos["tag"], db),
+        "tag": tag_svc,
+        "tag_governance": TagGovernanceService(sqlite_repos["tag_governance"], tag_svc, db),
         "cf": CustomFieldService(sqlite_repos["cf"], db),
         "activity": ActivityService(sqlite_repos["activity"], sqlite_repos["last_contact"], db),
         "task": TaskService(sqlite_repos["task"], sqlite_repos["cache"], db, sqlite_repos["party"]),
@@ -447,8 +455,11 @@ class _ProfileTagCFComposite:
     def list_party_tags(self, party_id):
         return self._tags.list_party_tags(party_id)
 
-    def attach_tag(self, party_id, tag_id, user_id=None):
-        return self._tags.attach_tag(party_id, tag_id, user_id)
+    def attach_tag(self, party_id, tag_id, user_id=None, source="crm_user"):
+        return self._tags.attach_tag(party_id, tag_id, user_id, source)
+
+    def list_tags_by_category_ordered_by_usage(self, category):
+        return self._tags.list_tags_by_category_ordered_by_usage(category)
 
     def detach_tag(self, party_id, tag_id):
         return self._tags.detach_tag(party_id, tag_id)
@@ -458,6 +469,9 @@ class _ProfileTagCFComposite:
 
     def create_tag(self, name, category, color, display_label=""):
         return self._tags.create_tag(name, category, color, display_label)
+
+    def find_or_create_tag(self, name, category, is_provisional=True, color="default", display_label=""):
+        return self._tags.find_or_create_tag(name, category, is_provisional, color, display_label)
 
     def update_tag(self, tag_id, name, category, color, display_label=""):
         return self._tags.update_tag(tag_id, name, category, color, display_label)
@@ -502,6 +516,7 @@ def _register_api_routes(
     """Register all HTTP API routers (prefix=/api already set per handler)."""
     app.include_router(create_health_router(sqlite_repos["db"]))
     app.include_router(create_admin_router(sync_parties_runner=_make_sync_parties_runner()))
+    app.include_router(create_admin_approach_scripts_router(sqlite_repos["approach"].scripts_dir))
     app.include_router(make_insight_router(sqlite_repos["party"], sqlite_repos["cache"]))
     app.include_router(make_approach_script_router(sqlite_repos["party"], sqlite_repos["approach"]))
     app.include_router(make_script_nav_router(sqlite_repos["party"], sqlite_repos["approach"], templates))
@@ -598,6 +613,7 @@ def _register_web_routes(
         claimed_action_resolver=sqlite_repos["task"],
         action_state=sqlite_repos["action_state"],
         party_insights=sqlite_repos["party"],
+        tags=services["tag"],
     ))
     app.include_router(make_tasks_board_router(
         templates=templates,
@@ -639,6 +655,7 @@ def _register_web_routes(
         parties_svc=sqlite_repos["party"],
         settings_svc=_profile_cf_tag,
         app_users_svc=sqlite_repos["app_user"],
+        tag_governance_svc=services["tag_governance"],
     ))
     app.include_router(make_task_detail_router(
         templates=templates,
