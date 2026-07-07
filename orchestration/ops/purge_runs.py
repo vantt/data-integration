@@ -96,7 +96,15 @@ def _cleanup_orphans(instance, known_run_ids: set) -> tuple[int, int]:
 
 
 def _cleanup_dbt_target_dirs(keep_days: int, log) -> tuple[int, float]:
-    """Remove old sapo_dbt_assets-* directories from transformation/target/."""
+    """Remove old per-invocation directories from transformation/target/.
+
+    dagster-dbt gives every `dbt.cli(...)` call its own isolated target subdir
+    (naming varies by invocation type/dagster-dbt version — e.g. `sapo_dbt_assets-*`
+    for context-bound `build` calls, plain hashes for context-less calls like the
+    startup `dbt parse`). Age-based, not name-prefix-based — a prior version only
+    matched the `sapo_dbt_assets-` prefix and silently never cleaned the rest,
+    which accumulated to 11.9k dirs / 66GB before this fix.
+    """
     target_dir = os.path.join(
         os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__)))),
         'transformation', 'target'
@@ -111,8 +119,6 @@ def _cleanup_dbt_target_dirs(keep_days: int, log) -> tuple[int, float]:
     log.info(f"Scanning dbt target dirs in {target_dir}...")
     last_heartbeat = time.time()
     for name in os.listdir(target_dir):
-        if not name.startswith('sapo_dbt_assets-'):
-            continue
         dir_path = os.path.join(target_dir, name)
         if not os.path.isdir(dir_path):
             continue
