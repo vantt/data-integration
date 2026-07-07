@@ -1,10 +1,10 @@
-# Phase 04 — Outbound Write-back: CRM Tag → Sapo (Deferred)
+# Phase 01 — Outbound Write-back: CRM Tag → Sapo (Blocked)
 
-**Context:** [plan.md](plan.md) · Requires: Phase 01-03 + Phase 07 (sync_outbox infrastructure)
+**Context:** [plan.md](plan.md) · Moved from `plans/archive/260619-0830-crm-tag-acl-sync/phase-04-outbound-writeback.md` · Requires: `260619-0830` Phase 01-03 + Phase 07 (sync_outbox infrastructure)
 
 ## Overview
-- **Priority:** P2 — **DEFERRED sau v1**
-- **Status:** ⬜ Deferred
+- **Priority:** P2 — **Blocked**, không có timeline
+- **Status:** ⬜ Blocked
 - Khi CRM user gán/bỏ tag có `direction='outbound'` hoặc `'both'` trong `crm_ext_tag_map` → translate ngược sang Sapo field (customer_group / native tag) → enqueue vào `sync_outbox`.
 
 ## Dependency cứng
@@ -21,7 +21,7 @@ Phase này chỉ **thêm trigger enqueue** khi tag thay đổi.
 ```
 CRM user gán tag "KH Sỉ" (crm_tag_id=X)
   → lookup crm_ext_tag_map(crm_tag_id=X, direction IN ('outbound','both'), is_active=1)
-  → tìm crm_ext_tag(ext_tag_id) → source_system='sapo_v2', ext_key='1812239' (group id — xem phase 01)
+  → tìm crm_ext_tag(ext_tag_id) → source_system='sapo_v2', ext_key='1812239' (group id — xem 260619-0830 phase 01)
   → lookup crm_party_external_id(party_id, source_system='sapo_v2') → external_key (Sapo customer_id)
   → INSERT INTO sync_outbox {
       entity_type: 'party',

@@ -70,11 +70,11 @@ crm_customer_profile.custom (JSON)
 | 01 | [Schema — is_provisional + is_archived + seed health tags](phase-01-schema.md) | ✅ | Migration: 2 columns mới trên crm_tag; seed 8 health domain tags |
 | 02 | [S14 collect — health chips + context text + provisional inline](phase-02-s14-health-collect.md) | ✅ | collect region: domain multi-chip + free text row + POST inline tạo provisional tag |
 | 03 | [Tag Governance Admin — S13 extension](phase-03-tag-governance-admin.md) | ✅ | `/settings/tags`: taxonomy + L1 queue + L2 queue + chipify |
-| 04 | [Script generator integration](phase-04-script-integration-deferred.md) | ⬜ Deferred | `wh_approach_script` reads health_tags → `data_gaps[]`, `talking_points[]` |
+| 04 | Script generator integration | ➡️ Moved | Moved sang [`260707-2343-crm-tag-deferred-followups`](../../260707-2343-crm-tag-deferred-followups/phase-02-approach-script-health-integration.md) phase 02 — `wh_approach_script` reads health_tags → `data_gaps[]`, `talking_points[]` |
 
-**v1 scope:** Phase 01 + 02 + 03. Phase 04 deferred.
+**v1 scope:** Phase 01 + 02 + 03. Phase 04 moved sang backlog plan `260707-2343-crm-tag-deferred-followups`.
 
-> **Status:** v1 complete (Phase 01+02+03 done). Phase 04 deferred — separate track.
+> **Status:** ✅ Plan hoàn tất (Phase 01+02+03 done). Phase 04 moved sang `260707-2343-crm-tag-deferred-followups`.
 
 ---
 
@@ -82,7 +82,7 @@ crm_customer_profile.custom (JSON)
 
 - Phase 01 → 02 → 03 (strict sequential)
 - Phase 01 depends on `260619` Phase 01 (crm_party_tag.source column)
-- Phase 04 depends on script generator refactor (track riêng)
+- Phase 04 (moved to `260707-2343-crm-tag-deferred-followups`) depends on script generator refactor (track riêng)
 
 ---
 
@@ -105,3 +105,5 @@ crm_customer_profile.custom (JSON)
 - Không outbound sync health tags về Sapo
 - Không per-customer health history timeline
 - Không NLP fuzzy grouping — chipify dùng exact text group v1
+
+> Backlog ý tưởng (LLM auto-suggest, outbound health sync, history timeline, NLP fuzzy grouping) đã gom vào [`260707-2343-crm-tag-deferred-followups`](../../260707-2343-crm-tag-deferred-followups/plan.md).
