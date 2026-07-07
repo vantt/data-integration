@@ -5,18 +5,30 @@ RUN apt-get update && apt-get install -y \
     git \
     build-essential \
     curl \
+    gnupg \
     && rm -rf /var/lib/apt/lists/*
+
+# Node.js 20.x (NodeSource) — required for codex CLI (npm package), used by
+# scripts/generate_approach_scripts.py as one of the completion providers.
+RUN curl -fsSL https://deb.nodesource.com/setup_20.x | bash - \
+    && apt-get install -y --no-install-recommends nodejs \
+    && rm -rf /var/lib/apt/lists/*
+
+# codex CLI headless (`codex exec`) — auth is subscription-based (OAuth), NOT an
+# API key: populated by a one-time `docker compose exec data_platform codex login`
+# into the `agent_codex_config` named volume (see docker-compose.yml), same
+# pattern as ../fgos. Without that login step, codex-based calls fail at call time
+# (container still starts fine).
+RUN npm install -g @openai/codex
 
 WORKDIR /app
 
 # Copy requirements files
 COPY ingestion/requirements.txt /app/ingestion/requirements.txt
-COPY webhook_consumer/cloudflared1_consumer/requirements.txt /app/webhook_consumer/cloudflared1_consumer/requirements.txt
+COPY scripts/requirements.txt /app/scripts/requirements.txt
 
-# Install dependencies (Merging and installing)
-# We install ingestion requirements first as it is likely a superset or has core deps
-RUN pip install --no-cache-dir -r ingestion/requirements.txt
-RUN pip install --no-cache-dir -r webhook_consumer/cloudflared1_consumer/requirements.txt
+# Install dependencies
+RUN pip install --no-cache-dir -r ingestion/requirements.txt -r scripts/requirements.txt
 
 # dlt 1.25.0 bug: create_dataset() calls makedirs without exist_ok=True, crashing when
 # the dataset directory already exists on second+ runs. Patch until dlt fixes upstream.

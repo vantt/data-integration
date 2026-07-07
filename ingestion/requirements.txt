@@ -7,8 +7,13 @@ duckdb
 dagster
 dagster-webserver
 dagster-dbt
+# Pin below dagster's own transitive pick (1.82.0): that version's compiled grpc_health
+# pb2 stub requires protobuf>=7.35, which conflicts with dbt-core/dagster's protobuf<7
+# constraint and crash-loops the Dagster grpc server at import time. 1.76.0 is the
+# newest release whose stub still matches protobuf<7 (verified via pip check + import).
+grpcio-health-checking==1.76.0
 dbt-duckdb==1.10.1
-dbt-core==1.11.8
+dbt-core==1.11.12
 pandas
 pyarrow
 openpyxl
