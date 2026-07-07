@@ -14,7 +14,7 @@ from fastapi.responses import HTMLResponse
 from fastapi.templating import Jinja2Templates
 
 from adapters.inbound.http.auth_dependency import require_admin
-from domain.entities.app_user import AppUser
+from domain.entities.app_user import AppUser, ROLE_ADMIN, VALID_ROLES
 from domain.entities.profile import CustomFieldDef, Tag
 from adapters.inbound.web.screens.management.screen_mgmt_helpers import (
     _is_valid_hex_color,
@@ -43,6 +43,7 @@ class AppUsersSvc(Protocol):
     """Structural protocol for the app-user repository used by make_settings_router."""
 
     def list_active(self) -> list[AppUser]: ...
+    def update(self, user_id: str, **kwargs: Any) -> None: ...
 
 
 class TagGovernancePendingSvc(Protocol):
@@ -191,5 +192,25 @@ def make_settings_router(
     async def tag_delete(tag_id: str):
         settings_svc.delete_tag(tag_id)
         return Response(status_code=200)  # HTMX removes the row via outerHTML swap
+
+    @router.patch("/settings/users/{user_id}/role", dependencies=[Depends(require_admin)])
+    async def user_role_update(request: Request, user_id: str, role: str = Form("")):
+        role = role.strip()
+        if role not in VALID_ROLES:
+            return HTMLResponse("invalid role", status_code=400)
+        current_user = request.state.current_user
+        if current_user is not None and current_user.user_id == user_id and role != ROLE_ADMIN:
+            return HTMLResponse("cannot remove your own admin role", status_code=400)
+        app_users_svc.update(user_id, role=role)
+        return Response(status_code=200, headers={"HX-Redirect": "/settings?tab=users"})
+
+    @router.patch("/settings/users/{user_id}/active", dependencies=[Depends(require_admin)])
+    async def user_active_update(request: Request, user_id: str, is_active: str = Form("true")):
+        active = is_active.strip().lower() == "true"
+        current_user = request.state.current_user
+        if current_user is not None and current_user.user_id == user_id and not active:
+            return HTMLResponse("cannot deactivate your own account", status_code=400)
+        app_users_svc.update(user_id, is_active=active)
+        return Response(status_code=200, headers={"HX-Redirect": "/settings?tab=users"})
 
     return router

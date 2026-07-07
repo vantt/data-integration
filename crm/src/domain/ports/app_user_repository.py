@@ -15,3 +15,7 @@ class AppUserRepository(Protocol):
     def list_active(self) -> list[AppUser]:
         """Return all active app users."""
         ...
+
+    def update(self, user_id: str, **kwargs: object) -> None:
+        """Update one or more columns (email, full_name, role, is_active, ...) for user_id."""
+        ...

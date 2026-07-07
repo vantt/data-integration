@@ -66,14 +66,21 @@ def cf_team_domain() -> str:
     return os.environ.get("CF_TEAM_DOMAIN", "")
 
 
-def cf_role_claim() -> str:
-    """Dot-separated JWT claim path for Lark role. E.g. 'custom.role' or 'role'."""
-    return os.environ.get("CF_ROLE_CLAIM", "role")
+def cf_dept_claim() -> str:
+    """Dot-separated JWT claim path for Lark departments (array). E.g. 'custom.departments'."""
+    return os.environ.get("CF_DEPT_CLAIM", "custom.departments")
+
+
+def cf_func_role_claim() -> str:
+    """Dot-separated JWT claim path for Lark functional roles (array). E.g. 'custom.functional_roles'."""
+    return os.environ.get("CF_FUNC_ROLE_CLAIM", "custom.functional_roles")
 
 
 def cf_role_map() -> dict:
-    """JSON mapping: Lark role value → CRM role string.
+    """JSON mapping: Lark department/functional_role value → CRM role string.
 
+    Applied to every value from CF_DEPT_CLAIM and CF_FUNC_ROLE_CLAIM; the
+    highest-privilege match wins when several values map to different roles.
     Example env: CF_ROLE_MAP={"Admin":"admin","Manager":"manager","Sales":"sales"}
     """
     raw = os.environ.get("CF_ROLE_MAP", "{}")
@@ -81,3 +88,24 @@ def cf_role_map() -> dict:
         return _json.loads(raw)
     except Exception:
         return {}
+
+
+def cf_manager_prefixes() -> tuple:
+    """Comma-separated claim-value prefixes that mean "head of department" → CRM role manager.
+
+    Any department/functional_role value starting with one of these prefixes maps
+    to manager regardless of CF_ROLE_MAP (head-of-* combos aren't enumerable —
+    e.g. "truong-phong-tai-chinh", "truong-phong-hanh-chinh", one per department).
+    Example env: CF_MANAGER_PREFIXES=truong-phong-,head-of-
+    """
+    raw = os.environ.get("CF_MANAGER_PREFIXES", "truong-phong-,head-of-")
+    return tuple(p.strip() for p in raw.split(",") if p.strip())
+
+
+def cf_admin_emails() -> set:
+    """Comma-separated emails that bootstrap as role=admin on FIRST login only.
+
+    Existing users are never auto-elevated — change role via Settings UI.
+    """
+    raw = os.environ.get("CRM_ADMIN_EMAILS", "")
+    return {e.strip().lower() for e in raw.split(",") if e.strip()}

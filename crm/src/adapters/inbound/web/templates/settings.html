@@ -97,14 +97,24 @@
             <td class="cell-strong">{{ u.full_name }}</td>
             <td class="mono muted">{{ u.email }}</td>
             <td><div class="inp-sel inp-sel--narrow">
-              <select name="role">
+              <select name="role" hx-patch="/settings/users/{{ u.user_id }}/role"
+                      hx-trigger="change" hx-swap="none">
                 {% for r in ["sales", "care", "manager", "admin"] %}
                 <option value="{{ r }}" {% if u.role == r %}selected{% endif %}>{{ r }}</option>
                 {% endfor %}
               </select>
               <span class="inp-sel__chev">{% include "icons/chevdown.svg" %}</span>
             </div></td>
-            <td>{% if u.is_active %}<span class="bdg bdg--good">Active</span>{% else %}<span class="bdg">Inactive</span>{% endif %}</td>
+            <td>
+              <button class="bdg {{ 'bdg--good' if u.is_active else '' }}" type="button"
+                      style="cursor:pointer;border:none"
+                      hx-patch="/settings/users/{{ u.user_id }}/active"
+                      hx-vals='{"is_active": "{{ "false" if u.is_active else "true" }}"}'
+                      hx-swap="none"
+                      {% if u.is_active %}hx-confirm="Vô hiệu hoá tài khoản {{ u.full_name }}?"{% endif %}>
+                {{ "Active" if u.is_active else "Inactive" }}
+              </button>
+            </td>
           </tr>{% endfor %}</tbody>
         </table></div>{% endif %}
       </div>

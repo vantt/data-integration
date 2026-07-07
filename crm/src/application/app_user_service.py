@@ -31,6 +31,10 @@ class AppUserService:
         self._repo = repo
         self._staff_resolver = staff_resolver  # StaffIdResolver | None
 
+    def is_registered(self, email: str) -> bool:
+        """True if an AppUser already exists for this email (first-login admin bootstrap check)."""
+        return self._repo.get_by_email(email) is not None
+
     def provision_or_sync(self, email: str, full_name: str, crm_role: str, lark_user_id: str = "") -> AppUser:
         """Return existing AppUser or create one on first login.
 

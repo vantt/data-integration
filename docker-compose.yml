@@ -226,8 +226,11 @@ services:
       - SAPO_API_KEY=${SAPO_API_KEY:-}
       - CF_ACCESS_AUDIENCE=${CF_ACCESS_AUDIENCE:-}
       - CF_TEAM_DOMAIN=${CF_TEAM_DOMAIN:-}
-      - CF_ROLE_CLAIM=${CF_ROLE_CLAIM:-role}
+      - CF_DEPT_CLAIM=${CF_DEPT_CLAIM:-custom.departments}
+      - CF_FUNC_ROLE_CLAIM=${CF_FUNC_ROLE_CLAIM:-custom.functional_roles}
       - CF_ROLE_MAP=${CF_ROLE_MAP:-{}}
+      - CF_MANAGER_PREFIXES=${CF_MANAGER_PREFIXES:-truong-phong-,head-of-}
+      - CRM_ADMIN_EMAILS=${CRM_ADMIN_EMAILS:-}
       # Cross-origin state-changing request guard — false=log-only, true=block. Flip to
       # true once a log-review cycle confirms no legitimate caller is flagged.
       - CRM_CSRF_ENFORCE=${CRM_CSRF_ENFORCE:-false}
