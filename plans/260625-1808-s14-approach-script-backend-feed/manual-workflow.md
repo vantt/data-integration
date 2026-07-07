@@ -1,5 +1,11 @@
 # Quy trình TAY sinh approach-script (đơn giản nhất)
 
+> **2026-07-06 — Có đường auto-gen thay bước dán tay:** `python scripts/generate_approach_scripts.py`
+> (codex CLI headless, chạy trong terminal có codex; output vẫn CHỜ DUYỆT rồi mới load).
+> Loader giờ **lint guardrail mặc định** (escape: `--no-lint`). Prompt tự inject notes/activities
+> thật từ crm.db (`--no-history` để tắt). Xem `plans/260706-0837-approach-script-codex-autogen/`.
+> Quy trình tay dưới đây vẫn dùng được nguyên vẹn.
+
 Dùng khi script còn **tạo tay** (chưa auto-gen). 3 bước. Vòng lặp lặp lại mỗi đợt.
 
 ## Bước 1 — PREP (sinh prompt)
