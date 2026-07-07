@@ -1,4 +1,4 @@
-# Phase 04 — Ledger Re-pull ngày 10 + Default Filter (P1)
+# Phase 09 — Ledger Re-pull ngày 10 + Default Filter (P1)
 
 **Status: DONE** (2026-07-05) — `ingest_monthly_repull_schedule` (cron `0 7 10 * *` ICT) added, reuses `ingest_monthly_job`. Default filter token: **`past1months`**, NOT `previousmonth` (empirically confirmed `previousmonth` 500s on Metabase v0.60.2 via live `/api/dataset` test). `finance_cashflow.md` (dashboard 113) already used `past6months`, not `thismonth` — left untouched. Confirmed via `misa_amis_assets.py` docstring: account-ledger ingest is idempotent, full-replaces (year, month) partition.
 

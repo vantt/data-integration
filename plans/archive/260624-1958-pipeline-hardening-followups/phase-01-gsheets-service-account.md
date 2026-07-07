@@ -1,6 +1,6 @@
 # Phase 03 — Google Sheets via service account (remove public exposure)
 
-**Priority:** Medium (security) | **Status:** ⬜ TODO (needs GCP service-account key from user)
+**Priority:** Medium (security) | **Status:** SUPERSEDED (2026-07-07) — merged into `plans/260707-1201-google-sheets-service-account`, which combines this read-only SA need with a new write-access need (budget sheet suggestions write-back). Do not implement from this file; see the new plan.
 **Context:** [plan](plan.md) · audit finding "Google Sheets public + IDs tracked in config.toml"
 
 ## Problem

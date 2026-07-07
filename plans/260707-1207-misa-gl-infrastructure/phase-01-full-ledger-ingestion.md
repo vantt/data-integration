@@ -1,6 +1,6 @@
 # Phase 01 — Full-ledger ingestion + idempotency fix
 
-**Status:** IN PROGRESS — parser + models DONE; downloader unblocked pending account-picker debug.
+**Status:** DONE (2026-07-03) — full-ledger export mechanism resolved, backfill Jan–Jun 2026 complete (37–39 accounts/month), 642 overhead regression PASS. Per parent plan's "Tiến độ 2026-07-03" log (now `plans/260707-1207-misa-gl-infrastructure/plan.md`).
 
 ## What's ALREADY DONE (do not re-implement)
 

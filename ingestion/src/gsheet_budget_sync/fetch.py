@@ -98,13 +98,18 @@ def _fetch_tab_csv(sheet_url: str, gid: str, tab_name: str) -> pd.DataFrame:
 
 
 def _parse_vnd(raw) -> float | None:
-    """Strip VND currency formatting ('6,000,000 ₫') and parse as float."""
+    """Strip VND currency formatting ('6,000,000 ₫') and parse as float.
+
+    Also strips a trailing '%' — Google Sheets' CSV export renders Percent-formatted
+    cells as display text (e.g. raw 0.2 -> '20%'), so pct_remaining values arrive here
+    with the sign baked into the export text, not just Sheets UI display.
+    """
     if raw is None:
         return None
     s = str(raw).strip()
     if s == "" or s.lower() == "nan":
         return None
-    s = s.replace("₫", "").replace(",", "").replace("\xa0", "").replace(" ", "").strip()
+    s = s.replace("₫", "").replace("%", "").replace(",", "").replace("\xa0", "").replace(" ", "").strip()
     if s == "":
         return None
     try:

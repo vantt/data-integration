@@ -1,4 +1,4 @@
-# Phase 01 — Sheet→Seed Sync Script (P0)
+# Phase 06 — Sheet→Seed Sync Script (P0)
 
 **Status: DONE** (2026-07-05) — `ingestion/src/gsheet_budget_sync/` package (9 files, refactored from initial 1013-LOC single file per code review), `budget_sheet_sync_asset` + `budget_sheet_sync_schedule` (02:30 ICT) in Dagster, mart WHERE fix. 31 unit tests + dbt compile + Dagster import all verified. Open question 3 (auto-commit) resolved NO — asset writes seed files only. **Blocking on live sheet:** open question 5 (missing `remainder` row in ALLOCATION_POLICY tab) still unresolved in the actual Google Sheet — sync will reject until finance/kỹ thuật adds it.
 

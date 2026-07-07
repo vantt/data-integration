@@ -1,4 +1,4 @@
-# Phase 03 — Sửa Scorecard lệch phạm vi (P1)
+# Phase 08 — Sửa Scorecard lệch phạm vi (P1)
 
 **Status: DONE** (2026-07-05) — 3 scorecards scoped to `coverage='both'`, new "Ngoài kế hoạch" card added, A3 table distinguishes coverage, deployed via `/deploy-metabase-blueprint` script. Verified: 192,445,945 (both) + 5,896,263,331 (actual_only) = 6,088,709,276 (old unscoped total) — no money lost. Bonus fix: corrected a pre-existing `🔘`/`📝` emoji mismatch in this blueprint that was silently corrupting all text-card positions.
 

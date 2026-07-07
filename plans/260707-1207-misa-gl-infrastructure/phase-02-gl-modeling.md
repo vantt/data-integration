@@ -1,6 +1,6 @@
 # Phase 02 — GL modeling (dim / fact)
 
-**Status:** PARTIALLY DONE — `dim_gl_account` + `fact_cash_movement` built and validated on real data. `fact_account_balance_monthly` still needed.
+**Status:** DONE (2026-07-03) — `dim_gl_account` (281 accounts, 14 cashflow_line), `fact_cash_movement`, and `fact_account_balance_monthly` all built and validated on real data (6 months live). Per parent plan's "Tiến độ 2026-07-03" log (now `plans/260707-1207-misa-gl-infrastructure/plan.md`).
 
 **Depends on:** Phase 01 (full-ledger parquet with `opening_balance` column).
 
