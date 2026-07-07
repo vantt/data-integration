@@ -19,6 +19,8 @@ Nâng cấp luồng sinh kịch bản tiếp cận: bỏ bước copy-dán tay (
 | 04 | [Hexagon completion provider cho approach-script (codex CLI + API adapter)](phase-04-llm-provider-hexagon.md) | ✅ |
 | 05 | [Trigger theo worklist-refresh + auto-load (bỏ review)](phase-05-worklist-refresh-trigger.md) | ✅ |
 
+> **Status: LIVE (2026-07-07).** Commit `3343b049`. Toàn bộ 5 phase code + test thật (codex thật, CRM auto-load thật, xem phase-05 § Verify). `pipeline_batch_nightly_schedule` đã bật (17:16 ICT, cùng lúc bật lại toàn bộ 17 schedule của repo — trước đó tất cả đang STOPPED trừ `crm_backup_schedule`) — asset `approach_script_autogen` giờ tự chạy 3h sáng ICT mỗi đêm, không cần trigger tay.
+
 ## Dependencies
 - Template v2: `plans/260624-1917-customer-insight-prompt-template/customer-insight-prompt-template.md`
 - Builder hiện có: `scripts/build_approach_prompts.py` (tái dùng cohort/template/fill)
