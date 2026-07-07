@@ -11,32 +11,44 @@
 
 ## Requirements
 
-1. Khai báo 2 OIDC claim `department`, `role` trong provider config (Zero Trust → Settings → Authentication → chọn Lark OIDC provider → OIDC Claims) — CF chỉ match được claim đã khai báo ở đây.
-2. Tạo **Access Groups** tái dùng cho nhiều app (không chỉ CRM):
-   - `grp-admins` — rule: Email trong danh sách cụ thể (hoặc claim `role` = giá trị admin nếu đã xác nhận ở Phase 1).
-   - `grp-managers` — rule: claim `role` hoặc email list.
-   - `grp-sales` — rule: claim `department` ∈ {tên phòng Sales theo Phase 1}.
-   - (Thêm group khác nếu cần — CSKH/Care, v.v.)
-3. Gắn Policy cho CRM Access Application: reference các group trên (Allow policy), KHÔNG duplicate rule trực tiếp trong policy (để group tái dùng được khi thêm app khác — Metabase/Dagster/Rill/Evidence).
+**Cập nhật 2026-07-07:** claim thật là `departments`/`functional_roles` (array, plural) — không phải `department`/`role` số ít. Bước #1 (khai báo OIDC Claims) **đã làm xong** — `/debug/me` xác nhận thấy cả 2 field, giá trị thật (xem `phase-01-idp-claims.md` § Test result).
 
-## Implementation steps
+**Quyết định (2026-07-07, user):** KHÔNG gate CRM app hôm nay — mọi nhân viên Lark org vẫn login được vào `crm.fwg.vn` (khớp thiết kế app-layer hiện tại: phòng ban không map trong `CF_ROLE_MAP` chỉ fallback role `sales`, không bị từ chối truy cập). Việc hôm nay chỉ là **tạo sẵn 4 Access Groups tái dùng** cho app sau (Metabase/Dagster/Rill/Evidence) — KHÔNG gắn vào Policy của CRM app, nên **không có rủi ro tự khóa mình** (Group chỉ có hiệu lực khi được reference trong 1 Policy).
 
-1. Zero Trust dashboard → Settings → Authentication → Login methods → chọn Lark OIDC provider → Edit → OIDC Claims → thêm `department`, `role`.
-2. Access → Groups → New group → tạo từng group theo mục Requirements #2.
-3. Access → Applications → chọn CRM app → Policies → Edit policy → Include → Groups → chọn groups vừa tạo.
-4. Save, chờ propagate (thường vài phút).
+Taxonomy thật (từ `/debug/me`, xem `project_crm_lark_claims_departments_functional_roles` memory):
+- departments: sales, sales-etc, sales-otc, marketing, kho-van, hr-admin, ky-thuat, design, ecom, tai-chinh-ke-toan, customer-care, sourcing, bod
+- functional_roles: administration, finance, hr, it, bod, nv-kho, + pattern `truong-phong-<dept>` (head-of-department, không enumerate hết được)
+
+## Implementation steps (chỉ tạo Groups, KHÔNG đổi Policy CRM)
+
+1. Zero Trust dashboard → Access → Groups → **Add a group**. Với mỗi group dưới đây: đặt tên, Session duration mặc định, phần **Configure rules** → Include → chọn selector **"OIDC Claim"** → nhập claim key + value:
+
+   | Group | Include rules (OR giữa các dòng) |
+   |---|---|
+   | `grp-admins` | OIDC Claim `departments` = `bod`  **OR**  OIDC Claim `functional_roles` = `bod` |
+   | `grp-managers` | OIDC Claim `functional_roles` = `truong-phong-hanh-chinh`  **OR**  `truong-phong-tai-chinh` (thêm dòng mới mỗi khi có `truong-phong-*`/`head-of-*` giá trị mới — CF Access KHÔNG hỗ trợ prefix/wildcard match trên claim value, khác với code `CF_MANAGER_PREFIXES` tự match theo prefix) |
+   | `grp-sales` | OIDC Claim `departments` = `sales`  **OR**  `sales-etc`  **OR**  `sales-otc`  **OR**  `ecom` |
+   | `grp-care` | OIDC Claim `departments` = `customer-care` |
+
+2. Save từng group. **KHÔNG** vào Access → Applications → CRM → Policies để đổi gì — giữ nguyên policy hiện tại (permissive).
+3. (Optional, an toàn) Access → Applications → CRM → Policies → xác nhận Include hiện tại là "Everyone"/"Login Methods: Lark" (không có group nào bị exclude) — chỉ để xác nhận, không sửa.
 
 ## Validation
 
-- [ ] Login bằng account nằm trong `grp-admins` → vào được CRM.
-- [ ] Login bằng account KHÔNG nằm trong bất kỳ group nào → CF Access chặn ở edge (màn hình "Access Denied" của Cloudflare, KHÔNG phải app trả 403) — verify request không tới được CRM container (check log app không có entry tương ứng).
-- [ ] Kiểm tra `Cf-Access-Jwt-Assertion` payload có `custom.department`/`custom.role` đúng giá trị Phase 1 đã ghi nhận.
+- [ ] Access → Groups → thấy đủ 4 group (`grp-admins`, `grp-managers`, `grp-sales`, `grp-care`) đã save.
+- [ ] CRM app policy KHÔNG đổi — vẫn cho toàn bộ Lark org vào (test: 1 tài khoản bất kỳ chưa từng login vẫn vào được `crm.fwg.vn`, tạo `AppUser` role fallback `sales` nếu department không nằm trong `CF_ROLE_MAP`).
+- [ ] Không cần test "chặn ở edge" (đã quyết định không gate hôm nay) — checklist tương ứng ở `phase-04-e2e-verification.md` được đánh dấu skip/deferred.
 
 ## Risks & rollback
 
-- Sai policy có thể khóa tất cả user ngoài dashboard admin CF — luôn giữ ít nhất 1 policy fallback bằng email cụ thể của người thao tác trước khi xóa policy cũ.
-- Rollback: xóa policy mới, khôi phục policy cũ (CF giữ lịch sử audit log, có thể revert qua UI).
+- Rủi ro chính (sai policy khóa hết user) **không áp dụng** cho việc tạo Group đơn thuần — chỉ phát sinh khi sau này thật sự gắn group vào 1 Policy. Khi làm bước đó (tương lai): luôn giữ ít nhất 1 policy fallback bằng email cụ thể của người thao tác trước khi xóa policy cũ permissive.
+- Rollback: xóa group vừa tạo (Access → Groups → Delete) — không ảnh hưởng app nào vì chưa được reference.
 
 ## Open question
 
-- App nào lên CF Access tiếp theo quyết định có cần thêm group nào ngoài 3 group cơ bản ở trên không (vd `grp-care` riêng nếu CSKH cần policy khác Sales).
+- Khi nào thật sự cần gate CRM/app khác theo group (thay vì permissive + role fallback trong app)? Để dành quyết định này cho lúc có nhu cầu cụ thể (vd thêm app không muốn toàn bộ org vào).
+- App nào lên CF Access tiếp theo quyết định có cần thêm group nào ngoài 4 group cơ bản ở trên không.
+
+## Kết quả (2026-07-07)
+
+4 group đã tạo (`grp-admins`, `grp-managers`, `grp-sales`, `grp-care`), KHÔNG gắn vào Policy nào — hiện tại không có tác dụng gì (đúng như thiết kế, group chỉ có hiệu lực khi được reference). Có thảo luận việc này hơi trái YAGNI (tạo trước khi có app thứ 2 thật sự cần) — quyết định: **giữ nguyên**, không hại gì vì chưa gắn policy, dùng khi có app/nhu cầu gate cụ thể. Phase 2 coi như **done**.

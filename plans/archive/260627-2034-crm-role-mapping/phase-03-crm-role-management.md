@@ -1,13 +1,14 @@
 # Phase 3 — CRM code: bootstrap admin + UI quản lý user (repo này)
 
 **Loại:** Code, chạy trong Docker container `crm`.
-**Phụ thuộc:** Không phụ thuộc Phase 1-2 (claim `department` mới). Dùng email hiện có từ CF Access JWT (`payload.email`) đã hoạt động qua claim `role` cũ.
+**Trạng thái:** **done** (2026-07-07) — implementation + tests, xem "Implementation notes" ở cuối file.
+**Phụ thuộc:** Không phụ thuộc Phase 1-2 (claim `departments`/`functional_roles` mới). Dùng email hiện có từ CF Access JWT (`payload.email`) đã hoạt động không cần claim mới.
 
 ## Context — hiện trạng đã đọc trong repo
 
 - `crm/src/application/app_user_service.py:34-79` — `provision_or_sync` đã đúng: tạo user lần đầu với role từ middleware, **không bao giờ ghi đè role** ở các lần login sau (chỉ sync `full_name`, `lark_user_id`, `staff_id`).
 - `crm/src/adapters/inbound/http/cf_access_middleware.py:128-139` — tính `crm_role` từ `CF_ROLE_MAP` (fallback `sales`), gọi `provision_or_sync(email, name, crm_role, lark_user_id=...)`. Đây là nơi cần chèn logic `CRM_ADMIN_EMAILS`.
-- `crm/src/config.py:59-84` — các hàm đọc env `CF_ACCESS_AUDIENCE`, `CF_TEAM_DOMAIN`, `CF_ROLE_CLAIM`, `CF_ROLE_MAP`. Thêm hàm mới `cf_admin_emails()` theo cùng pattern.
+- `crm/src/config.py` — các hàm đọc env `CF_ACCESS_AUDIENCE`, `CF_TEAM_DOMAIN`, `CF_DEPT_CLAIM`, `CF_FUNC_ROLE_CLAIM`, `CF_ROLE_MAP`. Thêm hàm mới `cf_admin_emails()` theo cùng pattern.
 - `crm/src/domain/entities/app_user.py:13-17` — 4 role hợp lệ: `ROLE_SALES="sales"`, `ROLE_CARE="care"`, `ROLE_MANAGER="manager"`, `ROLE_ADMIN="admin"`, list `VALID_ROLES`.
 - `crm/src/adapters/outbound/sqlite/app_user_repository.py:84-105` — `update(user_id, **kwargs)` đã tồn tại, whitelist cột `{email, full_name, role, is_active, updated_at, lark_user_id, staff_id}` — **không cần thêm method DB mới**, chỉ cần gọi đúng kwargs.
 - `crm/src/domain/ports/app_user_repository.py` — Protocol port hiện chỉ khai `get_by_email`, `list_active`. Cần thêm `update(self, user_id: str, **kwargs) -> None` vào Protocol để khớp interface.
@@ -74,6 +75,28 @@ Kiểm tra thủ công sau restart:
 
 ## Risks & rollback
 
-- **Risk:** admin tự đổi role của chính mình xuống non-admin hoặc tự deactivate → mất quyền vào `/settings`, không ai sửa lại qua UI. Cân nhắc chặn self-demote/self-deactivate ở route handler (so `user_id` với `request.state.current_user.user_id`) — quyết định cụ thể để lúc implement, không phải blocker cho việc viết plan.
+- **Risk:** admin tự đổi role của chính mình xuống non-admin hoặc tự deactivate → mất quyền vào `/settings`, không ai sửa lại qua UI. **Quyết định (implement):** chặn hẳn self-demote (đổi role khác `admin` cho chính mình) và self-deactivate ở route handler (so `user_id` với `request.state.current_user.user_id`) → trả 400.
 - **Risk:** `CRM_ADMIN_EMAILS` sai chính tả email → không ai bootstrap được admin → phải sửa DB SQLite trực tiếp (`sqlite3 crm.db "UPDATE crm_app_user SET role='admin' WHERE email='...'"`) như phương án dự phòng.
 - **Rollback:** revert các file trên qua git; không có migration DB mới (dùng cột `role`/`is_active` đã có sẵn) nên rollback code là đủ, không cần rollback schema.
+
+## Implementation notes (2026-07-07)
+
+Implemented cùng lúc với cập nhật claim shape (Phase 1 test cho thấy claim thật là `departments`/`functional_roles`, array — xem `phase-01-idp-claims.md`):
+
+- `crm/src/config.py`: `cf_dept_claim()`, `cf_func_role_claim()`, `cf_admin_emails()` (thay `cf_role_claim()` cũ — đã xoá, không còn dùng single-claim path).
+- `crm/src/adapters/inbound/http/cf_access_middleware.py`: `_get_claim_values()` đọc claim dạng array (tolerate cả scalar), `_resolve_crm_role()` — nhiều department/functional_role có thể map nhiều role khác nhau, giá trị ưu tiên cao nhất thắng (`admin > manager > care > sales`). `_compute_initial_role()` áp `CRM_ADMIN_EMAILS` cho user chưa từng đăng ký (`AppUserService.is_registered()`, method mới), warning nếu email trong list nhưng role hiện tại khác admin.
+- `crm/src/domain/ports/app_user_repository.py`: thêm `update()` vào Protocol.
+- `crm/src/adapters/inbound/web/screens/management/screen_mgmt_settings.py`: `AppUsersSvc` Protocol thêm `update()`; 2 route mới `PATCH /settings/users/{user_id}/role` và `PATCH /settings/users/{user_id}/active`, cả 2 guard `require_admin` + chặn self-demote/self-deactivate.
+- `crm/src/adapters/inbound/web/templates/settings.html`: role `<select>` wire `hx-patch` on change; cột trạng thái đổi thành button `hx-patch` toggle active (confirm khi deactivate).
+- `.env.compose.example`, `docker-compose.yml`: `CF_ROLE_CLAIM`/`CF_ROLE_MAP` → `CF_DEPT_CLAIM`/`CF_FUNC_ROLE_CLAIM`/`CF_ROLE_MAP` + `CRM_ADMIN_EMAILS`.
+- Tests (29 tổng, tất cả pass trong container `crm`): `test_cf_access_middleware.py` (role resolution helpers + manager-prefix rule), `test_cf_access_middleware_admin_bootstrap.py` (CRM_ADMIN_EMAILS bootstrap), `test_app_user_role_management.py` (route guard + self-demote/deactivate).
+- Full suite verify: `docker compose exec crm python -m pytest crm/src/tests/ --ignore=crm/src/tests/test_approach_script_handler.py` → 904 passed, 1 failed (pre-existing, unrelated — `test_approach_script_file_repository.py`, xem memory).
+- `cf_manager_prefixes()` (mới, `config.py`): `CF_MANAGER_PREFIXES` (default `truong-phong-,head-of-`) — bất kỳ giá trị department/functional_role nào bắt đầu bằng 1 trong các prefix này → role `manager`, bất kể có trong `CF_ROLE_MAP` hay không (head-of-department không enumerate hết được theo từng phòng ban). `_resolve_crm_role()` nhận thêm tham số `manager_prefixes`.
+- `CF_ROLE_MAP` thật đã điền vào `.env` (không commit git): `{"customer-care":"care","sales":"sales","sales-etc":"sales","sales-otc":"sales","ecom":"sales","bod":"admin"}` — dựa trên danh sách 13 department + 8 functional_role thật do user cung cấp (2026-07-07); phần còn lại (marketing, kho-van, hr-admin, ky-thuat, design, tai-chinh-ke-toan, sourcing, administration, finance, hr, it, nv-kho) không map, giữ fallback `sales` theo quyết định user.
+
+## Live verify (2026-07-07)
+
+- Login thật `van.tran@fgorg.vn` qua `crm.fwg.vn` → `/debug/me` xác nhận `custom.departments`/`custom.functional_roles` đúng giá trị (xem `phase-01-idp-claims.md`).
+- **Chicken-egg đã gặp và xử lý:** `van.tran@fgorg.vn` đã tồn tại trong DB với role=`sales` TRƯỚC KHI thêm vào `CRM_ADMIN_EMAILS` → theo thiết kế (không auto-elevate user cũ), login lại không tự đổi role, chỉ log warning → không ai vào được `/settings` để tự đổi tay. Xử lý: `UPDATE crm_app_user SET role='admin' WHERE email='van.tran@fgorg.vn'` một lần qua `docker compose exec crm python3 -c "..."` (phương án dự phòng đã ghi trong Risks ở trên).
+- Login lại + `/debug/me` → **xác nhận `current_user.role: "admin"`**. Admin đầu tiên đã có, có thể dùng UI Settings cho các thay đổi role sau này.
+- **Chưa verify sống**: UI role/active change qua browser thật (route code đã test bằng TestClient, nhưng chưa click thật qua `/settings?tab=users`); `CRM_ADMIN_EMAILS` bootstrap cho một email HOÀN TOÀN MỚI (chưa từng login) — trường hợp đã verify là email đã tồn tại từ trước, không đi qua nhánh "first-provision" thật.

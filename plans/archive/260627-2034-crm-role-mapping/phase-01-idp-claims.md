@@ -1,13 +1,14 @@
-# Phase 1 — IdP claims: department + role (external dependency)
+# Phase 1 — IdP claims: departments + functional_roles (external dependency)
 
 **Loại:** External dependency — code nằm ở repo IdP (Lark OIDC provider tự viết), NGOÀI repo `data-integration` này.
 **Phụ thuộc:** Không (có thể bắt đầu ngay, song song với Phase 3).
 
+**Cập nhật 2026-07-07:** claim thật do IdP trả về là **plural/array** — `departments` và `functional_roles` (KHÔNG phải `department`/`role` số ít như spec ban đầu bên dưới; giữ nguyên phần dưới để tham khảo lịch sử quyết định, nhưng field name đã đổi). Repo này (`data-integration`) đã cập nhật code để đọc 2 claim array này — xem `crm/src/config.py` (`cf_dept_claim()` default `custom.departments`, `cf_func_role_claim()` default `custom.functional_roles`) và `cf_access_middleware.py` (`_get_claim_values`, `_resolve_crm_role` — mỗi user có thể có nhiều department/functional_role, role CRM = giá trị ưu tiên cao nhất trong các giá trị khớp `CF_ROLE_MAP`, thứ tự admin > manager > care > sales).
+
 ## Context
 
-- CRM đọc role claim qua dot-path config (`CF_ROLE_CLAIM`, default `role`) — xem `crm/src/config.py:69-79` và `cf_access_middleware.py:59-67` (`_get_claim`).
-- Hiện tại claim `role` map rỗng (`CF_ROLE_MAP={}`) → mọi user fallback `sales` (`cf_access_middleware.py:132-133`).
-- Quyết định thiết kế (xem `plan.md`): dùng **department** làm nguồn default role vì ổn định hơn chức danh (`role`) — chức danh đổi thường xuyên hơn phòng ban.
+- CRM đọc 2 claim (departments, functional_roles) qua dot-path config (`CF_DEPT_CLAIM` default `custom.departments`, `CF_FUNC_ROLE_CLAIM` default `custom.functional_roles`) — xem `crm/src/config.py` và `cf_access_middleware.py` (`_get_claim_values`).
+- Hiện tại `CF_ROLE_MAP={}` (chưa điền) → mọi user fallback `sales`.
 - CF Access chỉ match được claim đã khai báo trong OIDC Claims config của provider (Phase 2); claim khai báo được CF nhét vào `Cf-Access-Jwt-Assertion` dưới namespace `custom.*`.
 
 ## Requirements
@@ -18,19 +19,34 @@ IdP (repo ngoài) cần thêm vào id_token trả về cho CF Access:
 {
   "email": "...",
   "name": "...",
-  "department": "<tên phòng ban Lark, org-level>",
-  "role": "<chức danh Lark, org-level>"
+  "departments": ["<tên phòng ban Lark, org-level>", "..."],
+  "functional_roles": ["<chức danh/vai trò chức năng Lark, org-level>", "..."]
 }
 ```
 
-Cả 2 claim đều lấy từ Lark org directory (không phải khái niệm app-specific). CRM sẽ dùng `department` làm primary; `role` là dự phòng/tham khảo, không bắt buộc dùng ngay.
+Cả 2 claim đều là **array** (user có thể thuộc nhiều phòng ban/chức năng) và lấy từ Lark org directory. CRM dùng `departments` + `functional_roles` như nhau — mọi giá trị của cả 2 array được tra `CF_ROLE_MAP`, giá trị ưu tiên cao nhất (admin > manager > care > sales) thắng.
 
 Sau khi CF Access nhét custom claims, phía CRM sẽ thấy tại path:
 
-- `custom.department`
-- `custom.role`
+- `custom.departments` (array)
+- `custom.functional_roles` (array)
 
-(vì middleware đọc `payload.custom.<key>` — xem `_get_claim` dùng dot-path `"custom.department"`).
+(vì middleware đọc `payload.custom.<key>` — xem `_get_claim_values`, dot-path `"custom.departments"` / `"custom.functional_roles"`).
+
+## Test result (2026-07-07)
+
+**Lần 1** (trước khi làm Phase 2): `custom` claim chỉ có `{name, sub, picture}` — CHƯA thấy `departments`/`functional_roles`.
+
+**Lần 2** (sau khi khai báo OIDC Claims ở Phase 2) — **PASS**: `/debug/me` cho `van.tran@fgorg.vn` trả về
+
+```json
+"custom": {
+  "departments": ["bod", "ky-thuat", "marketing", "ecom", "customer-care"],
+  "functional_roles": ["test-1", "bod", "it"]
+}
+```
+
+Xác nhận: (1) claim là slug kebab-case, không dấu; (2) 1 user có thể có nhiều department VÀ nhiều functional_role cùng lúc (tài khoản test này có 5 department + 3 functional_role); (3) pipeline đọc array claim → `_resolve_crm_role` hoạt động đúng (`role: "sales"` vì `CF_ROLE_MAP` còn rỗng `{}` → fallback đúng theo thiết kế). Phase 1 + Phase 2 coi như xong về mặt kỹ thuật; còn lại là điền `CF_ROLE_MAP` thật (xem `phase-03-crm-role-management.md`) và xác nhận toàn bộ tập giá trị department/functional_role trong org (mới thấy 1 tài khoản, có thể chưa đại diện hết).
 
 ## Implementation steps (ở repo IdP, ngoài scope code repo này)
 
@@ -42,17 +58,17 @@ Sau khi CF Access nhét custom claims, phía CRM sẽ thấy tại path:
 
 1. Login `crm.fwg.vn` (hoặc domain test) bằng Lark.
 2. DevTools → Network → tìm request có header `Cf-Access-Jwt-Assertion` → copy token.
-3. Paste vào `jwt.io` → xem payload, tìm:
+3. Paste vào `jwt.io` (hoặc gọi `/debug/me` — xem test result ở trên) → xem payload, tìm:
    ```json
    {
      "email": "...",
      "custom": {
-       "department": "???",   ← giá trị thật cần ghi lại
-       "role": "???"
+       "departments": ["???"],   ← giá trị thật cần ghi lại
+       "functional_roles": ["???"]
      }
    }
    ```
-4. Ghi lại giá trị `department` thật cho từng nhóm (Sales, CSKH/Care, Quản lý, Admin) — dùng để điền `CF_ROLE_MAP` ở Phase 3 config.
+4. Ghi lại giá trị `departments`/`functional_roles` thật cho từng nhóm (Sales, CSKH/Care, Quản lý, Admin) — dùng để điền `CF_ROLE_MAP` ở Phase 3 config.
 
 ## Risks & rollback
 

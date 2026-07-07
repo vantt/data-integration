@@ -18,12 +18,12 @@ Verify trên `crm.fwg.vn` (production CF Tunnel domain, xem plan archive `260626
 - [ ] Admin đổi role user khác qua UI Settings → có hiệu lực **ngay** ở lần request tiếp theo, KHÔNG cần user đó re-login (vì `provision_or_sync` đọc role từ DB, không phải JWT, ở các lần login sau).
 - [ ] Admin deactivate user → hành vi theo quyết định ở Phase 3 (hiện tại: không chặn login, chỉ log warning — xác nhận đây là hành vi mong muốn hay cần chặn hẳn).
 
-### Phần CF Access edge (Phase 1-2, cần claim `department` mới + Access Groups)
+### Phần CF Access edge (Phase 1-2)
 
-- [ ] Login bằng Lark admin account → CF Access cho qua (nằm trong `grp-admins`) → vào được app → CRM tạo/sync đúng role.
-- [ ] Login bằng account KHÔNG thuộc group nào được cấp quyền → CF Access chặn **ở edge** (màn hình Cloudflare Access Denied), request không tới CRM container (kiểm tra CRM log không có entry cho email đó).
-- [ ] JWT payload (`custom.department`, `custom.role`) đúng giá trị đã ghi nhận ở Phase 1.
-- [ ] Default role theo department đúng như `CF_ROLE_MAP` đã điền (vd account phòng Sales → role `sales` lúc first-provision).
+- [x] JWT payload (`custom.departments`, `custom.functional_roles`, qua `/debug/me`) đúng giá trị thật — **đạt 2026-07-07** (xem `phase-01-idp-claims.md` § Test result).
+- [x] Access Groups (`grp-admins`, `grp-managers`, `grp-sales`, `grp-care`) tạo sẵn để tái dùng cho app sau — xem `phase-02-cf-dashboard-config.md`.
+- [x] Default role theo department/functional_role đúng như `CF_ROLE_MAP` đã điền — verified: `van.tran@fgorg.vn` (departments chứa `bod`) → `role: admin` qua `/debug/me` (sau khi xử lý chicken-egg admin đầu tiên, xem `phase-03-crm-role-management.md` § Live verify).
+- [ ] **SKIP/DEFERRED theo quyết định user (2026-07-07):** "Login bằng account KHÔNG thuộc group nào được cấp quyền → CF Access chặn ở edge" — quyết định giữ policy permissive (toàn bộ Lark org vào được CRM), Access Groups mới tạo CHƯA gắn vào Policy nào. Chỉ làm khi có nhu cầu gate cụ thể (xem `phase-02-cf-dashboard-config.md` § Open question).
 
 ## Rollback nếu verify fail
 
