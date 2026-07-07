@@ -62,7 +62,7 @@ END                                                    AS normal_balance_side,
 (a.account_code = '131' OR LEFT(a.account_code, 3) = '131') AS is_trade_receivable,
 ```
 
-Keep all existing columns (`account_class`, `is_cash`, `cashflow_line`) unchanged — additive only, same pattern as the phase-02 changes in `plans/archive/260702-1727-misa-cashflow-budget-planner/phase-02-gl-modeling.md`.
+Keep all existing columns (`account_class`, `is_cash`, `cashflow_line`) unchanged — additive only, same pattern as the phase-02 changes in `plans/260707-1207-misa-gl-infrastructure/phase-02-gl-modeling.md`.
 
 ## Validation
 
