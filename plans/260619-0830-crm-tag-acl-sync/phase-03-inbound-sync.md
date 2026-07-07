@@ -1,82 +1,93 @@
-# Phase 03 — Inbound Sync: Warehouse → CRM Party Tags
+# Phase 03 — App-side Consumer: Mirror Sync Warehouse → CRM Party Tags
 
-**Context:** [plan.md](plan.md) · Requires: Phase 01 + 02 done
+**Context:** [plan.md](plan.md) · Requires: Phase 00 + 01 + 02 done
 
 ## Overview
 - **Priority:** P1
-- **Status:** ⬜ TODO
-- Extend reverse-ETL pipeline với module `tag_sync.py`: đọc `customer_group` từ `wh_customer_base` (cache.db), lookup ACL mapping trong `crm_ext_tag_map`, upsert `crm_party_tag` với `source='sapo_v2_sync'`.
+- **Status:** ✅ DONE — see [phase-03 report](reports/phase-03-implementation-report.md)
+- CLI mới `crm/src/sync_party_tags.py` (theo đúng tiền lệ `sync_parties.py`): đọc `wh_customer_base.customer_group_id` từ cache.db (read-only), resolve qua ACL tables trong crm.db, **mirror-reconcile** `crm_party_tag` cho rows sync-owned. Kèm app change: `attach_tag` upgrade `source` khi user gán đè tag sync.
 
 ## Key Insights
-- **Không đọc warehouse trực tiếp** — `customer_group` đã có trong `wh_customer_base` (cache.db) từ reverse-ETL step hiện tại. Tag sync chỉ đọc cache.db + ghi crm.db.
-- **1-writer rule** phải giữ: Python sync writes `crm_party_tag` (crm.db) — đây là ngoại lệ so với rule "Go app writes crm.db". Cần xác nhận không có concurrent write conflict (reverse-ETL chạy scheduled, không concurrent với Go app).
-- Lookup ACL: `crm_ext_tag_map` nằm trong `crm.db` → tag_sync cần ATTACH cả 2 file.
-- Conflict rule: `ON CONFLICT(party_id, tag_id) DO NOTHING` — không override `source='crm_user'`.
+- **Giữ invariant 1-writer:** `reverse_etl_warehouse_to_crm.py` docstring ghi rõ "app writes crm.db. Never cross-write." Bản plan cũ cho Python pipeline ghi thẳng crm.db là vi phạm — bản này chạy consumer trong `crm/src/` (app codebase, writer hợp lệ), reverse-ETL **không sửa gì**.
+- **Không cần bảng desired-state riêng:** desired state = projection của `wh_customer_base` (customer_id, customer_group_id) đã có sẵn trong cache.db. Consumer tự resolve — KISS.
+- **Mirror-reconcile, không append-only:** rows `source='sapo_v2_sync'` là hình chiếu trạng thái Sapo hiện tại. Khách đổi group → tag cũ bị xóa cứng, tag mới insert. Rows `source='crm_user'` không bao giờ bị đụng. (Bản cũ "không auto-remove" bị loại: append-only làm CRM trôi khỏi sự thật vĩnh viễn — ngược mục tiêu hệ trung tâm.)
+- Tiền lệ code: `sync_parties.py` (CLI entry), `application/party_seed_service.py` (service), `adapters/outbound/sqlite/tag_note_repository.py` (tag repo hiện có `attach_tag`/`detach_tag`).
 
 ## Architecture
 
 ```
-cache.db (read-only)          crm.db (write)
-  wh_customer_base              crm_party
-    customer_id                   party_id
-    customer_group          ←→    crm_party_external_id (lookup party_id)
-                                  crm_ext_tag            (ACL registry)
-                                  crm_ext_tag_map        (mapping)
-                                  crm_party_tag          (target — upsert)
+cache.db (read-only)              crm.db (app là writer duy nhất)
+  wh_customer_base                  crm_party_external_id  (resolve party_id)
+    customer_id                     crm_ext_tag + crm_ext_tag_map (ACL)
+    customer_group_id         →     crm_party_tag          (mirror target)
 
-Flow:
-  1. Fetch wh_customer_base WHERE customer_group IS NOT NULL
-  2. For each row:
-     a. Lookup crm_party_external_id(source_system='sapo_v2', external_key=customer_id) → party_id
-     b. Lookup crm_ext_tag(source_system='sapo_v2', ext_key=customer_group) → ext_tag_id
-     c. Lookup crm_ext_tag_map(ext_tag_id, is_active=1, direction IN ('inbound','both')) → [crm_tag_id, ...]
-     d. For each crm_tag_id:
-          INSERT INTO crm_party_tag(party_id, tag_id, source, ext_ref, tagged_at)
-          VALUES (?, ?, 'sapo_v2_sync', customer_group, now())
-          ON CONFLICT(party_id, tag_id) DO NOTHING   ← CRM user tags protected
-  3. Log sync stats (count tagged, count skipped no-party, count skipped no-mapping)
+sync_party_tags.py (chạy sau reverse-ETL + sync_parties.py):
+  1. Load desired: wh_customer_base WHERE customer_group_id IS NOT NULL
+     → resolve party_id (crm_party_external_id, source_system='sapo_v2', external_key=customer_id)
+     → resolve crm_tag_ids (crm_ext_tag ext_key=customer_group_id → map is_active=1, direction IN ('inbound','both'))
+     → desired set: {(party_id, tag_id)}
+  2. Load current: SELECT party_id, tag_id FROM crm_party_tag WHERE source='sapo_v2_sync'
+  3. Reconcile trong 1 transaction:
+     - INSERT (desired − current): source='sapo_v2_sync', ext_ref=customer_group_id,
+       ON CONFLICT(party_id, tag_id) DO NOTHING     ← row crm_user trùng cặp → giữ nguyên
+     - DELETE (current − desired): WHERE source='sapo_v2_sync'  ← chỉ rows sync-owned
+  4. Log stats: inserted / deleted / skipped-no-party / skipped-no-mapping
 ```
 
+## App change: source upgrade khi user gán tag
+
+`attach_tag` (tag_note_repository) hiện INSERT thuần. Sửa thành upsert:
+
+```sql
+INSERT INTO crm_party_tag (party_id, tag_id, tagged_by, tagged_at, source)
+VALUES (?, ?, ?, ?, 'crm_user')
+ON CONFLICT(party_id, tag_id)
+DO UPDATE SET source='crm_user', tagged_by=excluded.tagged_by
+```
+
+User gán đè tag đang là sync → tag trở thành user-owned, reconcile sau đó không xóa nữa (conflict rule dòng 3 trong plan.md — bản cũ khai báo rule nhưng không phase nào implement).
+
 ## Related Code Files
-- **Tạo:** `crm/sync/tag_sync.py` — module độc lập, callable từ reverse_etl
-- **Sửa:** `crm/sync/reverse_etl_warehouse_to_crm.py` — gọi `tag_sync.run(cache_conn, crm_db_path)` sau khi upsert wh_customer_base
-- **Đọc:** `crm/sync/sqlite_upsert.py` — pattern open_cache_db, insert_sync_run để follow
-- **Đọc:** `crm/sync/duckdb_reader.py` — fetch_customer_base (nguồn customer_group)
+- **Tạo:** `crm/src/sync_party_tags.py` — CLI entry (mirror `sync_parties.py`)
+- **Tạo:** `crm/src/application/tag_acl_sync_service.py` — reconcile logic (testable, tách khỏi CLI)
+- **Sửa:** `crm/src/adapters/outbound/sqlite/tag_note_repository.py` — `attach_tag` upsert + repo methods cho reconcile (list sync-owned, batch insert/delete)
+- **Sửa:** nơi schedule `sync_parties.py` (orchestration) — thêm `sync_party_tags.py` vào cùng chuỗi, NGAY SAU sync_parties
+- **Đọc:** `crm/src/application/party_seed_service.py`, `crm/src/adapters/outbound/sqlite/cache_repository.py` (pattern đọc cache.db)
 
 ## Implementation Steps
 
-1. **Tạo `crm/sync/tag_sync.py`:**
-   - `def run(cache_conn, crm_db_path: str) -> dict` — trả stats dict
-   - Open crm.db connection (sqlite3, WAL mode, foreign_keys=ON)
-   - Load `wh_customer_base` từ cache_conn (customer_id, customer_group)
-   - Load toàn bộ active mapping từ crm.db vào dict: `{(source_system, ext_key): [crm_tag_id, ...]}`
-   - Load `crm_party_external_id` lookup: `{(source_system, external_key): party_id}`
-   - Iterate rows, resolve party_id + crm_tag_ids, batch INSERT với executemany
-   - Log stats (tagged/skipped-no-party/skipped-no-mapping/error)
-
-2. **Sửa `reverse_etl_warehouse_to_crm.py`:**
-   - Import `from crm.sync import tag_sync`
-   - Sau step upsert_customer_base, gọi `tag_sync.run(cache_conn, crm_db_path())`
-   - Wrap trong try/except — tag sync failure không chặn toàn bộ ETL
-
-3. **Viết tests** `crm/sync/tests/test_tag_sync.py`:
-   - in-memory SQLite fixture với vài rows wh_customer_base + crm_ext_tag_map + crm_party_external_id
-   - Assert crm_party_tag được tạo đúng với source='sapo_v2_sync'
-   - Assert CRM user tag (source='crm_user') không bị override
+1. Repo methods (tag_note_repository hoặc repo mới nếu boundary rõ hơn): `list_party_tags_by_source(source)`, `bulk_attach_synced(rows)`, `bulk_detach_synced(pairs, source)` — DELETE có điều kiện `source=?` trong SQL, không chỉ trong Python.
+2. `tag_acl_sync_service.py`: load desired + current, diff, apply trong 1 transaction; trả stats dict.
+3. `sync_party_tags.py` CLI: arg `--data` như sync_parties, wire CRMDatabase + cache read-only.
+4. Schedule: thêm vào chuỗi orchestration sau `sync_parties.py` (party phải seed trước để resolve external_id).
+5. Tests `crm/src/tests/test_tag_acl_sync.py`:
+   - insert mới với source='sapo_v2_sync' + ext_ref đúng
+   - khách đổi group → row sync cũ bị xóa, row mới insert
+   - row `crm_user` cùng cặp (party, tag) → không insert đè, không xóa
+   - `attach_tag` lên tag đang sync → source upgrade thành 'crm_user', reconcile sau đó không xóa
+   - party chưa seed / group không có mapping → skip + đếm stats
 
 ## Todo
-- [ ] `crm/sync/tag_sync.py`
-- [ ] Update `reverse_etl_warehouse_to_crm.py`
-- [ ] `crm/sync/tests/test_tag_sync.py`
-- [ ] Chạy reverse-ETL end-to-end, verify crm_party_tag có rows source='sapo_v2_sync'
+- [x] Repo methods + `tag_acl_sync_service.py`
+- [x] `sync_party_tags.py` CLI + schedule vào chuỗi orchestration
+- [x] `attach_tag` source-upgrade
+- [x] `test_tag_acl_sync.py` (5 case trên + idempotency + guard, 7/7 pass)
+- [x] Chạy end-to-end: reverse-ETL → sync_parties → sync_party_tags, verify rows `source='sapo_v2_sync'` (939 rows, matches seeded mapping exactly)
+
+**Deviation found + fixed (verified, not a design change):** phase doc's party
+resolution via `crm_party_external_id` is a dead table (zero writers in the
+actual codebase) — `sync_parties.py` writes `crm_party_identity` instead.
+Switched resolution accordingly; confirmed correct via live run
+(`skipped_no_party` dropped from 7592 to 0). See implementation report for detail.
 
 ## Success Criteria
-- Sau khi chạy reverse-ETL: party có `customer_group=TYPE_WHOLESALE` → có `crm_party_tag` với tag "KH Sỉ" và `source='sapo_v2_sync'`
-- Party đã có tag "KH Sỉ" do CRM user gán → `source='crm_user'` vẫn giữ nguyên sau sync
-- `skipped-no-party` count đo được (party chưa seed vào CRM)
-- `skipped-no-mapping` count đo được (customer_group chưa có trong crm_ext_tag)
+- Khách group WHOLESALE → có tag "KH Sỉ" `source='sapo_v2_sync'`, `ext_ref='1812239'`
+- Đổi group trong wh_customer_base rồi re-run → tag cũ biến mất, tag mới xuất hiện; tag crm_user giữ nguyên
+- Chạy 2 lần liên tiếp không đổi input → 0 insert, 0 delete (idempotent)
+- Stats skipped-no-party / skipped-no-mapping đo được
 
 ## Risk
-- **1-writer rule breach:** Python ghi crm.db trong khi Go app đang dùng → dùng `busy_timeout=5000` và batch nhỏ; chạy scheduled ngoài giờ cao điểm
-- **Party chưa tồn tại trong crm.db** (Go seed consumer chưa chạy) → skip + log, không crash
-- **customer_group thay đổi trong Sapo** → tag cũ vẫn còn trong crm_party_tag (không auto-remove); cần quyết định: giữ (conservative) hay clean (risk data loss). **v1: giữ — không auto-remove sync tags**
+- **Concurrent write app vs consumer:** cùng codebase + SQLite WAL + busy_timeout sẵn có của CRMDatabase; consumer chạy scheduled batch ngắn — chấp nhận được. Transaction ngắn, batch executemany.
+- **Party chưa tồn tại** (sync_parties chưa chạy/khách mới) → skip + log; lần chạy sau tự vá (mirror tự hội tụ).
+- **Xóa nhầm khi warehouse feed rỗng bất thường:** guard — nếu desired set rỗng toàn phần trong khi current > N (threshold), abort + log error thay vì xóa sạch (bảo hiểm feed hỏng).
+- CRM code baked trong image → sau khi thêm file: `docker compose up -d --build crm` (consumer chạy trong container crm).

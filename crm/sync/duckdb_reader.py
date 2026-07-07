@@ -76,6 +76,9 @@ _DIM_CUSTOMERS_BASE_COLS = [
     "phone",
     "email",
     "customer_group",
+    "customer_group_id",
+    "customer_group_code",
+    "customer_group_name",
     "first_order_date",
     "source_contact_quality",
     "contact_quality",
@@ -293,6 +296,7 @@ def fetch_customer_base(conn: "duckdb.DuckDBPyConnection") -> list[dict]:
     sql = (
         "SELECT customer_key, customer_id, customer_code, "
         "full_name AS display_name, phone, email, customer_group, "
+        "customer_group_id, customer_group_code, customer_group_name, "
         "strftime(first_order_date, '%Y-%m-%d') AS first_order_date, "
         "source_contact_quality, contact_quality, "
         "province, district, ward, address1, address2, zip, "

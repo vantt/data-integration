@@ -96,6 +96,10 @@ def apply_schema(conn: sqlite3.Connection) -> None:
         "ALTER TABLE wh_customer_base ADD COLUMN gender TEXT",
         "ALTER TABLE wh_customer_base ADD COLUMN loyalty_points INTEGER",
         "ALTER TABLE wh_customer_base ADD COLUMN sapo_status TEXT",
+        # customer_group JSON parsed at staging — added 2026-07-06 (plans/260619-0830-crm-tag-acl-sync/phase-00)
+        "ALTER TABLE wh_customer_base ADD COLUMN customer_group_id TEXT",
+        "ALTER TABLE wh_customer_base ADD COLUMN customer_group_code TEXT",
+        "ALTER TABLE wh_customer_base ADD COLUMN customer_group_name TEXT",
     ]
     for stmt in _group_a:
         try:

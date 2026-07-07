@@ -39,7 +39,10 @@ SELECT
     -- Attributes
     dob AS birth_date,
     sex AS gender,
-    customer_group,
+    customer_group,  -- raw JSON blob, kept for reference; use the 3 columns below instead
+    customer_group_id,
+    customer_group_code,
+    customer_group_name,
     loyalty_point AS loyalty_points,
 
     -- B2B / misc scalars

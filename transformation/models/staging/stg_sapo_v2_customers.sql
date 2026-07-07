@@ -9,7 +9,11 @@
 -- Purpose:
 --   Reads from src_sapo_customers (already extracted & deduped).
 --   Cleaning, formatting (phone, email, dates).
---   No JSON extraction needed — data is already flat from src_.
+--   Exception: customer_group is NOT flat — src_ only extracts it as a stringified JSON
+--   sub-object ({"id":..,"code":..,"name":..}), since one Sapo customer can only carry
+--   one group and a bridge table wasn't warranted. Extract the 3 scalar fields here
+--   (single parse point for the whole warehouse — see plans/260619-0830-crm-tag-acl-sync/).
+--   json_extract_string returns NULL on non-JSON input (handles the legacy 'Unknown' literal).
 -- =================================================================================================
 
 WITH source_data AS (
@@ -30,7 +34,14 @@ SELECT
     -- Date of birth: consolidate birthday/dob
     coalesce(dob, birthday) as dob,
     sex,
-    customer_group,
+    customer_group,  -- raw JSON blob, kept for reference; use the 3 columns below instead
+
+    -- customer_group parsed (ACL data contract — see plans/260619-0830-crm-tag-acl-sync/).
+    -- id is the ONLY stable key: Sapo has renamed a group's code/name mid-flight while
+    -- keeping the same id (e.g. BANLE -> TYPE_RETAIL). NULL for the legacy 'Unknown' literal.
+    json_extract_string(customer_group, '$.id')   as customer_group_id,
+    json_extract_string(customer_group, '$.code') as customer_group_code,
+    json_extract_string(customer_group, '$.name') as customer_group_name,
 
     -- Address
     city,

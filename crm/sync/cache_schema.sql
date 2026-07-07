@@ -71,7 +71,10 @@ CREATE TABLE IF NOT EXISTS wh_customer_base (
   display_name    TEXT,
   phone           TEXT,
   email           TEXT,
-  customer_group  TEXT,
+  customer_group  TEXT,                  -- raw Sapo JSON blob; kept for reference
+  customer_group_id   TEXT,              -- stable ACL key (Sapo group id); NULL for 'Unknown'
+  customer_group_code TEXT,              -- display/debug — NOT stable (Sapo renames codes)
+  customer_group_name TEXT,              -- display/debug — NOT stable, same caveat
   first_order_date TEXT,                 -- YYYY-MM-DD
   -- Extended profile (added for CRM worklist display + address seeding)
   province        TEXT,

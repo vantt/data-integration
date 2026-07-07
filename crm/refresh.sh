@@ -9,4 +9,7 @@ PYTHONPATH=/app python3 -m crm.sync.reverse_etl_warehouse_to_crm
 echo "[refresh] sync_parties: cache.db → crm.db …"
 PYTHONPATH=/app python3 -m crm.src.sync_parties
 
+echo "[refresh] sync_party_tags: cache.db → crm.db (mirror-reconcile tags) …"
+PYTHONPATH=/app python3 -m crm.src.sync_party_tags
+
 echo "[refresh] done."

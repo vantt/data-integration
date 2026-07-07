@@ -44,6 +44,9 @@ joined_data AS (
         c.birth_date,
         c.gender,
         c.customer_group,
+        c.customer_group_id,
+        c.customer_group_code,
+        c.customer_group_name,
         c.loyalty_points,
         c.status,
         c.assignee_id,
@@ -187,12 +190,23 @@ SELECT
     -- backlog doesn't silently default to RETAIL. '%WHOLESALE%' catches both the new
     -- TYPE_WHOLESALE code and the legacy "WHOLESALE"/BANBUON group (name="WHOLESALE").
     -- See docs/context/customer-segmentation.md (§"Hướng dẫn triển khai trong Sapo").
+    -- Refactored 2026-07-06 (plans/260619-0830-crm-tag-acl-sync/phase-00) to match against
+    -- the parsed customer_group_code/customer_group_name columns instead of LIKE across the
+    -- raw JSON blob (2nd undocumented parse point removed; group `id` is the stable ACL key,
+    -- code/name can be renamed by Sapo — see dim_customers_base). Same substrings, same branches.
     CASE
-        WHEN customer_group LIKE '%WHOLESALE%' THEN 'WHOLESALE'                                    -- TYPE_WHOLESALE + legacy BANBUON
-        WHEN customer_group LIKE '%TYPE_PARTNER%' OR customer_group LIKE '%KY_GUI%' THEN 'PARTNER'  -- + Ký Gửi (consignment/ký gửi)
-        WHEN customer_group LIKE '%TYPE_STAFF%' THEN 'STAFF'
-        WHEN customer_group LIKE '%TYPE_KOL%' THEN 'KOL'
-        WHEN customer_group LIKE '%TYPE_CROSSBORDER%' OR customer_group LIKE '%CTN00014%' THEN 'CROSSBORDER'  -- US giao hàng hộ (người nhận VN)
+        WHEN customer_group_code LIKE '%WHOLESALE%' OR customer_group_name LIKE '%WHOLESALE%'
+            THEN 'WHOLESALE'                                    -- TYPE_WHOLESALE + legacy BANBUON
+        WHEN customer_group_code LIKE '%TYPE_PARTNER%' OR customer_group_name LIKE '%TYPE_PARTNER%'
+          OR customer_group_code LIKE '%KY_GUI%' OR customer_group_name LIKE '%KY_GUI%'
+            THEN 'PARTNER'  -- + Ký Gửi (consignment/ký gửi)
+        WHEN customer_group_code LIKE '%TYPE_STAFF%' OR customer_group_name LIKE '%TYPE_STAFF%'
+            THEN 'STAFF'
+        WHEN customer_group_code LIKE '%TYPE_KOL%' OR customer_group_name LIKE '%TYPE_KOL%'
+            THEN 'KOL'
+        WHEN customer_group_code LIKE '%TYPE_CROSSBORDER%' OR customer_group_name LIKE '%TYPE_CROSSBORDER%'
+          OR customer_group_code LIKE '%CTN00014%' OR customer_group_name LIKE '%CTN00014%'
+            THEN 'CROSSBORDER'  -- US giao hàng hộ (người nhận VN)
         ELSE 'RETAIL'  -- Default: TYPE_RETAIL/BANLE, Selly (end-consumers), untagged
     END as customer_type,
 
@@ -265,6 +279,9 @@ SELECT
     birth_date,
     gender,
     customer_group,  -- Keep raw Sapo value for reference
+    customer_group_id,    -- stable ACL key (Sapo group id; NULL for the legacy 'Unknown' literal)
+    customer_group_code,  -- display/debug — NOT stable, Sapo has renamed group codes mid-flight
+    customer_group_name,  -- display/debug — NOT stable, same caveat
     loyalty_points,
 
     -- CLV & RFM
@@ -284,7 +301,9 @@ SELECT
     -- are shipped from the US on behalf of overseas buyers. Group-code detection mirrors the
     -- customer_type CASE above (TYPE_CROSSBORDER or legacy CTN00014 group).
     -- Flag exposes the segment for filtering without requiring a self-join on customer_type.
-    (customer_group LIKE '%TYPE_CROSSBORDER%' OR customer_group LIKE '%CTN00014%') AS is_us_gift_recipient,
+    -- Refactored 2026-07-06 (phase-00) — matches parsed customer_group_code/name, not raw JSON.
+    (customer_group_code LIKE '%TYPE_CROSSBORDER%' OR customer_group_name LIKE '%TYPE_CROSSBORDER%'
+      OR customer_group_code LIKE '%CTN00014%' OR customer_group_name LIKE '%CTN00014%') AS is_us_gift_recipient,
 
     -- source_contact_quality: immutable — reflects whether the contact value is usable.
     -- '*' in phone = already obfuscated by source (relay/masked number from marketplace etc.).

@@ -59,6 +59,9 @@ def _make_warehouse(path: str) -> duckdb.DuckDBPyConnection:
             phone TEXT,
             email TEXT,
             customer_group TEXT,
+            customer_group_id TEXT,
+            customer_group_code TEXT,
+            customer_group_name TEXT,
             first_order_date DATE,
             value_group TEXT,
             customer_status TEXT,
@@ -81,13 +84,15 @@ def _make_warehouse(path: str) -> duckdb.DuckDBPyConnection:
     conn.execute("""
         INSERT INTO main_marts.dim_customers VALUES
           ('key-cust-001', 1001, 'C001', 'Nguyen Van A', '0901000001',
-           'a@test.vn', 'Retail', '2023-01-10',
+           'a@test.vn', '{"id":1812238,"code":"BANLE","name":"RETAIL"}',
+           '1812238', 'BANLE', 'RETAIL', '2023-01-10',
            'VIP', 'active', 'DUE_SOON', '2026-06-20',
            14.5, 850000.0, 'LOW', 0.02,
            'SKU-A', 'SKU-B', 'SKU-C', 'online',
            1200000.0, false, 'unverified', 'unverified'),
           ('key-cust-002', 1002, 'C002', 'Tran Thi B', '0902000002',
-           'b@test.vn', 'Wholesale', '2022-05-15',
+           'b@test.vn', '{"id":1812239,"code":"BANBUON","name":"WHOLESALE"}',
+           '1812239', 'BANBUON', 'WHOLESALE', '2022-05-15',
            'GOLD', 'at_risk', 'OVERDUE', '2026-06-10',
            30.0, 2000000.0, 'HIGH', 0.10,
            'SKU-D', 'SKU-E', NULL, 'store',
@@ -484,6 +489,7 @@ def _create_minimal_dim_tables(conn: duckdb.DuckDBPyConnection) -> None:
         CREATE TABLE IF NOT EXISTS main_marts.dim_customers (
             customer_key TEXT, customer_id BIGINT, customer_code TEXT,
             full_name TEXT, phone TEXT, email TEXT, customer_group TEXT,
+            customer_group_id TEXT, customer_group_code TEXT, customer_group_name TEXT,
             first_order_date DATE, value_group TEXT, customer_status TEXT,
             next_purchase_signal TEXT, predicted_next_purchase_date TEXT,
             avg_days_between_orders DOUBLE, avg_order_spend DOUBLE,
@@ -496,7 +502,8 @@ def _create_minimal_dim_tables(conn: duckdb.DuckDBPyConnection) -> None:
     """)
     conn.execute("""
         INSERT INTO main_marts.dim_customers VALUES
-          ('key-c1', 1001, 'C1', 'Test', '0901', 't@t.vn', 'R', '2023-01-01',
+          ('key-c1', 1001, 'C1', 'Test', '0901', 't@t.vn', '{"id":1812238,"code":"BANLE","name":"RETAIL"}',
+           '1812238', 'BANLE', 'RETAIL', '2023-01-01',
            'VIP', 'active', 'DUE_SOON', NULL, 14.0, 500000.0, 'LOW', 0.01,
            'S1', 'S2', NULL, 'online', 500000.0, false, 'unverified', 'unverified')
     """)

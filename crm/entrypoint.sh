@@ -40,6 +40,16 @@ else
         echo "[entrypoint] WARN: sync_parties failed — crm_party table may be empty" >&2
     fi
 
+    # ── Step 4: Mirror-reconcile crm_party_tag from wh_customer_base.customer_group_id ──
+    # Must run AFTER sync_parties (needs crm_party_external_id seeded to resolve party_id).
+    # Reads cache.db; writes crm.db (crm_party_tag rows with source='sapo_v2_sync').
+    echo "[entrypoint] running sync_party_tags …"
+    if PYTHONPATH=/app python3 -m crm.src.sync_party_tags; then
+        echo "[entrypoint] sync_party_tags OK"
+    else
+        echo "[entrypoint] WARN: sync_party_tags failed — synced tags may be stale" >&2
+    fi
+
 fi
 
 # ── Step 4: Start CRM server (foreground) ────────────────────────────────────

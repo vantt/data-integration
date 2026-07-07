@@ -45,7 +45,10 @@ SELECT
 
     birth_date,
     gender,
-    customer_group,
+    customer_group,  -- raw JSON blob, kept for reference; use the 3 columns below instead
+    customer_group_id,
+    customer_group_code,
+    customer_group_name,
     loyalty_points,
 
     -- Address (primary address from addresses[0])
@@ -105,6 +108,9 @@ SELECT
     NULL as birth_date,
     'Unknown' as gender,
     'Unknown' as customer_group,
+    NULL as customer_group_id,
+    NULL as customer_group_code,
+    NULL as customer_group_name,
     0 as loyalty_points,
     'Unknown' as city,
     'Unknown' as province,

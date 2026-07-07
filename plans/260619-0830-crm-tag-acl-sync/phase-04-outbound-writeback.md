@@ -21,14 +21,14 @@ Phase này chỉ **thêm trigger enqueue** khi tag thay đổi.
 ```
 CRM user gán tag "KH Sỉ" (crm_tag_id=X)
   → lookup crm_ext_tag_map(crm_tag_id=X, direction IN ('outbound','both'), is_active=1)
-  → tìm crm_ext_tag(ext_tag_id) → source_system='sapo_v2', ext_key='TYPE_WHOLESALE'
+  → tìm crm_ext_tag(ext_tag_id) → source_system='sapo_v2', ext_key='1812239' (group id — xem phase 01)
   → lookup crm_party_external_id(party_id, source_system='sapo_v2') → external_key (Sapo customer_id)
   → INSERT INTO sync_outbox {
       entity_type: 'party',
       entity_id: party_id,
       target_system: 'sapo_v2',
       operation: 'update_customer_group',
-      payload: {customer_id: X, customer_group: 'TYPE_WHOLESALE'},
+      payload: {customer_id: <external_key>, customer_group_id: 1812239},
       idempotency_key: hash(party_id + crm_tag_id + 'assign')
     }
 ```
