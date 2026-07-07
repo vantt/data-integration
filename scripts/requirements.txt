@@ -1,0 +1,3 @@
+# scripts/ specific deps NOT already in ingestion/requirements.txt (data_platform image).
+# anthropic — AnthropicCompletionProvider (scripts/approach_script_completion/anthropic_provider.py).
+anthropic==0.116.0

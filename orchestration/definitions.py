@@ -29,7 +29,7 @@ from orchestration.asset_checks import ALL_CHECKS
 from orchestration.asset_checks.reconciliation_checks import RECON_CHECKS
 from orchestration.asset_checks.kpi_closure_checks import KPI_CHECKS
 from dagster_dbt import DbtCliResource
-from orchestration.assets import sapo_v2_assets, sheets_assets, shopee_assets, misa_amis_assets, dbt, serving, rill, reconciliation, kpi_closure, crm_sync, hug_assets, crm_writeback_assets
+from orchestration.assets import sapo_v2_assets, sheets_assets, shopee_assets, misa_amis_assets, dbt, serving, rill, reconciliation, kpi_closure, crm_sync, hug_assets, crm_writeback_assets, approach_script_generation
 from orchestration.ops.system_backup import maintain_backup_platform_job
 from orchestration.ops.morning_digest import health_report_digest_job
 from orchestration.ops.purge_runs import maintain_purge_runs_job
@@ -44,7 +44,7 @@ from orchestration.sensors.health_db_watchdog_sensor import health_db_watchdog_s
 # (docker-compose.yml command: `python scripts/ensure_dbt_directories.py && ...`).
 # Don't call it from here: definitions.py is re-imported on every gRPC code
 # server spawn (e.g. each `dagster job launch`), which would add noise.
-all_assets = load_assets_from_modules([sapo_v2_assets, sheets_assets, shopee_assets, misa_amis_assets, dbt, serving, rill, reconciliation, kpi_closure, crm_sync, hug_assets, crm_writeback_assets])
+all_assets = load_assets_from_modules([sapo_v2_assets, sheets_assets, shopee_assets, misa_amis_assets, dbt, serving, rill, reconciliation, kpi_closure, crm_sync, hug_assets, crm_writeback_assets, approach_script_generation])
 
 # ------------------------------------------------------------------------------
 # ASSET SELECTIONS
@@ -173,9 +173,9 @@ budget_sheet_sync_job = define_asset_job(
 )
 
 # Monthly budget suggestion write-back (Phase 5) — computes + writes "Gợi Ý" cells for next
-# month only, never "Budget". HARD BLOCKER: requires GOOGLE_SERVICE_ACCOUNT_BUDGET_WRITE_PATH
-# (GCP service account w/ Editor access on the sheet) — fails loud at RUNTIME, not at code-load,
-# if unset. See gsheet_budget_sync.py module docstring for the manual GCP setup steps.
+# month only, never "Budget". Requires GOOGLE_SHEETS_SERVICE_ACCOUNT_KEY_PATH (shared GCP
+# service account, Editor access on this sheet) — fails loud at RUNTIME, not at code-load,
+# if unset. See plans/260707-1201-google-sheets-service-account/phase-01-service-account-setup.md.
 budget_suggestion_writeback_job = define_asset_job(
     name="budget_suggestion_writeback_job",
     selection=AssetSelection.assets(
@@ -232,7 +232,8 @@ _nightly_batch_selection = (
     AssetSelection.assets(serving.build_serving_db) |
     AssetSelection.assets(serving.build_standalone_export) |
     AssetSelection.assets(rill.build_rill_publish) |
-    AssetSelection.assets(crm_sync.crm_cache_refresh)
+    AssetSelection.assets(crm_sync.crm_cache_refresh) |
+    AssetSelection.assets(approach_script_generation.approach_script_autogen)
 )
 
 pipeline_batch_nightly_job = define_asset_job(

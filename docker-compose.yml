@@ -30,6 +30,9 @@ services:
       - ./ingestion:/app/ingestion
       - ./orchestration:/app/orchestration
       - ./scripts:/app/scripts
+      # Read-only: scripts/build_approach_prompts.py loads the approach-script prompt
+      # template from here at runtime (customer-insight-prompt-template.md).
+      - ./plans:/app/plans:ro
       # Data (stateful, persistent) — grouped under /app/var/
       - ./app_data/data_lake:/app/var/data_lake
       # Named volume overlay: isolates monitoring DB from Windows filesystem scanning (prevents dllhost lock)
@@ -37,8 +40,14 @@ services:
       - ./app_data/dagster_home:/app/var/dagster_home
       - ./app_data/backups:/app/var/backups
       - ./app_data/input_source:/app/var/input_source
+      - ./app_data/secrets:/app/var/secrets:ro
       # CRM SQLite databases (read-only — for backup access only)
       - crm_data:/app/var/crm_data:ro
+      # codex CLI OAuth state (subscription login, not an API key) — named volume so
+      # it survives container recreate/rebuild. One-time setup after first `up`:
+      #   docker compose exec data_platform codex login
+      # Same pattern as ../fgos (agent-codex-config named volume).
+      - agent_codex_config:/root/.codex
       # Config (read-only)
       - ./docker-compose.yml:/app/docker-compose.yml:ro
       - ./Dockerfile.dataplatform:/app/Dockerfile.dataplatform:ro
@@ -117,6 +126,21 @@ services:
     labels:
       caddy: evidence.lan.fwg.vn
       caddy.reverse_proxy: "{{upstreams 3000}}"
+
+  # Cloudflare Tunnel — outbound-only, no inbound ports needed.
+  # Public hostname config: Cloudflare dashboard → Networks → Tunnels.
+  # Token: thêm CLOUDFLARE_TUNNEL_TOKEN vào .env.docker rồi uncomment để dùng.
+  # cloudflared:
+  #   image: cloudflare/cloudflared:latest
+  #   container_name: cloudflared
+  #   restart: unless-stopped
+  #   mem_limit: 128m
+  #   cpus: 0.2
+  #   command: tunnel --no-autoupdate run
+  #   environment:
+  #     - TUNNEL_TOKEN=${CLOUDFLARE_TUNNEL_TOKEN}
+  #   networks:
+  #     - caddy_net
 
   fileserver:
     image: caddy:alpine
@@ -263,5 +287,9 @@ volumes:
     # Scratch /data for the restore-verify drill's ephemeral CRM. A named volume (not a
     # host bind) so it resolves on the host daemon when the socket-mounted sidecar boots
     # the sibling container — host-bind paths would not translate. Cleared each run.
+  agent_codex_config:
+    # codex CLI OAuth session (~/.codex in data_platform) — NOT the host's ~/.codex
+    # (that holds personal logs/memories unrelated to this container). Populated by
+    # a one-time `docker compose exec data_platform codex login` after first `up`.
 
 # H2 File Note: The database file will be metabase.db.mv.db (Multi-Version store)

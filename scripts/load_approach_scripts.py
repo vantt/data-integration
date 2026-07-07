@@ -28,13 +28,18 @@ import logging
 import os
 import re
 import shutil
+import sys
 from pathlib import Path
+
+sys.path.insert(0, str(Path(__file__).resolve().parent))
+from approach_script_lint import lint_file  # noqa: E402
 
 logging.basicConfig(level=logging.INFO, format="%(levelname)s %(message)s")
 log = logging.getLogger(__name__)
 
-# Pattern: script-01-603264280.json → customer_id = 603264280
-_FILENAME_RE = re.compile(r"^script-\d+-(\d+)\.json$", re.IGNORECASE)
+# Patterns chấp nhận: script-01-603264280.json (pilot dán tay)
+# hoặc 603264280.json (generate_approach_scripts.py) → customer_id = 603264280
+_FILENAME_RE = re.compile(r"^(?:script-\d+-)?(\d+)\.json$", re.IGNORECASE)
 
 
 def _default_src() -> Path:
@@ -76,8 +81,12 @@ def _extract_customer_id(path: Path) -> int | None:
     return None
 
 
-def load(src: Path, dest: Path) -> int:
-    """Copy and rename scripts from src into dest. Returns count of files written."""
+def load(src: Path, dest: Path, lint: bool = True) -> int:
+    """Copy and rename scripts from src into dest. Returns count of files written.
+
+    lint=True (default) rejects files violating guardrails (approach_script_lint);
+    rejected files are logged with reasons and NOT copied.
+    """
     if not src.exists():
         log.error("Source directory not found: %s", src)
         return 0
@@ -94,6 +103,14 @@ def load(src: Path, dest: Path) -> int:
             log.warning("Skipping %s — cannot extract customer_id", json_file.name)
             skipped += 1
             continue
+        if lint:
+            errors = lint_file(json_file)
+            if errors:
+                log.warning("Skipping %s — lint failed:", json_file.name)
+                for e in errors:
+                    log.warning("    - %s", e)
+                skipped += 1
+                continue
         target = dest / f"{customer_id}.json"
         shutil.copy2(json_file, target)
         log.info("  %s → %s/%d.json", json_file.name, dest.name, customer_id)
@@ -107,8 +124,9 @@ def main() -> None:
     parser = argparse.ArgumentParser(description="Load pilot approach-script JSONs into CRM data dir.")
     parser.add_argument("--src", type=Path, default=_default_src(), help="Source directory of script-NN-{cid}.json files")
     parser.add_argument("--dest", type=Path, default=_default_dest(), help="Destination directory (approach_scripts/)")
+    parser.add_argument("--no-lint", action="store_true", help="Skip guardrail lint (escape hatch for legacy files)")
     args = parser.parse_args()
-    load(args.src, args.dest)
+    load(args.src, args.dest, lint=not args.no_lint)
 
 
 if __name__ == "__main__":

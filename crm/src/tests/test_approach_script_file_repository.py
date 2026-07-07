@@ -140,6 +140,31 @@ def test_missing_approach_key_defaults_recommended_true(tmp_path):
     assert result.confidence == "low"
 
 
+def test_meta_block_populates_model_and_template_version(tmp_path):
+    """Auto-gen scripts embed meta {model, template_version} → entity fields set."""
+    data = {**_VALID_DATA, "meta": {"model": "gpt-5.5", "template_version": "v2", "generator": "codex-exec"}}
+    _write_json(tmp_path, 300, data)
+    repo = FileApproachScriptRepository(tmp_path)
+
+    result = repo.get_by_customer_id(300)
+
+    assert result is not None
+    assert result.model == "gpt-5.5"
+    assert result.template_version == "v2"
+
+
+def test_no_meta_block_leaves_model_none(tmp_path):
+    """Legacy hand-pasted scripts have no meta → model/template_version stay None."""
+    _write_json(tmp_path, 301, _VALID_DATA)
+    repo = FileApproachScriptRepository(tmp_path)
+
+    result = repo.get_by_customer_id(301)
+
+    assert result is not None
+    assert result.model is None
+    assert result.template_version is None
+
+
 # ── list_customer_ids ──────────────────────────────────────────────────────────
 
 def test_list_customer_ids_returns_int_set(tmp_path):

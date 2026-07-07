@@ -32,6 +32,12 @@ class FileApproachScriptRepository:
         self._ids_cache: set[int] | None = None
         self._ids_cache_ts: float = 0.0
 
+    @property
+    def scripts_dir(self) -> Path:
+        """Exposed so other adapters (e.g. the auto-load admin endpoint) write
+        into the same directory without re-reading CRM_APPROACH_SCRIPT_DIR."""
+        return self._scripts_dir
+
     def get_by_customer_id(self, customer_id: int) -> ApproachScript | None:
         """Return ApproachScript for customer_id, or None if file missing/malformed."""
         path = self._scripts_dir / f"{customer_id}.json"
@@ -53,7 +59,15 @@ class FileApproachScriptRepository:
             return None
 
         refreshed_at = datetime.fromtimestamp(mtime, tz=timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ")
-        return ApproachScript.from_json(customer_id, data, refreshed_at)
+        # meta block: auto-gen scripts embed provenance (model, template_version).
+        meta = data.get("meta") if isinstance(data.get("meta"), dict) else {}
+        return ApproachScript.from_json(
+            customer_id,
+            data,
+            refreshed_at,
+            model=meta.get("model"),
+            template_version=meta.get("template_version"),
+        )
 
     def list_customer_ids(self) -> set[int]:
         """Return set of customer_ids with a script file, cached for _SCRIPT_IDS_TTL seconds.
