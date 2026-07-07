@@ -46,4 +46,4 @@ Turn unpaid-order tracking into credit-risk management — overdue amounts, cred
 ## Dependency
 
 Requires credit terms data from sales/finance team (not available in Sapo by default).
-`fact_payments` pipeline needed for partial payment allocation — see `plans/260609-1107-cash-flow-payments/`.
+`fact_payments` (partial payment allocation) already populated — see `plans/archive/260609-1107-cash-flow-payments/` (superseded/closed 2026-07-06; that plan's remaining DSO/AR scope now lives here).
