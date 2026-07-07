@@ -1,7 +1,7 @@
 ---
 phase: 2
 title: "Customer Discount Metrics"
-status: pending
+status: done
 priority: P2
 dependencies: [1]
 ---

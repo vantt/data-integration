@@ -1,7 +1,7 @@
 ---
 phase: 1
 title: "Pipeline Extraction"
-status: pending
+status: done
 priority: P1
 dependencies: []
 ---

@@ -1,7 +1,7 @@
 ---
 phase: 3
 title: "dim_customers + CRM Sync"
-status: pending
+status: done
 priority: P2
 dependencies: [1, 2]
 ---

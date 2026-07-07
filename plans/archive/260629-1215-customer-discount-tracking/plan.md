@@ -1,7 +1,7 @@
 ---
 title: "Customer Discount Tracking — Pipeline + dim_customers + CRM Sync"
 description: "Extract line-item discount rate vào pipeline, thống nhất taxonomy 3 buckets, expose 6 customer-level discount metrics qua dim_customers và CRM cache."
-status: pending
+status: done
 priority: P2
 branch: "main"
 tags: ["dbt", "discount", "dim_customers", "crm-sync"]
@@ -60,13 +60,15 @@ negotiated     ← discount_items WHERE discount_type IN:
 > Phân biệt voucher vs campaign: voucher = khách chủ động → signal engagement; campaign = merchant áp → signal discount dependency.
 > `overseas` ở negotiated vì là segment riêng (US gift-ship), không phải marketing promo.
 
+> ✅ **Verified done (2026-07-08)** — all 3 phases implemented in code: `fact_sales.discount_rate`, `fact_orders.max_line_discount_rate`/`primary_discount_type`, `int_customer_discount_metrics.sql` (8 fields, incremental), `dim_customers` 8 columns, CRM `cache_insight.py`/`c360_insight_panel.html` render all 4 buckets.
+
 ## Phases
 
 | Phase | Name | Status |
 |-------|------|--------|
-| 1 | [Pipeline Extraction](./phase-01-pipeline-extraction.md) | Pending |
-| 2 | [Customer Discount Metrics](./phase-02-customer-discount-metrics.md) | Pending |
-| 3 | [dim_customers + CRM Sync](./phase-03-dim-customers-crm-sync.md) | Pending |
+| 1 | [Pipeline Extraction](./phase-01-pipeline-extraction.md) | ✅ Done |
+| 2 | [Customer Discount Metrics](./phase-02-customer-discount-metrics.md) | ✅ Done |
+| 3 | [dim_customers + CRM Sync](./phase-03-dim-customers-crm-sync.md) | ✅ Done |
 
 ## File Ownership
 
@@ -85,13 +87,13 @@ negotiated     ← discount_items WHERE discount_type IN:
 
 ## Acceptance Criteria
 
-- [ ] `fact_sales.discount_rate` computed and non-null where `discount_amount > 0`
-- [ ] `fact_order_costs` has `discount_line_item` rows for orders with line-level discounts
-- [ ] `fact_orders.max_line_discount_rate` populated (NEW column, not replacing `max_discount_rate`)
-- [ ] `int_customer_discount_metrics` exists, computes 8 fields correctly
-- [ ] `dim_customers` has 8 new discount fields
-- [ ] CRM `wh_customer_insight` includes 8 fields, visible in customer 360 insight panel
-- [ ] No double-counting between `line_discount` and `voucher`/`campaign`/`negotiated` buckets
+- [x] `fact_sales.discount_rate` computed and non-null where `discount_amount > 0`
+- [x] `fact_order_costs` has `discount_line_item` rows for orders with line-level discounts
+- [x] `fact_orders.max_line_discount_rate` populated (NEW column, not replacing `max_discount_rate`)
+- [x] `int_customer_discount_metrics` exists, computes 8 fields correctly
+- [x] `dim_customers` has 8 new discount fields
+- [x] CRM `wh_customer_insight` includes 8 fields, visible in customer 360 insight panel
+- [x] No double-counting between `line_discount` and `voucher`/`campaign`/`negotiated` buckets
 
 ## Dependencies
 
