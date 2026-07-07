@@ -91,6 +91,11 @@ class Tag:
     category: Optional[str] = None
     color: Optional[str] = None
     display_label: Optional[str] = None     # human-readable label (Vietnamese OK); falls back to name in UI
+    # Migration 0041 (260706-0833 Phase 01) — tag governance lifecycle flags.
+    # is_provisional: 0=canonical (shown in pickers/chips), 1=awaiting admin review.
+    #   L1 provisional: category set. L2 provisional: category IS NULL.
+    is_provisional: bool = False
+    is_archived: bool = False               # 1=retired, hidden from pickers, history preserved
 
 
 @dataclass
@@ -104,6 +109,7 @@ class PartyTag:
     color: Optional[str] = None
     tagged_by: Optional[str] = None         # FK → crm_app_user (nullable)
     display_label: Optional[str] = None     # denormalised from crm_tag.display_label
+    source: str = "crm_user"                # crm_user|ops_normalized|sapo_v2_sync|merged (migration 0039)
 
 
 @dataclass

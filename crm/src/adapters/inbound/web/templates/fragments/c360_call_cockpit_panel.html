@@ -15,7 +15,7 @@
      warning_notes       : list[Note]         — type=warning, active
      resolved_action_ids : set[str]
      geo_region          : str                — "HCMC" | "Hà Nội" | …
-     script              : dict | None        — wh_approach_script JSON
+     script              : dict | None        — approach-script JSON (file qua ApproachScriptRepository)
      meta                : dict | None        — {recommended, confidence, refreshed_at}
      rail_primary        : RailItem | None
      rail_secondary      : list[RailItem]
@@ -90,6 +90,13 @@
 {# Item 1 (Phase 06): custom profile fields — show only when not yet collected #}
 {% if not party_custom.get('skin_type') %}{% set _ = collect_rows.append({'key':'skin_type','label':'Loại da','kind':'custom_select','options':['dầu','khô','hỗn hợp','nhạy cảm','thường'],'current':''}) %}{% endif %}
 {% if not party_custom.get('preferred_contact') %}{% set _ = collect_rows.append({'key':'preferred_contact','label':'Kênh ưu thích','kind':'custom_select','options':['phone','zalo','messenger','email'],'current':''}) %}{% endif %}
+{# Phase 02 (260706-0833): health domain chips + health context free text —
+   has_health_domain_tag / health_domain_options come from load_health_domain_collect_context()
+   (screen_call_cockpit.py / screen_customer_360_panels.py); skin_type row above is untouched. #}
+{% set has_health_domain_tag = has_health_domain_tag | default(false) %}
+{% set health_domain_options = health_domain_options | default([]) %}
+{% if not has_health_domain_tag %}{% set _ = collect_rows.append({'key':'health_domain','label':'Lĩnh vực sức khỏe','kind':'tag_multiselect','category':'health_domain','options':health_domain_options,'current':''}) %}{% endif %}
+{% if not party_custom.get('health_context_raw') %}{% set _ = collect_rows.append({'key':'health_context_raw','label':'Ghi chú sức khỏe','kind':'custom_text','field':'health_context_raw','ph':'huyết áp cao, hay mệt...','maxlength':200}) %}{% endif %}
 {% set data_gaps = (script.data_gaps if script and script.data_gaps else []) %}
 
 {# ── Alert chips derivation (§6) ─────────────────────────────────────────────
@@ -326,7 +333,7 @@
           <div class="state">
             <div class="state__inner">
               <div class="state__title">Chưa có kịch bản tiếp cận</div>
-              <p class="state__sub">Chưa có row <code>cache.wh_approach_script</code> cho khách này. Lô sinh kịch bản đêm chưa phủ khách này.</p>
+              <p class="state__sub">Chưa có kịch bản AI cho khách này. Đợt sinh kịch bản gần nhất chưa phủ khách này.</p>
               <div style="display:flex;flex-wrap:wrap;gap:var(--sp-2);justify-content:center;margin-top:var(--sp-4)">
                 <a href="/customers" class="btn btn--secondary"
                    onclick="if(history.length>1){event.preventDefault();history.back()}">Quay lại Danh sách</a>
@@ -718,16 +725,19 @@
                       hx-get="/modals/m15?party_id={{ party_id }}&tab=contacts"
                       hx-target="#modal-root" hx-swap="innerHTML">Sửa</button>
             </div>
-            {% elif row.kind == 'custom_select' %}
-            {# Item 1 (Phase 06): custom field pill-select — inline POST → row swap #}
+            {% elif row.kind in ('custom_select', 'tag_multiselect') %}
+            {# Item 1 (Phase 06) custom_select / health_domain tag_multiselect
+               (Phase 02, 260706-0833) — inline POST → row swap #}
             {% include "fragments/_s14_collect_row.html" %}
             {% else %}
-            {# A-S14-020 (channel) / A-S14-021 (core) — inline write → row swap #}
+            {# A-S14-020 (channel) / A-S14-021 (core) / health_context_raw custom_text
+               (Phase 02, 260706-0833) — inline write → row swap #}
             <div class="s14-crow" id="s14-crow-{{ row.key }}" data-field="{{ row.key }}">
               <span class="s14-crow__label">{{ row.label }}</span>
               <input class="s14-crow__inp"
                      id="s14-collect-inp-{{ row.key }}"
                      type="text"
+                     maxlength="{{ row.maxlength if row.maxlength else 120 }}"
                      placeholder="{{ row.ph }}"
                      aria-label="{{ row.label }}"
                      oninput="s14CollectEnable('{{ row.key }}', this.value)"
@@ -963,21 +973,52 @@ window.s14R14AckError = function () {
     if (!val) return;
     var target = document.getElementById('s14-crow-' + key);
     if (!target) return;
+    // Phase 02 (260706-0833): custom_text (e.g. health_context_raw) reuses the
+    // existing custom-field-inline endpoint from Phase 06 — field_key/value form shape.
     var endpoint = kind === 'channel'
       ? '/customers/{{ party_id }}/contact'
-      : '/customers/{{ party_id }}/core';
+      : (kind === 'custom_text'
+        ? '/customers/{{ party_id }}/custom-field-inline'
+        : '/customers/{{ party_id }}/core');
     var formData = new FormData();
     formData.append('inline', '1');
     if (kind === 'channel') {
       formData.append('action', 'add_channel');
       formData.append('add_identity_type', field);
       formData.append('add_identity_value', val);
+    } else if (kind === 'custom_text') {
+      formData.append('field_key', field);
+      formData.append('value', val);
     } else {
       formData.append(field, val);
     }
     htmx.ajax('POST', endpoint,
       { target: target, swap: 'outerHTML', values: Object.fromEntries(formData) }
     );
+  };
+
+  // ── Health domain (Phase 02, 260706-0833): tag_multiselect chip toggle ──
+  window.s14TagChipToggle = function (key, el) {
+    el.classList.toggle('chip-pill--on');
+    var chipset = document.getElementById('s14-chipset-' + key);
+    var anySelected = chipset && chipset.querySelector('.chip-pill--on');
+    var btn = document.getElementById('s14-tagsave-' + key);
+    if (btn) btn.disabled = !anySelected;
+  };
+
+  // ── Health domain (Phase 02, 260706-0833): save selected chips via POST /tags/inline ──
+  window.s14TagMultiSave = function (key, category) {
+    var chipset = document.getElementById('s14-chipset-' + key);
+    if (!chipset) return;
+    var selected = Array.prototype.slice.call(chipset.querySelectorAll('.chip-pill--on'))
+      .map(function (el) { return el.getAttribute('data-tag-name'); });
+    if (!selected.length) return;
+    var target = document.getElementById('s14-cr-' + key);
+    if (!target) return;
+    htmx.ajax('POST', '/customers/{{ party_id }}/tags/inline', {
+      target: target, swap: 'outerHTML',
+      values: { tag_names: selected, category: category }
+    });
   };
 
   // ── A-S14-009: open outcome modal, inject quick-note into #m08-body ──

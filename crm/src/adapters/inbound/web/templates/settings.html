@@ -56,8 +56,11 @@
       {% if active_tab == "tags" %}
       <div class="stack stack-4">
         <div class="row-between"><span class="panel-title">Tags</span>
-          <button class="btn btn--primary" hx-get="/settings/tags/modal/create" hx-target="#modal-root" hx-swap="innerHTML">
-            {% include "icons/plus.svg" %} Tạo tag</button></div>
+          <div style="display:flex;gap:var(--sp-2)">
+            <a class="btn btn--ghost" href="/settings/tags">Quản lý Tag (merge/archive/provisional){% if tag_governance_pending_count %} <span class="bdg bdg--bad" data-tooltip="Tag/nhóm ghi chú đang chờ duyệt">{{ tag_governance_pending_count }}</span>{% endif %}</a>
+            <button class="btn btn--primary" hx-get="/settings/tags/modal/create" hx-target="#modal-root" hx-swap="innerHTML">
+              {% include "icons/plus.svg" %} Tạo tag</button>
+          </div></div>
         {% if not tags %}<div class="state"><div class="state__inner">
           <div class="state__icon">{% include "icons/tag.svg" %}</div>
           <div class="state__title">Chưa có tag nào.</div>

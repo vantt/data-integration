@@ -1,0 +1,42 @@
+{# @kind FRAGMENT — Provisional queue Level 1 (Feature B): category known, tag unvalidated.
+   Data: tags (list[dict]: tag_id,name,display_label,category,usage_count,has_active_mapping). #}
+<div class="row-between"><span class="panel-title">⚠ Chờ duyệt L1 — domain đã biết ({{ tags | length }} tag)</span></div>
+{% if not tags %}
+<div class="state"><div class="state__inner">
+  <div class="state__icon">{% include "icons/tag.svg" %}</div>
+  <div class="state__title">Không có tag nào đang chờ duyệt L1.</div>
+</div></div>
+{% else %}
+<div class="stack stack-3">
+{% for t in tags %}
+<div class="panel" id="tag-row-{{ t.tag_id }}" style="padding:var(--sp-3)">
+  <div class="row-between">
+    <div>
+      <span class="mono">{{ t.name }}</span> · <span class="muted">{{ t.category }}</span> · {{ t.usage_count }} KH
+      {% if t.has_active_mapping %}<span class="bdg bdg--warn" title="Đang nhận sync inbound từ Sapo">⇄ sync</span>{% endif %}
+    </div>
+  </div>
+  <div class="flex-wrap" style="margin-top:var(--sp-2);gap:var(--sp-2)">
+    <button class="btn btn--primary btn--sm" hx-post="/settings/tags/{{ t.tag_id }}/promote-l1" hx-target="body">
+      Xác nhận</button>
+
+    <form hx-post="/settings/tags/{{ t.tag_id }}/rename" hx-target="body" style="display:flex;gap:var(--sp-1);align-items:center">
+      <input type="hidden" name="tab" value="l1">
+      <input type="text" name="name" class="inp inp--mono" value="{{ t.name }}" style="width:14em">
+      <button type="submit" class="btn btn--ghost btn--sm">Đổi tên</button>
+    </form>
+
+    <button class="btn btn--ghost btn--sm"
+            hx-get="/settings/tags/merge/modal?category={{ t.category }}&preselect={{ t.tag_id }}&tab=l1"
+            hx-target="#modal-root" hx-swap="innerHTML">
+      Merge vào tag có sẵn</button>
+
+    <button class="btn btn--ghost btn--sm"
+            hx-post="/settings/tags/{{ t.tag_id }}/delete-provisional?tab=l1" hx-target="body"
+            hx-confirm="Xóa tag provisional '{{ t.name }}'? Không thể hoàn tác — sẽ xóa cả gán tag trên khách hàng.">
+      Xoá</button>
+  </div>
+</div>
+{% endfor %}
+</div>
+{% endif %}

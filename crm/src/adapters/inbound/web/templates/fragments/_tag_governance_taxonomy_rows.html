@@ -1,0 +1,47 @@
+{# @kind FRAGMENT — Taxonomy panel rows (Feature A), included by settings_tag_governance.html.
+   Data: tags (list[dict]: tag_id,name,display_label,color,category,is_archived,
+   usage_count,source_label,has_active_mapping), active_tab (str = current category). #}
+<div class="row-between"><span class="panel-title">{{ active_tab }} — {{ tags | length }} tag</span>
+  <button class="btn btn--primary" hx-get="/settings/tags/modal/create" hx-target="#modal-root" hx-swap="innerHTML">
+    {% include "icons/plus.svg" %} Tạo tag</button></div>
+{% if not tags %}
+<div class="state"><div class="state__inner">
+  <div class="state__icon">{% include "icons/tag.svg" %}</div>
+  <div class="state__title">Chưa có tag nào trong category này.</div>
+</div></div>
+{% else %}
+<div class="tbl-wrap"><table class="tbl">
+  <thead><tr><th>Tên</th><th>Dùng</th><th>Nguồn</th><th style="text-align:right">Actions</th></tr></thead>
+  <tbody>
+  {% for t in tags %}
+  <tr id="tag-row-{{ t.tag_id }}">
+    <td>
+      <span class="chip{% if t.color and t.color != 'default' %} chip--{{ t.color }}{% endif %}">{{ t.display_label or t.name }}</span>
+      {% if t.is_archived %}<span class="bdg">Lưu trữ</span>{% endif %}
+      {% if t.has_active_mapping %}<span class="bdg bdg--warn" title="Đang nhận sync inbound từ Sapo">⇄ sync</span>{% endif %}
+    </td>
+    <td>{{ t.usage_count }} KH</td>
+    <td class="muted">{{ t.source_label }}</td>
+    <td style="text-align:right"><div style="display:flex;flex-wrap:nowrap;gap:var(--sp-1);justify-content:flex-end">
+      {% if t.is_archived %}
+      <button class="btn btn--ghost btn--sm"
+              hx-post="/settings/tags/{{ t.tag_id }}/unarchive?tab={{ active_tab }}" hx-target="body">
+        Bỏ lưu trữ</button>
+      {% else %}
+      <button class="icon-btn icon-btn--sm" aria-label="Sửa"
+              hx-get="/settings/tags/{{ t.tag_id }}/modal/edit" hx-target="#modal-root" hx-swap="innerHTML">
+        {% include "icons/edit.svg" %}</button>
+      <button class="btn btn--ghost btn--sm"
+              hx-get="/settings/tags/merge/modal?category={{ active_tab }}&preselect={{ t.tag_id }}&tab={{ active_tab }}"
+              hx-target="#modal-root" hx-swap="innerHTML">Merge</button>
+      <button class="btn btn--ghost btn--sm"
+              hx-post="/settings/tags/{{ t.tag_id }}/archive?tab={{ active_tab }}" hx-target="body"
+              hx-confirm="Lưu trữ tag '{{ t.name }}'? {{ t.usage_count }} khách đang gắn tag này sẽ VẪN giữ tag (không bị gỡ), nhưng tag sẽ ẩn khỏi picker và mapping inbound đang active (nếu có) sẽ bị tắt.">
+        Lưu trữ</button>
+      {% endif %}
+    </div></td>
+  </tr>
+  {% endfor %}
+  </tbody>
+</table></div>
+{% endif %}

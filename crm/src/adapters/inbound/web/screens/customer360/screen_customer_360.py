@@ -143,6 +143,7 @@ def make_customer_360_router(
     app_users: Optional[AppUserReader] = None,
     approach_repo=None,
     action_state: Optional[ActionStateWriter] = None,
+    tags=None,           # Phase 02 (260706-0833): health_domain gap detection
 ) -> APIRouter:
     """Return APIRouter wired with all Customer 360 routes."""
     router = APIRouter()
@@ -277,6 +278,7 @@ def make_customer_360_router(
         customer_dim_metrics=customer_dim_metrics,
         app_users=app_users,
         approach_repo=approach_repo,
+        tags=tags,
         _load_base=_load_base,
         _load_insight=_load_insight,
         _sapo_customer_id=_sapo_customer_id,
@@ -312,6 +314,7 @@ def make_customer_360_router(
         party_tasks=party_tasks,
         approach_repo=approach_repo,
         action_task_resolver=action_task_resolver,
+        tags=tags,
     )
 
     return router

@@ -1,0 +1,58 @@
+{# @kind MODAL — Tag Governance merge dialog (Phase 03, 260706-0833).
+   Opened from a taxonomy row's [Merge] button or a provisional row's
+   [Merge vào tag có sẵn] button.
+   Data: category (str), tab (str), preselect (str — tag_id checked by default),
+   candidates (list[dict]: tag_id,name,display_label,is_provisional,has_active_mapping).
+   POST target: /settings/tags/merge → { canonical_tag_id, merge_tag_ids[] }.
+#}
+<div class="modal-scrim" onclick="document.getElementById('modal-root').innerHTML=''" data-surface="tag-governance-merge">
+  <div class="modal" role="dialog" aria-modal="true" onclick="event.stopPropagation()">
+    <div class="modal__head">
+      <div><div class="modal__title">Merge tag — {{ category }}</div></div>
+      <button class="icon-btn" onclick="document.getElementById('modal-root').innerHTML=''" aria-label="Đóng">✕</button>
+    </div>
+
+    <form hx-post="/settings/tags/merge" hx-target="body"
+          hx-confirm="Merge sẽ KHÔNG thể hoàn tác — các tag đã chọn sẽ bị xóa và toàn bộ khách hàng gắn tag đó chuyển sang tag đích. Tiếp tục?">
+      <input type="hidden" name="tab" value="{{ tab }}">
+      <div class="modal__body stack stack-3">
+
+        {% if candidates | selectattr('has_active_mapping') | list %}
+        <div class="bdg bdg--warn" style="display:block;padding:var(--sp-2)">
+          ⚠ Tag đánh dấu ⇄ đang nhận sync từ Sapo — nếu merge, mapping sẽ chuyển sang tag đích.
+        </div>
+        {% endif %}
+
+        <div class="field">
+          <span class="field__label">Tag đích (giữ lại) *</span>
+          {% for c in candidates if not c.is_provisional %}
+          <label class="radio-pill">
+            <input type="radio" name="canonical_tag_id" value="{{ c.tag_id }}" required
+                   {% if loop.first %}checked{% endif %}>
+            {{ c.display_label or c.name }}{% if c.has_active_mapping %} ⇄{% endif %}
+          </label>
+          {% endfor %}
+        </div>
+
+        <div class="field">
+          <span class="field__label">Tag sẽ bị gộp (chọn 1+)</span>
+          {% for c in candidates %}
+          <label class="field field--inline">
+            <input type="checkbox" name="merge_tag_ids" value="{{ c.tag_id }}"
+                   {% if c.tag_id == preselect %}checked{% endif %}>
+            <span>{{ c.display_label or c.name }}
+              {% if c.is_provisional %}<span class="bdg">L1 chưa duyệt</span>{% endif %}
+              {% if c.has_active_mapping %} ⇄{% endif %}
+            </span>
+          </label>
+          {% endfor %}
+        </div>
+
+      </div>
+      <div class="modal__actions">
+        <button type="button" class="btn btn--ghost" onclick="document.getElementById('modal-root').innerHTML=''">Hủy</button>
+        <button type="submit" class="btn btn--primary">Merge</button>
+      </div>
+    </form>
+  </div>
+</div>

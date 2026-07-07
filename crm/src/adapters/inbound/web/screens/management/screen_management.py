@@ -21,6 +21,7 @@ from adapters.inbound.web.screens.management.screen_mgmt_campaigns import make_c
 from adapters.inbound.web.screens.management.screen_mgmt_dedup import make_dedup_router
 from adapters.inbound.web.screens.management.screen_mgmt_segments import make_segments_router
 from adapters.inbound.web.screens.management.screen_mgmt_settings import make_settings_router
+from adapters.inbound.web.screens.management.screen_mgmt_tag_governance import make_tag_governance_router
 
 
 def make_management_router(
@@ -32,6 +33,7 @@ def make_management_router(
     parties_svc: Any,
     settings_svc: Any,
     app_users_svc: Any,
+    tag_governance_svc: Any,
 ) -> APIRouter:
     router = APIRouter()
     router.include_router(make_segments_router(templates, segments_svc))
@@ -39,5 +41,7 @@ def make_management_router(
         make_campaigns_router(templates, campaigns_svc, segments_svc, parties_svc, app_users_svc)
     )
     router.include_router(make_dedup_router(templates, dedup_svc, merger_svc, parties_svc))
-    router.include_router(make_settings_router(templates, settings_svc, app_users_svc))
+    router.include_router(make_settings_router(templates, settings_svc, app_users_svc, tag_governance_svc))
+    # Phase 03 (260706-0833): S13 extension — /settings/tags admin screen.
+    router.include_router(make_tag_governance_router(templates, tag_governance_svc))
     return router

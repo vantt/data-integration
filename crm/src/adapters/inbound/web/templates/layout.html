@@ -819,5 +819,56 @@ document.addEventListener('click', function(e) {
 </script>
   <!-- lazy data-health strip (loads after page renders) -->
   <div id="dq-strip-anchor" hx-get="/_dq_strip" hx-trigger="load delay:1500ms" hx-swap="outerHTML"></div>
+
+  <script>
+  /* ── Global htmx error toast ────────────────────────────────────────────────
+     htmx treats 4xx/5xx responses as errors and does NOT swap them in (see
+     htmx responseHandling defaults) — without this, a failed mutation (e.g.
+     tag create/merge/archive validation errors) fails completely silently.
+     Applies to every page (mounted once here in the shared layout). */
+  (function () {
+    function toastStack() {
+      var el = document.getElementById('global-toast-stack');
+      if (!el) {
+        el = document.createElement('div');
+        el.id = 'global-toast-stack';
+        el.className = 'toast-stack';
+        document.body.appendChild(el);
+      }
+      return el;
+    }
+
+    function showErrorToast(message) {
+      var stack = toastStack();
+      var toast = document.createElement('div');
+      toast.className = 'toast toast--error';
+      var dot = document.createElement('span');
+      dot.className = 'toast__dot toast__dot--error';
+      var label = document.createElement('span');
+      label.textContent = message; // textContent — never innerHTML — of server text
+      toast.appendChild(dot);
+      toast.appendChild(label);
+      stack.appendChild(toast);
+      setTimeout(function () { toast.remove(); }, 4000);
+    }
+
+    function messageFromXhr(xhr) {
+      var fallback = 'Có lỗi xảy ra, vui lòng thử lại.';
+      if (!xhr) return fallback;
+      var text = (xhr.responseText || '').trim();
+      // Only surface short plain-text bodies (routes return e.g. "Lỗi merge tag");
+      // a full HTML error page would be unreadable in a toast, so fall back instead.
+      if (text && text.length < 200 && text.indexOf('<') === -1) return text;
+      return fallback;
+    }
+
+    document.body.addEventListener('htmx:responseError', function (e) {
+      showErrorToast(messageFromXhr(e.detail && e.detail.xhr));
+    });
+    document.body.addEventListener('htmx:sendError', function () {
+      showErrorToast('Mất kết nối mạng, vui lòng thử lại.');
+    });
+  }());
+  </script>
 </body>
 </html>

@@ -45,10 +45,18 @@ class AppUsersSvc(Protocol):
     def list_active(self) -> list[AppUser]: ...
 
 
+class TagGovernancePendingSvc(Protocol):
+    """Structural protocol — only the badge count is needed here; the rest of
+    Tag Governance Admin is wired separately via make_tag_governance_router."""
+
+    def pending_review_count(self) -> int: ...
+
+
 def make_settings_router(
     templates: Jinja2Templates,
     settings_svc: SettingsSvc,
     app_users_svc: AppUsersSvc,
+    tag_governance_svc: Optional[TagGovernancePendingSvc] = None,
 ) -> APIRouter:
     router = APIRouter()
 
@@ -57,9 +65,14 @@ def make_settings_router(
         fields = _safe(lambda: settings_svc.list_custom_field_defs("party"), [], "cfd")
         tags = _safe(lambda: settings_svc.list_tags(""), [], "tags")
         users = _safe(app_users_svc.list_active, [], "users")
+        tag_governance_pending_count = (
+            _safe(tag_governance_svc.pending_review_count, 0, "tag_governance_pending")
+            if tag_governance_svc is not None else 0
+        )
         return templates.TemplateResponse("settings.html", {
             "request": request, "active_tab": tab,
             "custom_fields": fields, "tags": tags, "users": users,
+            "tag_governance_pending_count": tag_governance_pending_count,
         })
 
     @router.get("/settings/custom-fields/modal/create", response_class=HTMLResponse, dependencies=[Depends(require_admin)])
@@ -110,9 +123,24 @@ def make_settings_router(
                         headers={"HX-Redirect": "/settings?tab=custom_fields"})
 
     @router.get("/settings/tags/modal/create", response_class=HTMLResponse, dependencies=[Depends(require_admin)])
-    def modal_tag_create(request: Request):
+    def modal_tag_create(
+        request: Request,
+        chipify_raw_text: str = Query(default=""),
+        chipify_tab: str = Query(default=""),
+        prefill_name: str = Query(default=""),
+        prefill_category: str = Query(default=""),
+        is_provisional: bool = Query(default=False),
+    ):
+        """Phase 03 (260706-0833): also serves the Chipify panel's "Tạo tag L1/L2"
+        actions — same modal, prefilled + posting to the governance create-tag
+        endpoint instead of the plain canonical /settings/tags create route when
+        chipify_raw_text is present. See fragments/modal_m14_create_tag.html.
+        """
         return templates.TemplateResponse("fragments/modal_m14_create_tag.html", {
             "request": request, "tag": None,
+            "chipify_raw_text": chipify_raw_text, "chipify_tab": chipify_tab,
+            "prefill_name": prefill_name, "prefill_category": prefill_category,
+            "is_provisional": is_provisional,
         })
 
     @router.get("/settings/tags/{tag_id}/modal/edit", response_class=HTMLResponse, dependencies=[Depends(require_admin)])

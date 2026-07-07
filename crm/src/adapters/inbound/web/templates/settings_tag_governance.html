@@ -1,0 +1,45 @@
+{# @surface  S13 · Tag Governance Admin (extension)
+   @source   crm/docs/ui-spec/screens/S13-settings.md
+   @kind     SCREEN
+   Route: GET /settings/tags?tab=<category|l1|l2>
+   Data: categories (list[str]), active_tab (str), tags (list[dict] — shape
+   varies by tab, see the fragments below), chipify_groups (list[dict]).
+#}
+{% extends "layout.html" %}
+{% block title %}Quản lý Tag{% endblock %}
+{% block active_screen %}S13{% endblock %}
+{% block content %}
+<div class="crm-page page-enter" data-surface="S13-tag-governance">
+  <div class="crm-pagehead"><div>
+    <div class="caption crm-pagehead__eyebrow">CÀI ĐẶT</div>
+    <h1 class="crm-pagehead__title">Quản lý Tag</h1>
+  </div></div>
+
+  <nav class="settings-nav" style="flex-direction:row;flex-wrap:wrap;gap:var(--sp-2)">
+    {% for cat in categories %}
+    <a href="/settings/tags?tab={{ cat }}"
+       class="settings-nav__item{% if active_tab == cat %} settings-nav__item--on{% endif %}">{{ cat }}</a>
+    {% endfor %}
+    <a href="/settings/tags?tab=l1"
+       class="settings-nav__item{% if active_tab == 'l1' %} settings-nav__item--on{% endif %}">⚠ Chờ duyệt L1</a>
+    <a href="/settings/tags?tab=l2"
+       class="settings-nav__item{% if active_tab == 'l2' %} settings-nav__item--on{% endif %}">⚠ Chờ duyệt L2</a>
+  </nav>
+
+  <div class="stack stack-4" style="margin-top:var(--sp-4)">
+    {% if active_tab == 'l1' %}
+      {% include "fragments/_tag_governance_l1_rows.html" %}
+    {% elif active_tab == 'l2' %}
+      {% include "fragments/_tag_governance_l2_rows.html" %}
+    {% else %}
+      {% include "fragments/_tag_governance_taxonomy_rows.html" %}
+    {% endif %}
+  </div>
+
+  <hr style="margin:var(--sp-6) 0">
+
+  {% include "fragments/_tag_governance_chipify_rows.html" %}
+
+  <div id="modal-root"></div>
+</div>
+{% endblock %}

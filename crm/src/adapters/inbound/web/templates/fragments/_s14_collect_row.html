@@ -5,9 +5,22 @@
           field    : str   — identity_type or "core"
           value    : str   — collected value
           done     : bool  — True when write succeeded
-     B) custom_select state (Item 1 Phase 06 — returned by POST /custom-field-inline):
+     B) custom_select / custom_text state (Item 1 Phase 06 + health_context_raw
+        Phase 02 260706-0833 — returned by POST /custom-field-inline):
           party_id : str
           row      : dict  — {key, label, kind, options, current}
+                     kind='custom_select' → saved state is a pill (options used when unsaved)
+                     kind='custom_text'   → saved state is a pill (options always empty;
+                                            unsaved state renders as a free-text input via
+                                            the generic collect row markup in
+                                            c360_call_cockpit_panel.html, not this fragment)
+          saved    : bool  — True when just saved (triggers self-removing toast, Item 6)
+     C) tag_multiselect state (Phase 02, 260706-0833 — health_domain chips,
+        returned by GET call cockpit render (unsaved) or POST /tags/inline (saved)):
+          party_id : str
+          row      : dict  — {key, label, kind='tag_multiselect', category, options, current}
+                     options : list[Tag] — chip choices (only rendered when current is falsy)
+                     current : str       — comma-joined display labels once saved
           saved    : bool  — True when just saved (triggers self-removing toast, Item 6)
    INVARIANT: this fragment targets only its own row inside #s14-collect-root.
               NEVER re-renders #s14-panel-root.
@@ -22,8 +35,8 @@
   <span class="s14-collect-row__value">{{ value }}</span>
 </div>
 
-{% elif row is defined and row.kind == 'custom_select' %}
-{# ── B: Custom select row (Item 1 Phase 06) ──────────────────────────────── #}
+{% elif row is defined and row.kind in ('custom_select', 'custom_text') %}
+{# ── B: Custom select / custom text row (Item 1 Phase 06 + health_context_raw Phase 02) ── #}
 <div class="s14-crow s14-crow--custom-select" id="s14-cr-{{ row.key }}" data-field="{{ row.key }}">
   <span class="s14-crow__label">{{ row.label }}</span>
   {% if row.current %}
@@ -34,7 +47,8 @@
           hx-target="#s14-cr-{{ row.key }}" hx-swap="outerHTML"
           type="button">Sửa</button>
   {% else %}
-  {# Options state: pill selection #}
+  {# Options state: pill selection (custom_select only — custom_text's unsaved
+     state is a free-text input rendered by c360_call_cockpit_panel.html) #}
   <div class="radioset">
     {% for opt in row.options %}
     <label class="radio-pill"
@@ -48,6 +62,47 @@
 </div>
 
 {# Item 6 (Phase 06): self-removing toast on successful save #}
+{% if saved %}
+<div class="toast s14-save-toast" id="s14-save-toast-{{ row.key }}"
+     style="position:fixed;bottom:1.5rem;left:50%;transform:translateX(-50%);z-index:300;
+            background:var(--green-500,#48bb78);color:#fff;padding:8px 16px;
+            border-radius:6px;pointer-events:none;">
+  ✓ Đã lưu
+</div>
+<script>
+(function () {
+  var el = document.getElementById('s14-save-toast-{{ row.key }}');
+  if (el) setTimeout(function () { el.remove(); }, 2000);
+})();
+</script>
+{% endif %}
+
+{% elif row is defined and row.kind == 'tag_multiselect' %}
+{# ── C: Health-domain (or other whitelisted category) multi-chip select (Phase 02, 260706-0833) ── #}
+{% if row.current %}
+{# Saved state: reuse the existing done-row classes (variant A) for the moss-green tick styling #}
+<div class="s14-collect-row s14-collect-row--done" id="s14-cr-{{ row.key }}" data-field="{{ row.key }}">
+  <span class="s14-collect-row__tick" aria-label="Đã lưu">✓</span>
+  <span class="s14-collect-row__field">{{ row.label }}</span>
+  <span class="s14-collect-row__value">{{ row.current }}</span>
+</div>
+{% else %}
+{# Unsaved state: toggleable chips + single Lưu button #}
+<div class="s14-crow s14-crow--tag-multiselect" id="s14-cr-{{ row.key }}" data-field="{{ row.key }}">
+  <span class="s14-crow__label">{{ row.label }}</span>
+  <div class="chipset" id="s14-chipset-{{ row.key }}">
+    {% for opt in row.options %}
+    <label class="chip-pill" data-tag-name="{{ opt.name }}"
+           onclick="s14TagChipToggle('{{ row.key }}', this)"
+           style="cursor:pointer">{{ opt.display_label or opt.name }}</label>
+    {% endfor %}
+  </div>
+  <button class="btn btn--primary btn--xs" type="button"
+          id="s14-tagsave-{{ row.key }}" disabled
+          onclick="s14TagMultiSave('{{ row.key }}', '{{ row.category }}')">Lưu ✓</button>
+</div>
+{% endif %}
+
 {% if saved %}
 <div class="toast s14-save-toast" id="s14-save-toast-{{ row.key }}"
      style="position:fixed;bottom:1.5rem;left:50%;transform:translateX(-50%);z-index:300;

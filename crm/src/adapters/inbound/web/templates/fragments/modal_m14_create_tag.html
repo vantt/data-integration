@@ -9,8 +9,17 @@
 #}
 
 {% set editing = tag is not none %}
-{% set post_url = "/settings/tags/" + tag.tag_id if editing else "/settings/tags" %}
+{# Phase 03 (260706-0833): chipify_raw_text present → this modal was opened from
+   the Chipify panel's "Tạo tag L1/L2" action. Posts to the governance
+   create-tag endpoint (which also assigns matching parties + marks the raw
+   text reviewed) instead of the plain canonical-tag create route. #}
+{% set is_chipify = chipify_raw_text is defined and chipify_raw_text %}
+{% set post_url = "/settings/tags/chipify/create-tag" if is_chipify else
+                   ("/settings/tags/" + tag.tag_id if editing else "/settings/tags") %}
 {% set title = "Chỉnh sửa tag" if editing else "Tạo tag mới" %}
+{% set _prefill_name = prefill_name if prefill_name is defined else "" %}
+{% set _prefill_category = prefill_category if prefill_category is defined else "" %}
+{% set _is_provisional = is_provisional if is_provisional is defined else false %}
 
 <div class="modal-scrim" onclick="document.getElementById('modal-root').innerHTML=''" data-surface="M14">
   <div class="modal" role="dialog" aria-modal="true" onclick="event.stopPropagation()">
@@ -31,13 +40,25 @@
           hx-target="#modal-root"
           hx-swap="innerHTML">
 
+      {% if is_chipify %}
+      <input type="hidden" name="raw_text" value="{{ chipify_raw_text }}">
+      <input type="hidden" name="tab" value="{{ chipify_tab }}">
+      {% if _is_provisional %}<input type="hidden" name="is_provisional" value="true">{% endif %}
+      {% endif %}
+
       <div class="modal__body">
+
+        {% if is_chipify %}
+        <div class="field__hint" style="margin-bottom:var(--sp-3)">
+          Đang tạo tag từ: <strong>&ldquo;{{ chipify_raw_text }}&rdquo;</strong>
+        </div>
+        {% endif %}
 
         {# Display label — human-readable, shown in UI chips #}
         <label class="field">
           <span class="field__label">Nhãn hiển thị</span>
           <input type="text" name="display_label" class="inp"
-                 value="{{ tag.display_label if editing and tag.display_label else '' }}"
+                 value="{{ tag.display_label if editing and tag.display_label else _prefill_name }}"
                  placeholder="VIP lặp lại"
                  {% if not editing %}autofocus{% endif %}
                  autocomplete="off">
@@ -48,18 +69,20 @@
         <label class="field">
           <span class="field__label">Tag name (slug) <span style="color:var(--coral-500)">*</span></span>
           <input type="text" name="name" class="inp inp--mono"
-                 value="{{ tag.name if editing else '' }}"
+                 value="{{ tag.name if editing else _prefill_name }}"
                  placeholder="vip-repeat"
                  required
                  autocomplete="off">
           <span class="field__hint">Chỉ dùng chữ thường, số, dấu gạch ngang</span>
         </label>
 
-        {# Category — select enum from migration 0014 #}
+        {# Category — select enum from migration 0014 + health taxonomy (Phase 03).
+           L2 provisional (is_chipify + _is_provisional + no prefill_category) leaves
+           category empty on submit — dropping `required` lets that through. #}
         <label class="field">
-          <span class="field__label">Phân loại <span style="color:var(--coral-500)">*</span></span>
+          <span class="field__label">Phân loại {% if not (is_chipify and _is_provisional and not _prefill_category) %}<span style="color:var(--coral-500)">*</span>{% endif %}</span>
           <div class="inp-sel">
-            <select name="category" class="inp" required>
+            <select name="category" class="inp" {% if not (is_chipify and _is_provisional and not _prefill_category) %}required{% endif %}>
               <option value="">— Chọn phân loại —</option>
               <option value="behavioral"  {% if editing and tag.category == 'behavioral'  %}selected{% endif %}>Hành vi mua</option>
               <option value="demographic" {% if editing and tag.category == 'demographic' %}selected{% endif %}>Đặc điểm KH</option>
@@ -67,6 +90,8 @@
               <option value="vip_tier"    {% if editing and tag.category == 'vip_tier'    %}selected{% endif %}>Phân tầng VIP</option>
               <option value="risk"        {% if editing and tag.category == 'risk'        %}selected{% endif %}>Rủi ro</option>
               <option value="source"      {% if editing and tag.category == 'source'      %}selected{% endif %}>Nguồn gốc</option>
+              <option value="health_domain"  {% if _prefill_category == 'health_domain'  %}selected{% endif %}>Lĩnh vực sức khỏe</option>
+              <option value="health_concern" {% if _prefill_category == 'health_concern' %}selected{% endif %}>Vấn đề sức khỏe</option>
             </select>
             <span class="inp-sel__chev">{% include 'icons/chevdown.svg' %}</span>
           </div>

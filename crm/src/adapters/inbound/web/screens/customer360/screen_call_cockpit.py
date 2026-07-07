@@ -20,6 +20,7 @@ from fastapi.responses import HTMLResponse
 from fastapi.templating import Jinja2Templates
 
 from application.geography import geo_region
+from application.health_domain_collect import load_health_domain_collect_context
 from application.reason_rail import assemble_reason_rail
 from domain.entities.task import TASK_KIND_CONTACT, TASK_STATUS_OPEN, TASK_STATUS_DOING
 
@@ -37,6 +38,7 @@ def register_call_cockpit_route(
     party_tasks=None,
     approach_repo=None,
     action_task_resolver=None,
+    tags=None,           # Phase 02 (260706-0833): health_domain gap detection
 ) -> None:
     """Register GET /customers/{party_id}/call on *router*."""
 
@@ -134,6 +136,9 @@ def register_call_cockpit_route(
                 except Exception:
                     party_custom = {}
 
+        # Item 2 (Phase 02, 260706-0833): health_domain gap detection for collect row 1
+        health_ctx = load_health_domain_collect_context(tags, party_id)
+
         # Return target changes when entering from a task (S15 "Vào phiên gọi")
         return_target = f"/tasks/{pinned_task_id}" if pinned_task_id else None
 
@@ -169,5 +174,7 @@ def register_call_cockpit_route(
                 "queue_next_party_id": queue_next_party_id,
                 # Item 1 (Phase 06): custom fields for collect row gating
                 "party_custom": party_custom,
+                # Item 2 (Phase 02, 260706-0833): health_domain collect row gating
+                **health_ctx,
             },
         )

@@ -1,0 +1,56 @@
+{# @kind FRAGMENT — Chipify panel (Feature D): health_context_raw → structured tags.
+   Data: chipify_groups (list[dict]: raw_text,n), all_tags (list[Tag] — "Map hiện có" dropdown),
+   active_tab (str — carried in "tab" hidden fields so actions redirect back to the same tab). #}
+<div class="row-between">
+  <span class="panel-title">CHIPIFY — health_context_raw chưa xử lý ({{ chipify_groups | sum(attribute='n') }} KH, {{ chipify_groups | length }} nhóm)</span>
+  {% if chipify_groups %}
+  <form hx-post="/settings/tags/chipify/skip-all" hx-target="body"
+        hx-confirm="Bỏ qua TẤT CẢ {{ chipify_groups | length }} nhóm chưa xử lý? Không tạo tag, chỉ đánh dấu đã xem.">
+    <input type="hidden" name="tab" value="{{ active_tab }}">
+    <button type="submit" class="btn btn--ghost">Xử lý tất cả</button>
+  </form>
+  {% endif %}
+</div>
+{% if not chipify_groups %}
+<div class="state"><div class="state__inner">
+  <div class="state__icon">{% include "icons/doc.svg" %}</div>
+  <div class="state__title">Không còn ghi chú sức khỏe nào chưa xử lý.</div>
+</div></div>
+{% else %}
+<div class="stack stack-3">
+{% for g in chipify_groups %}
+<div class="panel" style="padding:var(--sp-3)">
+  <div>"{{ g.raw_text }}" · {{ g.n }} KH</div>
+  <div class="flex-wrap" style="margin-top:var(--sp-2);gap:var(--sp-2);align-items:center">
+    <button class="btn btn--primary btn--sm"
+            hx-get="/settings/tags/modal/create?chipify_raw_text={{ g.raw_text | urlencode }}&chipify_tab={{ active_tab }}&prefill_category=health_concern"
+            hx-target="#modal-root" hx-swap="innerHTML">
+      Tạo tag L1: health_concern</button>
+    <button class="btn btn--ghost btn--sm"
+            hx-get="/settings/tags/modal/create?chipify_raw_text={{ g.raw_text | urlencode }}&chipify_tab={{ active_tab }}&is_provisional=true"
+            hx-target="#modal-root" hx-swap="innerHTML">
+      Tạo tag L2: chưa rõ domain</button>
+
+    <form hx-post="/settings/tags/chipify/map-existing" hx-target="body" style="display:flex;gap:var(--sp-1);align-items:center">
+      <input type="hidden" name="raw_text" value="{{ g.raw_text }}">
+      <input type="hidden" name="tab" value="{{ active_tab }}">
+      <div class="inp-sel inp-sel--narrow">
+        <select name="tag_id" class="inp" required>
+          <option value="">Map hiện có...</option>
+          {% for t in all_tags %}<option value="{{ t.tag_id }}">{{ t.display_label or t.name }}{% if t.category %} ({{ t.category }}){% endif %}</option>{% endfor %}
+        </select>
+        <span class="inp-sel__chev">{% include "icons/chevdown.svg" %}</span>
+      </div>
+      <button type="submit" class="btn btn--ghost btn--sm">Gán</button>
+    </form>
+
+    <form hx-post="/settings/tags/chipify/skip" hx-target="body">
+      <input type="hidden" name="raw_text" value="{{ g.raw_text }}">
+      <input type="hidden" name="tab" value="{{ active_tab }}">
+      <button type="submit" class="btn btn--ghost btn--sm">Bỏ qua</button>
+    </form>
+  </div>
+</div>
+{% endfor %}
+</div>
+{% endif %}

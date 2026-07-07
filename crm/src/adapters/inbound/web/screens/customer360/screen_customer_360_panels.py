@@ -15,6 +15,7 @@ from fastapi.responses import HTMLResponse
 from fastapi.templating import Jinja2Templates
 
 from application.geography import geo_region
+from application.health_domain_collect import load_health_domain_collect_context
 from application.reason_rail import assemble_reason_rail
 from domain.entities.cache_insight import CustomerDimMetrics
 from domain.entities.profile import PartyIdentity, PartyInsight
@@ -40,6 +41,7 @@ def register_panel_routes(
     customer_dim_metrics=None,
     app_users=None,
     approach_repo=None,
+    tags=None,           # Phase 02 (260706-0833): health_domain gap detection
     _load_base,
     _load_insight,
     _sapo_customer_id,
@@ -257,6 +259,9 @@ def register_panel_routes(
 
             geo = geo_region(getattr(party, "province", None)) if party else ""
 
+            # Item 2 (Phase 02, 260706-0833): health_domain gap detection for collect row 1
+            health_ctx = load_health_domain_collect_context(tags, party_id)
+
             return templates.TemplateResponse(
                 "fragments/c360_call_cockpit_panel.html",
                 {
@@ -271,6 +276,7 @@ def register_panel_routes(
                     "meta": meta_dict,
                     "rail_primary": rail_primary,
                     "rail_secondary": rail_secondary,
+                    **health_ctx,
                 },
             )
         return HTMLResponse("panel not found", status_code=404)

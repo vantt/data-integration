@@ -64,5 +64,8 @@ def require_admin(request: Request) -> None:
     if not cf_access_audience():
         return  # bypass in dev mode
 
-    # TODO: re-enable when roles are configured in CF_ROLE_MAP
-    return  # temporarily allow all authenticated users into /settings
+    from domain.entities.app_user import ROLE_ADMIN
+
+    current_user = getattr(request.state, "current_user", None)
+    if current_user is None or current_user.role != ROLE_ADMIN:
+        raise HTTPException(status_code=403, detail={"status": "forbidden"})

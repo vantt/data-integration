@@ -73,6 +73,18 @@
 .radio-pill__dot { width: 9px; height: 9px; border-radius: var(--radii-pill); border: 1px solid var(--border-strong); flex: none; }
 .radio-pill--on .radio-pill__dot { border-color: var(--accent); background: var(--accent); box-shadow: inset 0 0 0 2px var(--bg-surface); }
 
+/* chip multi-select (S14 health_domain collect row, Phase 02 260706-0833) —
+   same visual language as radio-pill, but toggleable (multiple can be --on). */
+.chipset { display: flex; flex-wrap: wrap; gap: var(--sp-2); }
+.chip-pill {
+  display: inline-flex; align-items: center; cursor: pointer;
+  padding: 6px 11px; border: 1px solid var(--border); border-radius: var(--radii-pill);
+  background: var(--bg-surface); color: var(--fg-muted); font-size: 12.5px;
+  transition: all var(--dur-fast) var(--ease-fast);
+}
+.chip-pill:hover { border-color: var(--border-strong); color: var(--fg-1); }
+.chip-pill--on { border-color: var(--accent); color: var(--fg); background: color-mix(in srgb, var(--accent) 8%, transparent); }
+
 /* checkbox row */
 .chk-row { display: flex; align-items: flex-start; gap: var(--sp-3); cursor: pointer; padding: 3px 0; }
 .chk-box { width: 18px; height: 18px; flex: none; margin-top: 1px; border: 1px solid var(--border-strong); border-radius: var(--radii-hairline);
@@ -322,6 +334,8 @@
 @keyframes toastIn { from { transform: translateY(10px); opacity: 0; } to { transform: none; opacity: 1; } }
 .toast__dot { width: 8px; height: 8px; border-radius: var(--radii-pill); flex: none; background: var(--moss-500); box-shadow: 0 0 8px color-mix(in srgb, var(--moss-500) 45%, transparent); }
 .toast__dot--info { background: var(--accent); box-shadow: 0 0 8px color-mix(in srgb, var(--accent) 45%, transparent); }
+.toast--error { border-color: var(--coral-500, #e53e3e); }
+.toast__dot--error { background: var(--coral-500, #e53e3e); box-shadow: 0 0 8px color-mix(in srgb, var(--coral-500, #e53e3e) 45%, transparent); }
 
 /* ── Quick preview overlay (O02) ────────────────────────── */
 .qp-pop { width: 320px; background: var(--bg-raised); border: 1px solid var(--border-strong); border-radius: var(--radii-soft); overflow: hidden; box-shadow: 0 12px 32px rgba(0,0,0,0.35); }
