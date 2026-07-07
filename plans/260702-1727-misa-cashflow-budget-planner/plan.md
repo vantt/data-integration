@@ -3,7 +3,7 @@
 **Status:** DONE — Wave 1 (report + budget layer, P03-P05: 2026-07-02/04) và Wave 2 (workable loop close, P06-P10: 2026-07-05/07) đều hoàn thành. 1 open item còn treo (Phase 10 activation — chờ plan `260707-1201-google-sheets-service-account`).
 **Created:** 2026-07-02
 **Merged (2026-07-07):** `plans/260705-1459-budget-cashflow-workable-loop` sáp nhập vào đây làm Phase 6-10 (đóng các gap vận hành phát sinh sau khi Wave 1 chạy thật) — cùng 1 sản phẩm, 1 vòng đời, tách plan riêng trước đây chỉ vì lý do thời điểm.
-**Split (2026-07-07, trước khi merge):** Phases 1-2 (full-ledger ingestion + GL modeling — hạ tầng) đã tách sang `plans/260707-1207-misa-gl-infrastructure/`.
+**Split (2026-07-07, trước khi merge):** Phases 1-2 (full-ledger ingestion + GL modeling — hạ tầng) đã tách sang `plans/archive/260707-1207-misa-gl-infrastructure/`.
 **Branch (proposed):** `feature/misa-cashflow-budget`
 **Owner decisions locked:**
 - Budget source = **Hybrid** (actual từ MISA ledger; budget khởi đầu bằng CSV của ta, thiết kế để sau này đọc từ MISA)
@@ -11,7 +11,7 @@
 
 ## Vấn đề / Bối cảnh
 
-Cashflow cần tiền (111/112) + số dư quỹ theo kỳ, báo cáo Budget-vs-Actual so kế hoạch với thực tế lấy từ GL. (Phần ingest/modeling nền tảng — xem `plans/260707-1207-misa-gl-infrastructure/`.)
+Cashflow cần tiền (111/112) + số dư quỹ theo kỳ, báo cáo Budget-vs-Actual so kế hoạch với thực tế lấy từ GL. (Phần ingest/modeling nền tảng — xem `plans/archive/260707-1207-misa-gl-infrastructure/`.)
 
 Sau khi Wave 1 (report + budget layer) chạy thật, đánh giá 2026-07-05 phát hiện vòng budget đứt ở giữa: sheet matrix (nguồn sự thật, đã build + Apps Script validator) không có đường vào seed CSV; user guide mô tả sai layout; scorecard so sánh lệch phạm vi. Wave 2 (Phase 6-10) đóng các gap này. Budget bắt đầu từ T7/2026.
 
@@ -23,7 +23,7 @@ Sau khi Wave 1 (report + budget layer) chạy thật, đánh giá 2026-07-05 ph�
 
 | # | Phase | File | Phụ thuộc | Ra được gì |
 |---|-------|------|-----------|-----------|
-| 3 | Cashflow report (Metabase) | `phase-03-cashflow-report.md` | `plans/260707-1207-misa-gl-infrastructure/` | Dashboard vận hành: số dư quỹ, thu/chi theo kỳ, top đối ứng, dòng tiền ròng |
+| 3 | Cashflow report (Metabase) | `phase-03-cashflow-report.md` | `plans/archive/260707-1207-misa-gl-infrastructure/` | Dashboard vận hành: số dư quỹ, thu/chi theo kỳ, top đối ứng, dòng tiền ròng |
 | 4 | Budget layer hybrid + Budget-vs-Actual | `phase-04-budget-hybrid.md` | P3 | `fact_cashflow_budget` (source-swappable), report kế hoạch vs thực tế + dự báo số dư |
 | 5 | ~~MISA budget scraper~~ **DROPPED** | `phase-05-misa-budget-scraper.md` | — | Finance không dùng MISA budget module → không có gì để scrape (2026-07-03) |
 | 6 | Sheet→seed sync script (P0) | `phase-06-sheet-to-seed-sync.md` | P4 | Script + Dagster asset: matrix sheet → 2 seed CSV, validate, scheduled |
@@ -43,7 +43,7 @@ Phase 8+9 độc lập với 6+7, làm song song được.
 
 **Insight thật (6 tháng, từ hạ tầng GL):** dòng tiền âm 3/6 tháng (Jan −100M, Feb −70M, May −23M); dương Mar +85M, Jun +30M; số dư quỹ 72M–165M.
 
-**Cleanup nhỏ deferred:** Blueprint dùng header `## Segmentation Scope` (cũ) → warning non-blocking, đổi `## Semantic Contract` sau. (`fact_account_balance_monthly` NULL-balance cleanup → tracked in `plans/260707-1207-misa-gl-infrastructure/`.)
+**Cleanup nhỏ deferred:** Blueprint dùng header `## Segmentation Scope` (cũ) → warning non-blocking, đổi `## Semantic Contract` sau. (`fact_account_balance_monthly` NULL-balance cleanup → tracked in `plans/archive/260707-1207-misa-gl-infrastructure/`.)
 
 ## Kiến thức domain & Thực hành (cập nhật khi có learnings mới)
 
@@ -79,7 +79,7 @@ Phase-04 (budget) mở rộng CÙNG dashboard: thêm cột Kế hoạch|Chênh l
 - [x] Actuals tháng trước được re-pull sau khi sổ MISA chốt (~ngày 10) — `ingest_monthly_repull_schedule` cron `0 7 10 * *` ICT; mở dashboard mặc định thấy tháng có số đầy đủ — filter default `past1months` (verified valid token, `previousmonth` KHÔNG hợp lệ trên Metabase v0.60.2).
 - [x] Không regression: `fact_order_costs`, `fact_cash_movement`, dashboard 113 — confirmed zero diff qua code review + regression test.
 
-(Ingestion/modeling acceptance criteria — downloader toàn sổ cái, số dư quỹ đúng — ở `plans/260707-1207-misa-gl-infrastructure/plan.md`.)
+(Ingestion/modeling acceptance criteria — downloader toàn sổ cái, số dư quỹ đúng — ở `plans/archive/260707-1207-misa-gl-infrastructure/plan.md`.)
 
 **Grain budget vận hành:** budget theo **dòng thu/chi = nhóm tài khoản đối ứng**, không theo TK tiền. Ví dụ line: `Thu bán hàng (131)`, `Chi lương (334x)`, `Chi BHXH (338x)`, `Chi NCC (331x)`, `Chi ads (642172)`. Đây là grain finance nhập budget dễ hiểu + join được actual từ `fact_cash_movement`.
 
@@ -98,4 +98,4 @@ Phase-04 (budget) mở rộng CÙNG dashboard: thêm cột Kế hoạch|Chênh l
 
 1. Finance có thực sự dùng module ngân sách trong MISA chưa? (quyết định P5 — đã DROPPED, câu hỏi đóng theo).
 
-(Ingestion-mechanism questions, walking-skeleton findings, và infra incident notes ở `plans/260707-1207-misa-gl-infrastructure/plan.md`.)
+(Ingestion-mechanism questions, walking-skeleton findings, và infra incident notes ở `plans/archive/260707-1207-misa-gl-infrastructure/plan.md`.)

@@ -471,7 +471,7 @@ FROM ...
 
 | Phase | Tài liệu | Status |
 |---|---|---|
-| GL modeling | `plans/260707-1207-misa-gl-infrastructure/phase-02-gl-modeling.md` | ✅ Done |
+| GL modeling | `plans/archive/260707-1207-misa-gl-infrastructure/phase-02-gl-modeling.md` | ✅ Done |
 | Cashflow report | `plans/260702-1727-misa-cashflow-budget-planner/phase-03-cashflow-report.md` | ✅ Done (live) |
 | Budget hybrid layer | `plans/260702-1727-misa-cashflow-budget-planner/phase-04-budget-hybrid.md` | ✅ Done |
 | MISA budget scraper | — | ❌ Dropped (finance không dùng MISA budget module) |
