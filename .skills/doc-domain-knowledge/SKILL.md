@@ -1,6 +1,6 @@
 ---
 name: doc-domain-knowledge
-description: "Write, rewrite, or review domain knowledge documentation that serves both business users and technical teams. Use when explaining how a business concept is modeled in the data system — classification taxonomies, revenue definitions, channel groupings, metric calculations, reporting conventions, or any topic where business meaning and technical implementation must be aligned. Trigger on requests like: 'document how channels are classified', 'explain revenue calculation', 'write a guide for report creators', 'standardize terminology across teams', or 'make this technical doc accessible to business users'."
+description: "Write, rewrite, or review domain knowledge documentation that serves both business users and technical teams. Use when explaining how a business concept is modeled in the data system — any topic where business meaning and technical implementation must be aligned, and where a reader's intuition about that concept is likely wrong. Trigger on requests like: 'document how channels are classified', 'explain revenue calculation', 'write a guide for report creators', 'standardize terminology across teams', or 'make this technical doc accessible to business users'."
 ---
 
 # Domain Knowledge Documentation

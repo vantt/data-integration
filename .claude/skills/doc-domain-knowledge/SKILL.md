@@ -1,6 +1,6 @@
 ---
 name: doc-domain-knowledge
-description: Write, rewrite, or review domain knowledge documentation for both business and technical users. Use when documenting business concepts modeled in data (channel classifications, revenue definitions, metric calculations, reporting conventions) or aligning business meaning with technical implementation.
+description: Write, rewrite, or review domain knowledge documentation that serves both business users and technical teams. Full documentation lives in .skills/doc-domain-knowledge/.
 ---
 
 # Doc Domain Knowledge Skill
