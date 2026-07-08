@@ -103,10 +103,11 @@ tags: {{tags}}
 [TASK]
 1. Đọc hồ sơ, tổng hợp chân dung ngắn gọn, có dẫn chứng từ số liệu.
 2. Xác định 1 cơ hội lớn nhất và 1 rủi ro lớn nhất.
-3. Soạn kịch bản tiếp cận: chọn kênh chính + kênh dự phòng (theo
-   channel_preference), thời điểm, lời mở thoại cho kênh chính, lời nhắn
-   ngắn cho kênh dự phòng, 2-3 điểm nói chính, gợi ý bán kèm (dựa trên
-   affinity), và cách xử lý 1-2 từ chối thường gặp.
+3. Soạn kịch bản tiếp cận: chọn kênh chính + kênh dự phòng (suy luận từ
+   channel_preference — đây là kênh BÁN, không map thẳng ra phone/zalo/sms/
+   in_store, xem chú thích field bên dưới), thời điểm, lời mở thoại cho kênh
+   chính, lời nhắn ngắn cho kênh dự phòng, 2-3 điểm nói chính, gợi ý bán kèm
+   (dựa trên affinity), và cách xử lý 1-2 từ chối thường gặp.
 4. Ghi rõ độ tin cậy và các khoảng trống dữ liệu.
 
 [OUTPUT SCHEMA]
@@ -169,7 +170,7 @@ tags: {{tags}}
 | `avg_days_between_orders` | number\|null | chu kỳ mua TB |
 | `next_purchase_signal` | enum\|null | ON_TRACK/DUE_SOON/OVERDUE |
 | `discount_sensitivity` | enum\|null | FULL_PRICE/PROMO_MIXED/PROMO_DEPENDENT |
-| `channel_preference` | string | kênh mua ưa thích |
+| `channel_preference` | enum\|null | **kênh BÁN ưa thích** (CHANNEL_MARKETPLACE/CHANNEL_DIRECT/CHANNEL_SOCIAL/CHANNEL_OFFLINE/CHANNEL_OTHER), KHÔNG PHẢI kênh liên lạc — không có giá trị nào khớp thẳng enum `primary_channel` (phone/zalo/sms/in_store), phải tự suy luận (vd CHANNEL_SOCIAL→zalo, CHANNEL_OFFLINE→in_store/phone); null hoặc CHANNEL_MARKETPLACE/CHANNEL_OTHER → không đủ tín hiệu, ghi vào `data_gaps` thay vì đoán liều |
 | `payment_behavior` | string | ⚠ suy ra từ dữ liệu mỏng — độ tin thấp |
 | `product_affinity` | string | thương hiệu ưa thích |
 | `last_purchased_product`, `last_purchased_sku` | string\|null | mua gần nhất |
@@ -199,7 +200,7 @@ tags: {{tags}}
     "order_count": 11, "lifecycle_stage": "LIFECYCLE_AT_RISK",
     "customer_status": "At Risk", "recency_days": 74,
     "avg_days_between_orders": 38, "next_purchase_signal": "OVERDUE",
-    "discount_sensitivity": "PROMO_MIXED", "channel_preference": "Zalo",
+    "discount_sensitivity": "PROMO_MIXED", "channel_preference": "CHANNEL_SOCIAL",
     "product_affinity": "Brand X",
     "last_purchased_sku": "SKU-789", "last_purchased_product": "Serum X 30ml",
     "top_affinity_sku": "SKU-789", "top_affinity_product": "Serum X 30ml",
