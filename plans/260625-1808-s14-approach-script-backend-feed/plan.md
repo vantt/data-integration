@@ -34,7 +34,7 @@ Backend cho màn S14 (Call Mode Cockpit) đọc kịch bản tiếp cận AI. **
 | Code review (2 HIGH + 3 MED → fix) | ✅ | a113db5 |
 | Test hardening B1 (13 test: R14 gate + 500/404) | ✅ | 2917a80 |
 | Worklist "Có kịch bản" filter — phase 05 (auto-handle scripts mới) | ✅ | 62ff52c |
-| Production auto-gen (Dagster + GPT → cache table) | ⬜ chưa làm | — |
+| Production auto-gen (Dagster + codex, xem `plans/260706-0837-approach-script-codex-autogen/`) | ✅ (2026-07-07, LIVE) | 3343b049 |
 | B2 auth endpoint (gác — chính sách LAN-trust, nhất quán `/insight`) | ⬜ gác | — |
 
 ## Việc còn lại (chưa làm)
