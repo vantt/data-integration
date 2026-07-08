@@ -78,6 +78,7 @@ SELECT
     i.discount_amount,
     i.distributed_discount_amount,
     i.discount_rate,
+    i.is_gift_line,
     i.weight_grams,
     
     -- Addresses

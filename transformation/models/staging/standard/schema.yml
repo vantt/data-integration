@@ -57,6 +57,9 @@ models:
                 field: order_id
       - name: line_amount
         description: "Total line item amount (quantity * price - discount)"
+      - name: is_gift_line
+        description: "TRUE when line_amount = 0 (STRICT) — rep-entered giveaway/gift, distinct from voucher/campaign discounts that reduce but don't zero the line. Mirrors int_order_promo_goods_cost.is_gift_no_invoice definition at line-item grain."
+        tests: [not_null]
       - name: discount_amount
         description: "Discount amount allocated to this line item"
       - name: distributed_discount_amount

@@ -29,7 +29,8 @@ SELECT
     quantity,
     unit_price,
     line_amount,
-    
+    (line_amount = 0) AS is_gift_line,
+
     discount_amount,
     distributed_discount_amount,
     -- Rate: discount_amount / gross_line_amount (unit_price × quantity = pre-discount price)
