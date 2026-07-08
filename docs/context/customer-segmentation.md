@@ -374,6 +374,8 @@ WHOLESALE (BANBUON) → WHOLESALE
 
 Regex đã mở rộng để bắt cả mã/nhóm cũ: WHOLESALE bắt `%WHOLESALE%` (gồm BANBUON); PARTNER bắt `%TYPE_PARTNER%`+`%KY_GUI%`; CROSSBORDER bắt `%TYPE_CROSSBORDER%`+`%CTN00014%`.
 
+**Bổ sung 2026-07-08** (`plans/260708-1628-crossborder-channel-detection`): CROSSBORDER giờ OR thêm 1 tín hiệu tự động — khách có ≥1 đơn trên kênh Sapo `channel_name='US'` (gán tự động lúc ingest, không cần NV tag group) cũng được tính CROSSBORDER, không phụ thuộc group-tag có kịp gán hay không. Kết quả đo được: +773 khách RETAIL→CROSSBORDER. Chi tiết SQL + rủi ro/lịch sử: xem `docs/context/order-customer-classification-staff-guide.md` mục 8.2/9/12.
+
 **Mapping nhóm hiện tại (ĐÃ XÁC NHẬN 2026-06-05):**
 
 | Sapo group                            | Mã code | → customer_type                                         | n    |

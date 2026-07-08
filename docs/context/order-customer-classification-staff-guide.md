@@ -239,7 +239,7 @@ Mỗi nguồn đơn 1 dòng. Cột quyết định:
 | `TYPE_PARTNER` hoặc `KY_GUI` (Ký Gửi) | **PARTNER** | Ký Gửi → PARTNER (n=11) |
 | `TYPE_STAFF` | STAFF | |
 | `TYPE_KOL` | KOL | |
-| US / `CTN00014` | **CROSSBORDER** (MỚI) | Đơn giao hàng hộ — người nhận ở VN; regex bắt `%TYPE_CROSSBORDER%`+`%CTN00014%` (n=662) |
+| US / `CTN00014` | **CROSSBORDER** (MỚI) | Đơn giao hàng hộ — người nhận ở VN; regex bắt `%TYPE_CROSSBORDER%`+`%CTN00014%` (n=662) **HOẶC** đã có ≥1 đơn trên kênh Sapo `channel_name='US'` (tự động lúc ingest, không cần tag thủ công) — bổ sung 2026-07-08, xem mục 9 và 12 |
 
 ## 9. Logic xây dựng Model (derivation)
 
@@ -253,20 +253,24 @@ System / CrossBorder Fulfillment / (ELSE)  → 'Internal'
 ```sql
 channel_format NOT IN ('System', 'CrossBorder Fulfillment', 'Other') as is_sales_channel
 ```
-**customer_type** — `dim_customers.sql` (regex đã mở rộng — ĐÃ XÁC NHẬN 2026-06-05):
+**customer_type** — `dim_customers.sql` (regex đã mở rộng — ĐÃ XÁC NHẬN 2026-06-05; channel-signal bổ sung 2026-07-08):
 ```sql
 CASE
-  WHEN customer_group LIKE '%TYPE_CROSSBORDER%'
-    OR customer_group LIKE '%CTN00014%'         THEN 'CROSSBORDER'
   WHEN customer_group LIKE '%TYPE_WHOLESALE%'
     OR customer_group LIKE '%WHOLESALE%'        THEN 'WHOLESALE'
   WHEN customer_group LIKE '%TYPE_PARTNER%'
     OR customer_group LIKE '%KY_GUI%'           THEN 'PARTNER'
   WHEN customer_group LIKE '%TYPE_STAFF%'       THEN 'STAFF'
   WHEN customer_group LIKE '%TYPE_KOL%'         THEN 'KOL'
+  WHEN customer_group LIKE '%TYPE_CROSSBORDER%'
+    OR customer_group LIKE '%CTN00014%'
+    OR EXISTS (SELECT 1 FROM us_channel_customers uc  -- NEW 2026-07-08: has >=1 order on
+               WHERE uc.customer_key = joined_data.customer_key)  -- Sapo channel_name='US' (auto, not manual tag)
+                                                 THEN 'CROSSBORDER'
   ELSE 'RETAIL'
 END
 ```
+Lưu ý thứ tự: WHOLESALE/PARTNER/STAFF/KOL vẫn kiểm tra TRƯỚC CROSSBORDER — channel-signal chỉ bổ sung (OR), không đổi precedence. Khách vừa có group WHOLESALE vừa có đơn US-channel vẫn là WHOLESALE.
 **value_group** (tự động, theo chi tiêu trọn đời):
 ```sql
 CASE
@@ -313,6 +317,7 @@ scope_b2b:     scope_sales AND customer_type IN ('WHOLESALE','PARTNER')
 | **~~Migration `TYPE_*` chưa xong~~** — ~~chỉ 3 WHOLESALE~~ → **ĐÃ GIẢI QUYẾT**: regex mở rộng bắt `BANBUON`/`CTN*`/`KY_GUI`. WHOLESALE=161, CROSSBORDER=662, PARTNER=11 (ĐÃ XÁC NHẬN 2026-06-05) | ~~`customer_type` không tin được~~ → Đã tin được | `SELECT customer_type, COUNT(*) FROM dim_customers GROUP BY 1` | ✅ Xong. Khách mới: gán đúng nhóm Sapo là đủ. |
 | Đơn rơi vào **"Other"/"Unknown"** | Mất khỏi doanh thu | `WHERE channel_category='Internal' AND channel_format='Other'` đếm theo tuần | Sửa `order.source` của đơn; bổ sung nguồn vào `ref_order_sources.csv` nếu là kênh mới |
 | **~36 khách sỉ ẩn** (mua sỉ, giảm 40–73%, đang gắn RETAIL trên Zalo/FB/Web/POS) | ~800M doanh thu phân loại sai | file review `wholesale-customers-review-260526.csv` | **ĐỀ XUẤT** — chờ Sales xác nhận để gán `WHOLESALE` |
+| **Group-tag CROSSBORDER có gap** — khách "đơn Mỹ" chưa được NV (re-)tag đúng group vẫn rơi về RETAIL | Lẫn vào action-queue/retention/benchmark như khách lẻ thường | So `customer_type` vs đơn có `dim_channels.channel_name='US'` | **ĐÃ GIẢI QUYẾT 2026-07-08** (`plans/260708-1628-crossborder-channel-detection`) — thêm tín hiệu channel-derived (`us_channel_customers` CTE, OR vào CASE + `is_us_gift_recipient`), **tự động/thường trực** — không phải patch tạm. **Kết quả xác nhận sau full-refresh**: 773 khách reclassify RETAIL→CROSSBORDER (CROSSBORDER: 754→1527); cross-check `us-customers-260606.csv` (817 dòng): 813 khớp CROSSBORDER, 4 còn lại là WHOLESALE (đúng thiết kế — group-tag WHOLESALE ưu tiên trước) nhưng `is_us_gift_recipient=TRUE` (đúng thiết kế — cờ độc lập với customer_type). Không có transition bất thường nào khác ngoài RETAIL→CROSSBORDER. **Khi NV tag đúng group sau này**: điều kiện group-tag tự TRUE, channel-signal thành dư thừa-nhưng-vô-hại — KHÔNG cần gỡ code này, giữ vĩnh viễn vì gap tag-thủ-công có thể tái diễn. |
 
 ## Decision Log
 

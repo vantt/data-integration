@@ -23,6 +23,19 @@ discount_metrics AS (
     SELECT * FROM {{ ref('int_customer_discount_metrics') }}
 ),
 
+-- Customers with >=1 non-cancelled order on the Sapo 'US' channel (gift-fulfilment
+-- arrangement, auto-assigned at order ingestion — NOT a manual staff tag). Additive
+-- signal for customer_type=CROSSBORDER / is_us_gift_recipient below: fills the gap
+-- where a customer's Sapo group was never (re-)tagged to TYPE_CROSSBORDER/CTN00014.
+-- Pattern mirrors int_us_shipment_line_prices.sql:16-26.
+us_channel_customers AS (
+    SELECT DISTINCT fo.customer_key
+    FROM {{ ref('fact_orders') }}  fo
+    JOIN {{ ref('dim_channels') }} ch ON fo.channel_key = ch.channel_key
+    WHERE ch.channel_name = 'US'
+      AND fo.status != 'CANCELLED'
+),
+
 joined_data AS (
     SELECT
         c.customer_key,
@@ -194,6 +207,11 @@ SELECT
     -- the parsed customer_group_code/customer_group_name columns instead of LIKE across the
     -- raw JSON blob (2nd undocumented parse point removed; group `id` is the stable ACL key,
     -- code/name can be renamed by Sapo — see dim_customers_base). Same substrings, same branches.
+    -- CROSSBORDER branch additionally ORs a channel-derived signal (2026-07-08,
+    -- plans/260708-1628-crossborder-channel-detection): customer has >=1 order on the
+    -- Sapo 'US' channel, auto-assigned at ingestion — catches gift recipients whose
+    -- group tag hasn't (yet) been (re-)applied. Additive only: never overrides a
+    -- higher-precedence branch above (WHOLESALE/PARTNER/STAFF/KOL still win).
     CASE
         WHEN customer_group_code LIKE '%WHOLESALE%' OR customer_group_name LIKE '%WHOLESALE%'
             THEN 'WHOLESALE'                                    -- TYPE_WHOLESALE + legacy BANBUON
@@ -206,7 +224,8 @@ SELECT
             THEN 'KOL'
         WHEN customer_group_code LIKE '%TYPE_CROSSBORDER%' OR customer_group_name LIKE '%TYPE_CROSSBORDER%'
           OR customer_group_code LIKE '%CTN00014%' OR customer_group_name LIKE '%CTN00014%'
-            THEN 'CROSSBORDER'  -- US giao hàng hộ (người nhận VN)
+          OR EXISTS (SELECT 1 FROM us_channel_customers uc WHERE uc.customer_key = joined_data.customer_key)
+            THEN 'CROSSBORDER'  -- US giao hàng hộ (người nhận VN); group-tag OR has US-channel order
         ELSE 'RETAIL'  -- Default: TYPE_RETAIL/BANLE, Selly (end-consumers), untagged
     END as customer_type,
 
@@ -299,11 +318,15 @@ SELECT
 
     -- US gift-fulfilment recipients: CROSSBORDER customers are VN recipients whose packages
     -- are shipped from the US on behalf of overseas buyers. Group-code detection mirrors the
-    -- customer_type CASE above (TYPE_CROSSBORDER or legacy CTN00014 group).
+    -- customer_type CASE above (TYPE_CROSSBORDER or legacy CTN00014 group), now also OR'd with
+    -- the same channel-derived signal (2026-07-08, plans/260708-1628-crossborder-channel-detection)
+    -- — independent of overall customer_type (e.g. a WHOLESALE account with a US-channel order
+    -- still gets this flag TRUE, since it describes the shipment relationship, not the account type).
     -- Flag exposes the segment for filtering without requiring a self-join on customer_type.
     -- Refactored 2026-07-06 (phase-00) — matches parsed customer_group_code/name, not raw JSON.
     (customer_group_code LIKE '%TYPE_CROSSBORDER%' OR customer_group_name LIKE '%TYPE_CROSSBORDER%'
-      OR customer_group_code LIKE '%CTN00014%' OR customer_group_name LIKE '%CTN00014%') AS is_us_gift_recipient,
+      OR customer_group_code LIKE '%CTN00014%' OR customer_group_name LIKE '%CTN00014%'
+      OR EXISTS (SELECT 1 FROM us_channel_customers uc WHERE uc.customer_key = joined_data.customer_key)) AS is_us_gift_recipient,
 
     -- source_contact_quality: immutable — reflects whether the contact value is usable.
     -- '*' in phone = already obfuscated by source (relay/masked number from marketplace etc.).

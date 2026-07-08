@@ -212,7 +212,7 @@ models:
         description: "Surrogate key for this customer record."
         tests: [unique, not_null]
       - name: customer_type
-        description: "Commercial relationship type (Manual from Sapo groups). RETAIL/WHOLESALE/PARTNER/STAFF/KOL + CROSSBORDER (đơn US giao hàng hộ — người nhận VN)."
+        description: "Commercial relationship type (Manual from Sapo groups, + auto channel signal for CROSSBORDER). RETAIL/WHOLESALE/PARTNER/STAFF/KOL + CROSSBORDER (đơn US giao hàng hộ — người nhận VN; group-tag HOẶC có đơn trên kênh Sapo channel_name='US')."
         data_type: varchar
         tests:
           - accepted_values:
