@@ -1,0 +1,46 @@
+version: 2
+
+models:
+  - name: int_sku_gift_profile
+    description: >
+      Per-SKU gift-line profile. Grain: one row per SKU (all SKUs ever sold in
+      fact_sales — not limited to the 8 core SKUs in seed_sku_regimen_config).
+      gift_rate = share of line items where fs.is_gift_line is TRUE (Phase 1's
+      line_amount = 0 detection). Distinguishes anchor/premium SKUs (customer
+      actively buys) from entry/gift-prone SKUs (frequently bundled free with
+      a paid item) — feeds the Phase 4 customer-outreach action queue.
+
+      Deliberately does NOT expose a hardcoded sku_role threshold label.
+      gift_rate / multi_sku_gift_rate are the source of truth; any categorical
+      threshold (e.g. "gift-prone if gift_rate > X%") belongs in the consuming
+      mart (Phase 4), not baked into this table. Rationale: the business
+      threshold has only been sanity-checked against 2 of the 8 core SKUs
+      (Metabo, Coix) so far — freezing a cutoff here before validating against
+      all 8 would risk silently mis-classifying the untested SKUs. See
+      plans/260708-1501-gift-purchase-sku-action-scenario/plan.md open
+      question #2.
+    columns:
+      - name: sku
+        description: "SKU code (from dim_products), any SKU ever sold — not limited to core SKUs."
+        tests: [unique, not_null]
+      - name: total_lines
+        description: "Total fact_sales line items for this SKU, active orders only (fo.is_active_order = TRUE)."
+        tests: [not_null]
+      - name: gift_lines
+        description: "Count of lines where fs.is_gift_line is TRUE (line_amount = 0)."
+        tests: [not_null]
+      - name: gift_rate
+        description: "gift_lines / total_lines, rounded to 4dp. NULL only if total_lines = 0 (cannot occur post-GROUP BY)."
+      - name: multi_sku_lines
+        description: "Count of lines belonging to an order (order_id) that contains more than one distinct SKU line."
+        tests: [not_null]
+      - name: multi_sku_gift_lines
+        description: "Count of multi-SKU-basket lines that are also gift lines."
+        tests: [not_null]
+      - name: multi_sku_gift_rate
+        description: >
+          multi_sku_gift_lines / multi_sku_lines, rounded to 4dp. NULL when a SKU
+          never appears in a multi-SKU basket (NULLIF guards zero-division).
+          Per the finejapan gift-entry-sku report, this is the more meaningful
+          gift-rate for gift-prone SKUs since solo-SKU orders rarely carry a
+          zero-revenue line.
