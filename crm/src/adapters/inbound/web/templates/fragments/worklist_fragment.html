@@ -85,7 +85,7 @@
       {% for t in unassigned_tasks %}
       <div class="wl-row wl-row--task" id="queue-task-{{ t.task_id }}">
         <div class="wl-row__main">
-          <span class="wl-row__title">{{ t.title }}</span>
+          <a class="wl-row__name" href="/tasks/{{ t.task_id }}">{{ t.title }}</a>
           {% if t.due_at %}
           <span class="caption" style="color:var(--fg-tertiary)">{{ t.due_at[:10] }}</span>
           {% endif %}
