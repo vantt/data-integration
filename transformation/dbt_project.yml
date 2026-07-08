@@ -35,6 +35,9 @@ seeds:
         channel_code: varchar
         channel_name: varchar
         channel_group: varchar
+    seed_action_scenario_registry:
+      +column_types:
+        enabled: boolean
 # Dispatch configuration
 dispatch:
   - macro_namespace: dbt

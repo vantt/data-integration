@@ -12,6 +12,16 @@ WITH tag_flags AS (
     SELECT * FROM {{ ref('int_crm_party_tag_flags') }}
 ),
 
+-- Strategic tier + contactability (Phase 4). dim_customers.is_contactable is the
+-- canonical source (mart_customer_tier.is_contactable is a passthrough of it) —
+-- but it's stricter than the old local phone-presence check below: it excludes
+-- masked/obfuscated marketplace-relay phones. Intentional semantic tightening,
+-- not a no-op dedup. See mart_customer_tier.sql:11,28,74.
+tier AS (
+    SELECT customer_key, strategic_tier, is_contactable, tier_reason
+    FROM {{ ref('mart_customer_tier') }}
+),
+
 customers AS (
     SELECT
         d.customer_key,
@@ -42,8 +52,8 @@ customers AS (
         d.payment_behavior,
         d.lifetime_contribution_margin,
         d.is_margin_negative,
-        -- Contactable = has a usable phone (no Zalo OA fallback exists). Drives CS/Sales reachability.
-        (d.phone IS NOT NULL AND d.phone <> '') AS is_contactable,
+        t.is_contactable,
+        t.strategic_tier,
         -- COALESCE'd here (single reference site — not inside int_crm_party_tag_flags):
         -- bool_or() returns NULL over an empty group, and this LEFT JOIN also produces
         -- NULL for customers with zero rows in tag_flags. Either way `OR NULL` in the
@@ -54,9 +64,11 @@ customers AS (
         tf.risk_tag_labels
     FROM {{ ref('dim_customers') }} d
     LEFT JOIN tag_flags tf ON TRY_CAST(d.customer_id AS INTEGER) = tf.customer_id
+    LEFT JOIN tier t ON d.customer_key = t.customer_key
     WHERE d.customer_type = 'RETAIL'
       AND d.customer_id != 'Unknown'
       AND d.order_count > 0
+      AND NOT d.is_us_gift_recipient   -- excludes RETAIL-tagged US gift-fulfilment recipients (Phase 4, dim_customers.sql:300-306)
 ),
 
 classified AS (
@@ -124,6 +136,7 @@ SELECT
     classified.second_affinity_product,
     classified.payment_behavior,
     classified.is_contactable,
+    classified.strategic_tier,
     classified.lifetime_contribution_margin,
     classified.is_margin_negative,
     classified.action_type,
@@ -132,7 +145,7 @@ SELECT
     -- without these columns the risk flag would be silently swallowed by the VIP branch.
     classified.has_risk_tag AS has_manual_risk_flag,
     CASE WHEN classified.has_risk_tag THEN classified.risk_tag_labels ELSE NULL END AS risk_tag_labels,
-    CASE action_type
+    CASE classified.action_type
         WHEN 'CALL_NOW'            THEN 1
         WHEN 'MANUAL_RISK_REVIEW'  THEN 2
         WHEN 'REORDER_NUDGE'       THEN 3
@@ -142,7 +155,7 @@ SELECT
         WHEN 'HIGH_CANCEL_RISK'    THEN 7
         ELSE 9
     END AS priority_rank,
-    CASE action_type
+    CASE classified.action_type
         WHEN 'CALL_NOW'
             THEN 'VIP/Gold chưa mua ' || recency_days || ' ngày — gọi điện ngay'
         WHEN 'MANUAL_RISK_REVIEW'
@@ -159,7 +172,7 @@ SELECT
             THEN 'Tỷ lệ huỷ ' || ROUND(cancel_rate * 100)::INTEGER || '% — cần xác nhận'
         ELSE NULL
     END AS action_rationale,
-    CASE action_type
+    CASE classified.action_type
         WHEN 'CALL_NOW'      THEN ROUND(COALESCE(avg_order_spend, 0) * 2)::BIGINT
         -- Rủi ro liên quan tổng giá trị khách (không phải 1 đơn) → dùng lifetime_value.
         WHEN 'MANUAL_RISK_REVIEW' THEN ROUND(COALESCE(lifetime_value, 0))::BIGINT
@@ -181,5 +194,9 @@ SELECT
 
 FROM classified
 LEFT JOIN last_contact lc ON classified.customer_id::INTEGER = lc.customer_id
-WHERE action_type IS NOT NULL
+LEFT JOIN {{ ref('seed_action_scenario_registry') }} reg
+    ON classified.action_type = reg.action_type
+   AND reg.mart = 'mart_customer_action_queue'
+WHERE classified.action_type IS NOT NULL
+  AND COALESCE(reg.enabled, TRUE) = TRUE   -- default TRUE if action_type missing from registry (safety net)
 ORDER BY priority_rank, lifetime_value DESC

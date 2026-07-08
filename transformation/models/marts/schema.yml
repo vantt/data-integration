@@ -1,5 +1,34 @@
 version: 2
 
+seeds:
+  - name: seed_action_scenario_registry
+    description: >
+      Enable/disable switch for action_type output, per (action_type, mart) — lets
+      a scenario be toggled off at the output layer without an SQL branching change.
+      Missing registry row defaults to enabled (COALESCE(reg.enabled, TRUE) = TRUE)
+      so a mart-name typo or unregistered action_type never silently drops existing
+      output. `enabled` is explicitly typed boolean in dbt_project.yml (DuckDB seed
+      inference otherwise loads it as VARCHAR, breaking the COALESCE comparison).
+      Consumed by mart_customer_sku_action_queue and mart_customer_action_queue.
+    columns:
+      - name: action_type
+        data_type: varchar
+        tests: [not_null]
+      - name: mart
+        data_type: varchar
+        description: "Consuming mart name — 'mart_customer_sku_action_queue' or 'mart_customer_action_queue'."
+        tests: [not_null]
+      - name: enabled
+        data_type: boolean
+        tests: [not_null]
+      - name: scenario_group
+        data_type: varchar
+      - name: description_vi
+        data_type: varchar
+    tests:
+      - dbt_utils.unique_combination_of_columns:
+          combination_of_columns: [action_type, mart]
+
 models:
   # Hug
   - name: mart_hug_optin
@@ -424,6 +453,13 @@ models:
         data_type: varchar
       - name: is_contactable
         data_type: boolean
+        description: >
+          Passthrough from mart_customer_tier.is_contactable (dim_customers.is_contactable
+          is the canonical source) — stricter than a bare phone-presence check, excludes
+          masked/obfuscated marketplace-relay phones.
+      - name: strategic_tier
+        data_type: varchar
+        description: "Passthrough from mart_customer_tier.strategic_tier — enrichment column, available as a future branching predicate."
       - name: lifetime_contribution_margin
         data_type: bigint
       - name: is_margin_negative
@@ -465,10 +501,12 @@ models:
       Product-aware outreach queue. Grain: (customer_key, sku) — one row per customer
       per core SKU needing action today. One customer can have multiple rows (one per SKU).
       Companion to mart_customer_action_queue (customer-level behavioral signals).
-      5 action types: USAGE_FOLLOWUP (D5-9), PROGRESS_CHECK (D12-16),
+      5 action types for supply_stream='purchased': USAGE_FOLLOWUP (D5-9), PROGRESS_CHECK (D12-16),
       REORDER_OVERDUE (>7d past depletion), REORDER_NUDGE (D-7 to D0), REORDER_PREEMPT (within lead days).
       Priority ranks integrate with the customer-level queue: 2=OVERDUE, 3=NUDGE, 5=PREEMPT,
-      6=PROGRESS_CHECK, 7=USAGE_FOLLOWUP.
+      6=PROGRESS_CHECK, 7=USAGE_FOLLOWUP (GIFT_TO_PURCHASE falls to the default rank 9).
+      GIFT_TO_PURCHASE (supply_stream='gift_only', Phase 4) ships enabled=false in
+      seed_action_scenario_registry — computed but suppressed pending timing-rule review.
     columns:
       - name: customer_key
         data_type: varchar
@@ -494,13 +532,22 @@ models:
         data_type: integer
       - name: days_since_order
         data_type: integer
+      - name: is_contactable
+        data_type: boolean
+        description: >
+          Passthrough from mart_customer_tier.is_contactable (dim_customers.is_contactable
+          is the canonical source) — stricter than a bare phone-presence check, excludes
+          masked/obfuscated marketplace-relay phones.
+      - name: strategic_tier
+        data_type: varchar
+        description: "Passthrough from mart_customer_tier.strategic_tier — enrichment column, available as a future branching predicate."
       - name: action_type
         data_type: varchar
         tests:
           - not_null
           - accepted_values:
               arguments:
-                values: ['USAGE_FOLLOWUP', 'PROGRESS_CHECK', 'REORDER_OVERDUE', 'REORDER_NUDGE', 'REORDER_PREEMPT']
+                values: ['USAGE_FOLLOWUP', 'PROGRESS_CHECK', 'REORDER_OVERDUE', 'REORDER_NUDGE', 'REORDER_PREEMPT', 'GIFT_TO_PURCHASE']
       - name: priority_rank
         data_type: integer
         tests: [not_null]
@@ -839,6 +886,9 @@ models:
         description: "Direct discount amount"
       - name: distributed_discount_amount
         description: "Distributed discount amount"
+      - name: is_gift_line
+        description: "TRUE when line_amount = 0 (STRICT) — rep-entered giveaway/gift, distinct from voucher/campaign discounts that reduce but don't zero the line. Mirrors int_order_promo_goods_cost.is_gift_no_invoice definition at line-item grain."
+        tests: [not_null]
 
   - name: fact_orders
     description: "Aggregated order fact."

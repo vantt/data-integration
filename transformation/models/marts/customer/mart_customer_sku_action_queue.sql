@@ -16,6 +16,12 @@
 --   REORDER_PREEMPT  — supply expires within remind_lead_days; order now
 --   PROGRESS_CHECK   — D12-16 journey: check in on customer experience
 --   USAGE_FOLLOWUP   — D5-9 journey: confirm usage started, reinforce routine
+--   GIFT_TO_PURCHASE — gift_only stream (Phase 4): gifted, never bought, 14-45d
+--                      since gift received. Ships enabled=false in
+--                      seed_action_scenario_registry (timing rule not yet reviewed).
+--
+-- Registry (seed_action_scenario_registry) controls enable/disable per action_type
+-- at the output layer — see final WHERE/LEFT JOIN below.
 --
 -- SOURCE: int_customer_sku_supply_tracking (supply + stacking already computed)
 -- Companion to mart_customer_action_queue (customer-level signals).
@@ -40,11 +46,21 @@ customers AS (
         customer_status,
         lifetime_value,
         order_count,
-        avg_order_spend,
-        (phone IS NOT NULL AND phone <> '') AS is_contactable
+        avg_order_spend
     FROM {{ ref('dim_customers') }}
     WHERE customer_type = 'RETAIL'
       AND customer_id   != 'Unknown'
+      AND NOT is_us_gift_recipient   -- excludes RETAIL-tagged US gift-fulfilment recipients (Phase 4, dim_customers.sql:300-306)
+),
+
+-- Strategic tier + contactability (Phase 4). dim_customers.is_contactable is the
+-- canonical source (mart_customer_tier.is_contactable is a passthrough of it) —
+-- but it's stricter than the old local phone-presence check below: it excludes
+-- masked/obfuscated marketplace-relay phones. Intentional semantic tightening,
+-- not a no-op dedup. See mart_customer_tier.sql:11,28,74.
+tier AS (
+    SELECT customer_key, strategic_tier, is_contactable, tier_reason
+    FROM {{ ref('mart_customer_tier') }}
 ),
 
 last_contact AS (
@@ -65,29 +81,40 @@ classified AS (
         cu.lifetime_value,
         cu.order_count,
         cu.avg_order_spend,
-        cu.is_contactable,
+        t.is_contactable,
+        t.strategic_tier,
 
         DATE_DIFF('day', CURRENT_DATE, s.estimated_depletion_date) AS days_until_depletion,
         DATE_DIFF('day', s.last_purchase_date, CURRENT_DATE)       AS days_since_order,
 
-        -- Priority cascade: journey touchpoints checked first (day-of-purchase window),
-        -- then reorder urgency signals based on depletion date.
+        -- Priority cascade: GIFT_TO_PURCHASE (gift_only stream, Phase 4) checked first,
+        -- then the unchanged purchased-stream cascade — journey touchpoints checked
+        -- first (day-of-purchase window), then reorder urgency signals based on
+        -- depletion date. The purchased-stream branch logic itself is untouched.
         CASE
-            WHEN s.journey_enabled AND DATE_DIFF('day', s.last_purchase_date, CURRENT_DATE) BETWEEN 5  AND 9
-                THEN 'USAGE_FOLLOWUP'
-            WHEN s.journey_enabled AND DATE_DIFF('day', s.last_purchase_date, CURRENT_DATE) BETWEEN 12 AND 16
-                THEN 'PROGRESS_CHECK'
-            WHEN DATE_DIFF('day', CURRENT_DATE, s.estimated_depletion_date) < -7
-                THEN 'REORDER_OVERDUE'
-            WHEN DATE_DIFF('day', CURRENT_DATE, s.estimated_depletion_date) BETWEEN -7 AND 0
-                THEN 'REORDER_NUDGE'
-            WHEN DATE_DIFF('day', CURRENT_DATE, s.estimated_depletion_date) BETWEEN 1 AND s.remind_lead_days
-                THEN 'REORDER_PREEMPT'
+            WHEN s.supply_stream = 'gift_only'
+                 AND DATE_DIFF('day', s.last_purchase_date, CURRENT_DATE) BETWEEN 14 AND 45
+                THEN 'GIFT_TO_PURCHASE'
+            WHEN s.supply_stream = 'purchased' THEN
+                CASE
+                    WHEN s.journey_enabled AND DATE_DIFF('day', s.last_purchase_date, CURRENT_DATE) BETWEEN 5  AND 9
+                        THEN 'USAGE_FOLLOWUP'
+                    WHEN s.journey_enabled AND DATE_DIFF('day', s.last_purchase_date, CURRENT_DATE) BETWEEN 12 AND 16
+                        THEN 'PROGRESS_CHECK'
+                    WHEN DATE_DIFF('day', CURRENT_DATE, s.estimated_depletion_date) < -7
+                        THEN 'REORDER_OVERDUE'
+                    WHEN DATE_DIFF('day', CURRENT_DATE, s.estimated_depletion_date) BETWEEN -7 AND 0
+                        THEN 'REORDER_NUDGE'
+                    WHEN DATE_DIFF('day', CURRENT_DATE, s.estimated_depletion_date) BETWEEN 1 AND s.remind_lead_days
+                        THEN 'REORDER_PREEMPT'
+                    ELSE NULL
+                END
             ELSE NULL
         END AS action_type
 
     FROM supply s
     JOIN customers cu ON s.customer_key = cu.customer_key
+    LEFT JOIN tier t ON s.customer_key = t.customer_key
 )
 
 SELECT
@@ -104,9 +131,11 @@ SELECT
     classified.order_count,
     classified.avg_order_spend,
     classified.is_contactable,
+    classified.strategic_tier,
 
     -- SKU supply context
     classified.sku,
+    classified.supply_stream,
     classified.product_group,
     classified.display_name          AS product_display_name,
     classified.last_purchase_date,
@@ -151,6 +180,10 @@ SELECT
             THEN classified.display_name
                 || ' còn ' || classified.days_until_depletion
                 || ' ngày — đặt trước để không đứt liệu trình'
+        WHEN 'GIFT_TO_PURCHASE'
+            THEN 'Được tặng ' || classified.display_name
+                || ' ' || classified.days_since_order
+                || ' ngày trước, chưa từng mua — hỏi cảm nhận, gợi ý mua chính'
         ELSE NULL
     END AS action_rationale,
 
@@ -174,5 +207,9 @@ SELECT
 FROM classified
 LEFT JOIN last_contact lc
     ON classified.customer_id::INTEGER = lc.customer_id
+LEFT JOIN {{ ref('seed_action_scenario_registry') }} reg
+    ON classified.action_type = reg.action_type
+   AND reg.mart = 'mart_customer_sku_action_queue'
 WHERE classified.action_type IS NOT NULL
+  AND COALESCE(reg.enabled, TRUE) = TRUE   -- default TRUE if action_type missing from registry (safety net)
 ORDER BY priority_rank, classified.lifetime_value DESC NULLS LAST
