@@ -1,6 +1,6 @@
 # Plan — CRM UX & Data-Loop Improvements
 
-**Status:** DONE — phases 01–09 tất cả DONE (phase 08+09 triển khai 2026-07-06 sau đánh giá lại). Còn treo: AI-8 (theo dõi nightly 2 đêm), AI-9 (consumer đầu tiên — cần plan riêng), AI-12 (pilot outcome_reason đến 2026-07-20) — không phải lỗi, chỉ là việc time-gated/ngoài scope kỹ thuật ngay lúc này. Full CRM suite: 785 passed, 0 failed (1 test loại trừ thuộc workstream khác).
+**Status:** DONE — phases 01–09 tất cả DONE (phase 08+09 triển khai 2026-07-06 sau đánh giá lại). Còn treo: AI-8 (1/2 đêm nightly xác nhận xanh, xem chi tiết phase-08), AI-12 (pilot outcome_reason đến 2026-07-20) — không phải lỗi, chỉ time-gated ngoài scope kỹ thuật ngay lúc này. AI-9 đã DONE, tách plan riêng, archived: `plans/archive/260706-1738-crm-tag-signal-action-queue-consumer/`. Full CRM suite: 785 passed, 0 failed (1 test loại trừ thuộc workstream khác).
 **Created:** 2026-07-05
 **Design source:** `crm/docs/ui-spec/notes/ux-action-queue-task-cockpit-data-loop-design.md` (decisions D1–D4, issues A1–A4, B1–B5, C-group)
 **Goal:** Đóng vòng lặp dữ liệu CRM → warehouse và nâng UX cho NV CSKH: đúng việc, đúng lúc, giữ ngữ cảnh, capture dữ liệu tối đa với friction thấp nhất.
