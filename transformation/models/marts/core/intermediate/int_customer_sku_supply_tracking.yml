@@ -3,13 +3,32 @@ version: 2
 models:
   - name: int_customer_sku_supply_tracking
     description: >
-      Per-customer × SKU supply tracking with recursive stacking.
-      Grain: (customer_key, sku) — one row per customer per configured core SKU.
+      Per-customer × SKU supply tracking with recursive stacking, split into two
+      independent supply streams.
+      Grain: (customer_key, sku, supply_stream) — one row per customer per
+      configured core SKU per supply stream.
       Computes estimated_depletion_date using recursive LAG stacking:
         depletion(n) = GREATEST(purchase_date(n), depletion(n-1)) + effective_supply(n)
       effective_supply = qty × supply_days_per_unit × dose_reduction_buffer.
       Covers the 8 Fine Japan core SKUs from seed_sku_regimen_config only.
       Materialized as TABLE (not incremental) — recursive CTE needs full history.
+
+      supply_stream values:
+        'purchased'  — customer has EVER bought this SKU non-gift (any order).
+                       ALL quantity (purchased + gift) for this stream accumulates
+                       into effective_supply_days — unchanged behavior vs. the
+                       pre-dual-stream model; a gift on top of a real purchase
+                       habit still extends supply (intentional, not a residual bug).
+        'gift_only'  — customer has NEVER bought this SKU non-gift; every line is
+                       a gift. Supply days tracked independently from any reorder
+                       cadence. Feeds the GIFT_TO_PURCHASE action scenario.
+
+      Design note — ever_purchased is a STATIC per-(customer_key, sku) fact, not
+      chronological: it does not check whether the purchase happened before or
+      after a gift line for that SKU. A single non-gift purchase, at any point in
+      time, permanently classifies that customer×SKU pair as 'purchased'. This
+      was an explicit product decision (not an oversight) — see
+      plans/260708-1501-gift-purchase-sku-action-scenario/phase-03-dual-stream-supply-tracking.md.
     columns:
       - name: customer_key
         description: "Surrogate customer key (FK to dim_customers)."
@@ -17,6 +36,15 @@ models:
       - name: sku
         description: "Core SKU code (from seed_sku_regimen_config)."
         tests: [not_null]
+      - name: supply_stream
+        description: >
+          'purchased' (customer ever bought this SKU non-gift) or 'gift_only'
+          (customer never bought this SKU non-gift, all supply came from gifts).
+        tests:
+          - not_null
+          - accepted_values:
+              arguments:
+                values: ['purchased', 'gift_only']
       - name: product_group
         description: "Product group identifier (e.g. cordyceps_vien)."
       - name: display_name
@@ -40,4 +68,4 @@ models:
     tests:
       - dbt_utils.unique_combination_of_columns:
           arguments:
-            combination_of_columns: [customer_key, sku]
+            combination_of_columns: [customer_key, sku, supply_stream]

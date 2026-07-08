@@ -6,7 +6,24 @@
 -- =============================================================================
 -- INTERMEDIATE: CUSTOMER × SKU SUPPLY TRACKING
 -- =============================================================================
--- Grain: (customer_key, sku) — one row per customer per configured core SKU.
+-- Grain: (customer_key, sku, supply_stream) — one row per customer per configured
+-- core SKU per supply stream.
+--
+-- supply_stream ∈ {'purchased', 'gift_only'}:
+--   'purchased'  — customer has EVER bought this SKU non-gift (any order, not
+--                  necessarily the same order as a gift line). ALL quantity for
+--                  this stream (purchased + gift) accumulates into
+--                  effective_supply_days exactly as before this dual-stream
+--                  change — this is an intentional, unchanged behavior (a gift
+--                  box on top of a real purchase habit still extends supply).
+--   'gift_only'  — customer has NEVER bought this SKU non-gift; every line is a
+--                  gift. Tracked independently so gift-only supply days don't
+--                  bleed into (or get mistaken for) a real reorder cadence.
+--                  Feeds the GIFT_TO_PURCHASE scenario (Phase 4).
+-- ever_purchased is a STATIC per-(customer_key, sku) fact (not a chronological/
+-- time-windowed check) — confirmed with user: no need to order gift vs.
+-- purchase events by date; a single non-gift purchase, ever, is enough to
+-- classify all of that customer×SKU's activity as 'purchased'.
 --
 -- Computes estimated depletion date for each customer's most recent supply
 -- of each of the 8 core Fine Japan SKUs, using recursive LAG stacking to
@@ -25,6 +42,35 @@ WITH RECURSIVE config AS (
     SELECT * FROM {{ ref('seed_sku_regimen_config') }}
 ),
 
+-- Static per-(customer_key, sku) fact: has this customer EVER bought this SKU
+-- with a real (non-gift) line? Two branches mirroring raw_purchases:
+--   Direct branch — fact_sales SKU matches config exactly.
+--   Pack/alias branch — pack/combo SKU maps to a base config SKU via
+--     dim_sku_alias; a pack purchase still counts as a real purchase of the
+--     base SKU (same guards as raw_purchases Branch 2 to avoid double-counting).
+ever_purchased AS (
+    SELECT DISTINCT fs.customer_key, cfg.sku
+    FROM {{ ref('fact_sales') }}   fs
+    JOIN {{ ref('dim_products') }} dp  ON fs.product_key = dp.product_key
+    JOIN config                   cfg ON dp.sku          = cfg.sku
+    JOIN {{ ref('fact_orders') }}  fo  ON fs.order_id    = fo.order_id
+    WHERE fo.is_active_order = TRUE
+      AND fs.is_gift_line = FALSE
+
+    UNION
+
+    SELECT DISTINCT fs.customer_key, cfg.sku
+    FROM {{ ref('fact_sales') }}    fs
+    JOIN {{ ref('dim_products') }}  dp  ON fs.product_key  = dp.product_key
+    JOIN {{ ref('dim_sku_alias') }} da  ON dp.sku          = da.sapo_pack_sku
+    JOIN config                    cfg ON da.sapo_base_sku = cfg.sku
+    JOIN {{ ref('fact_orders') }}   fo  ON fs.order_id     = fo.order_id
+    WHERE fo.is_active_order = TRUE
+      AND fs.is_gift_line = FALSE
+      AND dp.sku NOT IN (SELECT sku FROM config)
+      AND da.sapo_pack_sku != da.sapo_base_sku
+),
+
 -- Active purchases of configured SKUs only, aggregated to day-grain.
 -- Two branches UNIONed before GROUP BY:
 --   Branch 1 — direct: fact_sales SKU matches config exactly.
@@ -33,13 +79,21 @@ WITH RECURSIVE config AS (
 -- Branch 2 guards prevent double-counting:
 --   • NOT IN config  — skip SKUs already handled by Branch 1
 --   • pack ≠ base    — skip self-referential aliases (e.g. Metabo H030→H030 MISA entry)
+--
+-- supply_stream classification: LEFT JOIN ever_purchased (a static per-
+-- customer-sku fact) makes supply_stream a per-(customer_key, sku) CONSTANT,
+-- not a per-row value — so every raw line (gift or not) for a customer who
+-- has ever purchased the SKU lands in 'purchased', and every line for a
+-- customer who never has lands in 'gift_only' (which, by definition, can only
+-- contain gift lines — there's nothing else to mix in).
 raw_purchases AS (
     SELECT
-        customer_key,
-        sku, product_group, display_name,
-        supply_days_per_unit, dose_reduction_buffer, remind_lead_days, journey_enabled,
-        purchase_date,
-        SUM(qty) AS total_qty
+        raw.customer_key,
+        raw.sku, raw.product_group, raw.display_name,
+        raw.supply_days_per_unit, raw.dose_reduction_buffer, raw.remind_lead_days, raw.journey_enabled,
+        raw.purchase_date,
+        CASE WHEN ep.customer_key IS NOT NULL THEN 'purchased' ELSE 'gift_only' END AS supply_stream,
+        SUM(raw.qty) AS total_qty
     FROM (
         -- Branch 1: individual SKU sold directly (pack_sku exactly in config)
         SELECT
@@ -73,14 +127,16 @@ raw_purchases AS (
         WHERE fo.is_active_order = TRUE
           AND dp.sku NOT IN (SELECT sku FROM config)
           AND da.sapo_pack_sku != da.sapo_base_sku
-    )
+    ) raw
+    LEFT JOIN ever_purchased ep
+        ON raw.customer_key = ep.customer_key AND raw.sku = ep.sku
     GROUP BY
-        customer_key, sku, product_group, display_name,
-        supply_days_per_unit, dose_reduction_buffer, remind_lead_days, journey_enabled,
-        purchase_date
+        raw.customer_key, raw.sku, raw.product_group, raw.display_name,
+        raw.supply_days_per_unit, raw.dose_reduction_buffer, raw.remind_lead_days, raw.journey_enabled,
+        raw.purchase_date, supply_stream
 ),
 
--- Assign row number per (customer, sku) for recursive traversal
+-- Assign row number per (customer, sku, supply_stream) for recursive traversal
 purchases_numbered AS (
     SELECT
         *,
@@ -88,7 +144,7 @@ purchases_numbered AS (
             total_qty * supply_days_per_unit * dose_reduction_buffer
         )::INTEGER AS effective_supply_days,
         ROW_NUMBER() OVER (
-            PARTITION BY customer_key, sku
+            PARTITION BY customer_key, sku, supply_stream
             ORDER BY purchase_date
         )::INTEGER  AS rn
     FROM raw_purchases
@@ -97,14 +153,16 @@ purchases_numbered AS (
 -- Recursive stacking: carry each purchase's actual stacked depletion forward
 -- so the next purchase stacks on the accumulated window, not the raw window.
 -- Column order matches the SELECT list in both anchor and recursive branches.
+-- Partition/join keys now include supply_stream — the stacking FORMULA itself
+-- (GREATEST(purchase_date, depletion_date) + effective_supply) is untouched.
 supply_stack (
-    customer_key, sku, product_group, display_name,
+    customer_key, sku, supply_stream, product_group, display_name,
     supply_days_per_unit, dose_reduction_buffer, remind_lead_days, journey_enabled,
     purchase_date, total_qty, effective_supply_days, depletion_date, rn
 ) AS (
-    -- Anchor: first purchase per (customer, sku)
+    -- Anchor: first purchase per (customer, sku, supply_stream)
     SELECT
-        customer_key, sku, product_group, display_name,
+        customer_key, sku, supply_stream, product_group, display_name,
         supply_days_per_unit, dose_reduction_buffer, remind_lead_days, journey_enabled,
         purchase_date, total_qty, effective_supply_days,
         purchase_date + effective_supply_days,
@@ -116,16 +174,17 @@ supply_stack (
 
     -- Recursive: stack on previous stacked depletion date
     SELECT
-        p.customer_key, p.sku, p.product_group, p.display_name,
+        p.customer_key, p.sku, p.supply_stream, p.product_group, p.display_name,
         p.supply_days_per_unit, p.dose_reduction_buffer, p.remind_lead_days, p.journey_enabled,
         p.purchase_date, p.total_qty, p.effective_supply_days,
         GREATEST(p.purchase_date, s.depletion_date) + p.effective_supply_days,
         p.rn
     FROM purchases_numbered p
     JOIN supply_stack s
-        ON  p.customer_key = s.customer_key
-        AND p.sku          = s.sku
-        AND p.rn           = s.rn + 1
+        ON  p.customer_key   = s.customer_key
+        AND p.sku            = s.sku
+        AND p.supply_stream  = s.supply_stream
+        AND p.rn             = s.rn + 1
 ),
 
 -- Most recent order context per (customer, base_sku).
@@ -146,18 +205,27 @@ supply_stack (
 --   = (net_revenue − distributed_discount_vat_excl) / quantity
 --   where distributed_discount_vat_excl = distributed_discount_amount × vat_ratio
 --   vat_ratio = (total_collected − vat_amount) / total_collected  (from fact_orders)
+-- SELF-CONTAINED CTE: has its own independent Branch1/Branch2 UNION (mirroring
+-- raw_purchases, but computed separately since it selects last_order_code /
+-- last_sku_discount_rate / last_net_unit_price, not qty aggregation) and its
+-- own ROW_NUMBER() — it does NOT inherit raw_purchases' supply_stream. Each
+-- branch below joins ever_purchased independently to classify supply_stream,
+-- and ROW_NUMBER() now partitions by (customer_key, sku, supply_stream) so the
+-- most-recent-order row is picked independently per stream.
 last_order_ctx AS (
     SELECT
         customer_key,
         sku,
+        supply_stream,
         last_order_code,
         last_sku_discount_rate,
         last_net_unit_price,
-        ROW_NUMBER() OVER (PARTITION BY customer_key, sku ORDER BY ordered_at DESC) AS rn
+        ROW_NUMBER() OVER (PARTITION BY customer_key, sku, supply_stream ORDER BY ordered_at DESC) AS rn
     FROM (
         SELECT
             fs.customer_key,
             cfg.sku,
+            CASE WHEN ep.customer_key IS NOT NULL THEN 'purchased' ELSE 'gift_only' END AS supply_stream,
             fo.order_code AS last_order_code,
             -- Effective total discount rate: line discount + pro-rated order discount
             CASE
@@ -197,6 +265,7 @@ last_order_ctx AS (
         JOIN {{ ref('dim_products') }} dp  ON fs.product_key = dp.product_key
         JOIN config                   cfg ON dp.sku          = cfg.sku
         JOIN {{ ref('fact_orders') }}  fo  ON fs.order_id    = fo.order_id
+        LEFT JOIN ever_purchased ep ON fs.customer_key = ep.customer_key AND cfg.sku = ep.sku
         WHERE fo.is_active_order = TRUE
 
         UNION ALL
@@ -204,6 +273,7 @@ last_order_ctx AS (
         SELECT
             fs.customer_key,
             cfg.sku,
+            CASE WHEN ep.customer_key IS NOT NULL THEN 'purchased' ELSE 'gift_only' END AS supply_stream,
             fo.order_code AS last_order_code,
             CASE
                 WHEN COALESCE(fs.distributed_discount_amount, 0) = 0
@@ -242,16 +312,18 @@ last_order_ctx AS (
         JOIN {{ ref('dim_sku_alias') }} da  ON dp.sku          = da.sapo_pack_sku
         JOIN config                    cfg ON da.sapo_base_sku = cfg.sku
         JOIN {{ ref('fact_orders') }}   fo  ON fs.order_id     = fo.order_id
+        LEFT JOIN ever_purchased ep ON fs.customer_key = ep.customer_key AND cfg.sku = ep.sku
         WHERE fo.is_active_order = TRUE
           AND dp.sku NOT IN (SELECT sku FROM config)
           AND da.sapo_pack_sku != da.sapo_base_sku
     )
 )
 
--- Keep only the final (most recent) purchase row per (customer, sku)
+-- Keep only the final (most recent) purchase row per (customer, sku, supply_stream)
 SELECT
     s.customer_key,
     s.sku,
+    s.supply_stream,
     s.product_group,
     s.display_name,
     s.supply_days_per_unit,
@@ -267,7 +339,8 @@ SELECT
     loctx.last_net_unit_price
 FROM supply_stack s
 LEFT JOIN last_order_ctx loctx
-    ON  s.customer_key = loctx.customer_key
-    AND s.sku          = loctx.sku
+    ON  s.customer_key    = loctx.customer_key
+    AND s.sku             = loctx.sku
+    AND s.supply_stream   = loctx.supply_stream
     AND loctx.rn = 1
-QUALIFY s.rn = MAX(s.rn) OVER (PARTITION BY s.customer_key, s.sku)
+QUALIFY s.rn = MAX(s.rn) OVER (PARTITION BY s.customer_key, s.sku, s.supply_stream)
