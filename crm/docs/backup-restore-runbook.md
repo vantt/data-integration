@@ -10,8 +10,20 @@ Tooling: `crm/ops/backup_crm.py` (verified snapshot) + `crm/ops/restore_verify_c
 ## What is protected
 - **`crm.db`** — source of truth (parties, tags, segments, tasks, campaigns, hug
   identity/voucher, consent, app users). Backed up + integrity-verified.
+- **`hug.db`** — source of truth for the physical Hug token lifecycle (printed/
+  bound tokens, order_code claim). The single registry — not derivable from
+  anything else. Backed up + integrity-verified (same gate as `crm.db`).
 - **`cache.db`** — warehouse reverse-ETL snapshot. Backed up so a restore is
   self-contained, but it is **regenerable** (see "post-restore refresh").
+
+## What is NOT protected in the CRM data dir (regenerable, low-stakes)
+- `hug_push_state.db` — incremental push-diff cache (Hug→edge sync). Losing it
+  just forces one full re-push next cycle; no data loss.
+- `crm_cache.db` — legacy/unused (0 bytes as of 2026-07-08); not wired to any
+  code path.
+- If a **new irreplaceable file** appears in `CRM_DATA_DIR` in the future, it
+  must be added explicitly to `SNAPSHOT_DBS` (+ `CRITICAL_DBS` if it's a source
+  of truth) in `crm/ops/backup_crm.py` — there is no auto-discovery of new files.
 
 ## What is NOT protected (honest scope)
 - This is a **local checkpoint, not full DR.** Snapshots live in the `crm_backups`
@@ -25,7 +37,7 @@ Tooling: `crm/ops/backup_crm.py` (verified snapshot) + `crm/ops/restore_verify_c
 ```
 docker exec crm python -m crm.ops.backup_crm --data-dir /data --dest /backups --keep 7
 ```
-Writes `/backups/<YYYYMMDD-HHMMSS>/{crm.db, cache.db, manifest.json}` to the
+Writes `/backups/<YYYYMMDD-HHMMSS>/{crm.db, hug.db, cache.db, manifest.json}` to the
 `crm_backups` volume. The backup is a **gate**: it FAILS (non-zero + Lark alert) if
 the snapshot does not byte-match the live source (counts + content checksums).
 
@@ -46,7 +58,7 @@ python crm/ops/restore_verify_crm.py --negative value   # self-test: must FAIL
 3. **Safety-copy current data** (so you can roll back):
    `docker run --rm -v <proj>_crm_data:/d -v "$PWD/app_data/crm_data_safety:/s" alpine cp -a /d/. /s/`
 4. **Restore** the chosen snapshot into the `crm_data` volume:
-   `docker run --rm -v <proj>_crm_backups:/b:ro -v <proj>_crm_data:/d alpine sh -c "rm -f /d/crm.db* /d/cache.db* && cp /b/<ts>/crm.db /b/<ts>/cache.db /d/"`
+   `docker run --rm -v <proj>_crm_backups:/b:ro -v <proj>_crm_data:/d alpine sh -c "rm -f /d/crm.db* /d/hug.db* /d/cache.db* && cp /b/<ts>/crm.db /b/<ts>/hug.db /b/<ts>/cache.db /d/"`
 5. **Start CRM:** `docker compose up -d crm` → check `docker logs crm` (migrations OK) + `curl :3007/healthz` + spot-check the UI.
 6. **Post-restore cache refresh (mandatory):** `cache.db` from the backup is *stale*.
    Trigger a fresh sync before relying on warehouse-derived views:

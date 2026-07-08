@@ -30,10 +30,13 @@ import sys
 from datetime import datetime, timezone
 from pathlib import Path
 
-# crm.db = irreplaceable source of truth; cache.db = regenerable warehouse cache
-# (included so a restore is self-contained / needs no warehouse).
+# crm.db + hug.db = irreplaceable sources of truth (hug.db is the single registry
+# for the physical Hug token lifecycle — printed/bound tokens are not derivable
+# from anything else). cache.db = regenerable warehouse cache, included so a
+# restore is self-contained / needs no warehouse.
 SOURCE_OF_TRUTH = "crm.db"
-SNAPSHOT_DBS = ("crm.db", "cache.db")
+CRITICAL_DBS = ("crm.db", "hug.db")  # present-but-failed ⇒ hard fail (not "partial")
+SNAPSHOT_DBS = ("crm.db", "hug.db", "cache.db")
 
 
 # --------------------------------------------------------------------------- #
@@ -218,11 +221,11 @@ def backup_crm(data_dir: str, dest_root: str, keep: int = 7) -> dict:
             }
         except Exception as exc:  # noqa: BLE001 — record + decide by DB criticality
             manifest["dbs"][db] = {"ok": False, "error": str(exc)}
-            if db == SOURCE_OF_TRUTH:
-                # source-of-truth failed → the whole backup is worthless
+            if db in CRITICAL_DBS:
+                # irreplaceable source failed → the whole backup is worthless
                 (out_dir / "manifest.json").write_text(json.dumps(manifest, indent=2))
-                raise RuntimeError(f"backup FAILED on source-of-truth {db}: {exc}") from exc
-            manifest["partial"] = True  # cache.db failed — keep crm.db, flag partial
+                raise RuntimeError(f"backup FAILED on critical db {db}: {exc}") from exc
+            manifest["partial"] = True  # cache.db failed — keep crm.db/hug.db, flag partial
 
     (out_dir / "manifest.json").write_text(json.dumps(manifest, indent=2))
     return manifest

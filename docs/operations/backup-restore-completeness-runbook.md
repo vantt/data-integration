@@ -37,7 +37,7 @@ The method is a **gate chain**: each gate closes exactly one failure mode. Any b
 Why each step maps to a property:
 
 - **Steps 1 + 3 → Consistent.** Never raw-copy a live database file. CRM uses SQLite's online-backup API (`Connection.backup()`) after `wal_checkpoint(PASSIVE)`, so the snapshot is a single consistent transaction, not a half-written WAL. (Lessons **L56/L68**.)
-- **Self-contained.** Back up *every* store the system needs to boot. CRM backs up both `crm.db` (source of truth) **and** `cache.db` (regenerable reverse-ETL cache) so restore needs **no warehouse**.
+- **Self-contained.** Back up *every* store the system needs to boot. CRM backs up `crm.db` + `hug.db` (both source-of-truth — `hug.db` is the single registry for the physical Hug token lifecycle, not derivable from anything else) **and** `cache.db` (regenerable reverse-ETL cache) so restore needs **no warehouse**. A new irreplaceable file in `CRM_DATA_DIR` is NOT auto-discovered — it must be added to `SNAPSHOT_DBS`/`CRITICAL_DBS` in `crm/ops/backup_crm.py` by hand (this is how the `hug.db` gap was found and closed, 2026-07-08).
 - **Steps 2 + 4 + 6 → Faithful (the crux).** This is what makes a backup a *gate*, not a dump: profile the **live source** before and the **snapshot** after, then require **delta == 0**. A manifest computed only from the snapshot cannot detect a copy that silently dropped rows — so we compare against the *source*, not against itself. (Closes red-team **H1**.)
 - **Content checksums, not just row counts.** Row count + file `sha256` catch added/removed rows but **miss a mutated cell** when the count is unchanged. Each table also carries `hash(group_concat(pk || updated_at ORDER BY pk))` to catch value mutation. (Closes **H5**.)
 

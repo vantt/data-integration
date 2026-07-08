@@ -122,7 +122,7 @@ def export_backup(ts: str) -> tuple[Path, str, dict]:
         dst = Path(VERIFY_DATA_DIR)
         for f in dst.glob("*"):
             f.unlink()
-        for db in ("crm.db", "cache.db"):
+        for db in ("crm.db", "hug.db", "cache.db"):
             if (src / db).exists():
                 shutil.copy2(src / db, dst / db)
         manifest = json.loads((src / "manifest.json").read_text())
