@@ -218,14 +218,14 @@ CREATE TABLE IF NOT EXISTS wh_deadstock_target (
 -- Grain: (customer_key, sku, action_type) — one row per customer per core SKU per signal type.
 -- Companion to wh_action_queue (customer-level behavioral NBA).
 -- action_id = md5(customer_key|sku|action_type|pending_since) — stable per episode.
--- 5 signal types: USAGE_FOLLOWUP, PROGRESS_CHECK, REORDER_PREEMPT, REORDER_NUDGE, REORDER_OVERDUE.
+-- 6 signal types: USAGE_FOLLOWUP, PROGRESS_CHECK, REORDER_PREEMPT, REORDER_NUDGE, REORDER_OVERDUE, GIFT_TO_PURCHASE.
 
 CREATE TABLE IF NOT EXISTS wh_sku_action_queue (
   action_id                TEXT    PRIMARY KEY,  -- md5(customer_key|sku|action_type|pending_since)
   customer_key             TEXT,
   sku                      TEXT,                 -- Fine Japan core SKU (e.g. VCSC20001L001)
   product_display_name     TEXT,                 -- human-readable product name (e.g. 'Cordyceps')
-  action_type              TEXT,                 -- USAGE_FOLLOWUP|PROGRESS_CHECK|REORDER_PREEMPT|REORDER_NUDGE|REORDER_OVERDUE
+  action_type              TEXT,                 -- USAGE_FOLLOWUP|PROGRESS_CHECK|REORDER_PREEMPT|REORDER_NUDGE|REORDER_OVERDUE|GIFT_TO_PURCHASE
   rationale_vi             TEXT,                 -- Vietnamese rationale string (product name + context embedded)
   days_until_depletion     INTEGER,              -- days until supply runs out (<0 = overdue)
   estimated_depletion_date TEXT,                 -- YYYY-MM-DD
@@ -236,6 +236,7 @@ CREATE TABLE IF NOT EXISTS wh_sku_action_queue (
   last_order_code          TEXT,                 -- order_code aligned with last_purchase_date (same CTE)
   last_sku_discount_rate   REAL,                 -- 0.0–1.0; None when no discount
   last_net_unit_price      INTEGER,              -- VND per base unit (VAT-exclusive, after discount)
+  supply_stream            TEXT,                 -- purchased|gift_only (see int_customer_sku_supply_tracking, Phase 3)
   refreshed_at             TEXT NOT NULL DEFAULT (strftime('%Y-%m-%dT%H:%M:%fZ','now'))
   -- status/snoozed_until live in crm.db:crm_action_state (keyed on action_id, same mechanism)
 );

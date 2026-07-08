@@ -163,6 +163,7 @@ _MART_SKU_ACTION_QUEUE_COLS = [
     "last_order_code",
     "last_sku_discount_rate",
     "last_net_unit_price",
+    "supply_stream",
 ]
 
 # dim_products output columns for product catalog (cache-facing names).
@@ -353,6 +354,14 @@ def fetch_sku_action_queue(conn: "duckdb.DuckDBPyConnection") -> list[dict]:
     Returns [] gracefully when the mart does not exist yet (first-run before dbt build).
     Source columns: action_rationale→rationale_vi, priority_rank→priority,
     estimated_depletion_date (DATE) cast to text, queue_generated_at truncated to date.
+
+    supply_stream (purchased|gift_only, Phase 3/4) is NOT currently a column in
+    main_marts.mart_customer_sku_action_queue's final SELECT — see Phase 5
+    implementation report for the confirmed gap. This SELECT is written per the
+    Phase 5 spec (forward-compatible) and will raise MissingColumnError via
+    _fetch()/_check_columns() below until the mart adds `classified.supply_stream`
+    to its output. That is the intended fail-fast contract of this module — do
+    NOT silently drop the column to work around it.
     """
     sql = (
         "SELECT "
@@ -368,7 +377,8 @@ def fetch_sku_action_queue(conn: "duckdb.DuckDBPyConnection") -> list[dict]:
         "  strftime(last_purchase_date, '%Y-%m-%d')           AS last_purchase_date, "
         "  last_order_code, "
         "  last_sku_discount_rate, "
-        "  last_net_unit_price "
+        "  last_net_unit_price, "
+        "  supply_stream "
         "FROM main_marts.mart_customer_sku_action_queue"
     )
     try:

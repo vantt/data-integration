@@ -85,6 +85,7 @@ _CATALOG: dict[str, dict[str, BadgeDef]] = {
         "cross_sell":       BadgeDef("good",   "Cross-sell — đề xuất sản phẩm bổ sung"),
         "collect_feedback": BadgeDef("accent", "Thu thập phản hồi từ khách"),
         "manual_risk_review": BadgeDef("bad",  "Cần xác minh rủi ro — NV đã tự đánh giá, không phải hệ thống tự động"),
+        "gift_to_purchase":   BadgeDef("accent", "Từng được tặng, chưa từng mua — hỏi cảm nhận, gợi ý mua chính"),
     },
     "customer_type": {
         "retail":    BadgeDef("",       "Khách lẻ"),
@@ -154,6 +155,7 @@ _ACTION_TYPE_SHORT_LABEL: dict[str, str] = {
     "cross_sell":       "Cross-sell",
     "collect_feedback": "Thu thập phản hồi",
     "manual_risk_review": "Cần xác minh",
+    "gift_to_purchase": "Từng được tặng",
 }
 
 

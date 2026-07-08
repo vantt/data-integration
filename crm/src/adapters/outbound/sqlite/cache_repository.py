@@ -165,7 +165,8 @@ class SQLiteCacheRepository:
                    COALESCE(a.top_affinity_product, '') AS top_affinity_product,
                    COALESCE(a.last_purchased_product, '') AS last_purchased_product,
                    COALESCE(ct.strategic_tier, '') AS strategic_tier,
-                   COALESCE(ct.value_group, '') AS value_group
+                   COALESCE(ct.value_group, '') AS value_group,
+                   NULL AS supply_stream
             FROM cache.wh_action_queue a
             LEFT JOIN cache.wh_customer_base bc ON bc.customer_key = a.customer_key
             LEFT JOIN cache.wh_party_seed ps ON ps.customer_key = a.customer_key
@@ -211,7 +212,8 @@ class SQLiteCacheRepository:
                    COALESCE(sa.product_display_name, '') AS top_affinity_product,
                    '' AS last_purchased_product,
                    COALESCE(ct.strategic_tier, '') AS strategic_tier,
-                   COALESCE(ct.value_group, '') AS value_group
+                   COALESCE(ct.value_group, '') AS value_group,
+                   sa.supply_stream AS supply_stream
             FROM cache.wh_sku_action_queue sa
             LEFT JOIN cache.wh_customer_base bc ON bc.customer_key = sa.customer_key
             LEFT JOIN cache.wh_party_seed ps ON ps.customer_key = sa.customer_key
@@ -272,6 +274,7 @@ class SQLiteCacheRepository:
                 last_purchased_product=row["last_purchased_product"] or "",
                 strategic_tier=row["strategic_tier"] or "",
                 value_group=row["value_group"] or "",
+                supply_stream=row["supply_stream"] or "",
             )
             for row in rows
         ]
@@ -412,7 +415,8 @@ class SQLiteCacheRepository:
                    NULL AS last_net_unit_price,
                    NULL AS estimated_depletion_date,
                    COALESCE(ct.strategic_tier, '') AS strategic_tier,
-                   COALESCE(ct.value_group, '') AS value_group
+                   COALESCE(ct.value_group, '') AS value_group,
+                   NULL AS supply_stream
             FROM cache.wh_action_queue a
             LEFT JOIN crm_action_state s ON s.action_id = a.action_id
             LEFT JOIN cache.wh_customer_tier ct ON ct.customer_key = a.customer_key
@@ -431,7 +435,8 @@ class SQLiteCacheRepository:
                    sa.last_net_unit_price,
                    sa.estimated_depletion_date,
                    COALESCE(ct.strategic_tier, '') AS strategic_tier,
-                   COALESCE(ct.value_group, '') AS value_group
+                   COALESCE(ct.value_group, '') AS value_group,
+                   sa.supply_stream AS supply_stream
             FROM cache.wh_sku_action_queue sa
             LEFT JOIN crm_action_state s ON s.action_id = sa.action_id
             LEFT JOIN cache.wh_customer_tier ct ON ct.customer_key = sa.customer_key
@@ -465,6 +470,7 @@ class SQLiteCacheRepository:
                 estimated_depletion_date=row["estimated_depletion_date"] or "",
                 strategic_tier=row["strategic_tier"] or "",
                 value_group=row["value_group"] or "",
+                supply_stream=row["supply_stream"] or "",
             )
             for row in rows
         ]

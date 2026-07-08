@@ -149,6 +149,7 @@ class ActionQueueItem:
     strategic_tier: str = ""   # from wh_customer_tier
     value_group: str = ""      # VIP|GOLD|SILVER|BRONZE, from wh_customer_tier
     estimated_depletion_date: str = ""  # YYYY-MM-DD when supply runs out (SKU actions only)
+    supply_stream: str = ""    # purchased|gift_only (SKU actions only; empty for customer-level actions)
 
 
 @dataclass
