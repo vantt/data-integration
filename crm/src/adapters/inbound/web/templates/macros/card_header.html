@@ -1,0 +1,27 @@
+{# @surface DS · Card section header | @kind MACRO
+   Usage: {% from "macros/card_header.html" import card_header %}
+          {{ card_header("Thông Tin Cơ Bản", edit_href="/modals/m15?party_id=" ~ party.party_id ~ "&tab=core") }}
+
+   title      str        section caption text
+   edit_href  str|None   hx-get URL for the "Sửa" (edit) button; omit for a title-only
+                          header (was a plain <div class="caption">Title</div>, e.g.
+                          customer_360's "Dates" block)
+
+   Extracted from a row-between + caption + ghost-link "Sửa" button pattern repeated
+   3x verbatim in customer_360.html (Thông Tin Cơ Bản / Tags / Liên Lạc). Pure macro
+   (no {% call %} slot) - always targets #modal-root with hx-swap innerHTML, matching
+   every current call site; if a future header needs a different target/swap, add a
+   param rather than forking a second header macro.
+#}
+{% macro card_header(title, edit_href=none) %}
+<div class="row-between" style="margin-bottom:var(--sp-3)">
+  <span class="caption">{{ title }}</span>
+  {% if edit_href %}
+  <button class="ghost-link"
+          hx-get="{{ edit_href }}"
+          hx-target="#modal-root" hx-swap="innerHTML">
+    {% include "icons/edit.svg" %} Sửa
+  </button>
+  {% endif %}
+</div>
+{% endmacro %}

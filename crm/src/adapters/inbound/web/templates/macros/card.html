@@ -2,7 +2,9 @@
    Usage: {% from "macros/card.html" import card %}
           {% call card(eyebrow="Headline") %} ...body markup... {% endcall %}
 
-   eyebrow      str|None  small accent caption line above body (was scard__eyebrow)
+   eyebrow      str|None  small caption line above body (was scard__eyebrow)
+   eyebrow_accent bool    render eyebrow in accent color (was "caption caption--accent
+                          scard__eyebrow", e.g. customer_360's "Headline" block)
    tag          str|None  short pill label top of card (was dedup-card__tag text)
    tag_variant  str       bdg modifier suffix for the tag, e.g. "accent" -> "bdg--accent"
    variant      str       card state modifier, e.g. "survive" -> class "scard--survive"
@@ -19,10 +21,10 @@
    content via {% call %}...{% endcall %}. See plans/260709-1034-card-badge-macro-consolidation
    for the rationale (drift was in the outer wrapper, not the inner content).
 #}
-{% macro card(eyebrow=none, tag=none, tag_variant='', variant='', extra_class='', attrs='') %}
+{% macro card(eyebrow=none, eyebrow_accent=false, tag=none, tag_variant='', variant='', extra_class='', attrs='') %}
 <div class="scard{% if variant %} scard--{{ variant }}{% endif %}{% if extra_class %} {{ extra_class }}{% endif %}"{% if attrs %} {{ attrs|safe }}{% endif %}>
   {% if tag %}<span class="scard__tag bdg{% if tag_variant %} bdg--{{ tag_variant }}{% endif %}">{{ tag }}</span>{% endif %}
-  {% if eyebrow %}<div class="caption scard__eyebrow">{{ eyebrow }}</div>{% endif %}
+  {% if eyebrow %}<div class="caption{% if eyebrow_accent %} caption--accent{% endif %} scard__eyebrow">{{ eyebrow }}</div>{% endif %}
   {{ caller() }}
 </div>
 {% endmacro %}

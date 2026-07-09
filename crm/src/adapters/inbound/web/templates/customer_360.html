@@ -1,5 +1,8 @@
 {# @surface S03 · Customer 360 Detail | @source crm/docs/ui-spec/screens/S03-customer-360-detail.md | @kind SCREEN #}
 {% extends "layout.html" %}
+{% from "macros/card.html" import card %}
+{% from "macros/card_header.html" import card_header %}
+{% from "macros/facts.html" import facts %}
 {% block title %}{{ party.display_name }}{% endblock %}
 {% block crumb_title %}{% endblock %}
 
@@ -105,15 +108,8 @@
     {% endif %}
 
     {# Thông Tin Cơ Bản — A-S03-015 (M15 core tab) #}
-    <div class="scard">
-      <div class="row-between" style="margin-bottom:var(--sp-3)">
-        <span class="caption">Thông Tin Cơ Bản</span>
-        <button class="ghost-link"
-                hx-get="/modals/m15?party_id={{ party.party_id }}&tab=core"
-                hx-target="#modal-root" hx-swap="innerHTML">
-          {% include "icons/edit.svg" %} Sửa
-        </button>
-      </div>
+    {% call card() %}
+      {{ card_header("Thông Tin Cơ Bản", edit_href="/modals/m15?party_id=" ~ party.party_id ~ "&tab=core") }}
       {# Name + badges row #}
       <span class="id-code--name" style="display:block;margin-bottom:var(--sp-2)">{{ party.display_name or "—" }}</span>
       <div class="badge-row" style="margin-bottom:var(--sp-3)">
@@ -156,18 +152,11 @@
         <div class="fact"><span class="fact__k">Phụ trách</span><span class="fact__v">{{ user_map.get(party.owner_user_id, party.owner_user_id) }}</span></div>
         {% endif %}
       </div>
-    </div>
+    {% endcall %}
 
     {# Tags — A-S03-017 (M03) #}
-    <div class="scard">
-      <div class="row-between" style="margin-bottom:var(--sp-3)">
-        <span class="caption">Tags</span>
-        <button class="ghost-link"
-                hx-get="/modals/m03?party_id={{ party.party_id }}"
-                hx-target="#modal-root" hx-swap="innerHTML">
-          {% include "icons/edit.svg" %} Sửa
-        </button>
-      </div>
+    {% call card() %}
+      {{ card_header("Tags", edit_href="/modals/m03?party_id=" ~ party.party_id) }}
       {% if party.tags %}
       <div class="chips">
         {% for tag in party.tags %}
@@ -177,18 +166,11 @@
       {% else %}
       <span class="muted" style="font-size:13px">Chưa có tag</span>
       {% endif %}
-    </div>
+    {% endcall %}
 
     {# Liên Lạc — channels + address merged block — A-S03-013 / A-S03-014 / A-S03-016 #}
-    <div class="scard">
-      <div class="row-between" style="margin-bottom:var(--sp-3)">
-        <span class="caption">Liên Lạc</span>
-        <button class="ghost-link"
-                hx-get="/modals/m15?party_id={{ party.party_id }}&tab=contacts"
-                hx-target="#modal-root" hx-swap="innerHTML">
-          {% include "icons/edit.svg" %} Sửa
-        </button>
-      </div>
+    {% call card() %}
+      {{ card_header("Liên Lạc", edit_href="/modals/m15?party_id=" ~ party.party_id ~ "&tab=contacts") }}
 
       {# Contact channels #}
       {% set _ch_labels = {'phone': 'SĐT', 'phone_secondary': 'Số phụ', 'zalo': 'Zalo', 'facebook': 'FB', 'email': 'Email'} %}
@@ -256,11 +238,10 @@
         <span class="consent-na" style="color:var(--text-muted)">— N/A</span>
         {% endif %}
       </div>
-    </div>
+    {% endcall %}
 
     {# Head Line — warehouse KPIs from wh_customer_insight #}
-    <div class="scard">
-      <div class="caption caption--accent scard__eyebrow">Headline</div>
+    {% call card(eyebrow="Headline", eyebrow_accent=true) %}
       {% if insight and insight.insight %}
       {% set ins = insight.insight %}
       {% set last_dk = insight.recent_orders[0].date_key if insight.recent_orders else 0 %}
@@ -285,28 +266,19 @@
       {% else %}
       <span class="muted" style="font-size:13px">Chưa có dữ liệu insight</span>
       {% endif %}
-    </div>
+    {% endcall %}
 
     {# Dates — First/Last order + Tenure — source: wh_customer_insight / wh_customer_base #}
-    <div class="scard">
-      <div class="caption" style="margin-bottom:var(--sp-3)">Dates</div>
+    {% call card() %}
+      {{ card_header("Dates") }}
       {% set first_date = (insight.insight.first_order_date if insight and insight.insight else "") %}
       {% set last_date_key = (insight.recent_orders[0].date_key if insight and insight.recent_orders else 0) %}
-      <div class="facts">
-        <div class="fact">
-          <span class="fact__k">First Order</span>
-          <span class="fact__v">{{ first_date | format_date_ict if first_date else "—" }}</span>
-        </div>
-        <div class="fact">
-          <span class="fact__k">Last Order</span>
-          <span class="fact__v">{{ last_date_key | fmt_date_key }}</span>
-        </div>
-        <div class="fact">
-          <span class="fact__k">Tenure</span>
-          <span class="fact__v mono">{{ first_date | days_since if first_date else "—" }}</span>
-        </div>
-      </div>
-    </div>
+      {{ facts([
+        {'k': 'First Order', 'v': first_date | format_date_ict if first_date else "—"},
+        {'k': 'Last Order', 'v': last_date_key | fmt_date_key},
+        {'k': 'Tenure', 'v': first_date | days_since if first_date else "—", 'mono': true},
+      ]) }}
+    {% endcall %}
 
   </aside>
 
