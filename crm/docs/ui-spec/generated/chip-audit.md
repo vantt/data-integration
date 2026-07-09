@@ -2,7 +2,7 @@
 
 # Chip Coverage Audit (generated)
 
-Surfaces: 40 · Tokens: 288 · Mapped: 164 · Unmapped: 124
+Surfaces: 40 · Tokens: 288 · Mapped: 163 · Unmapped: 125
 
 ## Unmapped Chips
 
@@ -193,6 +193,7 @@ Each unmapped chip is one of:
 | filter_bar | `↕` |
 | filter_bar | `↕` |
 | filter_bar | `💰 Giá trị cao` |
+| filter_bar | `📞 Có thể liên hệ (on)` |
 | kpi_strip | ` Giá trị: Ntr ` |
 | kpi_strip | ` Hành động AQ: N ` |
 | kpi_strip | ` Khẩn: N ` |

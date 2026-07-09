@@ -11,6 +11,7 @@ Identifier resolution on the full-page route:
 """
 from __future__ import annotations
 
+import asyncio
 import logging
 import re
 from typing import Optional, Protocol
@@ -216,6 +217,19 @@ def make_customer_360_router(
 
         ins = _load_insight(ids)
 
+        customer_type = ""
+        if customer_dim_metrics is not None:
+            sapo_id = _sapo_customer_id(ids)
+            if sapo_id:
+                try:
+                    dim_metrics = await asyncio.to_thread(
+                        customer_dim_metrics.get_by_customer_id, sapo_id
+                    )
+                    if dim_metrics is not None:
+                        customer_type = dim_metrics.customer_type
+                except Exception as exc:
+                    log.warning("c360: load customer_dim_metrics %s: %s", party_id, exc)
+
         # Notes split by type for S03 left col (warning banner + contact_pref inline)
         all_notes: list[Note] = []
         try:
@@ -253,6 +267,7 @@ def make_customer_360_router(
                 "identities": ids,
                 "active_tab": active_tab,
                 "insight": ins,
+                "customer_type": customer_type,
                 "warning_notes": warning_notes,
                 "contact_pref_notes": contact_pref_notes,
                 "custom_field_defs": cfd_list,

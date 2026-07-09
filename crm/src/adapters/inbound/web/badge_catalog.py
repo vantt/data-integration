@@ -88,9 +88,10 @@ _CATALOG: dict[str, dict[str, BadgeDef]] = {
         "gift_to_purchase":   BadgeDef("accent", "Từng được tặng, chưa từng mua — hỏi cảm nhận, gợi ý mua chính"),
     },
     "customer_type": {
-        "retail":    BadgeDef("",       "Khách lẻ"),
-        "wholesale": BadgeDef("accent", "Khách buôn / B2B"),
-        "partner":   BadgeDef("accent", "Đối tác"),
+        "retail":      BadgeDef("",       "Khách lẻ"),
+        "wholesale":   BadgeDef("accent", "Khách buôn / B2B"),
+        "partner":     BadgeDef("accent", "Đối tác"),
+        "crossborder": BadgeDef("accent", "Khách xuyên biên giới / quốc tế"),
     },
     "party_status": {
         "active":   BadgeDef("good",  "Hồ sơ đang hoạt động"),
