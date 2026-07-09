@@ -203,6 +203,14 @@
         {% if t.task_kind == 'contact' %}Liên hệ{% elif t.task_kind == 'internal' %}Nội bộ{% else %}Chung{% endif %}
       </span>
       {% endif %}
+      {# Claimed-from-queue marker — distinguishes "tôi đã nhận việc này từ Cơ Hội Hệ
+         Thống" from a manually-created task, so the row never reads ambiguously as
+         a still-unclaimed opportunity (the title format "Gọi X · N hành động" already
+         mirrors action-item vocabulary). Reuses .auto-tag (same pill used for the
+         "AUTO" badge on Tasks Board / Customer 360) with distinct text. #}
+      {% if t.source == 'action_queue_claim' %}
+      <span class="auto-tag" title="Đã nhận từ Cơ Hội Hệ Thống">Đã Claim</span>
+      {% endif %}
       <a class="wl-row__name" href="/tasks/{{ t.task_id }}"
          onclick="event.stopPropagation()">{{ t.title }}</a>
       {% if pid %}

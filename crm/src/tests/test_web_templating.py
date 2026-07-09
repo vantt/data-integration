@@ -509,6 +509,16 @@ class TestTaskRowLabelClarity:
         assert f">{self._PARTY_ID}</a>" not in html
         assert "(chưa xác định)" in html
 
+    def test_claimed_task_shows_da_claim_badge(self):
+        """Claimed-from-queue tasks get an explicit 'Đã Claim' marker — the title format
+        ("Gọi X · N hành động") otherwise mirrors action-item vocabulary too closely."""
+        html = self._render_task_row(source="action_queue_claim")
+        assert ">Đã Claim<" in html
+
+    def test_manual_task_does_not_show_da_claim_badge(self):
+        html = self._render_task_row(source="manual")
+        assert ">Đã Claim<" not in html
+
 
 class TestUnassignedQueueRowRedesign:
     """Hàng Đợi Chung rows render through wl_row() (priority pill, description,
