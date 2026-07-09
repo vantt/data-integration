@@ -110,6 +110,19 @@ urgency, để band urgency chỉ còn chứa task đã có chủ (manual-assign
 - 937 tests passing, live-verified (collapsed-by-default + order confirmed against the
   running container).
 
+## Follow-up 3 (2026-07-09, same day) — Quá hạn must not be hidden by Đã Claim collapse
+
+- User caught a regression introduced by follow-up 2: making Đã Claim collapse-by-default
+  meant an overdue (band 0, "Quá hạn") CLAIMED task was now hidden behind that collapsed
+  toggle — undermining the whole point of band 0 always being open/prominent.
+- Fix: band 0 is no longer split by source in `split_worklist_view()` — same treatment as
+  band 4 now (mixed manual+claimed, stays in `my_task_bands`, always in the always-expanded
+  urgency area). Only bands 1/2/3 are still split into `claimed_task_bands`.
+  `claimed_task_bands` now covers ids 1/2/3 only (was 0/1/2/3).
+- 939 tests passing (3 new: overdue-claimed-stays-in-my_task_bands, claimed-bands-ids-1-2-3,
+  manual+claimed-overdue-grouped-together, plus a template-level regression test rendering
+  an overdue claimed task and asserting it's visible without expanding Đã Claim).
+
 ## Key files
 
 - `crm/src/application/worklist_ranking.py` — add split helper, no change to `rank_worklist`

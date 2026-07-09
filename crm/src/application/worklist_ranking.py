@@ -353,25 +353,31 @@ def split_worklist_view(ranked: dict) -> dict:
       (assign_band() never routes an action there — only overdue tasks land
       in band 0). Reuses the existing `/worklist/band/{id}/more` overflow
       route unmodified (it already re-ranks actions-only by band id).
-    - claimed_task_bands: bands 0/1/2/3, rows filtered to
+    - claimed_task_bands: bands 1/2/3 only, rows filtered to
       kind=='task' and payload.source=='action_queue_claim' — work claimed
       from the queue, still in progress. Rendered as its own section
       ("Đã Claim") before the plain-task bands so a claimed row is never
       visually confused with a still-unclaimed opportunity.
-    - my_task_bands: bands 4/0/1/2/3 — band 4 ("Đã liên hệ") passed through
-      UNFILTERED (mixed kind + mixed source by design: an action's or a
-      claimed task's contacted-party routing already happened inside
-      rank_worklist(), so it's excluded from the other two sections by
-      construction and must still be visible somewhere). Bands 0/1/2/3 are
-      filtered to kind=='task' and NOT source=='action_queue_claim' (i.e.
-      manual tasks only — claimed tasks moved to claimed_task_bands above).
+    - my_task_bands: bands 4/0/1/2/3 — bands 0 ("Quá hạn") AND 4 ("Đã liên
+      hệ") are passed through UNFILTERED (mixed kind + mixed source by
+      design). Band 0 is deliberately NOT split by source like 1/2/3 are:
+      overdue is high enough priority that it must never be hidden behind
+      the "Đã Claim" section's collapsed-by-default toggle — a claimed
+      task overdue is exactly as urgent as a manual task overdue, so both
+      stay together in the always-expanded urgency area. Band 4 stays
+      mixed for the pre-existing reason: an action's or claimed task's
+      contacted-party routing already happened inside rank_worklist(), so
+      it's excluded from the other two sections by construction and must
+      still be visible somewhere. Bands 1/2/3 are filtered to kind=='task'
+      and NOT source=='action_queue_claim' (manual tasks only — claimed
+      tasks moved to claimed_task_bands above).
     """
     my_task_bands = []
     queue_action_bands = []
     claimed_task_bands = []
 
     for band in ranked["bands"]:
-        if band["id"] == 4:
+        if band["id"] in (0, 4):
             my_task_bands.append(dict(band))
             continue
 
@@ -381,9 +387,6 @@ def split_worklist_view(ranked: dict) -> dict:
 
         my_task_bands.append(_rebuild_band(band, manual_rows))
         claimed_task_bands.append(_rebuild_band(band, claimed_rows))
-
-        if band["id"] == 0:
-            continue  # Band 0 (Quá hạn) is task-only — no action-queue entry
 
         action_rows = [r for r in band["rows"] if r.kind == "action"]
         queue_action_bands.append(_rebuild_band(band, action_rows, zero_vip=False))

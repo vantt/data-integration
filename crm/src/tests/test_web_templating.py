@@ -588,6 +588,21 @@ class TestClaimedTaskSection:
         html = _render_fragment(self._ctx_with_claimed_task())
         assert html.count('id="task-t-claim"') == 1
 
+    def test_overdue_claimed_task_renders_outside_collapsed_da_claim_section(self):
+        """Regression guard: Quá hạn (band 0) must never be hidden behind the Đã Claim
+        <details> collapse — an overdue claimed task has to be exactly as visible as an
+        overdue manual task. Verify the row sits in the always-open urgency area, not
+        inside the Đã Claim details block."""
+        from datetime import date
+        overdue = "2026-06-22"  # 1 day before _TODAY_STR (2026-06-23)
+        t = _task("t-claim-overdue", priority=2, due_at=overdue, source="action_queue_claim")
+        result = rank_worklist([], [t], today=date(2026, 6, 23))
+        html = _render_fragment(_base_ctx(**result, party_extras={}))
+
+        assert "Đã Claim" not in html  # claimed_task_bands empty → section hidden entirely
+        assert 'id="task-t-claim-overdue"' in html
+        assert "quá hạn" in html.lower()  # overdue badge present
+
 
 # ── Band collapse/expand and overflow ("Xem thêm") ──────────────────────────
 

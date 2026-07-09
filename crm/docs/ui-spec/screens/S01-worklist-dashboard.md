@@ -113,7 +113,8 @@ work, and other owned tasks never sit mixed in the same list:
    aside swapped for a single **Nhận** button (`PATCH /tasks/{id}/assign-me`). Collapsible
    `<details>`, collapsed by default.
 2. **🙋 Đã Claim** — tasks with `source='action_queue_claim'` (claimed from Cơ Hội Hệ Thống,
-   still in progress), bands 0/1/2/3 (`claimed_task_bands`). Hidden when empty
+   still in progress), bands 1/2/3 only (`claimed_task_bands`) — band 0 ("Quá hạn")
+   deliberately excluded, see the band-0 note below. Hidden when empty
    (`claimed_task_count == 0`), so a claimed row is never confused with a still-unclaimed
    opportunity — the title format ("Gọi X · N hành động") otherwise mirrors action-item
    vocabulary closely. Placed before Cơ Hội Hệ Thống — work already claimed is more directly
@@ -128,11 +129,11 @@ work, and other owned tasks never sit mixed in the same list:
    existing `/worklist/band/{id}/more` overflow route already re-ranks actions-only, so it
    serves this section's "Xem thêm" (`show_overflow=true`) unmodified. Collapsible
    `<details>`, collapsed by default.
-4. **Urgency bands (`my_task_bands`)** — manual tasks assigned to me only (claimed tasks
-   moved to section 2 above). Never contains an unclaimed action row. **Renders
-   uncapped/eager (`show_overflow=false`), no "Xem thêm" toggle** — band ids 0/1/2 also
-   exist in `queue_action_bands`/`claimed_task_bands`, and `/worklist/band/{id}/more` always
-   re-ranks actions-only, so it cannot safely serve this section's overflow without
+4. **Urgency bands (`my_task_bands`)** — bands 1/2/3: manual tasks assigned to me only
+   (claimed tasks moved to section 2 above). Never contains an unclaimed action row.
+   **Renders uncapped/eager (`show_overflow=false`), no "Xem thêm" toggle** — band ids 1/2
+   also exist in `queue_action_bands`/`claimed_task_bands`, and `/worklist/band/{id}/more`
+   always re-ranks actions-only, so it cannot safely serve this section's overflow without
    injecting action rows into a task band. Task-per-band volume (a rep's own open tasks) is
    expected to stay small enough that this is a safe trade rather than a silent drop.
    Revisit if the route is ever made kind-aware.
@@ -144,14 +145,20 @@ default-collapsed keep the page compact without losing that single-glance feedba
 expanded; this mirrors the earlier decision against a full tab split for the whole screen
 (see plan.md).
 
-Band 4 ("Đã liên hệ") is NOT split by source — it stays mixed (unclaimed-but-contacted
-actions + contacted claimed tasks) inside `my_task_bands`, first, collapsed, exactly as
-before. Splitting it further was out of scope for this pass (see plan.md Outcome).
+**Bands 0 and 4 are NOT split by source** — both stay mixed (manual + claimed for band 0;
+unclaimed-but-contacted actions + contacted claimed tasks for band 4) inside `my_task_bands`,
+always in the always-expanded urgency area. Band 0 ("Quá hạn") specifically must never be
+hidden behind Đã Claim's collapsed-by-default toggle — an overdue claimed task is exactly as
+urgent as an overdue manual task, so unlike bands 1/2/3 it is never pulled out of
+`my_task_bands` regardless of claim status. Band 4 stays mixed for the pre-existing reason
+(contacted-party routing already happened inside `rank_worklist()`, excluded from the other
+sections by construction). Splitting band 4 further was out of scope for this pass (see
+plan.md Outcome).
 
 | Band ID | Label | Icon | Default state | Kind/source in `my_task_bands` |
 |---|---|---|---|---|
 | 4 | Đã liên hệ | ✅ | Collapsed | mixed (task + action, mixed source) — see above |
-| 0 | Quá hạn | 🔴 | Open | task, manual-source only (claimed → section 2) |
+| 0 | Quá hạn | 🔴 | Open | mixed (manual + claimed task) — NOT split, see above |
 | 1 | Hôm nay / Khẩn | 🟡 | Open | task, manual-source only (claimed → section 2) |
 | 2 | Đúng hạn | 🟢 | Open | task, manual-source only (claimed → section 2) |
 | 3 | Cần chú ý | 🔵 | Collapsed | always empty (action-only band; lives in `queue_action_bands` instead) |

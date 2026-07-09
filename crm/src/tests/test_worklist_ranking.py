@@ -825,15 +825,16 @@ class TestSplitWorklistViewClaimedTasks:
         assert claimed_ids == set()
         assert manual_ids == {"t-manual"}
 
-    def test_overdue_claimed_task_lands_in_claimed_band0(self):
-        """A claimed task can still be overdue (band 0) — assign_band() doesn't check source."""
+    def test_overdue_claimed_task_stays_in_my_task_bands_band0(self):
+        """Band 0 ('Quá hạn') is NOT split by source, unlike bands 1/2/3 — overdue is
+        too urgent to hide behind Đã Claim's collapsed-by-default toggle. A claimed
+        overdue task stays in my_task_bands' band 0 (mixed source), same as band 4."""
         overdue = str(TODAY - timedelta(days=2))
         t = make_task("t-claim-overdue", due_at=overdue, source="action_queue_claim")
         view = split_worklist_view(rank_worklist([], [t], TODAY))
-        band0 = next(b for b in view["claimed_task_bands"] if b["id"] == 0)
-        assert band0["rows"][0].ref_id == "t-claim-overdue"
         my_band0 = next(b for b in view["my_task_bands"] if b["id"] == 0)
-        assert my_band0["count"] == 0
+        assert my_band0["rows"][0].ref_id == "t-claim-overdue"
+        assert not any(b["id"] == 0 for b in view["claimed_task_bands"])
 
     def test_band4_stays_mixed_source_untouched(self):
         """Band 4 ('Đã liên hệ') isn't split by source — a contacted claimed task still
@@ -847,11 +848,22 @@ class TestSplitWorklistViewClaimedTasks:
         claimed_ids = {r.ref_id for band in view["claimed_task_bands"] for r in band["rows"]}
         assert claimed_ids == set()
 
-    def test_claimed_task_bands_covers_ids_0_1_2_3(self):
+    def test_claimed_task_bands_covers_ids_1_2_3_only(self):
+        """Band 0 is excluded — see test_overdue_claimed_task_stays_in_my_task_bands_band0."""
         t = make_task("t-claim", due_at=str(TODAY), source="action_queue_claim")
         view = split_worklist_view(rank_worklist([], [t], TODAY))
         ids = {b["id"] for b in view["claimed_task_bands"]}
-        assert ids == {0, 1, 2, 3}
+        assert ids == {1, 2, 3}
+
+    def test_overdue_manual_and_claimed_tasks_grouped_together_in_band0(self):
+        """Both sources land in the same my_task_bands' band 0 — Quá hạn is unified,
+        never split by claim status regardless of which task was overdue first."""
+        overdue = str(TODAY - timedelta(days=1))
+        t_manual = make_task("t-manual-overdue", due_at=overdue, source="manual")
+        t_claimed = make_task("t-claim-overdue", due_at=overdue, source="action_queue_claim")
+        view = split_worklist_view(rank_worklist([], [t_manual, t_claimed], TODAY))
+        band0_ids = {r.ref_id for b in view["my_task_bands"] if b["id"] == 0 for r in b["rows"]}
+        assert band0_ids == {"t-manual-overdue", "t-claim-overdue"}
 
 
 # =============================================================================
