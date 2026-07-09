@@ -18,6 +18,7 @@ account_code,account_name
 156,Hàng hóa
 331,Phải trả người bán
 333,Thuế và các khoản phải nộp NN
+3335,Thuế thu nhập cá nhân
 33311,Thuế GTGT đầu ra
 3341,Phải trả người lao động - lương
 3348,Phải trả người lao động - khác
@@ -41,6 +42,7 @@ account_code,account_name
 6421,Chi phí bán hàng
 6422,Chi phí quản lý doanh nghiệp
 642172,Chi phí quảng cáo
+642273,"Chi phí tạp vụ, vệ sinh"
 642282,Chi phí dịch vụ mua ngoài
 711,Thu nhập khác
 7118,Thu nhập khác

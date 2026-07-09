@@ -1,4 +1,10 @@
 priority,bucket,rule_type,value,effective_from,effective_to,notes
-1,operating_reserve,fill_to_target,200000000,2026-01-01,,Dự trữ vận hành tối thiểu 200M
-2,investment_reserve,fixed,20000000,2026-01-01,,Đầu tư TSCĐ tích lũy
-3,free_cash,remainder,,2026-01-01,,Phần còn lại sau reserve
+1,Chi lương,from_plan,,2026-07-01,,
+2,Phải trả khác & bảo hiểm,from_plan,,2026-07-01,,
+3,Mua SSD,fixed,1000000,2026-07-01,,
+4,Mua RAM,fixed,1000000,2026-07-01,,
+5,Quỹ Phúc Lợi Nhân Viên,fixed,1000000,2026-07-01,,
+6,Mua Laptop 1,fixed,1000000,2026-07-01,,
+7,Mua Laptop 2,fixed,1000000,2026-07-01,,
+8,Mua Laptop 3,pct_remaining,20,2026-07-01,,
+9,Tiền Mặt Tự Do,remainder,,2026-07-01,,
