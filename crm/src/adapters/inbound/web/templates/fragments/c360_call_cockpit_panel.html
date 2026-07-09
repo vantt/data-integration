@@ -697,7 +697,7 @@
           {% if insight and insight.insight and insight.insight.refreshed_at %}
           <div class="s14-snap__fresh">
             {# R2: refreshed_at always visible #}
-            <span class="freshness-badge" data-ts="{{ insight.insight.refreshed_at }}">
+            <span class="bdg">
               {{ insight.insight.refreshed_at | format_datetime_ict }} ICT
             </span>
           </div>
