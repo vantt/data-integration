@@ -8,6 +8,8 @@
    Tab panel fragments live in order_detail_tabs.html (included below).
 #}
 {% extends "base.html" %}
+{% from "macros/card.html" import card %}
+{% from "macros/facts.html" import facts %}
 {% block title %}Order {{ order.header.order_code }} · CRM{% endblock %}
 
 {% block content %}
@@ -61,8 +63,7 @@
   <aside class="detail-sidebar" aria-label="Order at a glance">
 
     {# Identity card #}
-    <div class="scard">
-      <div class="caption scard__eyebrow">ORDER AT A GLANCE</div>
+    {% call card(eyebrow="ORDER AT A GLANCE") %}
       <div class="id-code">{{ order.header.order_code }}</div>
       {% if order.header.order_id or order.channel.channel_name %}
       <div class="facts" style="margin-top:var(--sp-3)">
@@ -94,13 +95,12 @@
         <span class="bdg bdg--dot bdg--{{ order.header.fulfillment_status | ship_tone }}" data-tooltip="{{ order.header.fulfillment_status | bdg_tip('fulfillment_status') }}">{{ order.header.fulfillment_status }}</span>
         {% endif %}
       </div>
-    </div>
+    {% endcall %}
 
     {# Money headline card #}
     {% set f = order.financial %}
     {% set tone = f | verdict_tone %}
-    <div class="scard">
-      <div class="caption scard__eyebrow" style="color:var(--accent)">MONEY HEADLINE</div>
+    {% call card(eyebrow="MONEY HEADLINE", eyebrow_accent=true) %}
       <div class="verdict-glance verdict--{{ tone }}" style="margin-bottom:var(--sp-3)">
         <span class="verdict-dot verdict-dot--sm" aria-hidden="true"></span>
         <span class="verdict-glance__word">{{ tone | verdict_word }}</span>
@@ -143,9 +143,12 @@
           {{ f.channel_net_profit | fmt_vnd }}
         </span>
       </div>
-    </div>
+    {% endcall %}
 
-    {# Recipient link card (only when customer is linked) #}
+    {# Recipient link card (only when customer is linked) — deliberate exception: this is
+       an <a href=...> element, not a <div>. card() always emits a <div> wrapper; the two
+       variant classes (scard--link scard--recipient) are NOT the blocker (extra_class
+       already handles a second class trivially) — the tag itself is. Left hand-written. #}
     {% if order.customer and order.customer.customer_id %}
     {% set c = order.customer %}
     <a href="/customers/{{ c.customer_id }}"
@@ -178,38 +181,21 @@
     {% endif %}
 
     {# Quick facts card #}
-    <div class="scard">
-      <div class="caption scard__eyebrow">QUICK FACTS</div>
-      <div class="facts" style="margin-top:var(--sp-3)">
-        {% if order.channel.channel_name %}
-        <div class="fact"><span class="fact__k">Channel</span> <span class="fact__v">{{ order.channel.channel_name }}</span></div>
-        {% endif %}
-        {% if order.staff.seller_name %}
-        <div class="fact"><span class="fact__k">Seller</span> <span class="fact__v">{{ order.staff.seller_name }}</span></div>
-        {% endif %}
-        {% if order.staff.branch_name %}
-        <div class="fact"><span class="fact__k">Branch</span> <span class="fact__v">{{ order.staff.branch_name }}</span></div>
-        {% endif %}
-        {% if order.header.created_at %}
-        <div class="fact"><span class="fact__k">Created</span> <span class="fact__v mono">{{ order.header.created_at | format_ict }}</span></div>
-        {% endif %}
-        {% if order.header.first_shipped_at %}
-        <div class="fact"><span class="fact__k">Shipped</span> <span class="fact__v mono">{{ order.header.first_shipped_at | format_ict }}</span></div>
-        {% endif %}
-        {% if order.shipments and order.shipments[0].shipping_service %}
-        <div class="fact"><span class="fact__k">Carrier</span> <span class="fact__v">{{ order.shipments[0].shipping_service }}</span></div>
-        {% elif order.financial.carrier_id %}
-        <div class="fact"><span class="fact__k">Carrier</span> <span class="fact__v">{{ order.financial.carrier_id }}</span></div>
-        {% endif %}
-        {% if order.financial.cod_amount > 0 %}
-        <div class="fact"><span class="fact__k">COD</span> <span class="fact__v mono">{{ order.financial.cod_amount | fmt_vnd }}</span></div>
-        {% endif %}
-      </div>
-    </div>
+    {% call card(eyebrow="QUICK FACTS") %}
+      {% set _carrier = (order.shipments[0].shipping_service if order.shipments and order.shipments[0].shipping_service else order.financial.carrier_id) %}
+      {{ facts([
+        {'k': 'Channel', 'v': order.channel.channel_name} if order.channel.channel_name else none,
+        {'k': 'Seller', 'v': order.staff.seller_name} if order.staff.seller_name else none,
+        {'k': 'Branch', 'v': order.staff.branch_name} if order.staff.branch_name else none,
+        {'k': 'Created', 'v': order.header.created_at | format_ict, 'mono': true} if order.header.created_at else none,
+        {'k': 'Shipped', 'v': order.header.first_shipped_at | format_ict, 'mono': true} if order.header.first_shipped_at else none,
+        {'k': 'Carrier', 'v': _carrier} if _carrier else none,
+        {'k': 'COD', 'v': order.financial.cod_amount | fmt_vnd, 'mono': true} if order.financial.cod_amount > 0 else none,
+      ] | select | list) }}
+    {% endcall %}
 
     {# Data-quality flags card #}
-    <div class="scard">
-      <div class="caption scard__eyebrow">DATA-QUALITY FLAGS</div>
+    {% call card(eyebrow="DATA-QUALITY FLAGS") %}
       <div class="badge-row" style="flex-wrap:wrap;gap:var(--sp-2);margin-top:var(--sp-3)">
         {# COGS source #}
         {% if not f.cogs_source or f.cogs_source == "none" %}
@@ -237,7 +223,7 @@
         <span class="bdg bdg--accent">US CrossBorder</span>
         {% endif %}
       </div>
-    </div>
+    {% endcall %}
 
   </aside>
 </div>{# /detail-grid #}
