@@ -3,9 +3,10 @@
    Expects: note (Note), is_pinned (bool), party_id (str)
    note.note_type: general|preference|contact_pref|warning|outcome|internal
 #}
+{% from "macros/card.html" import card %}
 {% set type_info = note.note_type | note_type_meta %}
 
-<div class="note-card">
+{% call card(extra_class='note-item') %}
   <div class="note-card__head">
     <div class="note-card__who">
       {% if is_pinned %}<span style="color:var(--accent);margin-right:var(--sp-1)">★</span>{% endif %}
@@ -42,4 +43,4 @@
     </button>
   </div>
   {% endif %}
-</div>
+{% endcall %}

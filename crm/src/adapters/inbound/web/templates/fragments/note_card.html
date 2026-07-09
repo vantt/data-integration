@@ -5,7 +5,8 @@
    by POST /customers/{party_id}/notes for HTMX prepend.
    Data: note (Note).
 #}
-<div class="note-card">
+{% from "macros/card.html" import card %}
+{% call card(extra_class='note-item') %}
   <div class="note-card__body">{{ note.body }}</div>
   <div class="note-card__meta muted caption">
     <span class="mono">{{ note.created_at | format_ict }}</span>
@@ -13,4 +14,4 @@
     · {{ user_map.get(note.author_user_id, note.author_user_id) }}
     {% endif %}
   </div>
-</div>
+{% endcall %}
