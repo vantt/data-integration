@@ -2,6 +2,7 @@
    @source   crm/docs/ui-spec/screens/S06-conversation-detail.md
    @kind     SCREEN #}
 {% extends "base.html" %}
+{% from "macros/card.html" import card %}
 
 {% block title %}Hội thoại — CRM{% endblock %}
 
@@ -87,8 +88,7 @@
     {# ── Sidebar: party card or link prompt ──────────────────────────────── #}
     <div>
       {% if not party_name %}
-        <div class="scard">
-          <div class="caption scard__eyebrow">Chưa link khách</div>
+        {% call card(eyebrow="Chưa link khách") %}
           <p class="state__sub">
             PSID này chưa khớp với party nào. Tìm và gắn khách để xem hồ sơ 360.
           </p>
@@ -98,9 +98,9 @@
                   hx-swap="innerHTML">
             🔗 Tìm &amp; gắn khách
           </button>
-        </div>
+        {% endcall %}
       {% else %}
-        <div class="conv-cust-card">
+        {% call card(extra_class="conv-cust-card-body") %}
           <div class="row-between">
             <span class="mini-name">{{ party_name }}</span>
           </div>
@@ -123,7 +123,7 @@
           <a href="{{ party_link }}" class="btn btn--primary party-cta">
             Mở hồ sơ đầy đủ ›
           </a>
-        </div>
+        {% endcall %}
       {% endif %}
     </div>
 
