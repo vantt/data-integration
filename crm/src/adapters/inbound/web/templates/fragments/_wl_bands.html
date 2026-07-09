@@ -20,6 +20,7 @@
    own correct empty state independently.
 #}
 {% from "fragments/_wl_row.html" import wl_row %}
+{% from "macros/count_pill.html" import count_pill %}
 {% set bands = bands | default([]) %}
 {% set party_extras = party_extras | default({}) %}
 {% set script_cids = script_cids | default(none) %}
@@ -65,7 +66,7 @@
   <summary class="wl-band__header wl-band__header--b{{ band.id }}">
     <span class="wl-band__icon" aria-hidden="true">{{ band.icon }}</span>
     <span class="wl-band__label">{{ band.label }}</span>
-    <span class="wl-band__count">{{ band.count }}</span>
+    {{ count_pill(band.count, "band") }}
     {% if band.total_value > 0 %}
     <span class="wl-band__value">{{ band.total_value | fmt_vnd }}</span>
     {% endif %}

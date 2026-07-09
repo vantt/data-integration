@@ -5,6 +5,7 @@
    Data: order (OrderDetail).
    Sections: Recipient & delivery · Fulfillment · Shipments · Payments · Returns.
 #}
+{% from "macros/count_pill.html" import count_pill %}
 {% set h = order.header %}
 {% set f = order.financial %}
 <div class="tab-sections">
@@ -118,7 +119,7 @@
     <div class="panel-head ship-head">
       <div class="ship-head__title">
         <span class="panel-title">Shipments</span>
-        {% if n_shps > 1 %}<span class="ship-count">{{ n_shps }}</span>{% endif %}
+        {% if n_shps > 1 %}{{ count_pill(n_shps, "ship") }}{% endif %}
       </div>
       {% if n_shps > 0 %}
       {% set _shp_sum = order.shipment_status_summary %}
@@ -274,7 +275,7 @@
     <div class="panel-head ret-head">
       <div class="ship-head__title">
         <span class="panel-title">Returns</span>
-        {% if n_rets > 1 %}<span class="ship-count">{{ n_rets }}</span>{% endif %}
+        {% if n_rets > 1 %}{{ count_pill(n_rets, "ship") }}{% endif %}
       </div>
       {% if n_rets > 1 %}
       <div class="ret-total">total refunded <b class="mono">{{ ns3.paid_total | fmt_vnd }}</b></div>

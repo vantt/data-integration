@@ -135,11 +135,11 @@
   background: color-mix(in srgb, var(--accent) 4%, transparent);
   border-bottom: 1px solid var(--border);
 }
-.aq-session-card__pill {
-  font-family: var(--font-mono); font-size: 10px; letter-spacing: var(--tracking-mono);
+.cpill--session {
+  font-size: 10px; letter-spacing: var(--tracking-mono);
   color: var(--accent); background: color-mix(in srgb, var(--accent) 12%, transparent);
-  border: 1px solid color-mix(in srgb, var(--accent) 30%, transparent);
-  border-radius: var(--radii-pill); padding: 2px 8px; white-space: nowrap; flex: none;
+  border-color: color-mix(in srgb, var(--accent) 30%, transparent);
+  padding: 2px 8px; flex: none;
 }
 .aq-session-card__hint { font-size: 11.5px; color: var(--fg-tertiary); }
 .aq-session-card__cta { display: flex; align-items: center; justify-content: space-between; gap: var(--sp-3); padding: var(--sp-2) var(--sp-4); border-top: 1px solid var(--border); background: var(--bg-page); }
@@ -388,10 +388,14 @@
 
 .wl-band__icon { font-size: 15px; flex: none; }
 .wl-band__label { flex: 1; }
-.wl-band__count {
-  font-family: var(--font-mono); font-size: 10.5px; letter-spacing: var(--tracking-mono);
-  color: var(--fg-tertiary); padding: 1px 6px;
-  border: 1px solid var(--border); border-radius: var(--radii-pill);
+/* Count pill (2026-07-09): wl-band__count/ship-count/aq-session-card__pill converged onto
+   one shared shape - see .cpill base in ds-app.css (next to .bdg). Each variant keeps its
+   own pre-consolidation color/size exactly (deliberately NOT visually unified - only
+   font-family/border-radius/border-width were actually duplicated 3x; centering/nowrap
+   were not previously shared but are inert no-ops in this flex-parent, unsized context). */
+.cpill--band {
+  font-size: 10.5px; letter-spacing: var(--tracking-mono);
+  color: var(--fg-tertiary); padding: 1px 6px; border-color: var(--border);
 }
 .wl-band__value {
   font-family: var(--num-font); font-size: 11.5px;

@@ -1,0 +1,13 @@
+{# @surface DS · Count pill | @kind MACRO
+   Usage: {% from "macros/count_pill.html" import count_pill %}
+          {{ count_pill(band.count, "band") }}
+
+   text     any    the count value to display (rendered as-is, no fmt applied)
+   variant  str    which pill treatment: "band" (wl-band__count), "ship" (ship-count),
+                   "session" (aq-session-card__pill). Shell (.cpill) + "ship" live in
+                   ds-app.css (next to .bdg); "band"/"session" live in ds-extra.css (deliberately NOT unified into one
+                   look - see plans/260709-1034-card-badge-macro-consolidation for why
+                   this pulls the shared shape into one class but keeps each variant's
+                   bespoke sizing/color exactly as it was pre-consolidation).
+#}
+{% macro count_pill(text, variant) %}<span class="cpill cpill--{{ variant }}">{{ text }}</span>{% endmacro %}

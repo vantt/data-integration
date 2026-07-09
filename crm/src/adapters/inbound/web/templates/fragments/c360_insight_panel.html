@@ -1,5 +1,6 @@
 {# @surface P01 · Insight Panel | @source crm/docs/ui-spec/panels/P01-insight-panel.md | @kind PANEL #}
 {% from "macros/card.html" import card %}
+{% from "macros/count_pill.html" import count_pill %}
 {# HTMX fragment for /customers/{party_id}/panels/insight
    Data: party_id, insight (CacheInsight|None), rep_insights (list[PartyInsight]),
          resolved_action_ids (set[str]), dim_metrics (CustomerDimMetrics|None)
@@ -48,7 +49,7 @@
     {# ── Mode A — Session checklist (≥2 unresolved) ── #}
     {% call card(variant='lead', extra_class='aq-session-card-body') %}
       <div class="aq-session-card__head">
-        <span class="aq-session-card__pill">{{ unresolved_count }} việc</span>
+        {{ count_pill(unresolved_count ~ " việc", "session") }}
         <span class="aq-session-card__hint">Tích chọn xong rồi bấm Hoàn tất</span>
       </div>
       <form hx-post="/customers/{{ party_id }}/actions/dismiss-session"
