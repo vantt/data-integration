@@ -6,6 +6,8 @@
    Sections: Recipient & delivery · Fulfillment · Shipments · Payments · Returns.
 #}
 {% from "macros/count_pill.html" import count_pill %}
+{% from "macros/card.html" import card %}
+{% from "macros/facts.html" import facts %}
 {% set h = order.header %}
 {% set f = order.financial %}
 <div class="tab-sections">
@@ -19,8 +21,7 @@
     <div class="party-split">
 
       {# Left: Recipient — receives goods #}
-      <div class="scard scard--recipient scard--lead">
-        <div class="caption scard__eyebrow" style="color:var(--accent)">RECIPIENT — receives the goods</div>
+      {% call card(variant="recipient", extra_class="scard--lead", eyebrow="RECIPIENT — receives the goods", eyebrow_accent=true) %}
         <div class="recipient-name" style="margin-top:var(--sp-2)">
           {% if order.customer and order.customer.full_name %}{{ order.customer.full_name }}
           {% else %}<span class="muted">—</span>{% endif %}
@@ -28,28 +29,18 @@
         <div class="badge-row">
           <span class="bdg bdg--good bdg--dot">same as buyer</span>
         </div>
-        <div class="facts" style="margin-top:var(--sp-3)">
-          {% if order.shipping.address %}
-          <div class="fact"><span class="fact__k">Address</span> <span class="fact__v">{{ order.shipping.address }}</span></div>
-          {% endif %}
-          {% if order.shipping.ward or order.shipping.district %}
-          <div class="fact">
-            <span class="fact__k">Ward / District</span>
-            <span class="fact__v">{{ [order.shipping.ward, order.shipping.district] | join_nonempty(", ") }}</span>
-          </div>
-          {% endif %}
-          {% if order.shipping.province %}
-          <div class="fact"><span class="fact__k">Province</span> <span class="fact__v">{{ order.shipping.province }}</span></div>
-          {% endif %}
-          {% if order.shipping.country and order.shipping.country not in ("Việt Nam", "Vietnam") %}
-          <div class="fact"><span class="fact__k">Country</span> <span class="fact__v">{{ order.shipping.country }}</span></div>
-          {% endif %}
+        <div style="margin-top:var(--sp-3)">
+          {{ facts([
+            {'k': 'Address', 'v': order.shipping.address} if order.shipping.address else none,
+            {'k': 'Ward / District', 'v': [order.shipping.ward, order.shipping.district] | join_nonempty(", ")} if (order.shipping.ward or order.shipping.district) else none,
+            {'k': 'Province', 'v': order.shipping.province} if order.shipping.province else none,
+            {'k': 'Country', 'v': order.shipping.country} if (order.shipping.country and order.shipping.country not in ("Việt Nam", "Vietnam")) else none,
+          ] | select | list) }}
         </div>
-      </div>
+      {% endcall %}
 
       {# Right: Buyer account #}
-      <div class="scard">
-        <div class="caption scard__eyebrow">BUYER — placed &amp; paid</div>
+      {% call card(eyebrow="BUYER — placed & paid") %}
         <div class="recipient-name recipient-name--muted" style="margin-top:var(--sp-2)">
           {% if order.customer and order.customer.full_name %}{{ order.customer.full_name }}
           {% else %}<span class="muted">—</span>{% endif %}
@@ -62,8 +53,8 @@
           </div>
           {% endif %}
           {% if order.customer.lifetime_value != 0 %}
-          <div class="facts" style="margin-top:var(--sp-3)">
-            <div class="fact"><span class="fact__k">LTV</span> <span class="fact__v">{{ order.customer.lifetime_value | fmt_vnd }}</span></div>
+          <div style="margin-top:var(--sp-3)">
+            {{ facts([{'k': 'LTV', 'v': order.customer.lifetime_value | fmt_vnd}]) }}
           </div>
           {% endif %}
           {% if order.customer.customer_id %}
@@ -74,7 +65,7 @@
           </a>
           {% endif %}
         {% endif %}
-      </div>
+      {% endcall %}
 
     </div>
   </div>
@@ -90,22 +81,14 @@
       {% if h.payment_status %}<span class="bdg bdg--dot bdg--{{ h.payment_status | payment_tone }}" data-tooltip="{{ h.payment_status | bdg_tip('payment_status') }}">{{ h.payment_status }}</span> {% endif %}
       {% if h.fulfillment_status %}<span class="bdg bdg--dot bdg--{{ h.fulfillment_status | ship_tone }}" data-tooltip="{{ h.fulfillment_status | bdg_tip('fulfillment_status') }}">{{ h.fulfillment_status }}</span>{% endif %}
     </div>
-    <div class="scard facts">
-      {% if h.first_shipped_at %}
-      <div class="fact"><span class="fact__k">Shipped</span> <span class="fact__v mono">{{ h.first_shipped_at | format_ict }}</span></div>
-      {% endif %}
-      {% if f.carrier_id %}
-      <div class="fact"><span class="fact__k">Carrier</span> <span class="fact__v">{{ f.carrier_id }}</span></div>
-      {% endif %}
-      <div class="fact">
-        <span class="fact__k">COD</span>
-        <span class="fact__v mono">{% if f.cod_amount != 0 %}{{ f.cod_amount | fmt_vnd }}{% else %}—{% endif %}</span>
-      </div>
-      <div class="fact">
-        <span class="fact__k">TTC</span>
-        <span class="fact__v">{% if h.time_to_complete_hours is not none %}{{ "%.1f"|format(h.time_to_complete_hours) }}h{% else %}in transit{% endif %}</span>
-      </div>
-    </div>
+    {% call card() %}
+      {{ facts([
+        {'k': 'Shipped', 'v': h.first_shipped_at | format_ict, 'mono': true} if h.first_shipped_at else none,
+        {'k': 'Carrier', 'v': f.carrier_id} if f.carrier_id else none,
+        {'k': 'COD', 'v': (f.cod_amount | fmt_vnd if f.cod_amount != 0 else "—"), 'mono': true},
+        {'k': 'TTC', 'v': ("%.1f"|format(h.time_to_complete_hours) ~ "h" if h.time_to_complete_hours is not none else "in transit")},
+      ] | select | list) }}
+    {% endcall %}
     <div class="note-line">
       <span class="caveat__mark">ⓘ</span>
       <span>Order-level summary. Per-leg carrier codes and live status are in Shipments below.</span>
