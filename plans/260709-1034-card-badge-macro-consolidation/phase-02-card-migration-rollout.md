@@ -1,5 +1,26 @@
 # Phase 2: Card Migration Rollout
 
+## Status
+In progress (2026-07-09). Batch 1 done: `tasks_board.html` (`68857088`) + `note_card.html`/
+`note_card_typed.html` (`a59a9d31`). Both verified live against the running server with real
+data (not just synthetic render tests). Extended `card()` with an `attrs` param (raw
+attribute pass-through — needed for `tcard`'s `id`/`draggable`) and discovered a real class
+of regression this migration style risks: the OLD family classes sometimes carried layout/
+interaction behavior beyond visual styling (`tcard`'s flex/gap/cursor/hover,
+`note-card`'s hover-reveal + inter-sibling spacing) that bare `.scard` doesn't provide —
+fixed via additive modifier classes (`.task-card`, `.note-item`) applied through the macro's
+`extra_class` param, NOT by expanding `.scard` itself (which is shared by unrelated call
+sites). Apply the same "check for base-class side rules, not just visual ones" scrutiny to
+the remaining batch below.
+
+Remaining (batch 2, not started): `customer_360.html`, `order_detail.html`,
+`conversation_detail.html`, `fragments/c360_insight_panel.html` — meaningfully harder:
+`customer_360`/`order_detail` already use canonical `.scard` (no class rename needed) but
+carry heavy `facts()`/`card_header()` extraction opportunity (78 `.facts` usages across 6
+files per Phase 1 survey); `c360_insight_panel.html` has the `aq-session-card` checklist
+form which needs the same base-class-side-rule check as this batch.
+
+
 ## Context
 Phase 1 produced a validated `card()` macro (`macros/card.html`) and proved it on
 `dedup_review.html`. This phase migrates the remaining 5 template families to it:
