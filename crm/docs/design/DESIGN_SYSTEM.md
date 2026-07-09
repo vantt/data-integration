@@ -215,5 +215,100 @@ Lift these rather than re-styling raw HTML:
 (`--primary/--secondary/--ghost`) · `caveat` (`--info/--warn/--rule`) · `strip-stats` ·
 `segcard` · `pager` · `toolbar` / `fsel` · `skeleton` / `state`.
 
+`scard` → build via `{% from "macros/card.html" import card %}`, don't hand-roll the div
+structure — see §11 for the full macro inventory. `facts`/`fact` → same file's `facts()`
+macro. Both variants (`scard--survive`, `scard--lead`) and every other card-shell param
+are documented there, not here.
+
 Prototype-only additions live in `prototype/crm/crm-extra.css` (modal, form fields, kanban,
 chat thread, rule builder, tweaks panel) — all built strictly on the tokens above.
+
+## 11 · Macros
+
+`templates/macros/` is the canonical location for any Jinja macro shared across **more
+than one** template. Macros owned by a single fragment (e.g. `wl_row` in
+`fragments/_wl_row.html`) stay where they are — only cross-cutting ones move here. This
+keeps a future drifted pattern from spawning a 7th one-off CSS family instead of landing
+in an obvious shared place.
+
+Every macro file follows the docstring convention established in `fragments/_wl_row.html`:
+
+```jinja
+{# @surface <id-or-DS> · <name> | @kind MACRO
+   Usage: {% from "macros/<file>.html" import <name> %}
+          ...one example call...
+
+   <param>  <type>  <what it does, and what raw markup it replaced, if any>
+#}
+```
+
+`@surface DS` (not a specific screen id like `S04`) marks a macro as belonging to the
+design system generally, not one screen — used by every macro in `templates/macros/` so
+far, since they're all cross-cutting by definition.
+
+### Current inventory
+
+**`macros/card.html` → `card(eyebrow=None, eyebrow_accent=False, tag=None, tag_variant='',
+variant='', extra_class='', attrs='')`**
+
+Thin shell macro wrapping the canonical `.scard` div. Callers insert their own content via
+`{% call card(...) %}...{% endcall %}` — the macro does not know or care what kind of card
+it's wrapping (no `type`/`kind` param, by design: the drift this replaced was in the OUTER
+wrapper, not the inner content, so only the wrapper is centralized).
+
+```jinja
+{% from "macros/card.html" import card %}
+{% call card(variant="survive", tag="GIỮ LẠI", tag_variant="accent") %}
+  <div class="facts">...</div>
+{% endcall %}
+```
+
+- `eyebrow` / `eyebrow_accent` — small caption line above the body; accent-colored variant
+  for headline-style cards.
+- `tag` / `tag_variant` — a `bdg`-styled pill at the top of the card (e.g. dedup review's
+  "GIỮ LẠI"/"GỘP VÀO" labels).
+- `variant` — state modifier, rendered as `scard--{{ variant }}`. Known variants:
+  `survive` (dedup merge highlight), `lead` (accent border-left — shared with the action
+  queue card and Operations-tab recipient panels; reuse this before adding a new variant).
+- `extra_class` — escape hatch for one-off layout needs (e.g. `task-card` restoring the
+  flex/gap/cursor behavior a pre-migration `.tcard` had beyond what bare `.scard` provides).
+  Not for smuggling back a whole parallel class family — if the same `extra_class` shows up
+  repeatedly for the same reason, that's a signal to add a real param instead.
+- `attrs` — raw HTML attribute pass-through for the wrapper div (`id`, `draggable`,
+  `data-*`). Caller must pre-escape any interpolated dynamic value (e.g. `{{ t.task_id | e
+  }}`) before building the string; the macro renders it via `|safe`.
+
+**`macros/facts.html` → `facts(items)`**
+
+Pure macro (no `{% call %}` slot) wrapping the `.facts`/`.fact` k/v-list classes. `items`
+is a list of `{'k': ..., 'v': ..., 'mono': False}` dicts. Only use this where every fact in
+a block is a plain text value — if any fact embeds markup (a link, an icon, a badge), leave
+that block hand-written; forcing embedded HTML through `facts()` would require an
+unescaped render path (`{{ item.v }}` goes through normal autoescaping on purpose).
+
+```jinja
+{% from "macros/facts.html" import facts %}
+{{ facts([{'k': 'ID', 'v': candidate.party_a, 'mono': true}]) }}
+```
+
+**`macros/card_header.html` → `card_header(title, edit_href=None)`**
+
+Pure macro extracted from a `row-between` + caption + "Sửa" edit-button pattern repeated
+verbatim across a template's sidebar cards. Omit `edit_href` for a title-only header (no
+button rendered, still wraps in the same `row-between` for visual consistency with headers
+that do have a button).
+
+```jinja
+{% from "macros/card_header.html" import card_header %}
+{{ card_header("Liên Lạc", edit_href="/modals/m15?party_id=" ~ party.party_id ~ "&tab=contacts") }}
+```
+
+### Badges (Phase 3 note)
+
+Status badges are NOT a macro — they're server-side, via `fmt_badge.py` → `badge_catalog.py`,
+exposed as Jinja filters: `{{ value | bdg_cls('domain') }}` / `{{ value | bdg_tip('domain') }}`.
+This predates the macro convention above and was already the correct pattern; Phase 3 only
+converged a few one-off pill classes that had drifted alongside it (`freshness-badge` → the
+plain `bdg` class) onto it. Not every pill is a status badge, though — a selectable control
+(`radio-pill`) or a raw count indicator (`aq-session-card__pill`) is a different concept and
+was deliberately left alone rather than forced through `bdg_cls`.
