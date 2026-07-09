@@ -2,6 +2,8 @@
    @source   crm/docs/ui-spec/screens/S04-dedup-review.md
    @kind     SCREEN #}
 {% extends "layout.html" %}
+{% from "macros/card.html" import card %}
+{% from "macros/facts.html" import facts %}
 {% block title %}Dedup Review{% endblock %}
 {% block active_screen %}S04{% endblock %}
 {% block content %}
@@ -12,24 +14,18 @@
     <div class="modal__body stack stack-3">
       <div class="caveat caveat--warn">Party B sẽ bị gộp vào Party A và không thể khôi phục.</div>
       <div class="dedup-compare">
-        <div class="dedup-card dedup-card--survive">
-          <span class="dedup-card__tag bdg bdg--accent">GIỮ LẠI</span>
-          <div class="facts">
-            <div class="fact"><span class="fact__k">Party A</span>
-              <span class="fact__v">{{ party_a.display_name if party_a else candidate.party_a }}</span></div>
-            <div class="fact"><span class="fact__k">ID</span>
-              <span class="fact__v mono">{{ candidate.party_a }}</span></div>
-          </div>
-        </div>
-        <div class="dedup-card">
-          <span class="dedup-card__tag bdg">GỘP VÀO</span>
-          <div class="facts">
-            <div class="fact"><span class="fact__k">Party B</span>
-              <span class="fact__v">{{ party_b.display_name if party_b else candidate.party_b }}</span></div>
-            <div class="fact"><span class="fact__k">ID</span>
-              <span class="fact__v mono">{{ candidate.party_b }}</span></div>
-          </div>
-        </div>
+        {% call card(variant='survive', tag='GIỮ LẠI', tag_variant='accent') %}
+          {{ facts([
+            {'k': 'Party A', 'v': party_a.display_name if party_a else candidate.party_a},
+            {'k': 'ID', 'v': candidate.party_a, 'mono': true},
+          ]) }}
+        {% endcall %}
+        {% call card(tag='GỘP VÀO') %}
+          {{ facts([
+            {'k': 'Party B', 'v': party_b.display_name if party_b else candidate.party_b},
+            {'k': 'ID', 'v': candidate.party_b, 'mono': true},
+          ]) }}
+        {% endcall %}
       </div>
       <label class="field field--inline">
         <input type="checkbox" name="confirm" value="1" required>
@@ -92,25 +88,23 @@
       {% for c in candidates %}
       <div id="detail-{{ c.candidate_id }}">
         <div class="dedup-compare">
-          <div class="dedup-card dedup-card--survive">
-            <span class="dedup-card__tag bdg bdg--accent">GIỮ LẠI</span>
-            <div class="facts">
-              <div class="fact"><span class="fact__k">Party A</span> <span class="fact__v">{{ party_names.get(c.party_a, c.party_a) }}</span></div>
-              <div class="fact"><span class="fact__k">ID</span> <span class="fact__v mono">{{ c.party_a }}</span></div>
-              <div class="fact"><span class="fact__k">Rule</span> <span class="fact__v mono">{{ c.match_rule }}</span></div>
-              <div class="fact"><span class="fact__k">Score</span> <span class="fact__v mono">{{ "%.2f" | format(c.match_score) }}</span></div>
-            </div>
+          {% call card(variant='survive', tag='GIỮ LẠI', tag_variant='accent') %}
+            {{ facts([
+              {'k': 'Party A', 'v': party_names.get(c.party_a, c.party_a)},
+              {'k': 'ID', 'v': c.party_a, 'mono': true},
+              {'k': 'Rule', 'v': c.match_rule, 'mono': true},
+              {'k': 'Score', 'v': "%.2f" | format(c.match_score), 'mono': true},
+            ]) }}
             <a href="/customers/{{ c.party_a }}" class="ghost-link">Xem hồ sơ {% include "icons/external.svg" %}</a>
-          </div>
-          <div class="dedup-card">
-            <span class="dedup-card__tag bdg">GỘP VÀO</span>
-            <div class="facts">
-              <div class="fact"><span class="fact__k">Party B</span> <span class="fact__v">{{ party_names.get(c.party_b, c.party_b) }}</span></div>
-              <div class="fact"><span class="fact__k">ID</span> <span class="fact__v mono">{{ c.party_b }}</span></div>
-              <div class="fact"><span class="fact__k">Thời gian</span> <span class="fact__v mono">{{ c.created_at | format_ict }}</span></div>
-            </div>
+          {% endcall %}
+          {% call card(tag='GỘP VÀO') %}
+            {{ facts([
+              {'k': 'Party B', 'v': party_names.get(c.party_b, c.party_b)},
+              {'k': 'ID', 'v': c.party_b, 'mono': true},
+              {'k': 'Thời gian', 'v': c.created_at | format_ict, 'mono': true},
+            ]) }}
             <a href="/customers/{{ c.party_b }}" class="ghost-link">Xem hồ sơ {% include "icons/external.svg" %}</a>
-          </div>
+          {% endcall %}
         </div>
         <div class="caveat caveat--rule">
           <span class="caveat__mark">{% include "icons/bolt.svg" %}</span>

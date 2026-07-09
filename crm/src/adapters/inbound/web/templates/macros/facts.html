@@ -1,0 +1,20 @@
+{# @surface DS · Facts k/v list | @kind MACRO
+   Usage: {% from "macros/facts.html" import facts %}
+          {{ facts([{'k': 'Party A', 'v': party_a.display_name},
+                    {'k': 'ID', 'v': candidate.party_a, 'mono': true}]) }}
+
+   items  list[dict]  each item: k (label), v (value), mono (bool, optional,
+                       renders value in monospace font - was "fact__v mono")
+
+   Pure macro (no {% call %} needed) - wraps the existing shared .facts/.fact/
+   .fact__k/.fact__v classes (ds-app.css:201-206), already used identically across
+   78 call sites in 6 templates before this macro existed.
+#}
+{% macro facts(items) %}
+<div class="facts">
+  {% for item in items %}
+  <div class="fact"><span class="fact__k">{{ item.k }}</span>
+    <span class="fact__v{% if item.mono %} mono{% endif %}">{{ item.v }}</span></div>
+  {% endfor %}
+</div>
+{% endmacro %}

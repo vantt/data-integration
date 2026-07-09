@@ -1,0 +1,23 @@
+{# @surface DS · Card shell | @kind MACRO
+   Usage: {% from "macros/card.html" import card %}
+          {% call card(eyebrow="Headline") %} ...body markup... {% endcall %}
+
+   eyebrow      str|None  small accent caption line above body (was scard__eyebrow)
+   tag          str|None  short pill label top of card (was dedup-card__tag text)
+   tag_variant  str       bdg modifier suffix for the tag, e.g. "accent" -> "bdg--accent"
+   variant      str       card state modifier, e.g. "survive" -> class "scard--survive"
+   extra_class  str       escape hatch for one-off spacing/layout needs; do not use to
+                          smuggle back a whole parallel class family - if you need this
+                          often for the same reason, that's a signal to add a real param
+
+   No type/kind param by design: this is a shell only, every caller inserts its own
+   content via {% call %}...{% endcall %}. See plans/260709-1034-card-badge-macro-consolidation
+   for the rationale (drift was in the outer wrapper, not the inner content).
+#}
+{% macro card(eyebrow=none, tag=none, tag_variant='', variant='', extra_class='') %}
+<div class="scard{% if variant %} scard--{{ variant }}{% endif %}{% if extra_class %} {{ extra_class }}{% endif %}">
+  {% if tag %}<span class="scard__tag bdg{% if tag_variant %} bdg--{{ tag_variant }}{% endif %}">{{ tag }}</span>{% endif %}
+  {% if eyebrow %}<div class="caption scard__eyebrow">{{ eyebrow }}</div>{% endif %}
+  {{ caller() }}
+</div>
+{% endmacro %}
