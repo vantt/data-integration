@@ -13,12 +13,27 @@ fixed via additive modifier classes (`.task-card`, `.note-item`) applied through
 sites). Apply the same "check for base-class side rules, not just visual ones" scrutiny to
 the remaining batch below.
 
-Remaining (batch 2, not started): `customer_360.html`, `order_detail.html`,
-`conversation_detail.html`, `fragments/c360_insight_panel.html` — meaningfully harder:
-`customer_360`/`order_detail` already use canonical `.scard` (no class rename needed) but
-carry heavy `facts()`/`card_header()` extraction opportunity (78 `.facts` usages across 6
-files per Phase 1 survey); `c360_insight_panel.html` has the `aq-session-card` checklist
-form which needs the same base-class-side-rule check as this batch.
+Batch 2 done: `customer_360.html` (`4bbba938`) + `order_detail.html` (`3a61d335`). Both
+already used canonical `.scard` (no class rename), so this batch centralized wrapper
+boilerplate + extracted 2 new sibling macros: `card_header(title, edit_href=None)` (row-
+between + caption + "Sửa" button, repeated 3x verbatim in customer_360) and reused
+`facts()` from Phase 1 wherever a card's facts are all simple text (no embedded markup).
+Extended `card()` with `eyebrow_accent` (accent-colored eyebrow, was inline
+`style="color:var(--accent)"` or a stray class in different places — now one param).
+2 blocks/cards deliberately left hand-written (documented in-template): customer_360's
+"Thông Tin Cơ Bản"/"Liên Lạc" (facts mixed with an embedded `<a><img></a>` deep-link —
+facts() can't express that without an unescaped render path) and order_detail's
+"Recipient link" card (an `<a>` element, not a `<div>` — card() only emits divs). Both
+templates verified live against the running server with real customer/order data.
+
+Remaining (batch 3, not started): `conversation_detail.html` (`scard` + `conv-cust-card` +
+`facts`), `fragments/c360_insight_panel.html` (`aq-card`/`aq-session-card`). Important
+open question before touching these: `.aq-card` (`ds-extra.css`) has a border-left accent
+stripe, asymmetric border-radius, and a real box-shadow — a deliberately distinct visual
+treatment, not just a differently-named `.scard`. Decide whether this is (a) a legitimate
+`card()` variant to add (e.g. `variant="flagged"`) or (b) a documented exception to leave
+alone, before doing any mechanical migration on it — don't force convergence on a
+component that may be intentionally different by design.
 
 
 ## Context
