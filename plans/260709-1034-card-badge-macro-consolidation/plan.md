@@ -25,6 +25,25 @@ suffix rendering bug in `format_datetime_ict` usage (unrelated to CSS/macro work
 incidentally); `order_context_tab.html`/`order_operations_tab.html`'s large `.facts` usage
 never got the `facts()` macro treatment (outside Phase 2's defined file list).
 
+**All of the above were subsequently closed out (2026-07-09), plus a retrospective audit
+("what's missing?") caught 5 more gaps, all now fixed:**
+1. Count-pill consolidation done (`3d0afd88`) — `.cpill` base + `--band`/`--ship`/`--session`
+   variants (a 4th, `--section`, was added later by a concurrent session — confirms the
+   convention is discoverable/extensible).
+2. ICT-duplication + underlying date-parse bug fixed (`9eb1ac19`), with a regression test.
+3. `facts()`/`card()` applied to `order_context_tab.html`/`order_operations_tab.html`
+   (`b6e91d0b`).
+4. Retrospective audit found and fixed: dead `.dedup-card*` CSS never removed (Phase 1
+   left it, Phase 2 never closed the loop) — removed. `count_pill()` was never added to
+   `DESIGN_SYSTEM.md` §11 despite being a 4th macro (and despite someone already
+   extending it with a new variant) — documented, along with `card()`'s `recipient`
+   variant. Zero test coverage for any of the 4 macros — added
+   `crm/src/tests/test_card_macros.py` (21 tests). `cpill--ship` had never been verified
+   against real data — confirmed live on a real 7-shipment order. No true browser-based
+   visual QA had been done across the 3 themes for ANY of this work (all prior
+   verification was HTML-structure/grep-based) — done via Puppeteer screenshots across
+   5 key screens × 3 themes; zero visual regressions found (`49f343a3`).
+
 ## Context
 Survey (2026-07-09) found the Precision design system already has a full token layer
 (`ds-precision.css`, 150+ vars) and a documented canonical class list
