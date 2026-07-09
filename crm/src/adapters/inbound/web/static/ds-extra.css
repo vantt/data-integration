@@ -410,14 +410,13 @@
 /* Top-level page Section (Đã Claim / Chưa Claim, 2026-07-09) — visually heavier
    than the urgency bands nested inside it, so a Section reads as a distinct tier
    from a Band at a glance instead of both looking like the same accordion row
-   repeated ("band chồng band"). Elevation scale: --bg-page (body) <
-   --wl-section (--bg-raised, heavier) < .wl-band (--bg-surface, lighter) —
-   Section sits ABOVE its own bands in visual weight even though --bg-raised is
-   literally one step darker, because larger type + bold + border communicate
-   "container of containers". */
+   repeated ("band chồng band"). No fill of its own — border + the header's own
+   background are enough to read as a container; a solid fill behind the whole
+   section (including the body, where .wl-band/.wl-list already have their own
+   backgrounds) read as an extra unwanted white panel. */
 .wl-section {
   border: 1px solid var(--border-strong); border-radius: var(--radii-control);
-  overflow: hidden; background: var(--bg-surface); margin-bottom: var(--sp-4);
+  overflow: hidden; margin-bottom: var(--sp-4);
 }
 .wl-section__header {
   display: flex; align-items: center; gap: var(--sp-3);
