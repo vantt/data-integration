@@ -136,7 +136,7 @@
           📥 Hàng Đợi Chung
           {{ count_pill(unassigned_tasks | length, "band") }}
         </div>
-        <div class="wl-list wl-subsection__box">
+        <div class="wl-list">
           {% for row in unassigned_tasks %}
           {{ wl_row(row, party_extras, is_unassigned=true, current_user_id=current_user_id | default('')) }}
           {% endfor %}
