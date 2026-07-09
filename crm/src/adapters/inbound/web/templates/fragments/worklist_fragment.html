@@ -94,6 +94,36 @@
   </details>
   {% endif %}
 
+  {# ── Đã Claim — work claimed from Cơ Hội Hệ Thống, still in progress.
+     Own section so a claimed row is never visually confused with a still-
+     unclaimed opportunity (the title format "Gọi X · N hành động" mirrors
+     action-item vocabulary closely enough that this distinction matters).
+     Placed before Cơ Hội Hệ Thống — work already claimed is more directly
+     actionable than new opportunities still to be decided on. Collapsible
+     (collapsed by default, like Hàng Đợi Chung) instead of a full tab —
+     tabbing would hide the "just claimed → moved here" feedback right
+     after clicking Nhận việc, since the item would land in a hidden tab
+     instead of the same scroll. Bands 0/1/2/3 only (band 4 "Đã liên hệ"
+     stays mixed-source in my_task_bands below, untouched).
+     show_overflow=false — same band-id collision reasoning as my_task_bands
+     below. ── #}
+  {% set claimed_task_bands = claimed_task_bands | default([]) %}
+  {% set claimed_task_count = claimed_task_count | default(0) %}
+  {% if claimed_task_count > 0 %}
+  <details class="wl-band" style="margin-bottom:var(--sp-2)">
+    <summary class="wl-band__header" style="background:var(--bg-secondary)">
+      <span class="wl-band__icon" aria-hidden="true">🙋</span>
+      <span class="wl-band__label">Đã Claim</span>
+      <span class="wl-band__count">{{ claimed_task_count }}</span>
+      <span class="wl-band__chevron" aria-hidden="true"></span>
+    </summary>
+    {% set bands = claimed_task_bands %}
+    {% set empty_state_id = 'wl-empty-state-claimed' %}
+    {% set show_overflow = false %}
+    {% include "fragments/_wl_bands.html" %}
+  </details>
+  {% endif %}
+
   {# ── Cơ Hội Hệ Thống — action-queue items no one has claimed yet.
      Row UI unchanged (still the plain action-row wl_row branch); only the
      RENDER LOCATION moved out of the urgency-banded area so an unclaimed
@@ -101,40 +131,23 @@
      _wl_bands.html verbatim (band ids 1/2/3 keep their existing
      Khẩn-open/Trong hạn-open/Treo lâu-collapsed defaults and VIP/GOLD
      auto-expand — no new sub-grouping decision needed) and the existing
-     `/worklist/band/{id}/more` overflow route (already actions-only). ── #}
+     `/worklist/band/{id}/more` overflow route (already actions-only).
+     Collapsible, collapsed by default — same reasoning as Đã Claim above. ── #}
   {% set queue_action_bands = queue_action_bands | default([]) %}
   {% set queue_action_count = queue_action_count | default(0) %}
   {% if queue_action_count > 0 %}
-  <div style="margin-bottom:var(--sp-3)">
-    <div class="wl-band__label" style="font-size:15px;margin-bottom:var(--sp-2)">
-      🎯 Cơ Hội Hệ Thống <span class="wl-band__count">{{ queue_action_count }}</span>
-    </div>
+  <details class="wl-band" style="margin-bottom:var(--sp-2)">
+    <summary class="wl-band__header" style="background:var(--bg-secondary)">
+      <span class="wl-band__icon" aria-hidden="true">🎯</span>
+      <span class="wl-band__label">Cơ Hội Hệ Thống</span>
+      <span class="wl-band__count">{{ queue_action_count }}</span>
+      <span class="wl-band__chevron" aria-hidden="true"></span>
+    </summary>
     {% set bands = queue_action_bands %}
     {% set empty_state_id = 'wl-empty-state-queue' %}
     {% set show_overflow = true %}
     {% include "fragments/_wl_bands.html" %}
-  </div>
-  {% endif %}
-
-  {# ── Đã Claim — work claimed from Cơ Hội Hệ Thống, still in progress.
-     Own section so a claimed row is never visually confused with a still-
-     unclaimed opportunity (the title format "Gọi X · N hành động" mirrors
-     action-item vocabulary closely enough that this distinction matters).
-     Bands 0/1/2/3 only (band 4 "Đã liên hệ" stays mixed-source in
-     my_task_bands below, untouched). show_overflow=false — same band-id
-     collision reasoning as my_task_bands below. ── #}
-  {% set claimed_task_bands = claimed_task_bands | default([]) %}
-  {% set claimed_task_count = claimed_task_count | default(0) %}
-  {% if claimed_task_count > 0 %}
-  <div style="margin-bottom:var(--sp-3)">
-    <div class="wl-band__label" style="font-size:15px;margin-bottom:var(--sp-2)">
-      🙋 Đã Claim <span class="wl-band__count">{{ claimed_task_count }}</span>
-    </div>
-    {% set bands = claimed_task_bands %}
-    {% set empty_state_id = 'wl-empty-state-claimed' %}
-    {% set show_overflow = false %}
-    {% include "fragments/_wl_bands.html" %}
-  </div>
+  </details>
   {% endif %}
 
   {# ── Banded rows (urgency bands rendered via the wl_row macro) —

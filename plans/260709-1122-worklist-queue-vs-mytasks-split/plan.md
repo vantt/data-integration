@@ -93,8 +93,22 @@ urgency, để band urgency chỉ còn chứa task đã có chủ (manual-assign
   `test_band3_vip_count_preserved_in_queue_action_bands` test — reinforces why that regression
   test was worth writing in the first place.
 - The inline badge from `a3f746b0` was removed as part of this follow-up (not a separate
-  revert commit — folded into the new commit below, which is the correct final state). 936
-  tests passing, live-verified.
+  revert commit — folded into the new commit below, which is the correct final state).
+  Committed as `8276b209`. 936 tests passing, live-verified.
+
+## Follow-up 2 (2026-07-09, same day) — collapsible sections, reorder
+
+- User asked whether Cơ Hội Hệ Thống / Đã Claim should become tabs for easier use.
+  Recommendation given (and accepted): no full tab — a real tab would hide the "just
+  claimed → moved to Đã Claim" feedback the instant a rep clicks Nhận việc (item lands in a
+  hidden tab instead of the same scroll), which mirrors the earlier decision against a
+  full-page tab split. Went with the cheaper alternative instead: made both sections
+  collapsible `<details>` (collapsed by default, same pattern already used for Hàng Đợi
+  Chung) — page starts compact, expand only what's needed.
+- Reordered: Đã Claim now renders before Cơ Hội Hệ Thống (work already claimed is more
+  directly actionable than new opportunities still to be decided on).
+- 937 tests passing, live-verified (collapsed-by-default + order confirmed against the
+  running container).
 
 ## Key files
 

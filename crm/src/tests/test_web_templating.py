@@ -561,8 +561,19 @@ class TestClaimedTaskSection:
 
     def test_shows_da_claim_header_with_count(self):
         html = _render_fragment(self._ctx_with_claimed_task())
-        assert "🙋 Đã Claim" in html
+        assert ">Đã Claim<" in html
         assert "t-claim" in html
+
+    def test_da_claim_header_collapsed_by_default(self):
+        """Collapsible <details> for the section header — collapsed by default so the
+        page starts compact; NOT a full tab (see worklist_fragment.html comment for why
+        tabs would break the claim → moved-here feedback loop)."""
+        html = _render_fragment(self._ctx_with_claimed_task())
+        import re
+        m = re.search(r'<details class="wl-band"[^>]*>.*?>Đã Claim<', html, re.DOTALL)
+        assert m is not None, "Đã Claim details block not found"
+        opening_tag = m.group(0).split(">")[0]
+        assert "open" not in opening_tag, f"Đã Claim should be collapsed by default: {opening_tag!r}"
 
     def test_no_da_claim_header_when_no_claimed_tasks(self):
         from datetime import date
