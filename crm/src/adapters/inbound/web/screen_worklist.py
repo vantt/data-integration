@@ -254,12 +254,13 @@ def make_worklist_router(
         # ALWAYS re-ranks actions-only (rank_worklist(actions, [], ...)) keyed by
         # band id — correct for queue_action_bands (ids 1/2/3 are action-only
         # there by construction) but NOT kind-aware, so it must never be wired to
-        # my_task_bands: bands 1/2 exist in both band-dict lists, and reusing that
-        # route for the task side would inject action rows into "owned work"
-        # (exactly the kind-mixing this split exists to prevent). Until the route
-        # is made kind-aware, my_task_bands renders uncapped/eager instead of
-        # lazy-paginated — task-per-band volume is expected to stay small (a
-        # rep's own open tasks), so this is a safe trade, not a silent drop.
+        # my_task_bands or claimed_task_bands: bands 0/1/2 exist in all three
+        # band-dict lists, and reusing that route for the task side would inject
+        # action rows into "owned work" (exactly the kind-mixing this split exists
+        # to prevent). Until the route is made kind-aware, both task-side band
+        # lists render uncapped/eager instead of lazy-paginated — task-per-band
+        # volume is expected to stay small (a rep's own open/claimed tasks), so
+        # this is a safe trade, not a silent drop.
         def _cap_rows(bands: list) -> None:
             for band in bands:
                 cap = band["display_capacity"]
@@ -271,6 +272,8 @@ def make_worklist_router(
             **ranked,
             "queue_action_bands": view["queue_action_bands"],
             "queue_action_count": view["queue_action_count"],
+            "claimed_task_bands": view["claimed_task_bands"],
+            "claimed_task_count": view["claimed_task_count"],
             "my_task_bands": view["my_task_bands"],
             "party_extras": party_extras,
             "refreshed_at": refreshed_at,

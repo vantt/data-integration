@@ -70,8 +70,31 @@ urgency, để band urgency chỉ còn chứa task đã có chủ (manual-assign
   section reuses the existing band metadata unchanged (open question #1 below) — each section
   has its own top-level heading, so this reads as "which sub-tier within this section" rather
   than reintroducing kind-ambiguity. Revisit if it proves confusing in practice.
-- Not committed — awaiting user decision on commit split (hash-fix vs redesign as separate
-  commits) and confirmation of the shared-label tradeoff above.
+- Committed as 2 commits per user decision: `1c90e448` (hash-fix, isolated by hand-trimming
+  git diffs — nothing had been committed yet, so partial-hunk staging via `git apply`/selective
+  `git add` was safe) and `c4e5fdff` (the queue/my-tasks split + overflow-collision fix).
+  Shared-label tradeoff confirmed acceptable by user, kept as-is.
+
+## Follow-up (2026-07-09, same day) — Đã Claim section
+
+- User asked for a distinct "Đã Claim" grouping (initially requested as an inline row label,
+  then changed to "a section header before the claimed bands" instead — inline label reverted,
+  never shipped).
+- Added `claimed_task_bands`/`claimed_task_count` to `split_worklist_view()`: bands 0/1/2/3
+  further partitioned by `payload.source == 'action_queue_claim'` (claimed) vs not (manual).
+  `my_task_bands`'s bands 0/1/2/3 now manual-only; band 4 stays mixed-source untouched (out of
+  scope, documented in the ui-spec doc). New 4th page section "🙋 Đã Claim", same
+  `show_overflow=false` treatment as `my_task_bands` (shares band ids 0/1/2 with it and with
+  `queue_action_bands` — same overflow-route collision risk applies).
+- Regression caught during implementation (not by an external reviewer this time): the shared
+  `_rebuild_band()` helper introduced for this refactor zeroed `vip_count` unconditionally,
+  breaking `queue_action_bands`' VIP/GOLD signal (band 3 only, must be preserved there). Fixed
+  with a `zero_vip` parameter, caught immediately by the existing
+  `test_band3_vip_count_preserved_in_queue_action_bands` test — reinforces why that regression
+  test was worth writing in the first place.
+- The inline badge from `a3f746b0` was removed as part of this follow-up (not a separate
+  revert commit — folded into the new commit below, which is the correct final state). 936
+  tests passing, live-verified.
 
 ## Key files
 

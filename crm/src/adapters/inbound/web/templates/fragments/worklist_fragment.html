@@ -116,11 +116,33 @@
   </div>
   {% endif %}
 
+  {# ── Đã Claim — work claimed from Cơ Hội Hệ Thống, still in progress.
+     Own section so a claimed row is never visually confused with a still-
+     unclaimed opportunity (the title format "Gọi X · N hành động" mirrors
+     action-item vocabulary closely enough that this distinction matters).
+     Bands 0/1/2/3 only (band 4 "Đã liên hệ" stays mixed-source in
+     my_task_bands below, untouched). show_overflow=false — same band-id
+     collision reasoning as my_task_bands below. ── #}
+  {% set claimed_task_bands = claimed_task_bands | default([]) %}
+  {% set claimed_task_count = claimed_task_count | default(0) %}
+  {% if claimed_task_count > 0 %}
+  <div style="margin-bottom:var(--sp-3)">
+    <div class="wl-band__label" style="font-size:15px;margin-bottom:var(--sp-2)">
+      🙋 Đã Claim <span class="wl-band__count">{{ claimed_task_count }}</span>
+    </div>
+    {% set bands = claimed_task_bands %}
+    {% set empty_state_id = 'wl-empty-state-claimed' %}
+    {% set show_overflow = false %}
+    {% include "fragments/_wl_bands.html" %}
+  </div>
+  {% endif %}
+
   {# ── Banded rows (urgency bands rendered via the wl_row macro) —
-     my_task_bands: owned work only (manual-assigned + claimed). Band 4
-     ("Đã liên hệ") stays mixed-kind by design, first, collapsed.
+     my_task_bands: manual-assigned tasks only now (claimed tasks moved to
+     the Đã Claim section above). Band 4 ("Đã liên hệ") stays mixed-kind
+     AND mixed-source by design, first, collapsed.
      show_overflow=false: rows are uncapped/eager here, NOT lazy-paginated —
-     see the comment in screen_worklist.py on why band ids 1/2 can't safely
+     see the comment in screen_worklist.py on why band ids 0/1/2 can't safely
      share the actions-only /worklist/band/{id}/more route with the queue
      section above. ── #}
   {% set bands = my_task_bands | default([]) %}

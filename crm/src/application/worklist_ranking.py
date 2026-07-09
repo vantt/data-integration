@@ -326,28 +326,49 @@ def rank_worklist(
 # Presentation split: queue (unclaimed opportunities) vs my tasks (owned work)
 # ---------------------------------------------------------------------------
 
+def _rebuild_band(band: dict, rows: list, zero_vip: bool = True) -> dict:
+    """Copy a band dict with `rows` replaced and count/total_value recomputed
+    to match. vip_count (item-3 VIP/GOLD auto-expand, band-3-action-only
+    signal) is zeroed by default for task-only rebuilds where it never
+    applies — pass zero_vip=False to preserve it (queue_action_bands, where
+    it's the whole point of the signal).
+    """
+    rebuilt = dict(band)
+    rebuilt["rows"] = rows
+    rebuilt["count"] = len(rows)
+    rebuilt["total_value"] = sum(r.value for r in rows)
+    if zero_vip:
+        rebuilt["vip_count"] = 0
+    return rebuilt
+
+
 def split_worklist_view(ranked: dict) -> dict:
-    """Regroup rank_worklist()'s bands into a queue/my-tasks presentation split.
+    """Regroup rank_worklist()'s bands into 3 presentation sections, keeping
+    each band's existing label/icon/display_capacity/is_expanded/vip_count
+    metadata intact so all 3 render through the same `_wl_bands.html` partial
+    with no changes to that partial. Does not re-derive urgency/band/sort.
 
-    Does not re-derive urgency/band/sort — purely partitions rows already
-    computed by rank_worklist() by `kind`, keeping each band's existing
-    label/icon/display_capacity/is_expanded/vip_count metadata intact. This
-    lets both halves render through the same `_wl_bands.html` partial (and
-    the existing `/worklist/band/{id}/more` overflow route, which already
-    re-ranks actions-only and looks rows up by band id) with no template
-    changes to that partial.
-
-    - queue_action_bands: bands 1/2/3, rows filtered to kind=='action'.
-      Band 0 has no action-queue entry (assign_band() never routes an
-      action there — only overdue tasks land in band 0).
-    - my_task_bands: bands 4/0/1/2/3, rows filtered to kind=='task', EXCEPT
-      band 4 ("Đã liên hệ") which is passed through unfiltered (mixed kind
-      by design — an action's contacted-party routing already happened
-      inside rank_worklist(), so it's excluded from queue_action_bands by
-      construction and must still be visible somewhere).
+    - queue_action_bands: bands 1/2/3, rows filtered to kind=='action' — not
+      yet claimed, not recently contacted. Band 0 has no entry here
+      (assign_band() never routes an action there — only overdue tasks land
+      in band 0). Reuses the existing `/worklist/band/{id}/more` overflow
+      route unmodified (it already re-ranks actions-only by band id).
+    - claimed_task_bands: bands 0/1/2/3, rows filtered to
+      kind=='task' and payload.source=='action_queue_claim' — work claimed
+      from the queue, still in progress. Rendered as its own section
+      ("Đã Claim") before the plain-task bands so a claimed row is never
+      visually confused with a still-unclaimed opportunity.
+    - my_task_bands: bands 4/0/1/2/3 — band 4 ("Đã liên hệ") passed through
+      UNFILTERED (mixed kind + mixed source by design: an action's or a
+      claimed task's contacted-party routing already happened inside
+      rank_worklist(), so it's excluded from the other two sections by
+      construction and must still be visible somewhere). Bands 0/1/2/3 are
+      filtered to kind=='task' and NOT source=='action_queue_claim' (i.e.
+      manual tasks only — claimed tasks moved to claimed_task_bands above).
     """
     my_task_bands = []
     queue_action_bands = []
+    claimed_task_bands = []
 
     for band in ranked["bands"]:
         if band["id"] == 4:
@@ -355,25 +376,22 @@ def split_worklist_view(ranked: dict) -> dict:
             continue
 
         task_rows = [r for r in band["rows"] if r.kind == "task"]
-        task_band = dict(band)
-        task_band["rows"] = task_rows
-        task_band["count"] = len(task_rows)
-        task_band["total_value"] = sum(r.value for r in task_rows)
-        task_band["vip_count"] = 0
-        my_task_bands.append(task_band)
+        claimed_rows = [r for r in task_rows if getattr(r.payload, "source", "") == "action_queue_claim"]
+        manual_rows = [r for r in task_rows if getattr(r.payload, "source", "") != "action_queue_claim"]
+
+        my_task_bands.append(_rebuild_band(band, manual_rows))
+        claimed_task_bands.append(_rebuild_band(band, claimed_rows))
 
         if band["id"] == 0:
             continue  # Band 0 (Quá hạn) is task-only — no action-queue entry
 
         action_rows = [r for r in band["rows"] if r.kind == "action"]
-        action_band = dict(band)
-        action_band["rows"] = action_rows
-        action_band["count"] = len(action_rows)
-        action_band["total_value"] = sum(r.value for r in action_rows)
-        queue_action_bands.append(action_band)
+        queue_action_bands.append(_rebuild_band(band, action_rows, zero_vip=False))
 
     return {
         "queue_action_bands": queue_action_bands,
         "queue_action_count": sum(b["count"] for b in queue_action_bands),
+        "claimed_task_bands": claimed_task_bands,
+        "claimed_task_count": sum(b["count"] for b in claimed_task_bands),
         "my_task_bands": my_task_bands,
     }

@@ -157,6 +157,8 @@ def _base_ctx(**overrides) -> dict:
         "bands": [],
         "queue_action_bands": [],
         "queue_action_count": 0,
+        "claimed_task_bands": [],
+        "claimed_task_count": 0,
         "my_task_bands": [],
         "value_total": 0,
         "counts": {"actions": 0, "tasks": 0, "total": 0},
@@ -182,6 +184,8 @@ def _base_ctx(**overrides) -> dict:
         split = split_worklist_view({"bands": ctx["bands"]})
         ctx["queue_action_bands"] = split["queue_action_bands"]
         ctx["queue_action_count"] = split["queue_action_count"]
+        ctx["claimed_task_bands"] = split["claimed_task_bands"]
+        ctx["claimed_task_count"] = split["claimed_task_count"]
         ctx["my_task_bands"] = split["my_task_bands"]
     return ctx
 
@@ -509,16 +513,6 @@ class TestTaskRowLabelClarity:
         assert f">{self._PARTY_ID}</a>" not in html
         assert "(chưa xác định)" in html
 
-    def test_claimed_task_shows_da_claim_badge(self):
-        """Claimed-from-queue tasks get an explicit 'Đã Claim' marker — the title format
-        ("Gọi X · N hành động") otherwise mirrors action-item vocabulary too closely."""
-        html = self._render_task_row(source="action_queue_claim")
-        assert ">Đã Claim<" in html
-
-    def test_manual_task_does_not_show_da_claim_badge(self):
-        html = self._render_task_row(source="manual")
-        assert ">Đã Claim<" not in html
-
 
 class TestUnassignedQueueRowRedesign:
     """Hàng Đợi Chung rows render through wl_row() (priority pill, description,
@@ -552,6 +546,36 @@ class TestUnassignedQueueRowRedesign:
         assert "Trả việc" not in html
         assert "Dời hạn" not in html
         assert ">Hủy<" not in html
+
+
+class TestClaimedTaskSection:
+    """Claimed tasks (source='action_queue_claim') render under their own
+    '🙋 Đã Claim' header, not mixed into the plain urgency-band area."""
+
+    def _ctx_with_claimed_task(self, **task_overrides) -> dict:
+        from datetime import date
+        t = _task("t-claim", priority=2, due_at=str(_TODAY_STR),
+                  source="action_queue_claim", **task_overrides)
+        result = rank_worklist([], [t], today=date(2026, 6, 23))
+        return _base_ctx(**result, party_extras={})
+
+    def test_shows_da_claim_header_with_count(self):
+        html = _render_fragment(self._ctx_with_claimed_task())
+        assert "🙋 Đã Claim" in html
+        assert "t-claim" in html
+
+    def test_no_da_claim_header_when_no_claimed_tasks(self):
+        from datetime import date
+        t = _task("t-manual", priority=2, due_at=str(_TODAY_STR), source="manual")
+        result = rank_worklist([], [t], today=date(2026, 6, 23))
+        html = _render_fragment(_base_ctx(**result, party_extras={}))
+        assert "Đã Claim" not in html
+
+    def test_claimed_task_not_duplicated_in_plain_urgency_area(self):
+        """The claimed row must render exactly once — under Đã Claim, not also
+        under the generic urgency bands below it."""
+        html = _render_fragment(self._ctx_with_claimed_task())
+        assert html.count('id="task-t-claim"') == 1
 
 
 # ── Band collapse/expand and overflow ("Xem thêm") ──────────────────────────
