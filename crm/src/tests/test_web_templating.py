@@ -567,7 +567,7 @@ class TestChuaClaimWrapper:
         primary content, not secondary reference material."""
         import re
         html = _render_fragment(self._ctx_with_both())
-        m = re.search(r'<details class="wl-band"[^>]*>.*?>Chưa Claim<', html, re.DOTALL)
+        m = re.search(r'<details class="wl-section"[^>]*>.*?>Chưa Claim<', html, re.DOTALL)
         assert m is not None, "Chưa Claim details block not found"
         opening_tag = m.group(0).split(">")[0]
         assert "open" in opening_tag, f"Chưa Claim should be expanded by default: {opening_tag!r}"
@@ -576,7 +576,7 @@ class TestChuaClaimWrapper:
         import re
         html = _render_fragment(self._ctx_with_both())
         # 1 action + 1 unassigned task = 2, shown in Chưa Claim's own count pill
-        m = re.search(r'>Chưa Claim<.*?cpill--band">(\d+)<', html, re.DOTALL)
+        m = re.search(r'>Chưa Claim<.*?cpill--section">(\d+)<', html, re.DOTALL)
         assert m is not None, "Chưa Claim count pill not found"
         assert m.group(1) == "2"
 
@@ -616,7 +616,7 @@ class TestClaimedTaskSection:
         tabs would break the claim → moved-here feedback loop)."""
         html = _render_fragment(self._ctx_with_task(source="action_queue_claim"))
         import re
-        m = re.search(r'<details class="wl-band"[^>]*>.*?>Đã Claim<', html, re.DOTALL)
+        m = re.search(r'<details class="wl-section"[^>]*>.*?>Đã Claim<', html, re.DOTALL)
         assert m is not None, "Đã Claim details block not found"
         opening_tag = m.group(0).split(">")[0]
         assert "open" not in opening_tag, f"Đã Claim should be collapsed by default: {opening_tag!r}"

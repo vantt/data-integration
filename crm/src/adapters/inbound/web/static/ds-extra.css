@@ -410,6 +410,50 @@
 }
 .wl-band[open] .wl-band__chevron { transform: rotate(-135deg); }
 
+/* Top-level page Section (Đã Claim / Chưa Claim, 2026-07-09) — visually heavier
+   than the urgency bands nested inside it, so a Section reads as a distinct tier
+   from a Band at a glance instead of both looking like the same accordion row
+   repeated ("band chồng band"). Elevation scale: --bg-page (body) <
+   --wl-section (--bg-raised, heavier) < .wl-band (--bg-surface, lighter) —
+   Section sits ABOVE its own bands in visual weight even though --bg-raised is
+   literally one step darker, because larger type + bold + border communicate
+   "container of containers". */
+.wl-section { border: 1px solid var(--border-strong); border-radius: var(--radii-control); overflow: hidden; background: var(--bg-surface); margin-bottom: var(--sp-4); }
+.wl-section__header {
+  display: flex; align-items: center; gap: var(--sp-3);
+  padding: var(--sp-4) var(--sp-5);
+  cursor: pointer;
+  font-size: 16px; font-weight: var(--fw-semi); color: var(--fg);
+  user-select: none; list-style: none;
+  background: var(--bg-raised);
+  transition: background var(--dur-fast) var(--ease-fast);
+}
+.wl-section__header::-webkit-details-marker { display: none; }
+.wl-section__header:hover { background: color-mix(in srgb, var(--bg-raised) 80%, var(--fg) 5%); }
+.wl-section[open] > .wl-section__header { border-bottom: 1px solid var(--border); }
+.wl-section__icon { font-size: 19px; flex: none; }
+.wl-section__label { flex: 1; }
+.wl-section__chevron {
+  width: 14px; height: 14px; flex: none; margin-left: var(--sp-1);
+  border-right: 2px solid var(--fg-tertiary); border-bottom: 2px solid var(--fg-tertiary);
+  transform: rotate(45deg); transition: transform var(--dur-fast) var(--ease-fast);
+}
+.wl-section[open] .wl-section__chevron { transform: rotate(-135deg); }
+.wl-section__body { padding: var(--sp-4); }
+.cpill--section { font-size: 12px; padding: 2px 8px; color: var(--fg); border-color: var(--border-strong); }
+
+/* Sub-group heading inside Chưa Claim (Hàng Đợi Chung / Cơ Hội Hệ Thống) — a
+   plain labeled divider, not a box: sits between Section and Band in weight so
+   it doesn't compete with either tier. */
+.wl-subsection + .wl-subsection { margin-top: var(--sp-5); }
+.wl-subsection__label {
+  display: flex; align-items: center; gap: var(--sp-2);
+  font-size: 12px; font-weight: var(--fw-medium); color: var(--fg-tertiary);
+  text-transform: uppercase; letter-spacing: var(--tracking-eyebrow);
+  padding-bottom: var(--sp-2); margin-bottom: var(--sp-3);
+  border-bottom: 1px dashed var(--border);
+}
+
 /* Row list inside an open band — inherits wl-row styles */
 .wl-list--b0 .wl-row,
 .wl-list--b1 .wl-row { border-left: 3px solid color-mix(in srgb, var(--coral-500) 45%, transparent); }

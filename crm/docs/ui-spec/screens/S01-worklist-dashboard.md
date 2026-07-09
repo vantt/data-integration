@@ -168,6 +168,14 @@ provenance (action vs task) — provenance only matters as a sub-grouping label 
 unclaimed section, where two different claim mechanisms ("Nhận việc" vs "Nhận") would
 otherwise be visually ambiguous.
 
+**CSS hierarchy (3 tiers)**: `.wl-section`/`.wl-section__*` (Đã Claim / Chưa Claim —
+`--fw-semi`, `--bg-raised` header, `--border-strong` border) > `.wl-subsection`/
+`.wl-subsection__label` (Hàng Đợi Chung / Cơ Hội Hệ Thống — uppercase eyebrow label, dashed
+underline, no box) > `.wl-band`/`.wl-band__*` (the urgency bands — unchanged from the
+original design). Tabs were considered for the 2 top-level sections and declined (see
+plan.md Follow-up 5) — a real tab would either lose the "just claimed" feedback or require
+an in-place optimistic-update pattern not worth the added complexity right now.
+
 ## States
 
 - ST-WORKLIST-EMPTY: Không có task hoặc action nào → empty state + CTA browse customers

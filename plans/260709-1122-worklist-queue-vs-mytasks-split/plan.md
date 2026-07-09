@@ -157,6 +157,30 @@ urgency, để band urgency chỉ còn chứa task đã có chủ (manual-assign
   count). Live-verified against the restarted container (order, expand/collapse defaults
   confirmed via direct HTTP fetch).
 
+## Follow-up 5 (2026-07-09, same day) — tabs considered and declined; visual hierarchy fixed
+
+- User floated converting Đã Claim/Chưa Claim into real tabs, with claimed items staying
+  rendered in place (not disappearing) until a manual refresh re-sorts them. Recommendation
+  given: solves the original tab objection (lost feedback), but trades it for a different
+  cost — the claimed row sits in the wrong tab until refresh, confusing unless paired with
+  an explicit "Đã claim ✓" in-place state; also meaningfully more work (real tab component
+  instead of `<details>`, partial-row HTMX swap instead of full-container reload, and the
+  claim action affects multiple rows per customer, not just the one clicked). Declined by
+  the user in favor of keeping `<details>`.
+- Real issue named instead: both top-level sections reused the exact same `.wl-band` /
+  `.wl-band__header` CSS as the urgency bands nested inside them — "band chồng band" (bands
+  stacked on bands), no visual hierarchy between "this is a Section" and "this is a Band".
+  Root cause found along the way: the section headers' `background:var(--bg-secondary)`
+  inline style was a silent no-op — that CSS variable is never defined anywhere in the
+  codebase, so the intended distinguishing background never actually applied.
+- Fix: new `.wl-section`/`.wl-section__*` classes (bigger type, `--fw-semi`, `--bg-raised`
+  header background, `--border-strong`) for the 2 top-level sections, and `.wl-subsection`/
+  `.wl-subsection__label` (uppercase eyebrow style, dashed underline, no box) for the Hàng
+  Đợi Chung / Cơ Hội Hệ Thống sub-groups inside Chưa Claim — a real 3-tier hierarchy now:
+  Section > Sub-section > Band. Added `.cpill--section` count-pill variant to match.
+- 948 tests still passing (updated regexes that matched on the old shared `wl-band` class
+  for section-level assertions). Live-verified class names render correctly post-restart.
+
 ## Key files
 
 - `crm/src/application/worklist_ranking.py` — add split helper, no change to `rank_worklist`

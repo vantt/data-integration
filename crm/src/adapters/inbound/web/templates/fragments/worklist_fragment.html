@@ -89,17 +89,19 @@
   {% set claimed_bands = claimed_bands | default([]) %}
   {% set claimed_count = claimed_count | default(0) %}
   {% if claimed_count > 0 %}
-  <details class="wl-band" style="margin-bottom:var(--sp-2)">
-    <summary class="wl-band__header" style="background:var(--bg-secondary)">
-      <span class="wl-band__icon" aria-hidden="true">🙋</span>
-      <span class="wl-band__label">Đã Claim</span>
-      {{ count_pill(claimed_count, "band") }}
-      <span class="wl-band__chevron" aria-hidden="true"></span>
+  <details class="wl-section">
+    <summary class="wl-section__header">
+      <span class="wl-section__icon" aria-hidden="true">🙋</span>
+      <span class="wl-section__label">Đã Claim</span>
+      {{ count_pill(claimed_count, "section") }}
+      <span class="wl-section__chevron" aria-hidden="true"></span>
     </summary>
-    {% set bands = claimed_bands %}
-    {% set empty_state_id = 'wl-empty-state-claimed' %}
-    {% set show_overflow = false %}
-    {% include "fragments/_wl_bands.html" %}
+    <div class="wl-section__body">
+      {% set bands = claimed_bands %}
+      {% set empty_state_id = 'wl-empty-state-claimed' %}
+      {% set show_overflow = false %}
+      {% include "fragments/_wl_bands.html" %}
+    </div>
   </details>
   {% endif %}
 
@@ -114,53 +116,55 @@
   {% set queue_action_count = queue_action_count | default(0) %}
   {% set chua_claim_count = (unassigned_tasks | length) + queue_action_count %}
   {% if chua_claim_count > 0 %}
-  <details class="wl-band" open style="margin-bottom:var(--sp-2)">
-    <summary class="wl-band__header" style="background:var(--bg-secondary)">
-      <span class="wl-band__icon" aria-hidden="true">🎯</span>
-      <span class="wl-band__label">Chưa Claim</span>
-      {{ count_pill(chua_claim_count, "band") }}
-      <span class="wl-band__chevron" aria-hidden="true"></span>
+  <details class="wl-section" open>
+    <summary class="wl-section__header">
+      <span class="wl-section__icon" aria-hidden="true">🎯</span>
+      <span class="wl-section__label">Chưa Claim</span>
+      {{ count_pill(chua_claim_count, "section") }}
+      <span class="wl-section__chevron" aria-hidden="true"></span>
     </summary>
+    <div class="wl-section__body">
 
-    {# ── Hàng Đợi Chung — unassigned custom tasks, visible to the whole
-       team. Renders through the same wl_row() macro/markup as every other
-       task row (priority pill, description, due date, contact-pref notes)
-       — only the aside CTA differs (is_unassigned=true → single "Nhận"
-       button). ── #}
-    {% if unassigned_tasks %}
-    <div style="margin:var(--sp-3) 0">
-      <div class="wl-band__label" style="font-size:14px;margin-bottom:var(--sp-2)">
-        📥 Hàng Đợi Chung
-        {{ count_pill(unassigned_tasks | length, "band") }}
+      {# ── Hàng Đợi Chung — unassigned custom tasks, visible to the whole
+         team. Renders through the same wl_row() macro/markup as every other
+         task row (priority pill, description, due date, contact-pref notes)
+         — only the aside CTA differs (is_unassigned=true → single "Nhận"
+         button). ── #}
+      {% if unassigned_tasks %}
+      <div class="wl-subsection">
+        <div class="wl-subsection__label">
+          📥 Hàng Đợi Chung
+          {{ count_pill(unassigned_tasks | length, "band") }}
+        </div>
+        <div class="wl-list">
+          {% for row in unassigned_tasks %}
+          {{ wl_row(row, party_extras, is_unassigned=true, current_user_id=current_user_id | default('')) }}
+          {% endfor %}
+        </div>
       </div>
-      <div class="wl-list">
-        {% for row in unassigned_tasks %}
-        {{ wl_row(row, party_extras, is_unassigned=true, current_user_id=current_user_id | default('')) }}
-        {% endfor %}
-      </div>
-    </div>
-    {% endif %}
+      {% endif %}
 
-    {# ── Cơ Hội Hệ Thống — action-queue items no one has claimed yet. Row
-       UI unchanged (still the plain action-row wl_row branch). Reuses
-       _wl_bands.html verbatim (band ids keep their existing
-       Đã-liên-hệ-collapsed / Khẩn-open / Trong-hạn-open / Treo-lâu-collapsed
-       defaults and VIP/GOLD auto-expand — no new sub-grouping decision
-       needed) and the existing `/worklist/band/{id}/more` overflow route
-       (already actions-only, correct for every id queue_action_bands can
-       contain including 4). ── #}
-    {% if queue_action_count > 0 %}
-    <div style="margin:var(--sp-3) 0">
-      <div class="wl-band__label" style="font-size:14px;margin-bottom:var(--sp-2)">
-        🎯 Cơ Hội Hệ Thống
-        {{ count_pill(queue_action_count, "band") }}
+      {# ── Cơ Hội Hệ Thống — action-queue items no one has claimed yet. Row
+         UI unchanged (still the plain action-row wl_row branch). Reuses
+         _wl_bands.html verbatim (band ids keep their existing
+         Đã-liên-hệ-collapsed / Khẩn-open / Trong-hạn-open / Treo-lâu-collapsed
+         defaults and VIP/GOLD auto-expand — no new sub-grouping decision
+         needed) and the existing `/worklist/band/{id}/more` overflow route
+         (already actions-only, correct for every id queue_action_bands can
+         contain including 4). ── #}
+      {% if queue_action_count > 0 %}
+      <div class="wl-subsection">
+        <div class="wl-subsection__label">
+          🎯 Cơ Hội Hệ Thống
+          {{ count_pill(queue_action_count, "band") }}
+        </div>
+        {% set bands = queue_action_bands %}
+        {% set empty_state_id = 'wl-empty-state-queue' %}
+        {% set show_overflow = true %}
+        {% include "fragments/_wl_bands.html" %}
       </div>
-      {% set bands = queue_action_bands %}
-      {% set empty_state_id = 'wl-empty-state-queue' %}
-      {% set show_overflow = true %}
-      {% include "fragments/_wl_bands.html" %}
+      {% endif %}
     </div>
-    {% endif %}
   </details>
   {% endif %}
 
