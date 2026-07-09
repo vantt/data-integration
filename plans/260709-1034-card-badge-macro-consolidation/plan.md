@@ -1,14 +1,29 @@
 # Plan: Card & Pill Macro Consolidation (CRM templates)
 
 ## Status
-Phase 1 + Phase 2 done (2026-07-09). Phase 1: `card()`/`facts()` macros built, piloted on
-`dedup_review.html`. Phase 2: all 7 remaining card-family templates migrated across 3
-batches (see phase-02 for commit hashes) — `tasks_board.html`, note cards, `customer_360`,
-`order_detail`, `conversation_detail`, `c360_insight_panel` (`aq-card`/`aq-session-card`,
-including a deliberate visual fix removing a design-system-contradicting box-shadow).
-New macro: `card_header()`. Card family count went from 6 drifted + 1 canonical down to 1
-canonical (`scard`) + documented variants (`--survive`, `--lead`) + additive layout
-modifier classes. Phase 3 (pill/badge) and Phase 4 (docs) not started.
+ALL 4 PHASES DONE (2026-07-09).
+- **Phase 1**: `card()`/`facts()` macros built, piloted on `dedup_review.html`.
+- **Phase 2**: all 7 remaining card-family templates migrated across 3 batches (see
+  phase-02 for commit hashes) — `tasks_board.html`, note cards, `customer_360`,
+  `order_detail`, `conversation_detail`, `c360_insight_panel` (`aq-card`/`aq-session-card`,
+  including a deliberate visual fix removing a design-system-contradicting box-shadow).
+  New macro: `card_header()`. Card family count went from 6 drifted + 1 canonical down to
+  1 canonical (`scard`) + documented variants (`--survive`, `--lead`) + additive layout
+  modifier classes.
+- **Phase 3**: pill/badge classification — `dedup-card__tag` already converged via Phase 1
+  side effect; `radio-pill` and `aq-session-card__pill` confirmed as genuinely different
+  concepts (interactive control, raw count) and left alone; `freshness-badge` converged to
+  plain `bdg` (`0114ff2e`) — turned out to have zero CSS rules at all, closer to a missing-
+  styles bug than drift.
+- **Phase 4**: `DESIGN_SYSTEM.md` §11 "Macros" added (`d4bd90ee`) — documents the
+  `templates/macros/` convention and the full current macro inventory.
+
+Follow-ups noted but explicitly out of scope for this plan (see phase files for detail):
+count-pill family drift (`wl-band__count`/`ship-count`/`aq-session-card__pill`, same shape
+of duplication the card family had — not tackled here); a pre-existing "ICT ICT" double-
+suffix rendering bug in `format_datetime_ict` usage (unrelated to CSS/macro work, found
+incidentally); `order_context_tab.html`/`order_operations_tab.html`'s large `.facts` usage
+never got the `facts()` macro treatment (outside Phase 2's defined file list).
 
 ## Context
 Survey (2026-07-09) found the Precision design system already has a full token layer
