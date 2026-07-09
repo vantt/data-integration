@@ -9,13 +9,18 @@
    extra_class  str       escape hatch for one-off spacing/layout needs; do not use to
                           smuggle back a whole parallel class family - if you need this
                           often for the same reason, that's a signal to add a real param
+   attrs        str       raw HTML attribute pass-through for the wrapper div (id,
+                          draggable, data-*, onclick, ...) - was needed for tcard's
+                          id="task-card-N" draggable="true". Caller must pre-escape any
+                          interpolated dynamic values (e.g. {{ t.task_id | e }}) before
+                          building this string; the macro renders it unescaped via |safe.
 
    No type/kind param by design: this is a shell only, every caller inserts its own
    content via {% call %}...{% endcall %}. See plans/260709-1034-card-badge-macro-consolidation
    for the rationale (drift was in the outer wrapper, not the inner content).
 #}
-{% macro card(eyebrow=none, tag=none, tag_variant='', variant='', extra_class='') %}
-<div class="scard{% if variant %} scard--{{ variant }}{% endif %}{% if extra_class %} {{ extra_class }}{% endif %}">
+{% macro card(eyebrow=none, tag=none, tag_variant='', variant='', extra_class='', attrs='') %}
+<div class="scard{% if variant %} scard--{{ variant }}{% endif %}{% if extra_class %} {{ extra_class }}{% endif %}"{% if attrs %} {{ attrs|safe }}{% endif %}>
   {% if tag %}<span class="scard__tag bdg{% if tag_variant %} bdg--{{ tag_variant }}{% endif %}">{{ tag }}</span>{% endif %}
   {% if eyebrow %}<div class="caption scard__eyebrow">{{ eyebrow }}</div>{% endif %}
   {{ caller() }}

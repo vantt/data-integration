@@ -2,6 +2,7 @@
    @source   crm/docs/ui-spec/screens/S07-tasks-board.md
    @kind     SCREEN #}
 {% from "modals.html" import modal_container %}
+{% from "macros/card.html" import card %}
 {% extends "base.html" %}
 
 {% block title %}Tasks — CRM{% endblock %}
@@ -104,7 +105,7 @@
               <div class="board-col__empty mono">—</div>
             {% else %}
               {% for t in col_tasks %}
-                <div class="tcard" id="task-card-{{ t.task_id }}" draggable="true">
+                {% call card(extra_class='task-card', attrs='id="task-card-' ~ (t.task_id | e) ~ '" draggable="true"') %}
 
                   <div class="tcard__top">
                     {% if t.source in ("action_queue", "action_queue_claim") %}
@@ -160,7 +161,7 @@
                     {% endif %}
                   </div>
 
-                </div>{# /.tcard #}
+                {% endcall %}
               {% endfor %}
             {% endif %}
           </div>{# /.board-col__body #}
