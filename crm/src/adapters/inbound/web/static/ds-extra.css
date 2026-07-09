@@ -418,29 +418,46 @@
    Section sits ABOVE its own bands in visual weight even though --bg-raised is
    literally one step darker, because larger type + bold + border communicate
    "container of containers". */
-.wl-section { border: 1px solid var(--border-strong); border-radius: var(--radii-control); overflow: hidden; background: var(--bg-surface); margin-bottom: var(--sp-4); }
+.wl-section {
+  border: 1px solid var(--border-strong); border-radius: var(--radii-control);
+  overflow: hidden; background: var(--bg-surface); margin-bottom: var(--sp-5);
+  box-shadow: 0 1px 3px color-mix(in srgb, var(--fg) 6%, transparent);
+}
 .wl-section__header {
-  display: flex; align-items: center; gap: var(--sp-3);
+  display: flex; align-items: center; gap: var(--sp-4);
   padding: var(--sp-4) var(--sp-5);
   cursor: pointer;
-  font-size: 16px; font-weight: var(--fw-semi); color: var(--fg);
+  font-size: 20px; font-weight: var(--fw-bold); color: var(--fg);
   user-select: none; list-style: none;
   background: var(--bg-raised);
   transition: background var(--dur-fast) var(--ease-fast);
 }
 .wl-section__header::-webkit-details-marker { display: none; }
-.wl-section__header:hover { background: color-mix(in srgb, var(--bg-raised) 80%, var(--fg) 5%); }
+.wl-section__header:hover { background: color-mix(in srgb, var(--bg-raised) 80%, var(--fg) 6%); }
 .wl-section[open] > .wl-section__header { border-bottom: 1px solid var(--border); }
-.wl-section__icon { font-size: 19px; flex: none; }
-.wl-section__label { flex: 1; }
+/* Icon in a soft circular badge — gives the header a focal point instead of
+   plain emoji-then-text, and is the one place accent color shows through. */
+.wl-section__icon {
+  font-size: 20px; flex: none; line-height: 1;
+  display: flex; align-items: center; justify-content: center;
+  width: 40px; height: 40px; border-radius: 50%;
+  background: color-mix(in srgb, var(--accent) 14%, transparent);
+}
+.wl-section__label { flex: 1; margin-right: var(--sp-3); }
 .wl-section__chevron {
-  width: 14px; height: 14px; flex: none; margin-left: var(--sp-1);
+  width: 16px; height: 16px; flex: none; margin-left: var(--sp-2);
   border-right: 2px solid var(--fg-tertiary); border-bottom: 2px solid var(--fg-tertiary);
   transform: rotate(45deg); transition: transform var(--dur-fast) var(--ease-fast);
 }
 .wl-section[open] .wl-section__chevron { transform: rotate(-135deg); }
-.wl-section__body { padding: var(--sp-4); }
-.cpill--section { font-size: 12px; padding: 2px 8px; color: var(--fg); border-color: var(--border-strong); }
+.wl-section__body { padding: var(--sp-5); }
+/* Filled pill (not just outlined like the small band-level counts) so a big
+   bold header doesn't dwarf a tiny outline next to it. */
+.cpill--section {
+  font-size: 13px; font-weight: var(--fw-medium); padding: 3px 11px;
+  color: var(--accent); background: color-mix(in srgb, var(--accent) 14%, transparent);
+  border-color: transparent;
+}
 
 /* Sub-group heading inside Chưa Claim (Hàng Đợi Chung / Cơ Hội Hệ Thống) — a
    plain labeled divider, not a box: sits between Section and Band in weight so
@@ -448,10 +465,18 @@
 .wl-subsection + .wl-subsection { margin-top: var(--sp-5); }
 .wl-subsection__label {
   display: flex; align-items: center; gap: var(--sp-2);
-  font-size: 12px; font-weight: var(--fw-medium); color: var(--fg-tertiary);
+  font-size: 12.5px; font-weight: var(--fw-semi); color: var(--fg-tertiary);
   text-transform: uppercase; letter-spacing: var(--tracking-eyebrow);
   padding-bottom: var(--sp-2); margin-bottom: var(--sp-3);
   border-bottom: 1px dashed var(--border);
+}
+/* Hàng Đợi Chung has no per-tier bands underneath it (unlike Cơ Hội Hệ Thống,
+   which gets its own boxed .wl-band per urgency tier from _wl_bands.html) — so
+   its flat row list needs its own box, or it reads as "missing a background"
+   next to its boxed sibling sub-group. */
+.wl-subsection__box {
+  border: 1px solid var(--border); border-radius: var(--radii-control);
+  background: var(--bg-surface); padding: var(--sp-2);
 }
 
 /* Row list inside an open band — inherits wl-row styles */
