@@ -22,7 +22,7 @@ All 4 cards source from `fact_balance_sheet_monthly` (ratios computed in the car
 
 ## Steps
 
-1. Update `docs/analytics-handbook/designs/finance_cashflow.md` — add the new tab's viz choices (scorecard×3 + line×1 or ×2) under a "Balance Sheet & Liquidity — Phase-04 extensions" heading, same pattern the budget layer used when it extended this same dashboard (`plans/260702-1727-misa-cashflow-budget-planner/phase-04-budget-hybrid.md`).
+1. Update `docs/analytics-handbook/designs/finance_cashflow.md` — add the new tab's viz choices (scorecard×3 + line×1 or ×2) under a "Balance Sheet & Liquidity — Phase-04 extensions" heading, same pattern the budget layer used when it extended this same dashboard (`plans/archive/260702-1727-misa-cashflow-budget-planner/phase-04-budget-hybrid.md`).
 2. Update `docs/analytics-handbook/blueprints/metabase/finance_cashflow.md` — add the new tab's card definitions (SQL + viz JSON + layout), marked clearly as a new section so the existing cashflow/budget cards aren't touched.
 3. Deploy: `node .skills/metabase-automation/scripts/deploy_from_markdown.js docs/analytics-handbook/blueprints/metabase/finance_cashflow.md` (or the project's current equivalent — confirm command from `.skills/metabase-automation/SKILL.md`, this repo's deploy script has moved before).
 4. Verify field filters if any date/string filter is added on this tab — needs explicit `field_id` per `feedback_metabase_field_filter_required` project memory; run `query_metadata` to confirm the right `field_id` for `fact_balance_sheet_monthly.period_month` before wiring a filter (per `reference_metabase_field_ids_post_v2_rename` — field IDs can be stale after any rename).

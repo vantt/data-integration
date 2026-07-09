@@ -1,5 +1,7 @@
 # Phase 06 — Sheet→Seed Sync Script (P0)
 
+> **Superseded (partial) 2026-07-09:** phần `recurring` join qua `cashflow_line` (bucket text) ở transform rule 3 đang được thay bằng `account_code` (cha hoặc con, prefix-match) — xem `plans/260709-1415-budget-account-level-remap/plan.md`. Phần `one_off`/`reserve` (rule 4) và `ALLOCATION_POLICY` không đổi. Nội dung dưới đây giữ nguyên làm lịch sử.
+
 **Status: DONE** (2026-07-05) — `ingestion/src/gsheet_budget_sync/` package (9 files, refactored from initial 1013-LOC single file per code review), `budget_sheet_sync_asset` + `budget_sheet_sync_schedule` (02:30 ICT) in Dagster, mart WHERE fix. 31 unit tests + dbt compile + Dagster import all verified. Open question 3 (auto-commit) resolved NO — asset writes seed files only. **Blocking on live sheet:** open question 5 (missing `remainder` row in ALLOCATION_POLICY tab) still unresolved in the actual Google Sheet — sync will reject until finance/kỹ thuật adds it.
 
 ## Mục tiêu

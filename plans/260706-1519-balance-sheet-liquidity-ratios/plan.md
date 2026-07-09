@@ -6,7 +6,7 @@
 
 ## Objective
 
-Build company-wide liquidity ratios (Current Ratio, Quick Ratio, DSO) from the MISA full-ledger data already ingested by `plans/archive/260707-1207-misa-gl-infrastructure/` (split 2026-07-07 out of `plans/260702-1727-misa-cashflow-budget-planner/`, which is not archived).
+Build company-wide liquidity ratios (Current Ratio, Quick Ratio, DSO) from the MISA full-ledger data already ingested by `plans/archive/260707-1207-misa-gl-infrastructure/` (split 2026-07-07 out of `plans/archive/260702-1727-misa-cashflow-budget-planner/`, itself archived DONE 2026-07-07).
 
 ## Key finding — most of the data already exists
 

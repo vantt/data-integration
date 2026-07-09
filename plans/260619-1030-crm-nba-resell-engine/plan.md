@@ -39,6 +39,7 @@
 
 > Stage B detail = phase-01..05 (thiết kế engine đầy đủ, giữ nguyên). Thin v1 = lát cắt tối giản của thiết kế đó cho ~83 live core.
 
+> **Cross-plan (2026-07-08)**: `plans/260708-1501-gift-purchase-sku-action-scenario` (Phase 4) thêm scenario registry (`seed_action_scenario_registry.csv`) bật/tắt action_type trên CASE WHEN tĩnh hiện có trong `mart_customer_action_queue`/`mart_customer_sku_action_queue` — đây KHÔNG phải khôi phục Stage B. Registry chỉ là feature-flag (1 candidate/khách, không scoring, không state); NBA Engine (B1-B5) là scoring nhiều candidate + rule engine ưu tiên + contactability ladder có state. Plan kia explicit không reopen Stage B — Stage B vẫn đứng yên chờ đúng 2 điều kiện ở trên (chốt §14.1/14.2/14.3/14.5 + active base đủ lớn).
 ## Quyết định mở (bàn tiếp)
 
 - A1: định nghĩa tier cuối + ngưỡng (live core, dormant-valuable, masked-repeat, second-order, graveyard).

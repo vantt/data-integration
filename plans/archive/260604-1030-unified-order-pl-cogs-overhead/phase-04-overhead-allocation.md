@@ -13,7 +13,7 @@
 ## Overview
 
 **Priority:** P1 (blocked by phases 01 + 03)
-**Status:** CORE DONE — P4-3 provisional (live-month uses actual data; budgeted-rate branch not exercised) | P4-5 VERIFIED 2026-06-09 (count-once separation clean; zero overlap)
+**Status:** CORE DONE — P4-3 DONE via trailing-rate estimate (open-month uses trailing 3m rate, not budgeted-rate/gsheet) | P4-5 VERIFIED 2026-06-09 (count-once separation clean; zero overlap)
 **Scope:**
 1. New dbt model `int_order_overhead_allocation` — closure-based allocation of TK642 (net-of-promo) + optional TK635/641-common pool(s) onto every completed order in the period.
 2. Extend `fact_order_economics` with 4 new columns: `allocated_overhead`, `fully_loaded_net_profit`, `fully_loaded_margin_pct`, `is_overhead_estimated`.
@@ -241,7 +241,7 @@ All `residual` values must be ≤ 1.
 - [x] Dagster run SUCCESS (int_order_overhead_allocation builds)
 - [x] Spot-check closure: all residuals ≤ 1 VND
 - [x] Hand off column specs to phase 05 (fact_order_economics/costs edits)
-- [ ] P4-3: exercise budgeted-rate provisional branch → [plan: 260609-1343-overhead-budgeted-rate-open-month](../../260609-1343-overhead-budgeted-rate-open-month/plan.md)
+- [x] P4-3: DONE via trailing 3-month rate (not budgeted-rate/gsheet) — `int_order_overhead_allocation.sql` ACTUAL/ESTIMATED UNION branch, `is_overhead_estimated` wired through `fact_order_economics` + `fact_order_costs.fee_source`, closure test scoped to closed months. Original budgeted-rate design superseded — see [plan: 260609-1343-overhead-budgeted-rate-open-month](../260609-1343-overhead-budgeted-rate-open-month/plan.md)
 - [x] P4-5: reconcile 64214 sub-account vs sales-ledger-642 to confirm count-once exclusion is tight — VERIFIED 2026-06-09: zero voucher_no overlap across all 642x accounts (1,817 sales-ledger vs 1,894 account-ledger; intersection=0); 64214 classified `drop_promo_count_once` in live gsheet, confirmed excluded from all pools
 
 ---

@@ -1660,7 +1660,7 @@
 | `cash_account_name` | VARCHAR | Display name of cash account |
 | `offset_account` | VARCHAR | Counterpart GL account code |
 | `offset_account_name` | VARCHAR | Counterpart GL account display name |
-| `cashflow_line` | VARCHAR | Budget grouping label (derived from dim_gl_account; provisional — needs finance sign-off) |
+| `cashflow_line` | VARCHAR | Budget grouping label (derived from dim_gl_account). Sign-off DONE 2026-07-09 — budget-side grain is moving from this bucket label to `account_code` (parent-or-child, finance's choice); `cashflow_line` stays as a derived display attribute only. See `plans/260709-1415-budget-account-level-remap/plan.md` (not yet implemented). |
 | `direction` | VARCHAR | `'inflow'` or `'outflow'` |
 | `is_internal_transfer` | BOOL | TRUE when both debit and credit are 111x/112x (chuyển quỹ nội bộ) |
 | `amount` | BIGINT | Absolute amount in VND (always positive) |
@@ -1747,7 +1747,7 @@
 - **Formula:** SUM(amount) WHERE direction='outflow' AND NOT is_internal_transfer
 - **Unit:** VND
 - **Common Misunderstandings:** Cùng quy tắc loại trừ is_internal_transfer như CF2. Tổng chi bao gồm cả chi lương, trả NCC, nộp thuế — tất cả offset_account bên ngoài 111x/112x range.
-- **Pitfalls / Edge Cases:** cashflow_line taxonomy được derive từ prefix của offset_account trong dim_gl_account. Nếu 1 TK đối ứng chưa được map, cashflow_line sẽ là NULL hoặc 'Khác'. Cần finance sign-off trên taxonomy trước khi dùng cho báo cáo chính thức.
+- **Pitfalls / Edge Cases:** cashflow_line taxonomy được derive từ prefix của offset_account trong dim_gl_account. Nếu 1 TK đối ứng chưa được map, cashflow_line sẽ là NULL hoặc 'Khác'. Finance sign-off DONE 2026-07-09 — xem `plans/260709-1415-budget-account-level-remap/plan.md`: budget join key đổi sang `account_code` (prefix-match, hỗ trợ cả cha-rollup lẫn con-granular), `cashflow_line` giữ vai trò display-only. Actual không match budget nào sẽ có mart riêng (`mart_cashflow_unmapped_actuals`, phase-04) thay vì bị gộp/ẩn.
 
 #### CF4. Dòng tiền ròng (`net_cash_flow`)
 

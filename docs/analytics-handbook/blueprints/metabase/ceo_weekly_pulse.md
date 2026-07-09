@@ -465,6 +465,101 @@ ORDER BY o.ordered_at DESC
 
 ---
 
+#### Question: Forecasted Month-End GMV
+
+Linear projection: if current pace holds for the rest of the month, where does GMV land?
+
+> **⚠️ Deployment note:** same static `progress.goal` caveat as MTD GMV vs Target — currently 600,000,000.
+
+```sql
+WITH mtd_actual AS (
+    SELECT COALESCE(SUM(gross_revenue), 0) as mtd_gmv
+    FROM fact_orders
+    WHERE scope_sales
+      AND is_active_order
+      AND ordered_at >= date_trunc('month', current_date)
+      AND ordered_at < current_date
+)
+SELECT
+    ROUND(
+        a.mtd_gmv
+        / (
+            EXTRACT(DAY FROM current_date)
+            / EXTRACT(DAY FROM (date_trunc('month', current_date) + INTERVAL '1 month' - INTERVAL '1 day'))
+        )
+    ) as "Forecasted Month-End GMV"
+FROM mtd_actual a
+```
+
+```json metabase-viz
+{
+  "display": "progress",
+  "visualization_settings": {
+    "progress.goal": 600000000,
+    "progress.color": "#509EE3",
+    "column_settings": {
+      "[\"name\",\"Forecasted Month-End GMV\"]": { "number_style": "currency", "currency": "VND", "decimals": 0, "compact": true }
+    }
+  }
+}
+```
+
+```json metabase-pos
+{"row": 28, "col":0, "size_x":12, "size_y":3}
+```
+
+#### Question: Cần Đạt Mỗi Ngày (Required Daily Run-Rate)
+
+Doanh thu mỗi ngày còn lại trong tháng cần đạt để chạm target — dựa trên phần target còn thiếu chia đều cho số ngày còn lại.
+
+```sql
+WITH mtd_actual AS (
+    SELECT COALESCE(SUM(gross_revenue), 0) as mtd_gmv
+    FROM fact_orders
+    WHERE scope_sales
+      AND is_active_order
+      AND ordered_at >= date_trunc('month', current_date)
+      AND ordered_at < current_date
+),
+monthly_target AS (
+    SELECT COALESCE(SUM(target_val), 0) as target_gmv
+    FROM fact_targets
+    WHERE metric_code = 'gmv'
+      AND cycle_start_date <= current_date
+      AND cycle_end_date >= current_date
+),
+remaining AS (
+    SELECT GREATEST(
+        EXTRACT(DAY FROM (date_trunc('month', current_date) + INTERVAL '1 month' - INTERVAL '1 day'))
+        - EXTRACT(DAY FROM current_date),
+        1
+    ) as remaining_days
+)
+SELECT
+    CASE WHEN t.target_gmv = 0 THEN NULL
+         ELSE ROUND(GREATEST(t.target_gmv - a.mtd_gmv, 0) / r.remaining_days)
+    END as "Required Daily Run-Rate"
+FROM mtd_actual a
+CROSS JOIN monthly_target t
+CROSS JOIN remaining r
+```
+
+```json metabase-viz
+{
+  "display": "scalar",
+  "visualization_settings": {
+    "column_settings": {
+      "Required Daily Run-Rate": { "number_style": "currency", "currency": "VND", "decimals": 0, "compact": true }
+    }
+  }
+}
+```
+
+```json metabase-pos
+{"row": 28, "col":12, "size_x":6, "size_y":3}
+```
+
+---
 
 #### ❓ Question: Độ tươi dữ liệu
 
@@ -495,7 +590,7 @@ WHERE o.scope_sales AND o.is_active_order
 
 #### 📝 Text: Source & Freshness
 
-**Source:** fact_orders + fact_order_economics · **Cadence:** Tuần này (Mon-to-date) vs WoW (tuần trước Mon-Sun) · **Scope:** is_sales_channel=true, exclude CANCELLED/Voided · **Caveats:** has_cogs ~65% coverage (MISA window) · **Exception:** MTD GMV vs Target + Pace Index dùng cửa sổ tháng (monthly), không theo tuần.
+**Source:** fact_orders + fact_order_economics · **Cadence:** Tuần này (Mon-to-date) vs WoW (tuần trước Mon-Sun) · **Scope:** is_sales_channel=true, exclude CANCELLED/Voided · **Caveats:** has_cogs ~65% coverage (MISA window) · **Exception:** MTD GMV vs Target + Pace Index + Forecasted Month-End GMV + Required Daily Run-Rate dùng cửa sổ tháng (monthly), không theo tuần. Run-rate/Forecast là linear projection dựa trên pace hiện tại, không phải model có seasonality.
 <!-- text-id:source-freshness -->
 
 ```json metabase-pos

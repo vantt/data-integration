@@ -1,9 +1,28 @@
 # Plan: Overhead Budgeted-Rate Branch for Open Months
 
 **Created:** 2026-06-09  
-**Status:** Not Started
-(updated 2026-06-24: untouched by 260623 audit work; int_overhead_pool_monthly UNION branch not built)  
+**Status:** SUPERSEDED (2026-07-08) — goal achieved via a different mechanism, this plan's specific approach was never built
 **Priority:** Medium — P4-3 from `260604-1030-unified-order-pl-cogs-overhead`
+
+## Superseded — resolution note (2026-07-08)
+
+The open-month overhead gap this plan targeted is **fixed in production**, but not via
+`budgeted_rate`/gsheet as designed here. `overhead_allocation_config` was found to not exist
+(no gsheet, no `budgeted_rate` column — see
+`plans/archive/reports/scout-260605-2155-p4-3-provisional-overhead.md`). Instead
+`int_order_overhead_allocation.sql` (in `plans/archive/260604-1030-unified-order-pl-cogs-overhead/`)
+implements a UNION of:
+- **ACTUAL branch** — closed months (`period_month < current ICT month`), pro-rata from MISA actual pool, `is_overhead_estimated = FALSE`.
+- **ESTIMATED branch** — current/open month, trailing 3-closed-month rate per pool, `is_overhead_estimated = TRUE`.
+
+Verified wired end-to-end: `fact_order_economics.is_overhead_estimated` (BOOL_OR from allocation),
+`fact_order_costs.fee_source = 'estimated'|'actual'`, and
+`assert_overhead_allocation_closure.sql` scoped to closed months only. Auto true-up on MISA
+arrival confirmed by design (full-rebuild pipeline, no restate logic needed).
+
+This plan's UNION-in-`int_overhead_pool_monthly` design (Steps 1-2) and gsheet `budgeted_rate`
+column were never implemented and should not be — the trailing-rate approach is the shipped
+solution. Keeping this file for historical record only.
 
 ## Problem
 

@@ -1,8 +1,11 @@
 ---
 title: "Customer Product Affinity (SKU-level) — Implementation Spec"
 created: 2026-06-13
-status: ready-to-build
-# (updated 2026-06-24: untouched by 260623 audit work; backlog item awaiting activation)
+status: done
+completed: 2026-06-13
+# (updated 2026-07-08: verified shipped in commit 55b178b3, same day as spec — all 5 cols
+#  in int_customer_metrics/dim_customers/mart_customer_action_queue, docs updated, consumed
+#  downstream by CRM S01 worklist + task detail + c360 panel)
 parent_plan: ../260604-1125-retail-reactivation/05-action-plans/b2c-reactivation-phases.md (P1)
 owner: Data
 ---
@@ -104,16 +107,20 @@ int_customer_metrics.sql  ──►  dim_customers.sql  ──►  mart_customer
 - **`mart_customer_action_queue.sql`**: thêm 5 cột vào CTE `customers` + SELECT cuối (đọc từ `dim_customers`,
   khớp cách đang đọc `product_affinity`).
 
-## 6. Các bước thực thi
+## 6. Các bước thực thi — ✅ DONE (commit 55b178b3, 2026-06-13)
 
-1. [ ] `int_customer_metrics.sql`: thêm CTE `sku_affinity` + `last_purchase_sku`; join vào output.
-2. [ ] `dim_customers.sql`: thêm 5 cột (joined_data + SELECT cuối) + comment mô tả.
-3. [ ] `mart_customer_action_queue.sql`: thêm 5 cột (CTE `customers` + SELECT cuối).
-4. [ ] Restart `data_platform` container (manifest pre-parse — node mới cần reload).
-5. [ ] Chạy `dbt run --full-refresh` cho `int_customer_metrics`, `dim_customers`, `mart_customer_action_queue`
+1. [x] `int_customer_metrics.sql`: thêm CTE `sku_affinity` + `last_purchase_sku`; join vào output.
+2. [x] `dim_customers.sql`: thêm 5 cột (joined_data + SELECT cuối) + comment mô tả.
+3. [x] `mart_customer_action_queue.sql`: thêm 5 cột (CTE `customers` + SELECT cuối).
+4. [x] Restart `data_platform` container (manifest pre-parse — node mới cần reload).
+5. [x] Chạy `dbt run --full-refresh` cho `int_customer_metrics`, `dim_customers`, `mart_customer_action_queue`
        trong container, kèm lock-retry (incremental + cột mới chỉ backfill row đổi).
-6. [ ] Verify (§8).
-7. [ ] Cập nhật docs (§9).
+6. [x] Verify (§8).
+7. [x] Cập nhật docs (§9).
+
+**Đã build thêm** (ngoài scope spec ban đầu, cùng commit): `dim_customers.is_contactable` +
+`is_us_gift_recipient`, `dim_channels.is_marketplace`, `mart_retention_waterfall_monthly` segment dims.
+5 cột affinity hiện được CRM tiêu thụ tại S01 worklist row, task detail, c360 insight panel.
 
 ## 7. Lưu ý kỹ thuật
 

@@ -20,6 +20,8 @@ Nâng cấp luồng sinh kịch bản tiếp cận: bỏ bước copy-dán tay (
 | 05 | [Trigger theo worklist-refresh + auto-load (bỏ review)](phase-05-worklist-refresh-trigger.md) | ✅ |
 
 > **Status: LIVE (2026-07-07).** Commit `3343b049`. Toàn bộ 5 phase code + test thật (codex thật, CRM auto-load thật, xem phase-05 § Verify). `pipeline_batch_nightly_schedule` đã bật (17:16 ICT, cùng lúc bật lại toàn bộ 17 schedule của repo — trước đó tất cả đang STOPPED trừ `crm_backup_schedule`) — asset `approach_script_autogen` giờ tự chạy 3h sáng ICT mỗi đêm, không cần trigger tay.
+>
+> **Re-check 2026-07-07 23:16 ICT (ngoài code, live infra):** `pipeline_batch_nightly_schedule` xác nhận `RUNNING` qua Dagster GraphQL (`repositoriesOrError.schedules`), không có sensor riêng cho `approach_script_autogen` — chạy theo dep chain (`crm_cache_refresh` → `approach_script_autogen`) trong cùng job, đúng thiết kế. Codex CLI trong `data_platform` vẫn login sống (`~/.codex/auth.json` có token, `codex-cli 0.142.5`). `assetMaterializations` cho `approach_script_autogen` = rỗng — **đúng dự kiến**, vì bật schedule lúc 17:16 (sau mốc 3h sáng hôm nay) nên lần chạy tự động đầu tiên là ~03:00 ICT 2026-07-08, chưa tới. 2 test CRM fail đã biết từ trước ([[project_approach_script_codex_pipeline]]) — `test_approach_script_handler.py` (import `wire_approach_script_router`, đã đổi tên thành `make_approach_script_router` ở commit `f68ef397`, 29/06, không liên quan plan này) và `test_list_customer_ids_reflects_new_file_without_reinit` (TTL cache 60s) — verify lại vẫn fail y hệt, không phải regression mới, không chặn asset (asset không phụ thuộc 2 test này).
 
 ## Dependencies
 - Template v2: `plans/260624-1917-customer-insight-prompt-template/customer-insight-prompt-template.md`

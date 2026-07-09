@@ -27,6 +27,8 @@ CEO mo tab nay dau tien — tra loi "tuan nay on khong?" trong 2 phut.
 - **Supporting KPIs:** Gross Revenue, Total Orders, AOV — tat ca co WoW %
 - **MTD Progress:** Progress bar visual — da dat bao nhieu % target thang
 - **Pace Index:** Ahead/Behind indicator — so sanh toc do hien tai voi expected pace
+- **Forecasted Month-End GMV:** Progress bar — chieu doanh thu cuoi thang neu giu nguyen pace hien tai (linear projection tu MTD)
+- **Required Daily Run-Rate:** Scalar — con thieu bao nhieu/ngay trong so ngay con lai de cham target thang
 - **14-Day Trend:** Area chart doanh thu 14 ngay — this week vs previous week
 - **Profitability Row:** 3 scalars WoW — Net Profit, Gross Margin %, Loss-Making Channel Count (alert)
 
@@ -57,6 +59,7 @@ CEO chuyen sang tab nay khi muon kiem tra customer health va red flags.
 |:---|:---|:---|:---|
 | Revenue KPIs | [Net Revenue](../domains/sales.md#2-net-revenue) | Scalar + WoW | Net Revenue, Gross Revenue, Orders, AOV |
 | MTD Progress | [Target Achievement Rate](../domains/sales.md#15-target-achievement-rate) | Progress bar + Gauge | GMV vs Target, Pace Index |
+| Forecast & Run-Rate | [Target Achievement Rate](../domains/sales.md#15-target-achievement-rate) | Progress bar + Scalar | Forecasted Month-End GMV, Required Daily Run-Rate |
 | Revenue Trend | [Net Revenue](../domains/sales.md#2-net-revenue) | Area chart (14d) | Daily Net Revenue |
 | **Profitability** | [Order Gross Profit](../domains/finance.md#9-order-gross-profit), [Channel Net Profit](../domains/finance.md#10-channel-net-profit-lãi-ròng-kênh) | Scalar + WoW / Alert | Net Profit WoW, Gross Margin % WoW, Loss-Making Channel Count |
 | Channel Mix | [Sales by Channel](../domains/sales.md#8-sales-by-channel) | Pie, Bar, Table | Revenue split by channel |
@@ -72,8 +75,8 @@ CEO chuyen sang tab nay khi muon kiem tra customer health va red flags.
 
 1. **CONTEXT:** Dashboard nay ton tai de CEO kiem tra suc khoe kinh doanh moi sang thu Hai. Tra loi: "Tuan qua co on-track khong?"
 2. **KEY FINDING:** Nhin Net Revenue (Hero) va WoW arrow truoc. Xanh len = tot. Do xuong = can chu y.
-3. **EVIDENCE:** MTD Progress bar cho biet dang ahead hay behind target thang. Pace Index > 1.0 = dang vuot toc do can thiet.
-4. **IMPLICATIONS:** Neu behind target + kenh chinh giam → can tang marketing hoac khuyen mai.
+3. **EVIDENCE:** MTD Progress bar cho biet dang ahead hay behind target thang. Pace Index > 1.0 = dang vuot toc do can thiet. Forecasted Month-End GMV cho biet neu giu nguyen pace se ket thuc thang o dau so voi target. Required Daily Run-Rate cho biet moi ngay con lai phai ban duoc bao nhieu.
+4. **IMPLICATIONS:** Neu behind target + kenh chinh giam → can tang marketing hoac khuyen mai. Neu Required Daily Run-Rate tang manh so voi pace trung binh hien tai → target thang kho dat neu khong co hanh dong ngay.
 5. **ACTIONS:** Neu Red Flags (Tab 3) co bat thuong → chuyen thong tin cho team lien quan xu ly trong tuan.
 
 ## Implementation Notes

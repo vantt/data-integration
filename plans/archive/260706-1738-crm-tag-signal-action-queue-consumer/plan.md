@@ -1,6 +1,6 @@
 # Plan — CRM Tag Signal → Action Queue Consumer (AI-9)
 
-**Status:** TODO
+**Status:** DONE (2026-07-07) — phase 01+02 implemented, tested, deployed live; verified badge render on S01 worklist. Committed `fbdeac9c`.
 **Created:** 2026-07-06
 **Nguồn:** `plans/260705-1146-crm-ux-data-loop-improvements/phase-08-reassessment-fixes.md` AI-9
 **Goal:** Đóng nốt vòng lặp dữ liệu CRM: tag (`risk`/`vip_tier`) NV gắn tay quay lại ảnh hưởng thật đến `mart_customer_action_queue` — mắt xích cuối cùng của thiết kế "NV nhập → gợi ý tốt hơn → NV thấy giá trị → nhập nhiều hơn" (`crm/docs/ui-spec/notes/ux-action-queue-task-cockpit-data-loop-design.md` §5).
