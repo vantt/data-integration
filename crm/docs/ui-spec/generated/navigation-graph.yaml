@@ -294,6 +294,14 @@ edges:
     effects:
       - worklist_container.reload
     region: topbar
+  - id: A-S01-023
+    from: S01
+    element: filter_contactable_only
+    trigger: change
+    action: mutate
+    effects:
+      - task_list.reload_with_filters
+    region: filter_bar
   - id: A-S02-001
     from: S02
     element: customer_row

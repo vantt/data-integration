@@ -2,7 +2,7 @@
 
 # Chip Coverage Audit (generated)
 
-Surfaces: 40 · Tokens: 287 · Mapped: 163 · Unmapped: 124
+Surfaces: 40 · Tokens: 288 · Mapped: 164 · Unmapped: 124
 
 ## Unmapped Chips
 

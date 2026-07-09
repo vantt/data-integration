@@ -69,7 +69,8 @@ def _setup_cache_tables(cache_conn: sqlite3.Connection) -> None:
             customer_key    TEXT PRIMARY KEY,
             customer_id     INTEGER,
             strategic_tier  TEXT,
-            value_group     TEXT
+            value_group     TEXT,
+            is_contactable  INTEGER
         );
     """)
     cache_conn.commit()

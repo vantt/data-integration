@@ -29,6 +29,7 @@ A-S01-017,S01,btn_snooze_action,click,mutate,,,task_list
 A-S01-018,S01,btn_cancel_task,click,mutate,,,task_list
 A-S01-019,S01,btn_reschedule_task,click,open_overlay,M05,,task_list
 A-S01-020,S01,btn_refresh,click,mutate,,,topbar
+A-S01-023,S01,filter_contactable_only,change,mutate,,,filter_bar
 A-S02-001,S02,customer_row,click,navigate,S03,,result_list
 A-S02-002,S02,btn_create_party,click,open_overlay,M02,,main
 A-S02-003,S02,filter_value_group,change,mutate,,,topbar

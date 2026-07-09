@@ -1,13 +1,13 @@
 {# @surface S01 · Worklist filter bar — WlfTwoRow redesign | @kind PARTIAL #}
 {#
   Port of wl_filter.jsx (WlfTwoRow). Two-row sticky layout:
-    Row 1 (always): Search · Ưu tiên · 3 mode toggles · spacer · Lọc nâng cao · Xóa filter
+    Row 1 (always): Search · Ưu tiên · 4 mode toggles · spacer · Lọc nâng cao · Xóa filter
     Row 2 (adv=1) : Loại · Phân khúc · Hạng KH · Sản phẩm · spacer · Bỏ lọc nâng cao
 
   Context variables (from screen_worklist._load_worklist_data):
     filters            dict  — {priority, types:list, q, min_value, product,
-                               hide_contacted, has_script, strategic_tier,
-                               value_group, adv}
+                               hide_contacted, has_script, contactable_only,
+                               strategic_tier, value_group, adv}
     available_types    list[str]  — distinct action_type values (unfiltered)
     available_tiers    list[str]  — distinct strategic_tier values (unfiltered)
     available_value_groups list[str] — value_group values in RFM order
@@ -35,6 +35,7 @@
 {% set fprod       = filters.product         | default('') %}
 {% set fhide       = filters.hide_contacted  | default(false) %}
 {% set fscript     = filters.has_script      | default(false) %}
+{% set fcontact    = filters.contactable_only | default(false) %}
 {% set ftier       = filters.strategic_tier  | default('') %}
 {% set fvg         = filters.value_group     | default('') %}
 {% set fadv        = filters.adv             | default('') %}
@@ -62,6 +63,7 @@
   {% if fmin > 0 %}<input type="hidden" name="min_value" value="{{ fmin }}">{% endif %}
   {% if fhide %}<input type="hidden" name="hide_contacted" value="1">{% endif %}
   {% if fscript %}<input type="hidden" name="has_script" value="1">{% endif %}
+  {% if fcontact %}<input type="hidden" name="contactable_only" value="1">{% endif %}
 
   {# ══ Row 1 — always visible ══════════════════════════════════════════ #}
   <div class="wlf-bar wlf-row1">
@@ -131,6 +133,17 @@
               hx-include="#wl-filter-form"
               hx-vals='{% if fscript %}{"has_script":"0"}{% else %}{"has_script":"1"}{% endif %}'>
         {% include "icons/tasks.svg" %} Có kịch bản
+      </button>
+
+      {# Có thể liên hệ — only actions for customers with a usable phone number #}
+      <button type="button"
+              class="wlf-toggle{% if fcontact %} wlf-toggle--on{% endif %}"
+              aria-pressed="{{ 'true' if fcontact else 'false' }}"
+              title="Chỉ hiện khách hàng có số điện thoại"
+              hx-get="/worklist/fragment" hx-target="#worklist-container" hx-swap="outerHTML"
+              hx-include="#wl-filter-form"
+              hx-vals='{% if fcontact %}{"contactable_only":"0"}{% else %}{"contactable_only":"1"}{% endif %}'>
+        {% include "icons/check.svg" %} Có thể liên hệ
       </button>
 
     </div>{# /.wlf-row1__toggles #}

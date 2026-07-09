@@ -150,6 +150,7 @@ class ActionQueueItem:
     value_group: str = ""      # VIP|GOLD|SILVER|BRONZE, from wh_customer_tier
     estimated_depletion_date: str = ""  # YYYY-MM-DD when supply runs out (SKU actions only)
     supply_stream: str = ""    # purchased|gift_only (SKU actions only; empty for customer-level actions)
+    is_contactable: bool = True  # from wh_customer_tier; True when phone present or tier row absent
 
 
 @dataclass

@@ -65,6 +65,7 @@ def parse_filters(query_params: Mapping) -> dict:
         "product": product if product in valid_keys else "",
         "hide_contacted": _last("hide_contacted", "") == "1",
         "has_script": _last("has_script", "") == "1",
+        "contactable_only": _last("contactable_only", "") == "1",
         "strategic_tier": strategic_tier,
         "value_group": value_group,
         "adv": adv,                 # row-2 open state: "1" = open, "" = closed
@@ -113,6 +114,8 @@ def active_filter_count(filters: dict) -> int:
     if filters.get("hide_contacted"):
         count += 1
     if filters.get("has_script"):
+        count += 1
+    if filters.get("contactable_only"):
         count += 1
     if filters.get("strategic_tier"):
         count += 1
@@ -191,6 +194,10 @@ def apply_filters(
     if filters.get("has_script") and script_cids is not None:
         actions = [a for a in actions
                    if a.customer_id in script_cids]
+
+    # contactable_only: hide actions for customers without a usable phone number.
+    if filters.get("contactable_only"):
+        actions = [a for a in actions if a.is_contactable]
 
     tier = filters.get("strategic_tier", "")
     if tier:
