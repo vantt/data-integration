@@ -1,5 +1,32 @@
 # Phase 3: Pill/Badge Convergence
 
+## Status
+Done (2026-07-09). Classification of all 4 families:
+- **`dedup-card__tag`** — already converged as a SIDE EFFECT of Phase 1 (`scard__tag` in
+  `macros/card.html` composes with `bdg`/`bdg--{{variant}}`). No separate work needed.
+- **`radio-pill`/`radio-pill__dot`** — confirmed genuinely different widget: a segmented
+  radio-selector control used in 16+ files, with real JS wiring (`layout.html:774-780`
+  syncs `.radio-pill--on` with actual `<input type="radio">` checked state). Left alone —
+  forcing this into the read-only `bdg` badge system would break real interactivity.
+- **`aq-session-card__pill`** — displays a raw count ("N việc"), not a categorical status
+  value — doesn't fit the `bdg_cls`/`bdg_tip` domain-filter mechanism (no "domain" for an
+  integer). Left alone. Side finding (out of scope, noted for a future phase): at least 2
+  OTHER count-pill implementations exist with the same shape-drift pattern the card family
+  had — `wl-band__count` and `ship-count` (both `border-radius: var(--radii-pill)`,
+  different colors/sizing each). Worth its own consolidation pass later.
+- **`freshness-badge`** — converged to plain `bdg` (`0114ff2e`). Turned out to have ZERO
+  CSS rules anywhere (rendered as unstyled plain text) — this wasn't really "drift into a
+  parallel family," it was closer to a missing-styles bug; fixed by adopting the existing
+  system instead of writing new CSS for it. Also removed its unused `data-ts` attribute
+  (zero JS consumers anywhere).
+
+Incidental finding (out of scope, not fixed): the surrounding Jinja expression for
+`freshness-badge`'s content (`{{ ... | format_datetime_ict }} ICT`) renders "ICT ICT" —
+`format_datetime_ict` (`fmt_date.py`) already appends "ICT" itself, making the template's
+literal `" ICT"` redundant. Pre-existing (blames to `0cf6e763b`, 2026-07-02), unrelated to
+this plan's scope — flagged for a separate fix, not touched here.
+
+
 ## Context
 Canonical badge already has a server-side component layer (`fmt_badge.py` →
 `badge_catalog.py`, exposed as Jinja filters `| bdg_cls('domain')` / `| bdg_tip('domain')`)
