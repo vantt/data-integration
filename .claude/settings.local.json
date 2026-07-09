@@ -78,7 +78,21 @@
       "Bash(curl -s -X POST http://localhost:3000/graphql -H \"Content-Type: application/json\" -d '{\"query\":\"{ schedulesOrError\\(repositorySelector: {repositoryName: \\\\\"__repository__\\\\\", repositoryLocationName: \\\\\"definitions.py\\\\\"}\\) { ... on Schedules { results { name scheduleState { status } } } } }\"}')",
       "Bash(curl -s -X POST http://localhost:3000/graphql -H \"Content-Type: application/json\" -d '{\"query\":\"{ schedulesOrError\\(repositorySelector: {repositoryName: \\\\\"__repository__\\\\\", repositoryLocationName: \\\\\"definitions.py\\\\\"}\\) { ... on Schedules { results { name cronSchedule } } } }\"}')",
       "Bash(ping -n 2 github.com)",
-      "Bash(git fetch *)"
+      "Bash(git fetch *)",
+      "Bash(git rm *)",
+      "Bash(sed -i 's#]\\(\\\\.\\\\./260707-2343-crm-tag-deferred-followups/#]\\(../../260707-2343-crm-tag-deferred-followups/#g' \"D:\\\\Vantt\\\\app\\\\data-integration\\\\plans\\\\archive\\\\260619-0830-crm-tag-acl-sync\\\\plan.md\" \"D:\\\\Vantt\\\\app\\\\data-integration\\\\plans\\\\archive\\\\260706-0833-crm-health-profile-tag-governance\\\\plan.md\")",
+      "Bash(grep -n \"]\\(\\\\.\\\\./\\\\.\\\\./260707\" \"D:\\\\Vantt\\\\app\\\\data-integration\\\\plans\\\\archive\\\\260619-0830-crm-tag-acl-sync\\\\plan.md\" \"D:\\\\Vantt\\\\app\\\\data-integration\\\\plans\\\\archive\\\\260706-0833-crm-health-profile-tag-governance\\\\plan.md\")",
+      "Bash(timeout 8)",
+      "Bash(docker cp *)",
+      "Bash(powershell -Command \"Get-ChildItem -Path 'D:\\\\Vantt\\\\app\\\\data-integration\\\\transformation\\\\models' -Recurse -Filter 'int_customer_sku_supply_tracking.sql' | Select-Object -ExpandProperty FullName\")",
+      "Bash(MSYS_NO_PATHCONV=1 docker exec data_platform find /app/var/data_lake/export -maxdepth 2)",
+      "Bash(MSYS_NO_PATHCONV=1 docker exec data_platform find /app -iname \"*.duckdb\")",
+      "Bash(MSYS_NO_PATHCONV=1 docker exec data_platform *)",
+      "Bash(docker restart *)",
+      "Bash(MSYS_NO_PATHCONV=1 docker exec *)",
+      "Bash(MSYS_NO_PATHCONV=1 docker cp \"C:/Users/Vantt/AppData/Local/Temp/claude/D--Vantt-app-data-integration/8dc7334d-80b9-49b2-befb-649be999a0db/scratchpad/baseline_sku_action_queue.parquet\" data_platform:/tmp/baseline_sku_action_queue.parquet)",
+      "Bash(MSYS_NO_PATHCONV=1 docker cp \"C:/Users/Vantt/AppData/Local/Temp/claude/D--Vantt-app-data-integration/8dc7334d-80b9-49b2-befb-649be999a0db/scratchpad/baseline_customer_action_queue.parquet\" data_platform:/tmp/baseline_customer_action_queue.parquet)",
+      "Bash(powershell -Command \"New-Item -ItemType Directory -Force -Path 'D:\\\\Vantt\\\\app\\\\data-integration\\\\plans\\\\260708-1501-gift-purchase-sku-action-scenario\\\\reports' | Out-Null; Write-Output ok\")"
     ]
   },
   "hooks": {
