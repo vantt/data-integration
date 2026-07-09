@@ -45,7 +45,7 @@ samples:
   main: "(right content area — topbar · kpi_strip · filter_bar · task_list)"
   topbar: "Worklist hôm nay  [Làm mới ↺]  [+ Tạo task]"
   kpi_strip: "[ Task mở: N ] [ Hành động AQ: N ] [ Giá trị: Ntr ] [ Khẩn: N ]"
-  filter_bar: "Ưu tiên:[↕] Loại:[↕] Sản phẩm:[↕]  [💰 Giá trị cao] [✅ Ẩn đã liên hệ] [📋 Có kịch bản] [☎️ Có thể liên hệ]"
+  filter_bar: "Ưu tiên:[↕] Loại:[↕] Sản phẩm:[↕]  [📞 Có thể liên hệ (on)] [💰 Giá trị cao] [✅ Ẩn đã liên hệ] [📋 Có kịch bản]"
   task_list: "▼ 🔴 Quá hạn (3) · [P1] Nguyễn Văn A quá hạn 2 ngày · 🛍 Fine Japan · [📅 Dời hạn][Hủy][📞 Gọi][Xem 360 >]"
 elements:
   "Làm mới ↺": A-S01-020
@@ -318,6 +318,6 @@ interactions:
 - **Last-contact data**: `WorklistQueryService.get_map_for_parties()` is always called (non-optional). Empty dict returned when `last_contact` repo not configured. All rows show the last-contact strip when data is available.
 - **Band 4 / hide_contacted interaction**: mutually exclusive presentation. When `hide_contacted=true`, positive-outcome contacts are filtered out server-side and band 4 stays empty. When `hide_contacted=false` (default), any contact in last 24h (any outcome) moves that action to band 4 so the agent can see what they already tried.
 - **filter_strategic_tier + filter_value_group**: Both derive from `wh_customer_tier` via `LEFT JOIN` in `list_all_action_queue()`. Show only when data present in unfiltered set (`available_tiers` / `available_value_groups` context vars). Actions only; tasks pass through.
-- **filter_contactable_only**: `ActionQueueItem.is_contactable` sourced from `wh_customer_tier.is_contactable` (phone-presence proxy, `dim_customers.sql`; not a consent/DNC signal — see `20-domain-rules.md` R1). Defaults to `true` when the tier row is absent (LEFT JOIN NULL → COALESCE 1), matching the codebase's "default = contactable" policy. Row-1 toggle (like `hide_contacted`/`has_script`); actions only, tasks always pass through.
+- **filter_contactable_only**: `ActionQueueItem.is_contactable` sourced from `wh_customer_tier.is_contactable` (phone-presence proxy, `dim_customers.sql`; not a consent/DNC signal — see `20-domain-rules.md` R1). Defaults to `true` when the tier row is absent (LEFT JOIN NULL → COALESCE 1), matching the codebase's "default = contactable" policy. Row-1 toggle, first position (before "Giá trị cao"), 📞 icon; **default ON** — `parse_filters` treats the toggle as active unless the request explicitly sends `contactable_only=0` (hidden round-trip input persists the off state only, since on is the default). Actions only, tasks always pass through. Turning it OFF is the non-default state and is what increments `active_filter_count`.
 - **Item 3 — B3 VIP/GOLD auto-expand (Phase 06)**: `WorklistRow.value_group` populated from `ActionQueueItem.value_group`. After band sorting, band 3 ("Treo lâu") overrides `is_expanded=True` and adds `vip_count` when any row has `value_group in {'VIP','GOLD'}`. Template shows `⭐ N VIP/GOLD` badge in band summary. Module-level `_BAND_META` is not mutated (dict copy per call).
 - **Item 4 — Wake badge (Phase 06)**: `WorklistRow.wake_badge=True` when `snoozed_until` is a datetime that passed within the last 24 hours. Computed per-row in `rank_worklist()` from action's `snoozed_until` (str ISO or datetime). Template shows `⏰ vừa thức dậy` badge inline on action row. Safe no-op when field absent.

@@ -65,7 +65,7 @@ def parse_filters(query_params: Mapping) -> dict:
         "product": product if product in valid_keys else "",
         "hide_contacted": _last("hide_contacted", "") == "1",
         "has_script": _last("has_script", "") == "1",
-        "contactable_only": _last("contactable_only", "") == "1",
+        "contactable_only": _last("contactable_only", "") != "0",  # default ON; "0" = explicit off
         "strategic_tier": strategic_tier,
         "value_group": value_group,
         "adv": adv,                 # row-2 open state: "1" = open, "" = closed
@@ -115,7 +115,7 @@ def active_filter_count(filters: dict) -> int:
         count += 1
     if filters.get("has_script"):
         count += 1
-    if filters.get("contactable_only"):
+    if not filters.get("contactable_only", True):
         count += 1
     if filters.get("strategic_tier"):
         count += 1

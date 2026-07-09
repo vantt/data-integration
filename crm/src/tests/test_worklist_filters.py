@@ -36,7 +36,7 @@ def test_parse_filters_defaults():
     # keep this assertion in sync with parse_filters' actual return shape.
     assert f == {"assignee": "me", "priority": "all", "types": [], "q": "", "min_value": 0,
                  "product": "", "hide_contacted": False, "has_script": False,
-                 "contactable_only": False,
+                 "contactable_only": True,  # default ON
                  "strategic_tier": "", "value_group": "", "adv": ""}
 
 
@@ -177,31 +177,42 @@ def test_parse_filters_has_script_on():
     assert parse_filters({"has_script": "1"})["has_script"] is True
 
 
-# ── apply_filters: contactable_only ─────────────────────────────────────────
+# ── apply_filters: contactable_only (default ON) ────────────────────────────
 
-def test_contactable_only_keeps_only_contactable_actions():
+def test_contactable_only_default_keeps_only_contactable_actions():
+    """No query param — contactable_only defaults to True and filters."""
     acts = [_action("CALL_NOW", is_contactable=True), _action("WIN_BACK", is_contactable=False)]
     tasks = [_task()]
-    f = parse_filters({"contactable_only": "1"})
+    f = parse_filters({})
     out_acts, out_tasks = apply_filters(acts, tasks, f)
     assert [a.action_type for a in out_acts] == ["CALL_NOW"]
     assert len(out_tasks) == 1  # tasks not filtered by contactable_only
 
 
-def test_contactable_only_off_returns_all_actions():
+def test_contactable_only_explicit_off_returns_all_actions():
     acts = [_action(is_contactable=True), _action(is_contactable=False)]
-    f = parse_filters({})
+    f = parse_filters({"contactable_only": "0"})
     out_acts, _ = apply_filters(acts, [], f)
     assert len(out_acts) == 2
 
 
-def test_contactable_only_counted_in_active_filter_count():
-    f = parse_filters({"contactable_only": "1"})
+def test_contactable_only_off_counted_in_active_filter_count():
+    """Turning OFF the default-on toggle is the non-default state — counts."""
+    f = parse_filters({"contactable_only": "0"})
     assert active_filter_count(f) == 1
 
 
-def test_parse_filters_contactable_only_default_false():
-    assert parse_filters({})["contactable_only"] is False
+def test_contactable_only_default_on_not_counted_in_active_filter_count():
+    f = parse_filters({})
+    assert active_filter_count(f) == 0
+
+
+def test_parse_filters_contactable_only_default_true():
+    assert parse_filters({})["contactable_only"] is True
+
+
+def test_parse_filters_contactable_only_explicit_off():
+    assert parse_filters({"contactable_only": "0"})["contactable_only"] is False
 
 
 def test_parse_filters_contactable_only_on():

@@ -63,7 +63,7 @@
   {% if fmin > 0 %}<input type="hidden" name="min_value" value="{{ fmin }}">{% endif %}
   {% if fhide %}<input type="hidden" name="hide_contacted" value="1">{% endif %}
   {% if fscript %}<input type="hidden" name="has_script" value="1">{% endif %}
-  {% if fcontact %}<input type="hidden" name="contactable_only" value="1">{% endif %}
+  {% if not fcontact %}<input type="hidden" name="contactable_only" value="0">{% endif %}
 
   {# ══ Row 1 — always visible ══════════════════════════════════════════ #}
   <div class="wlf-bar wlf-row1">
@@ -102,6 +102,17 @@
     {# Mode toggles ────────────────────────────────────────────────────── #}
     <div class="wlf-row1__toggles">
 
+      {# Có thể liên hệ — only actions for customers with a usable phone number. Default ON. #}
+      <button type="button"
+              class="wlf-toggle{% if fcontact %} wlf-toggle--on{% endif %}"
+              aria-pressed="{{ 'true' if fcontact else 'false' }}"
+              title="Chỉ hiện khách hàng có số điện thoại"
+              hx-get="/worklist/fragment" hx-target="#worklist-container" hx-swap="outerHTML"
+              hx-include="#wl-filter-form"
+              hx-vals='{% if fcontact %}{"contactable_only":"0"}{% else %}{"contactable_only":"1"}{% endif %}'>
+        {% include "icons/phone.svg" %} Có thể liên hệ
+      </button>
+
       {# Giá trị cao — min_value ≥ 1,000,000 VND #}
       <button type="button"
               class="wlf-toggle{% if fmin > 0 %} wlf-toggle--on{% endif %}"
@@ -133,17 +144,6 @@
               hx-include="#wl-filter-form"
               hx-vals='{% if fscript %}{"has_script":"0"}{% else %}{"has_script":"1"}{% endif %}'>
         {% include "icons/tasks.svg" %} Có kịch bản
-      </button>
-
-      {# Có thể liên hệ — only actions for customers with a usable phone number #}
-      <button type="button"
-              class="wlf-toggle{% if fcontact %} wlf-toggle--on{% endif %}"
-              aria-pressed="{{ 'true' if fcontact else 'false' }}"
-              title="Chỉ hiện khách hàng có số điện thoại"
-              hx-get="/worklist/fragment" hx-target="#worklist-container" hx-swap="outerHTML"
-              hx-include="#wl-filter-form"
-              hx-vals='{% if fcontact %}{"contactable_only":"0"}{% else %}{"contactable_only":"1"}{% endif %}'>
-        {% include "icons/check.svg" %} Có thể liên hệ
       </button>
 
     </div>{# /.wlf-row1__toggles #}
