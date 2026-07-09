@@ -28,7 +28,7 @@ from adapters.inbound.web.format_helpers import (
     bdg_cls_filter, bdg_tip_filter, bdg_label_filter,
 )
 from adapters.inbound.web.badge_catalog import bdg_lookup
-from application.worklist_ranking import WorklistRow, rank_worklist
+from application.worklist_ranking import WorklistRow, rank_worklist, split_worklist_view
 from domain.entities.cache_insight import ActionQueueItem
 from domain.entities.task import Task
 
@@ -155,6 +155,9 @@ def _base_ctx(**overrides) -> dict:
     """Minimal valid context satisfying every variable referenced in the fragment."""
     ctx = {
         "bands": [],
+        "queue_action_bands": [],
+        "queue_action_count": 0,
+        "my_task_bands": [],
         "value_total": 0,
         "counts": {"actions": 0, "tasks": 0, "total": 0},
         "task_open": 0,
@@ -172,6 +175,14 @@ def _base_ctx(**overrides) -> dict:
         "request": SimpleNamespace(url=SimpleNamespace(query="")),
     }
     ctx.update(overrides)
+    # Auto-derive the queue/my-tasks split from a raw rank_worklist() `bands` result
+    # when the caller didn't already provide the split explicitly — keeps every
+    # existing `_base_ctx(**rank_worklist_result)` call site working unmodified.
+    if "bands" in overrides and "queue_action_bands" not in overrides:
+        split = split_worklist_view({"bands": ctx["bands"]})
+        ctx["queue_action_bands"] = split["queue_action_bands"]
+        ctx["queue_action_count"] = split["queue_action_count"]
+        ctx["my_task_bands"] = split["my_task_bands"]
     return ctx
 
 
@@ -499,6 +510,40 @@ class TestTaskRowLabelClarity:
         assert "(chưa xác định)" in html
 
 
+class TestUnassignedQueueRowRedesign:
+    """Hàng Đợi Chung rows render through wl_row() (priority pill, description,
+    due date) instead of the old stripped-down bare markup, with a single
+    "Nhận" CTA swapped in for the assigned-only controls."""
+
+    def _render_queue(self, current_user_id: str = "u-1", **task_overrides) -> str:
+        t = _task("t-queue", priority=2, description="Gọi xác nhận đơn hàng", **task_overrides)
+        row = WorklistRow(kind="task", band=-1, urgency=0, value=0, neglect_days=0,
+                           ref_id=t.task_id, payload=t)
+        ctx = _base_ctx(unassigned_tasks=[row], current_user_id=current_user_id)
+        return _render_fragment(ctx)
+
+    def test_shows_priority_pill_and_description(self):
+        html = self._render_queue()
+        assert 'prio prio--P1' in html  # priority=2 → urgent → P1
+        assert "Gọi xác nhận đơn hàng" in html
+
+    def test_shows_nhan_button_when_authenticated(self):
+        html = self._render_queue(current_user_id="u-1")
+        assert 'hx-patch="/tasks/t-queue/assign-me"' in html
+        assert ">Nhận<" in html
+
+    def test_hides_nhan_button_when_not_authenticated(self):
+        html = self._render_queue(current_user_id="")
+        assert 'hx-patch="/tasks/t-queue/assign-me"' not in html
+
+    def test_no_assigned_only_controls(self):
+        """Trả việc / Dời hạn / Hủy / snooze all assume an existing owner — must not render."""
+        html = self._render_queue()
+        assert "Trả việc" not in html
+        assert "Dời hạn" not in html
+        assert ">Hủy<" not in html
+
+
 # ── Band collapse/expand and overflow ("Xem thêm") ──────────────────────────
 
 class TestBandCollapseAndOverflow:
@@ -586,3 +631,35 @@ class TestBandCollapseAndOverflow:
         ctx = _base_ctx(**result, party_extras={})
         html = _render_fragment(ctx)
         assert "Xem thêm" not in html
+
+    def test_my_task_bands_never_show_xem_them_even_when_over_cap(self):
+        """my_task_bands renders eager/uncapped (show_overflow=false) — regression guard
+        for the band-id collision the code review caught: /worklist/band/{id}/more always
+        re-ranks actions-only, so band ids 1/2 can't safely be shared between
+        queue_action_bands (lazy-paginated) and my_task_bands (owned tasks) — if
+        my_task_bands ever re-enabled that toggle, clicking it would fetch action rows
+        into a task band. Cap is 10 for band 1 — 12 urgent tasks exceeds it.
+        """
+        from datetime import date
+        tasks = [_task(f"t-urgent-{i}", priority=2, due_at="2026-06-23") for i in range(12)]
+        result = rank_worklist([], tasks, today=date(2026, 6, 23))
+        ctx = _base_ctx(**result, party_extras={})
+        html = _render_fragment(ctx)
+        assert "Xem thêm" not in html
+        # All 12 must actually render (uncapped), not silently truncated to 10.
+        for i in range(12):
+            assert f"t-urgent-{i}" in html
+
+    def test_queue_and_my_tasks_overflow_do_not_collide_on_shared_band_id(self):
+        """Band 1 exists in both queue_action_bands and my_task_bands simultaneously —
+        the queue side's 'Xem thêm' must be present (its overflow route is safe/actions-
+        only), while the task side must not offer one at all."""
+        from datetime import date
+        actions = [_action(f"a-c{i}", action_type="CALL_NOW", priority=1) for i in range(12)]
+        tasks = [_task(f"t-urgent-{i}", priority=2, due_at="2026-06-23") for i in range(12)]
+        result = rank_worklist(actions, tasks, today=date(2026, 6, 23))
+        ctx = _base_ctx(**result, party_extras={})
+        html = _render_fragment(ctx)
+        assert html.count("Xem thêm") == 1  # only the queue section's toggle
+        for i in range(12):
+            assert f"t-urgent-{i}" in html  # all 12 tasks rendered directly, no truncation

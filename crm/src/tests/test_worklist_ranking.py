@@ -25,6 +25,7 @@ from crm.src.application.worklist_ranking import (  # noqa: E402
     urgency_score,
     assign_band,
     rank_worklist,
+    split_worklist_view,
     WorklistRow,
     _parse_date,
     today_ict,
@@ -701,6 +702,101 @@ class TestRankWorklistBand4ClaimTasks:
         result = rank_worklist([], [t], TODAY, contacted_party_ids={"party-001"})
         band4 = _b(result, 4)
         assert band4["count"] == 0
+
+
+# =============================================================================
+# split_worklist_view — queue (unclaimed actions) vs my-tasks (owned work)
+# =============================================================================
+
+class TestSplitWorklistView:
+    """Presentation split: rank_worklist() output regrouped by kind, no re-sort.
+
+    queue_action_bands / my_task_bands keep the same band-dict shape as
+    rank_worklist()'s own `bands` (id/label/icon/rows/count/total_value/
+    display_capacity/is_expanded/vip_count) so both render through the
+    existing `_wl_bands.html` partial unmodified.
+    """
+
+    def test_mixed_input_separates_actions_from_tasks(self):
+        a_urgent = make_action("a-urgent", priority=1)              # band 1 (urgency 9)
+        a_ontrack = make_action("a-ontrack", priority=5)             # band 2
+        t_today = make_task("t-today", priority=2, due_at=str(TODAY))  # band 1
+        t_ontrack = make_task("t-ontrack", priority=0)               # band 2 (no due date)
+        result = rank_worklist([a_urgent, a_ontrack], [t_today, t_ontrack], TODAY)
+        view = split_worklist_view(result)
+
+        queue_ids = {r.ref_id for band in view["queue_action_bands"] for r in band["rows"]}
+        assert queue_ids == {"a-urgent", "a-ontrack"}
+
+        task_ids = {r.ref_id for band in view["my_task_bands"] for r in band["rows"]}
+        assert task_ids == {"t-today", "t-ontrack"}
+
+    def test_task_bands_never_contain_action_rows(self):
+        a = make_action("a-001", priority=1)
+        t = make_task("t-001", priority=2, due_at=str(TODAY))
+        view = split_worklist_view(rank_worklist([a], [t], TODAY))
+        for band in view["my_task_bands"]:
+            if band["id"] == 4:
+                continue  # band 4 stays mixed by design
+            assert all(r.kind == "task" for r in band["rows"])
+
+    def test_queue_action_bands_never_contain_task_rows(self):
+        a = make_action("a-001", priority=1)
+        t = make_task("t-001", priority=2, due_at=str(TODAY))
+        view = split_worklist_view(rank_worklist([a], [t], TODAY))
+        for band in view["queue_action_bands"]:
+            assert all(r.kind == "action" for r in band["rows"])
+
+    def test_queue_action_bands_covers_only_ids_1_2_3(self):
+        """Band 0 (task-only) and band 4 (mixed) never appear in queue_action_bands."""
+        a = make_action("a-001", priority=1)
+        view = split_worklist_view(rank_worklist([a], [], TODAY))
+        ids = {b["id"] for b in view["queue_action_bands"]}
+        assert ids == {1, 2, 3}
+
+    def test_neglected_action_lands_in_band3_queue(self):
+        """Band-3 (Treo lâu, pending>=7d) actions surface in queue_action_bands, not lost."""
+        old_pending = str(TODAY - timedelta(days=10))
+        a = make_action("a-neglected", priority=5, pending_since=old_pending)
+        view = split_worklist_view(rank_worklist([a], [], TODAY))
+        assert view["queue_action_count"] == 1
+        band3 = next(b for b in view["queue_action_bands"] if b["id"] == 3)
+        assert band3["rows"][0].ref_id == "a-neglected"
+
+    def test_band3_vip_count_preserved_in_queue_action_bands(self):
+        """Item-3 VIP/GOLD auto-expand signal must survive the split (queue side only)."""
+        a = make_action("a-vip", pending_since=str(TODAY - timedelta(days=10)))
+        a.value_group = "VIP"
+        view = split_worklist_view(rank_worklist([a], [], TODAY))
+        band3 = next(b for b in view["queue_action_bands"] if b["id"] == 3)
+        assert band3["vip_count"] == 1
+        assert band3["is_expanded"] is True
+
+    def test_band4_contacted_row_stays_mixed_not_duplicated_into_queue(self):
+        """A contacted action must appear in my_task_bands' band 4, never in queue_action_bands."""
+        a = make_action("a-001", priority=5)
+        a.party_id = "party-001"
+        result = rank_worklist([a], [], TODAY, contacted_party_ids={"party-001"})
+        view = split_worklist_view(result)
+
+        band4 = next(b for b in view["my_task_bands"] if b["id"] == 4)
+        assert band4["count"] == 1
+        assert band4["rows"][0].ref_id == "a-001"
+        assert view["queue_action_count"] == 0
+
+    def test_empty_input_produces_empty_view(self):
+        view = split_worklist_view(rank_worklist([], [], TODAY))
+        assert view["queue_action_count"] == 0
+        assert all(band["count"] == 0 for band in view["queue_action_bands"])
+        assert all(band["count"] == 0 for band in view["my_task_bands"])
+
+    def test_band3_always_empty_in_my_task_bands(self):
+        """Band 3 (Treo lâu) is action-only in assign_band() — task view always empty there."""
+        a = make_action("a-neglected", pending_since=str(TODAY - timedelta(days=10)))
+        view = split_worklist_view(rank_worklist([a], [], TODAY))
+        band3 = next(b for b in view["my_task_bands"] if b["id"] == 3)
+        assert band3["count"] == 0
+        assert band3["rows"] == []
 
 
 # =============================================================================

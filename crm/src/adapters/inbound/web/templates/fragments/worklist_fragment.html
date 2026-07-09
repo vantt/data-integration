@@ -1,11 +1,11 @@
 {# @surface S01 · Worklist / Dashboard | @source crm/docs/ui-spec/screens/S01-worklist-dashboard.md | @kind FRAGMENT #}
 {# HTMX-refreshable inner fragment — served at GET /worklist/fragment.
-   Context: bands[], value_total, counts, urgent_count, task_open, available_types,
-   active_filter_count, filters, party_extras, refreshed_at, is_stale.
+   Context: queue_action_bands[], queue_action_count, my_task_bands[], value_total, counts,
+   urgent_count, task_open, available_types, active_filter_count, filters, party_extras,
+   refreshed_at, is_stale.
 #}
 {% set filters = filters | default({}) %}
 {% set party_extras = party_extras | default({}) %}
-{% set bands = bands | default([]) %}
 {% set value_total = value_total | default(0) %}
 {% set counts = counts | default({}) %}
 {% set urgent_count = urgent_count | default(0) %}
@@ -71,7 +71,12 @@
 
   <div style="margin-bottom:var(--sp-6)"></div>
 
-  {# ── Team Queue — unassigned tasks, shown above Quá Hạn band ── #}
+  {# ── Team Queue — unassigned custom tasks, shown above Cơ Hội Hệ Thống.
+     Renders through the same wl_row() macro/markup as every other task row
+     (priority pill, description, due date, contact-pref notes) so it no
+     longer looks like a stripped-down second-class row — only the aside
+     CTA differs (is_unassigned=true → single "Nhận" button). ── #}
+  {% from "fragments/_wl_row.html" import wl_row %}
   {% set unassigned_tasks = unassigned_tasks | default([]) %}
   {% if unassigned_tasks %}
   <details class="wl-band" style="margin-bottom:var(--sp-2)">
@@ -82,30 +87,45 @@
       <span class="wl-band__chevron" aria-hidden="true"></span>
     </summary>
     <div class="wl-list">
-      {% for t in unassigned_tasks %}
-      <div class="wl-row wl-row--task" id="queue-task-{{ t.task_id }}">
-        <div class="wl-row__main">
-          <a class="wl-row__name" href="/tasks/{{ t.task_id }}">{{ t.title }}</a>
-          {% if t.due_at %}
-          <span class="caption" style="color:var(--fg-tertiary)">{{ t.due_at[:10] }}</span>
-          {% endif %}
-        </div>
-        {% if current_user_id %}
-        <button
-          class="btn btn--xs btn--secondary"
-          hx-patch="/tasks/{{ t.task_id }}/assign-me"
-          hx-swap="delete"
-          hx-target="#queue-task-{{ t.task_id }}"
-          hx-confirm="Nhận task này về danh sách của bạn?"
-        >Nhận</button>
-        {% endif %}
-      </div>
+      {% for row in unassigned_tasks %}
+      {{ wl_row(row, party_extras, is_unassigned=true, current_user_id=current_user_id | default('')) }}
       {% endfor %}
     </div>
   </details>
   {% endif %}
 
-  {# ── Banded rows (urgency bands rendered via the wl_row macro) ── #}
+  {# ── Cơ Hội Hệ Thống — action-queue items no one has claimed yet.
+     Row UI unchanged (still the plain action-row wl_row branch); only the
+     RENDER LOCATION moved out of the urgency-banded area so an unclaimed
+     opportunity never sits next to owned work in the same band. Reuses
+     _wl_bands.html verbatim (band ids 1/2/3 keep their existing
+     Khẩn-open/Trong hạn-open/Treo lâu-collapsed defaults and VIP/GOLD
+     auto-expand — no new sub-grouping decision needed) and the existing
+     `/worklist/band/{id}/more` overflow route (already actions-only). ── #}
+  {% set queue_action_bands = queue_action_bands | default([]) %}
+  {% set queue_action_count = queue_action_count | default(0) %}
+  {% if queue_action_count > 0 %}
+  <div style="margin-bottom:var(--sp-3)">
+    <div class="wl-band__label" style="font-size:15px;margin-bottom:var(--sp-2)">
+      🎯 Cơ Hội Hệ Thống <span class="wl-band__count">{{ queue_action_count }}</span>
+    </div>
+    {% set bands = queue_action_bands %}
+    {% set empty_state_id = 'wl-empty-state-queue' %}
+    {% set show_overflow = true %}
+    {% include "fragments/_wl_bands.html" %}
+  </div>
+  {% endif %}
+
+  {# ── Banded rows (urgency bands rendered via the wl_row macro) —
+     my_task_bands: owned work only (manual-assigned + claimed). Band 4
+     ("Đã liên hệ") stays mixed-kind by design, first, collapsed.
+     show_overflow=false: rows are uncapped/eager here, NOT lazy-paginated —
+     see the comment in screen_worklist.py on why band ids 1/2 can't safely
+     share the actions-only /worklist/band/{id}/more route with the queue
+     section above. ── #}
+  {% set bands = my_task_bands | default([]) %}
+  {% set empty_state_id = 'wl-empty-state' %}
+  {% set show_overflow = false %}
   {% include "fragments/_wl_bands.html" %}
 
   {# ── Freshness footer ─────────────────────────────────────── #}

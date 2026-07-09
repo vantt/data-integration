@@ -22,7 +22,12 @@ from domain.entities.cache_insight import ActionQueueItem
 from domain.entities.profile import Note
 from domain.entities.party import PartyIdentity
 from domain.entities.task import Task
-from application.worklist_ranking import rank_worklist, today_ict
+from application.worklist_ranking import (
+    WorklistRow,
+    rank_worklist,
+    split_worklist_view,
+    today_ict,
+)
 from application.worklist_filters import (
     CORE_PRODUCTS,
     active_filter_count,
@@ -235,16 +240,38 @@ def make_worklist_router(
             if len(queue_party_ids) >= 50:
                 break
 
+        # Presentation split: queue (unclaimed action-queue opportunities) vs
+        # my_task_bands (owned work — manual-assigned + claimed). Must run
+        # BEFORE the display_capacity cap-slicing below so both views see the
+        # full, unsliced row lists (each band dict's `rows` list is rebound
+        # to a new sliced list afterward — the lists already extracted here
+        # are independent copies, unaffected by that later rebind).
+        view = split_worklist_view(ranked)
+
         # Screen adapter responsibility: cap band.rows to display_capacity before
         # passing to the template so the initial render only processes cap rows.
-        # Overflow is loaded lazily via GET /worklist/band/{band_id}/more.
-        # band.count retains the full count for the header badge.
-        for band in ranked["bands"]:
-            cap = band["display_capacity"]
-            band["rows"] = band["rows"][:cap]
+        # Overflow is loaded lazily via GET /worklist/band/{band_id}/more, which
+        # ALWAYS re-ranks actions-only (rank_worklist(actions, [], ...)) keyed by
+        # band id — correct for queue_action_bands (ids 1/2/3 are action-only
+        # there by construction) but NOT kind-aware, so it must never be wired to
+        # my_task_bands: bands 1/2 exist in both band-dict lists, and reusing that
+        # route for the task side would inject action rows into "owned work"
+        # (exactly the kind-mixing this split exists to prevent). Until the route
+        # is made kind-aware, my_task_bands renders uncapped/eager instead of
+        # lazy-paginated — task-per-band volume is expected to stay small (a
+        # rep's own open tasks), so this is a safe trade, not a silent drop.
+        def _cap_rows(bands: list) -> None:
+            for band in bands:
+                cap = band["display_capacity"]
+                band["rows"] = band["rows"][:cap]
+
+        _cap_rows(view["queue_action_bands"])
 
         return {
             **ranked,
+            "queue_action_bands": view["queue_action_bands"],
+            "queue_action_count": view["queue_action_count"],
+            "my_task_bands": view["my_task_bands"],
             "party_extras": party_extras,
             "refreshed_at": refreshed_at,
             "is_stale": is_stale,
@@ -260,8 +287,17 @@ def make_worklist_router(
             # Pass raw lists for templates that might still iterate directly.
             "actions": all_actions,
             "tasks": all_tasks,
-            # Team queue: unassigned tasks any user can pick up
-            "unassigned_tasks": unassigned_tasks,
+            # Team queue: unassigned tasks any user can pick up. Wrapped in a minimal
+            # WorklistRow (band/urgency/value/neglect_days unused — Hàng Đợi Chung has
+            # no urgency banding) so the row renders via the same wl_row() macro/markup
+            # as every other task row, with is_unassigned=true swapping in "Nhận".
+            "unassigned_tasks": [
+                WorklistRow(
+                    kind="task", band=-1, urgency=0, value=0, neglect_days=0,
+                    ref_id=str(t.task_id), payload=t,
+                )
+                for t in unassigned_tasks
+            ],
             "current_user_id": current_user_id,
             # A2: ordered party_ids for call-mode queue navigation (up to 50)
             "queue_party_ids": queue_party_ids,

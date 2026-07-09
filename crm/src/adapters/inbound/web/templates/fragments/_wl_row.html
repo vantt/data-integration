@@ -5,8 +5,12 @@
    row        WorklistRow  — .kind('action'|'task'), .band, .urgency, .value,
                               .neglect_days, .ref_id, .payload
    party_extras dict       — {party_id: {preferred_identity, contact_pref_notes}}
+   is_unassigned bool      — task rows only ("Hàng Đợi Chung" — no assignee yet).
+                              Swaps the whole aside for a single "Nhận" self-assign
+                              button; contact/reschedule/unclaim/snooze controls don't
+                              apply until someone owns the task.
 #}
-{% macro wl_row(row, party_extras, script_cids=none, queue_party_ids=[]) %}
+{% macro wl_row(row, party_extras, script_cids=none, queue_party_ids=[], is_unassigned=false, current_user_id='') %}
 {% set a = row.payload %}
 {% set pid = a.party_id %}
 {% set extras = party_extras.get(pid, {}) if pid else {} %}
@@ -253,6 +257,23 @@
   </div>
 
   <div class="wl-row__aside">
+    {% if is_unassigned %}
+    {# Hàng Đợi Chung — no assignee yet: the only relevant action is self-assign.
+       Contact/reschedule/unclaim/snooze controls all assume an owner already exists.
+       Gated on current_user_id (matches prior behavior) — assign-me 401s with no auth. #}
+    {% if current_user_id %}
+    <button class="btn btn--primary" style="padding:8px 12px" type="button"
+            title="Nhận task này về danh sách của bạn"
+            hx-patch="/tasks/{{ t.task_id }}/assign-me"
+            hx-target="#task-{{ t.task_id }}" hx-swap="delete"
+            hx-confirm="Nhận task này về danh sách của bạn?"
+            onclick="event.stopPropagation()">Nhận</button>
+    {% endif %}
+    {% if pid %}
+    <a href="/customers/{{ pid }}" class="btn btn--ghost" style="padding:8px 10px"
+       onclick="event.stopPropagation()">Xem 360 {% include "icons/chevron.svg" %}</a>
+    {% endif %}
+    {% else %}
     {% if pid %}
       {% if t.source == 'action_queue_claim' %}
         {{ contact_btn(pid, pref_id, task_id=t.task_id) }}
@@ -298,6 +319,7 @@
     {% if pid %}
     <a href="/customers/{{ pid }}?tab=tasks" class="btn btn--ghost" style="padding:8px 10px"
        onclick="event.stopPropagation()">Xem 360 {% include "icons/chevron.svg" %}</a>
+    {% endif %}
     {% endif %}
   </div>
 </div>

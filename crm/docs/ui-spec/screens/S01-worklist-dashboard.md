@@ -103,19 +103,48 @@ elements:
 - [Xem 360 >] → navigate S03 (renamed from "Mở hồ sơ" to match action rows —
   both link to the same destination)
 
-### Band structure
+### Section structure (2026-07-09 — queue vs my-tasks split)
 
-| Band ID | Label | Icon | Default state |
-|---|---|---|---|
-| 4 | Đã liên hệ | ✅ | Collapsed |
-| 0 | Quá hạn | 🔴 | Open |
-| 1 | Hôm nay / Khẩn | 🟡 | Open |
-| 2 | Đúng hạn | 🟢 | Open |
-| 3 | Cần chú ý | 🔵 | Collapsed |
+The page renders 3 top-to-bottom sections so an unclaimed opportunity never sits next to
+owned work in the same list:
 
-Band 4 collects action rows whose `party_id` had ANY contact attempt in last 24h (regardless of outcome),
-when `hide_contacted=false`. When `hide_contacted=true`, positive-outcome contacts are removed from the
-list entirely — band 4 stays empty.
+1. **📥 Hàng Đợi Chung** — unassigned custom (`manual`-source) tasks, visible to the whole
+   team. Row UI is the standard task row (priority pill, description, due date) with the
+   aside swapped for a single **Nhận** button (`PATCH /tasks/{id}/assign-me`).
+2. **🎯 Cơ Hội Hệ Thống** — unclaimed `wh_action_queue` items (`kind='action'`, not yet
+   claimed, not recently contacted). Row UI unchanged from the original action row. Reuses
+   `_wl_bands.html` with `queue_action_bands` (band ids 1/2/3 only — action rows filtered
+   out of the urgency area below), so the existing sub-band defaults still apply: 1 "Khẩn"
+   open, 2 "Trong hạn" open, 3 "Treo lâu" collapsed (VIP/GOLD auto-expand unchanged). The
+   existing `/worklist/band/{id}/more` overflow route already re-ranks actions-only, so it
+   serves this section's "Xem thêm" (`show_overflow=true`) unmodified.
+3. **Urgency bands (`my_task_bands`)** — owned work only: manual tasks assigned to me +
+   `action_queue_claim` tasks. Never contains an unclaimed action row. **Renders
+   uncapped/eager (`show_overflow=false`), no "Xem thêm" toggle** — band ids 1/2 also exist
+   in `queue_action_bands`, and `/worklist/band/{id}/more` always re-ranks actions-only, so
+   it cannot safely serve this section's overflow without injecting action rows into a task
+   band. Task-per-band volume (a rep's own open tasks) is expected to stay small enough that
+   this is a safe trade rather than a silent drop. Revisit if the route is ever made
+   kind-aware.
+
+| Band ID | Label | Icon | Default state | Kind in `my_task_bands` |
+|---|---|---|---|---|
+| 4 | Đã liên hệ | ✅ | Collapsed | mixed (task + action) — see below |
+| 0 | Quá hạn | 🔴 | Open | task only |
+| 1 | Hôm nay / Khẩn | 🟡 | Open | task only |
+| 2 | Đúng hạn | 🟢 | Open | task only |
+| 3 | Cần chú ý | 🔵 | Collapsed | always empty (action-only band; lives in `queue_action_bands` instead) |
+
+Band 4 collects rows (either kind) whose `party_id` had ANY contact attempt in last 24h
+(regardless of outcome), when `hide_contacted=false`. When `hide_contacted=true`, positive-outcome
+contacts are removed from the list entirely — band 4 stays empty. Band 4 is the one place
+`my_task_bands` still mixes kinds — a contacted-but-unclaimed action has nowhere else to go
+once excluded from `queue_action_bands`, and "already contacted" is a orthogonal signal to
+ownership, so mixing here doesn't reintroduce the original claim/opportunity confusion.
+
+`split_worklist_view()` (`application/worklist_ranking.py`) performs this partition from
+`rank_worklist()`'s output — no change to urgency/band/sort logic, purely a `kind` filter per
+band, run before the `display_capacity` cap-slicing so both views see full row counts.
 
 ## States
 

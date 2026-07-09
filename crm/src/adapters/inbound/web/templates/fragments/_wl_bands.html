@@ -6,23 +6,43 @@
    <details> expand — avoids rendering thousands of hidden rows on initial page load.
 
    Context:
-     bands         list[dict]  — [{id, label, icon, rows, count, total_value}]
-     party_extras  dict        — {party_id: {preferred_identity, contact_pref_notes}}
-     counts        dict        — {actions, tasks, total}
+     bands           list[dict]  — [{id, label, icon, rows, count, total_value}]
+     party_extras    dict        — {party_id: {preferred_identity, contact_pref_notes}}
+     empty_state_id  str         — DOM id for the empty-state block (override when this
+                                    partial is included more than once per page, so ids
+                                    stay unique — e.g. "wl-empty-state-queue")
+     empty_title/empty_sub  str  — empty-state copy override (defaults keep the original
+                                    "Hôm nay không có task nào" wording)
+
+   total_count is derived from the `bands` passed in (sum of band.count), NOT a global
+   counts dict — makes this partial self-contained so it can be included twice on the same
+   page (once for the action-queue bands, once for the my-tasks bands) and each shows its
+   own correct empty state independently.
 #}
 {% from "fragments/_wl_row.html" import wl_row %}
 {% set bands = bands | default([]) %}
 {% set party_extras = party_extras | default({}) %}
 {% set script_cids = script_cids | default(none) %}
-{% set total_count = counts.total | default(0) %}
+{% set total_count = bands | sum(attribute='count') %}
 {% set queue_party_ids = queue_party_ids | default([]) %}
+{% set empty_state_id = empty_state_id | default('wl-empty-state') %}
+{% set empty_title = empty_title | default('Hôm nay không có task nào') %}
+{% set empty_sub = empty_sub | default('Không có task theo bộ lọc hiện tại.') %}
+{# show_overflow=false: the screen adapter left `rows` UNCAPPED for this call (see
+   screen_worklist.py — my_task_bands is rendered eager/full, not lazy-paginated,
+   because /worklist/band/{id}/more always re-ranks actions-only and would inject
+   action rows into a task band sharing the same id). Skip the "Xem thêm" toggle
+   entirely in that case — there is nothing left to fetch, and band.count == the
+   number of rows already rendered so the `count > cap` check would otherwise
+   show a toggle that duplicates/breaks. #}
+{% set show_overflow = show_overflow | default(true) %}
 
 {# ── Empty / all-done state ──────────────────────────────────────────────── #}
 {% if total_count == 0 %}
-<div class="state" id="wl-empty-state">
+<div class="state" id="{{ empty_state_id }}">
   <div class="state__inner">
-    <div class="state__title">Hôm nay không có task nào</div>
-    <p class="state__sub">Không có task theo bộ lọc hiện tại.</p>
+    <div class="state__title">{{ empty_title }}</div>
+    <p class="state__sub">{{ empty_sub }}</p>
     <div class="state__actions">
       <a href="/customers" class="btn btn--secondary">Duyệt khách hàng</a>
     </div>
@@ -65,7 +85,7 @@
 
     {# Overflow: lazy-load on <details> expand — avoids rendering thousands of hidden rows.
        band.rows is already capped; band.count > cap means there is overflow to fetch. #}
-    {% if band.count > cap %}
+    {% if show_overflow and band.count > cap %}
     <details class="wl-more">
       <summary class="wl-more__toggle">
         Xem thêm ({{ band.count - cap }})

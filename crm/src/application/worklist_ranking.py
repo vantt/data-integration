@@ -320,3 +320,60 @@ def rank_worklist(
         "task_open": len(tasks),      # all tasks passed in are open (filter applied upstream)
         "urgent_count": urgent_count,  # rows needing attention today
     }
+
+
+# ---------------------------------------------------------------------------
+# Presentation split: queue (unclaimed opportunities) vs my tasks (owned work)
+# ---------------------------------------------------------------------------
+
+def split_worklist_view(ranked: dict) -> dict:
+    """Regroup rank_worklist()'s bands into a queue/my-tasks presentation split.
+
+    Does not re-derive urgency/band/sort — purely partitions rows already
+    computed by rank_worklist() by `kind`, keeping each band's existing
+    label/icon/display_capacity/is_expanded/vip_count metadata intact. This
+    lets both halves render through the same `_wl_bands.html` partial (and
+    the existing `/worklist/band/{id}/more` overflow route, which already
+    re-ranks actions-only and looks rows up by band id) with no template
+    changes to that partial.
+
+    - queue_action_bands: bands 1/2/3, rows filtered to kind=='action'.
+      Band 0 has no action-queue entry (assign_band() never routes an
+      action there — only overdue tasks land in band 0).
+    - my_task_bands: bands 4/0/1/2/3, rows filtered to kind=='task', EXCEPT
+      band 4 ("Đã liên hệ") which is passed through unfiltered (mixed kind
+      by design — an action's contacted-party routing already happened
+      inside rank_worklist(), so it's excluded from queue_action_bands by
+      construction and must still be visible somewhere).
+    """
+    my_task_bands = []
+    queue_action_bands = []
+
+    for band in ranked["bands"]:
+        if band["id"] == 4:
+            my_task_bands.append(dict(band))
+            continue
+
+        task_rows = [r for r in band["rows"] if r.kind == "task"]
+        task_band = dict(band)
+        task_band["rows"] = task_rows
+        task_band["count"] = len(task_rows)
+        task_band["total_value"] = sum(r.value for r in task_rows)
+        task_band["vip_count"] = 0
+        my_task_bands.append(task_band)
+
+        if band["id"] == 0:
+            continue  # Band 0 (Quá hạn) is task-only — no action-queue entry
+
+        action_rows = [r for r in band["rows"] if r.kind == "action"]
+        action_band = dict(band)
+        action_band["rows"] = action_rows
+        action_band["count"] = len(action_rows)
+        action_band["total_value"] = sum(r.value for r in action_rows)
+        queue_action_bands.append(action_band)
+
+    return {
+        "queue_action_bands": queue_action_bands,
+        "queue_action_count": sum(b["count"] for b in queue_action_bands),
+        "my_task_bands": my_task_bands,
+    }
