@@ -26,14 +26,21 @@ facts() can't express that without an unescaped render path) and order_detail's
 "Recipient link" card (an `<a>` element, not a `<div>` — card() only emits divs). Both
 templates verified live against the running server with real customer/order data.
 
-Remaining (batch 3, not started): `conversation_detail.html` (`scard` + `conv-cust-card` +
-`facts`), `fragments/c360_insight_panel.html` (`aq-card`/`aq-session-card`). Important
-open question before touching these: `.aq-card` (`ds-extra.css`) has a border-left accent
-stripe, asymmetric border-radius, and a real box-shadow — a deliberately distinct visual
-treatment, not just a differently-named `.scard`. Decide whether this is (a) a legitimate
-`card()` variant to add (e.g. `variant="flagged"`) or (b) a documented exception to leave
-alone, before doing any mechanical migration on it — don't force convergence on a
-component that may be intentionally different by design.
+Batch 3 part 1 done: `conversation_detail.html` (`7bfbca76`) — both sidebar cards (no-
+party-linked, `conv-cust-card`) migrated. `conv-cust-card`'s flex/gap layout preserved via
+new `.conv-cust-card-body` modifier class (same pattern as `tcard`->`task-card`). "Trạng
+thái" fact (embeds a `<span class="bdg">` badge as its value) correctly left hand-written,
+not forced into `facts()`. Verified via Jinja render byte-diff (live `crm_conversation`
+table is empty, no real conversations to click through).
+
+Remaining (batch 3 part 2, not started): `fragments/c360_insight_panel.html`
+(`aq-card`/`aq-session-card`). Open design question before touching this: `.aq-card`
+(`ds-extra.css`) has a border-left accent stripe, asymmetric border-radius, and a real
+box-shadow — a deliberately distinct visual treatment, not just a differently-named
+`.scard`. Decide whether this is (a) a legitimate `card()` variant to add (e.g.
+`variant="flagged"`) or (b) a documented exception to leave alone, before doing any
+mechanical migration on it — don't force convergence on a component that may be
+intentionally different by design.
 
 
 ## Context
