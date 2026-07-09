@@ -123,6 +123,40 @@ urgency, để band urgency chỉ còn chứa task đã có chủ (manual-assign
   manual+claimed-overdue-grouped-together, plus a template-level regression test rendering
   an overdue claimed task and asserting it's visible without expanding Đã Claim).
 
+## Follow-up 4 (2026-07-09, same day) — reframe to claimed/unclaimed as the PRIMARY axis
+
+- User flagged a genuine miscommunication after follow-up 3: what they actually wanted was
+  the opposite fix (band 0 items that happen to be claimed should live INSIDE Đã Claim, not
+  in a separate always-visible area) — but going back and forth on band 0 in isolation kept
+  producing contradictory patches. Root cause: the whole `split_worklist_view()` was built on
+  a **kind** axis (action vs task) when the user's actual mental model is a **claim-status**
+  axis (claimed vs unclaimed) — kind is only a sub-distinction that matters within the
+  unclaimed side.
+- New 2-section model, confirmed with the user via concrete preview before implementing
+  (after 2 rounds of talking past each other on this exact point):
+  - **🙋 Đã Claim** (secondary, collapsed by default, renders first): `claimed_bands` = ALL
+    `kind='task'` rows (manual-assigned + `action_queue_claim`), NOT split by source —
+    reverts to the ORIGINAL unsplit banding from phase 02, just relabeled/repositioned. This
+    resolves the Quá hạn dilemma as a side effect: there's no more "which section does an
+    overdue claimed task belong to" question, because claimed/manual is no longer a
+    distinction made anywhere inside this section.
+  - **🎯 Chưa Claim** (PRIMARY, expanded by default): everything with no owner. Two named
+    sub-groups nested inside — Hàng Đợi Chung (unassigned manual tasks) FIRST per explicit
+    user request, then Cơ Hội Hệ Thống (unclaimed actions, `queue_action_bands`) second.
+  - Bonus correctness fix that fell out of the reframe: band 4 ("Đã liên hệ") now correctly
+    splits into two independent sub-groups (contacted-unclaimed actions → inside Cơ Hội Hệ
+    Thống; contacted-claimed tasks → inside Đã Claim) instead of awkwardly mixing both kinds
+    under "my tasks" as it did in every earlier iteration — each half now lives in the
+    section it conceptually belongs to.
+  - Removed: `claimed_task_bands`/`claimed_task_count` (source-based split), `my_task_bands`
+    (renamed/repurposed as `claimed_bands`, unsplit). `queue_action_bands` unchanged in
+    shape, now also includes band 4.
+- 948 tests passing (rewrote `TestSplitWorklistView`/`TestSplitWorklistViewClaimedTasks` into
+  one coherent class; rewrote `TestClaimedTaskSection`'s now-inverted assumptions; added
+  `TestChuaClaimWrapper` for the new wrapper's expand-by-default + sub-ordering + combined
+  count). Live-verified against the restarted container (order, expand/collapse defaults
+  confirmed via direct HTTP fetch).
+
 ## Key files
 
 - `crm/src/application/worklist_ranking.py` — add split helper, no change to `rank_worklist`
@@ -135,13 +169,18 @@ urgency, để band urgency chỉ còn chứa task đã có chủ (manual-assign
 
 ## Acceptance criteria
 
-- Band 0-3 in the urgency area never render `row.kind == 'action'` rows.
-- Every unclaimed, not-recently-contacted action renders exactly once, inside "Cơ Hội Hệ
-  Thống" — not duplicated in urgency bands, not lost.
+**Superseded by Follow-up 4 — see that section for the final, correct model.** Kept here for
+history; do not treat as current spec:
+
+- ~~Band 0-3 in the urgency area never render `row.kind == 'action'` rows.~~
+- ~~Every unclaimed, not-recently-contacted action renders exactly once, inside "Cơ Hội Hệ
+  Thống" — not duplicated in urgency bands, not lost.~~ (still true, unchanged by follow-up 4)
 - Claiming an action (or self-assigning a queue task) removes it from its queue section and
-  it appears in the correct urgency band on next load — end-to-end verified manually.
-- Band 4 "Đã liên hệ" still mixes both kinds, still first, still collapsed by default.
-- All existing tests pass; new tests cover the split helper and the two queue sections.
+  it appears in Đã Claim on next load — end-to-end verified manually.
+- ~~Band 4 "Đã liên hệ" still mixes both kinds, still first, still collapsed by default.~~
+  Superseded: band 4 now splits into 2 independent sub-groups, one per section (see
+  Follow-up 4) — this was a correctness improvement, not a regression.
+- All existing tests pass; new tests cover the split helper and both top-level sections.
 
 ## Open questions
 

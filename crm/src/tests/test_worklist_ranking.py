@@ -705,16 +705,18 @@ class TestRankWorklistBand4ClaimTasks:
 
 
 # =============================================================================
-# split_worklist_view — queue (unclaimed actions) vs my-tasks (owned work)
+# split_worklist_view — claimed (owned work) vs queue (unclaimed opportunities)
 # =============================================================================
 
 class TestSplitWorklistView:
-    """Presentation split: rank_worklist() output regrouped by kind, no re-sort.
-
-    queue_action_bands / my_task_bands keep the same band-dict shape as
-    rank_worklist()'s own `bands` (id/label/icon/rows/count/total_value/
-    display_capacity/is_expanded/vip_count) so both render through the
-    existing `_wl_bands.html` partial unmodified.
+    """Presentation split along the screen's PRIMARY axis: claimed vs
+    unclaimed, NOT kind. claimed_bands = all kind=='task' rows (manual +
+    action_queue_claim, never split by source — a claimed task is a claimed
+    task). queue_action_bands = all kind=='action' rows (always unclaimed by
+    construction — a claimed action becomes a Task and disappears from
+    `all_actions` upstream). Both keep the same band-dict shape as
+    rank_worklist()'s own `bands` so they render through the existing
+    `_wl_bands.html` partial unmodified.
     """
 
     def test_mixed_input_separates_actions_from_tasks(self):
@@ -728,16 +730,14 @@ class TestSplitWorklistView:
         queue_ids = {r.ref_id for band in view["queue_action_bands"] for r in band["rows"]}
         assert queue_ids == {"a-urgent", "a-ontrack"}
 
-        task_ids = {r.ref_id for band in view["my_task_bands"] for r in band["rows"]}
+        task_ids = {r.ref_id for band in view["claimed_bands"] for r in band["rows"]}
         assert task_ids == {"t-today", "t-ontrack"}
 
-    def test_task_bands_never_contain_action_rows(self):
+    def test_claimed_bands_never_contain_action_rows(self):
         a = make_action("a-001", priority=1)
         t = make_task("t-001", priority=2, due_at=str(TODAY))
         view = split_worklist_view(rank_worklist([a], [t], TODAY))
-        for band in view["my_task_bands"]:
-            if band["id"] == 4:
-                continue  # band 4 stays mixed by design
+        for band in view["claimed_bands"]:
             assert all(r.kind == "task" for r in band["rows"])
 
     def test_queue_action_bands_never_contain_task_rows(self):
@@ -747,12 +747,17 @@ class TestSplitWorklistView:
         for band in view["queue_action_bands"]:
             assert all(r.kind == "action" for r in band["rows"])
 
-    def test_queue_action_bands_covers_only_ids_1_2_3(self):
-        """Band 0 (task-only) and band 4 (mixed) never appear in queue_action_bands."""
+    def test_queue_action_bands_covers_ids_1_2_3_4_not_0(self):
+        """Band 0 (task-only) never appears in queue_action_bands — only tasks can
+        be overdue. Band 4 DOES appear here now (contacted-but-still-unclaimed
+        actions belong with the queue, not with claimed work)."""
         a = make_action("a-001", priority=1)
-        view = split_worklist_view(rank_worklist([a], [], TODAY))
+        a.party_id = "party-001"
+        result = rank_worklist([a], [], TODAY, contacted_party_ids={"party-001"})
+        view = split_worklist_view(result)
         ids = {b["id"] for b in view["queue_action_bands"]}
-        assert ids == {1, 2, 3}
+        assert 0 not in ids
+        assert 4 in ids
 
     def test_neglected_action_lands_in_band3_queue(self):
         """Band-3 (Treo lâu, pending>=7d) actions surface in queue_action_bands, not lost."""
@@ -772,98 +777,55 @@ class TestSplitWorklistView:
         assert band3["vip_count"] == 1
         assert band3["is_expanded"] is True
 
-    def test_band4_contacted_row_stays_mixed_not_duplicated_into_queue(self):
-        """A contacted action must appear in my_task_bands' band 4, never in queue_action_bands."""
+    def test_contacted_unclaimed_action_lands_in_queue_band4_not_claimed(self):
+        """A contacted-but-still-unclaimed action belongs to the queue (Cơ Hội Hệ
+        Thống's own Đã liên hệ sub-band), never in claimed_bands — it has no owner."""
         a = make_action("a-001", priority=5)
         a.party_id = "party-001"
         result = rank_worklist([a], [], TODAY, contacted_party_ids={"party-001"})
         view = split_worklist_view(result)
 
-        band4 = next(b for b in view["my_task_bands"] if b["id"] == 4)
+        band4 = next(b for b in view["queue_action_bands"] if b["id"] == 4)
         assert band4["count"] == 1
         assert band4["rows"][0].ref_id == "a-001"
-        assert view["queue_action_count"] == 0
-
-    def test_empty_input_produces_empty_view(self):
-        view = split_worklist_view(rank_worklist([], [], TODAY))
-        assert view["queue_action_count"] == 0
-        assert view["claimed_task_count"] == 0
-        assert all(band["count"] == 0 for band in view["queue_action_bands"])
-        assert all(band["count"] == 0 for band in view["claimed_task_bands"])
-        assert all(band["count"] == 0 for band in view["my_task_bands"])
-
-    def test_band3_always_empty_in_my_task_bands(self):
-        """Band 3 (Treo lâu) is action-only in assign_band() — task view always empty there."""
-        a = make_action("a-neglected", pending_since=str(TODAY - timedelta(days=10)))
-        view = split_worklist_view(rank_worklist([a], [], TODAY))
-        band3 = next(b for b in view["my_task_bands"] if b["id"] == 3)
-        assert band3["count"] == 0
-        assert band3["rows"] == []
-
-
-class TestSplitWorklistViewClaimedTasks:
-    """claimed_task_bands (source='action_queue_claim') get their own section,
-    separate from plain manual tasks in my_task_bands — bands 0/1/2 only
-    (band 3 is action-only, band 4 stays mixed by design, untouched here)."""
-
-    def test_claimed_task_moves_out_of_my_task_bands(self):
-        t = make_task("t-claim", priority=2, due_at=str(TODAY),
-                      source="action_queue_claim")  # band 1
-        view = split_worklist_view(rank_worklist([], [t], TODAY))
-
-        claimed_ids = {r.ref_id for band in view["claimed_task_bands"] for r in band["rows"]}
-        manual_ids = {r.ref_id for band in view["my_task_bands"] if band["id"] != 4 for r in band["rows"]}
-        assert claimed_ids == {"t-claim"}
-        assert manual_ids == set()
-
-    def test_manual_task_stays_in_my_task_bands(self):
-        t = make_task("t-manual", priority=2, due_at=str(TODAY), source="manual")  # band 1
-        view = split_worklist_view(rank_worklist([], [t], TODAY))
-
-        claimed_ids = {r.ref_id for band in view["claimed_task_bands"] for r in band["rows"]}
-        manual_ids = {r.ref_id for band in view["my_task_bands"] if band["id"] != 4 for r in band["rows"]}
+        claimed_ids = {r.ref_id for band in view["claimed_bands"] for r in band["rows"]}
         assert claimed_ids == set()
-        assert manual_ids == {"t-manual"}
 
-    def test_overdue_claimed_task_stays_in_my_task_bands_band0(self):
-        """Band 0 ('Quá hạn') is NOT split by source, unlike bands 1/2/3 — overdue is
-        too urgent to hide behind Đã Claim's collapsed-by-default toggle. A claimed
-        overdue task stays in my_task_bands' band 0 (mixed source), same as band 4."""
-        overdue = str(TODAY - timedelta(days=2))
-        t = make_task("t-claim-overdue", due_at=overdue, source="action_queue_claim")
-        view = split_worklist_view(rank_worklist([], [t], TODAY))
-        my_band0 = next(b for b in view["my_task_bands"] if b["id"] == 0)
-        assert my_band0["rows"][0].ref_id == "t-claim-overdue"
-        assert not any(b["id"] == 0 for b in view["claimed_task_bands"])
-
-    def test_band4_stays_mixed_source_untouched(self):
-        """Band 4 ('Đã liên hệ') isn't split by source — a contacted claimed task still
-        lives in my_task_bands' band 4, not pulled into claimed_task_bands."""
+    def test_contacted_claimed_task_lands_in_claimed_band4(self):
+        """A contacted claimed task belongs to claimed_bands (it has an owner),
+        never duplicated into queue_action_bands."""
         t = make_task("t-claim", source="action_queue_claim", party_id="party-001")
         result = rank_worklist([], [t], TODAY, contacted_party_ids={"party-001"})
         view = split_worklist_view(result)
 
-        band4 = next(b for b in view["my_task_bands"] if b["id"] == 4)
+        band4 = next(b for b in view["claimed_bands"] if b["id"] == 4)
         assert band4["rows"][0].ref_id == "t-claim"
-        claimed_ids = {r.ref_id for band in view["claimed_task_bands"] for r in band["rows"]}
-        assert claimed_ids == set()
+        assert view["queue_action_count"] == 0
 
-    def test_claimed_task_bands_covers_ids_1_2_3_only(self):
-        """Band 0 is excluded — see test_overdue_claimed_task_stays_in_my_task_bands_band0."""
-        t = make_task("t-claim", due_at=str(TODAY), source="action_queue_claim")
-        view = split_worklist_view(rank_worklist([], [t], TODAY))
-        ids = {b["id"] for b in view["claimed_task_bands"]}
-        assert ids == {1, 2, 3}
-
-    def test_overdue_manual_and_claimed_tasks_grouped_together_in_band0(self):
-        """Both sources land in the same my_task_bands' band 0 — Quá hạn is unified,
-        never split by claim status regardless of which task was overdue first."""
+    def test_overdue_manual_and_claimed_tasks_grouped_together(self):
+        """claimed_bands is NOT split by source — a manual overdue task and a
+        claimed overdue task land in the same band 0, together."""
         overdue = str(TODAY - timedelta(days=1))
         t_manual = make_task("t-manual-overdue", due_at=overdue, source="manual")
         t_claimed = make_task("t-claim-overdue", due_at=overdue, source="action_queue_claim")
         view = split_worklist_view(rank_worklist([], [t_manual, t_claimed], TODAY))
-        band0_ids = {r.ref_id for b in view["my_task_bands"] if b["id"] == 0 for r in b["rows"]}
+        band0_ids = {r.ref_id for b in view["claimed_bands"] if b["id"] == 0 for r in b["rows"]}
         assert band0_ids == {"t-manual-overdue", "t-claim-overdue"}
+
+    def test_empty_input_produces_empty_view(self):
+        view = split_worklist_view(rank_worklist([], [], TODAY))
+        assert view["queue_action_count"] == 0
+        assert view["claimed_count"] == 0
+        assert all(band["count"] == 0 for band in view["queue_action_bands"])
+        assert all(band["count"] == 0 for band in view["claimed_bands"])
+
+    def test_band3_always_empty_in_claimed_bands(self):
+        """Band 3 (Treo lâu) is action-only in assign_band() — task view always empty there."""
+        a = make_action("a-neglected", pending_since=str(TODAY - timedelta(days=10)))
+        view = split_worklist_view(rank_worklist([a], [], TODAY))
+        band3 = next(b for b in view["claimed_bands"] if b["id"] == 3)
+        assert band3["count"] == 0
+        assert band3["rows"] == []
 
 
 # =============================================================================

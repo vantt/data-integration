@@ -4,6 +4,7 @@
    urgent_count, task_open, available_types, active_filter_count, filters, party_extras,
    refreshed_at, is_stale.
 #}
+{% from "macros/count_pill.html" import count_pill %}
 {% set filters = filters | default({}) %}
 {% set party_extras = party_extras | default({}) %}
 {% set value_total = value_total | default(0) %}
@@ -71,99 +72,113 @@
 
   <div style="margin-bottom:var(--sp-6)"></div>
 
-  {# ── Team Queue — unassigned custom tasks, shown above Cơ Hội Hệ Thống.
-     Renders through the same wl_row() macro/markup as every other task row
-     (priority pill, description, due date, contact-pref notes) so it no
-     longer looks like a stripped-down second-class row — only the aside
-     CTA differs (is_unassigned=true → single "Nhận" button). ── #}
-  {% from "fragments/_wl_row.html" import wl_row %}
-  {% set unassigned_tasks = unassigned_tasks | default([]) %}
-  {% if unassigned_tasks %}
-  <details class="wl-band" style="margin-bottom:var(--sp-2)">
-    <summary class="wl-band__header" style="background:var(--bg-secondary)">
-      <span class="wl-band__icon" aria-hidden="true">📥</span>
-      <span class="wl-band__label">Hàng Đợi Chung (Custom Tasks)</span>
-      <span class="wl-band__count">{{ unassigned_tasks | length }}</span>
-      <span class="wl-band__chevron" aria-hidden="true"></span>
-    </summary>
-    <div class="wl-list">
-      {% for row in unassigned_tasks %}
-      {{ wl_row(row, party_extras, is_unassigned=true, current_user_id=current_user_id | default('')) }}
-      {% endfor %}
-    </div>
-  </details>
-  {% endif %}
-
-  {# ── Đã Claim — work claimed from Cơ Hội Hệ Thống, still in progress.
-     Own section so a claimed row is never visually confused with a still-
-     unclaimed opportunity (the title format "Gọi X · N hành động" mirrors
-     action-item vocabulary closely enough that this distinction matters).
-     Placed before Cơ Hội Hệ Thống — work already claimed is more directly
-     actionable than new opportunities still to be decided on. Collapsible
-     (collapsed by default, like Hàng Đợi Chung) instead of a full tab —
+  {# ── Đã Claim — everything that already has an owner (manual tasks
+     assigned to me + tasks claimed from Cơ Hội Hệ Thống), NOT split by
+     source — a claimed task is a claimed task regardless of how it got an
+     owner. Secondary/reference section: this screen's PRIMARY focus is the
+     unclaimed queue below, so Đã Claim is collapsed by default despite
+     rendering first — collapsible <details> rather than a full tab, since
      tabbing would hide the "just claimed → moved here" feedback right
-     after clicking Nhận việc, since the item would land in a hidden tab
-     instead of the same scroll. Bands 0/1/2/3 only (band 4 "Đã liên hệ"
-     stays mixed-source in my_task_bands below, untouched).
-     show_overflow=false — same band-id collision reasoning as my_task_bands
-     below. ── #}
-  {% set claimed_task_bands = claimed_task_bands | default([]) %}
-  {% set claimed_task_count = claimed_task_count | default(0) %}
-  {% if claimed_task_count > 0 %}
+     after clicking Nhận việc (item would land in a hidden tab instead of
+     the same scroll). show_overflow=false: /worklist/band/{id}/more always
+     re-ranks actions-only, so it can't safely serve this task-only
+     section's overflow (ids 1/2/4 overlap with queue_action_bands below) —
+     renders uncapped/eager instead; task-per-band volume (a rep's own
+     open/claimed tasks) is expected to stay small enough for that to be a
+     safe trade, not a silent drop. ── #}
+  {% set claimed_bands = claimed_bands | default([]) %}
+  {% set claimed_count = claimed_count | default(0) %}
+  {% if claimed_count > 0 %}
   <details class="wl-band" style="margin-bottom:var(--sp-2)">
     <summary class="wl-band__header" style="background:var(--bg-secondary)">
       <span class="wl-band__icon" aria-hidden="true">🙋</span>
       <span class="wl-band__label">Đã Claim</span>
-      <span class="wl-band__count">{{ claimed_task_count }}</span>
+      {{ count_pill(claimed_count, "band") }}
       <span class="wl-band__chevron" aria-hidden="true"></span>
     </summary>
-    {% set bands = claimed_task_bands %}
+    {% set bands = claimed_bands %}
     {% set empty_state_id = 'wl-empty-state-claimed' %}
     {% set show_overflow = false %}
     {% include "fragments/_wl_bands.html" %}
   </details>
   {% endif %}
 
-  {# ── Cơ Hội Hệ Thống — action-queue items no one has claimed yet.
-     Row UI unchanged (still the plain action-row wl_row branch); only the
-     RENDER LOCATION moved out of the urgency-banded area so an unclaimed
-     opportunity never sits next to owned work in the same band. Reuses
-     _wl_bands.html verbatim (band ids 1/2/3 keep their existing
-     Khẩn-open/Trong hạn-open/Treo lâu-collapsed defaults and VIP/GOLD
-     auto-expand — no new sub-grouping decision needed) and the existing
-     `/worklist/band/{id}/more` overflow route (already actions-only).
-     Collapsible, collapsed by default — same reasoning as Đã Claim above. ── #}
+  {# ── Chưa Claim — this screen's PRIMARY content: everything nobody owns
+     yet, expanded by default (unlike Đã Claim above). Two named sub-groups
+     so a system opportunity is never confused with a manually-created task
+     despite sharing one parent section — Hàng Đợi Chung first (per user
+     request), then Cơ Hội Hệ Thống. ── #}
+  {% from "fragments/_wl_row.html" import wl_row %}
+  {% set unassigned_tasks = unassigned_tasks | default([]) %}
   {% set queue_action_bands = queue_action_bands | default([]) %}
   {% set queue_action_count = queue_action_count | default(0) %}
-  {% if queue_action_count > 0 %}
-  <details class="wl-band" style="margin-bottom:var(--sp-2)">
+  {% set chua_claim_count = (unassigned_tasks | length) + queue_action_count %}
+  {% if chua_claim_count > 0 %}
+  <details class="wl-band" open style="margin-bottom:var(--sp-2)">
     <summary class="wl-band__header" style="background:var(--bg-secondary)">
       <span class="wl-band__icon" aria-hidden="true">🎯</span>
-      <span class="wl-band__label">Cơ Hội Hệ Thống</span>
-      <span class="wl-band__count">{{ queue_action_count }}</span>
+      <span class="wl-band__label">Chưa Claim</span>
+      {{ count_pill(chua_claim_count, "band") }}
       <span class="wl-band__chevron" aria-hidden="true"></span>
     </summary>
-    {% set bands = queue_action_bands %}
-    {% set empty_state_id = 'wl-empty-state-queue' %}
-    {% set show_overflow = true %}
-    {% include "fragments/_wl_bands.html" %}
+
+    {# ── Hàng Đợi Chung — unassigned custom tasks, visible to the whole
+       team. Renders through the same wl_row() macro/markup as every other
+       task row (priority pill, description, due date, contact-pref notes)
+       — only the aside CTA differs (is_unassigned=true → single "Nhận"
+       button). ── #}
+    {% if unassigned_tasks %}
+    <div style="margin:var(--sp-3) 0">
+      <div class="wl-band__label" style="font-size:14px;margin-bottom:var(--sp-2)">
+        📥 Hàng Đợi Chung
+        {{ count_pill(unassigned_tasks | length, "band") }}
+      </div>
+      <div class="wl-list">
+        {% for row in unassigned_tasks %}
+        {{ wl_row(row, party_extras, is_unassigned=true, current_user_id=current_user_id | default('')) }}
+        {% endfor %}
+      </div>
+    </div>
+    {% endif %}
+
+    {# ── Cơ Hội Hệ Thống — action-queue items no one has claimed yet. Row
+       UI unchanged (still the plain action-row wl_row branch). Reuses
+       _wl_bands.html verbatim (band ids keep their existing
+       Đã-liên-hệ-collapsed / Khẩn-open / Trong-hạn-open / Treo-lâu-collapsed
+       defaults and VIP/GOLD auto-expand — no new sub-grouping decision
+       needed) and the existing `/worklist/band/{id}/more` overflow route
+       (already actions-only, correct for every id queue_action_bands can
+       contain including 4). ── #}
+    {% if queue_action_count > 0 %}
+    <div style="margin:var(--sp-3) 0">
+      <div class="wl-band__label" style="font-size:14px;margin-bottom:var(--sp-2)">
+        🎯 Cơ Hội Hệ Thống
+        {{ count_pill(queue_action_count, "band") }}
+      </div>
+      {% set bands = queue_action_bands %}
+      {% set empty_state_id = 'wl-empty-state-queue' %}
+      {% set show_overflow = true %}
+      {% include "fragments/_wl_bands.html" %}
+    </div>
+    {% endif %}
   </details>
   {% endif %}
 
-  {# ── Banded rows (urgency bands rendered via the wl_row macro) —
-     my_task_bands: manual-assigned tasks in bands 1/2/3 (claimed tasks moved
-     to the Đã Claim section above). Band 0 ("Quá hạn") and band 4 ("Đã liên
-     hệ") stay mixed-kind AND mixed-source by design — overdue is never
-     split by claim status, so it can't end up hidden behind Đã Claim's
-     collapsed-by-default toggle.
-     show_overflow=false: rows are uncapped/eager here, NOT lazy-paginated —
-     see the comment in screen_worklist.py on why band ids 1/2 can't safely
-     share the actions-only /worklist/band/{id}/more route with the queue
-     section above. ── #}
-  {% set bands = my_task_bands | default([]) %}
-  {% set empty_state_id = 'wl-empty-state' %}
-  {% set show_overflow = false %}
-  {% include "fragments/_wl_bands.html" %}
+  {# ── Empty / all-done state — both sections gate on their own count>0, so
+     when everything is empty neither renders anything. Fall back to the
+     same empty-state markup _wl_bands.html itself uses when it's the only
+     content on the page. ── #}
+  {% if claimed_count == 0 and chua_claim_count == 0 %}
+  <div class="state" id="wl-empty-state">
+    <div class="state__inner">
+      <div class="state__title">Hôm nay không có task nào</div>
+      <p class="state__sub">Không có task theo bộ lọc hiện tại.</p>
+      <div class="state__actions">
+        <a href="/customers" class="btn btn--secondary">Duyệt khách hàng</a>
+      </div>
+    </div>
+  </div>
+  {% endif %}
 
   {# ── Freshness footer ─────────────────────────────────────── #}
   <div class="row-between" style="padding-top:var(--sp-3);margin-top:var(--sp-2);border-top:1px solid var(--border)">

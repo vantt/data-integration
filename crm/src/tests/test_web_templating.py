@@ -157,9 +157,8 @@ def _base_ctx(**overrides) -> dict:
         "bands": [],
         "queue_action_bands": [],
         "queue_action_count": 0,
-        "claimed_task_bands": [],
-        "claimed_task_count": 0,
-        "my_task_bands": [],
+        "claimed_bands": [],
+        "claimed_count": 0,
         "value_total": 0,
         "counts": {"actions": 0, "tasks": 0, "total": 0},
         "task_open": 0,
@@ -184,9 +183,8 @@ def _base_ctx(**overrides) -> dict:
         split = split_worklist_view({"bands": ctx["bands"]})
         ctx["queue_action_bands"] = split["queue_action_bands"]
         ctx["queue_action_count"] = split["queue_action_count"]
-        ctx["claimed_task_bands"] = split["claimed_task_bands"]
-        ctx["claimed_task_count"] = split["claimed_task_count"]
-        ctx["my_task_bands"] = split["my_task_bands"]
+        ctx["claimed_bands"] = split["claimed_bands"]
+        ctx["claimed_count"] = split["claimed_count"]
     return ctx
 
 
@@ -254,8 +252,9 @@ class TestWorlistFragmentMixedBands:
 
     def test_band_counts_rendered(self):
         html = _render_fragment(self._build_ctx())
-        # Band counts appear inside wl-band__count spans
-        assert "wl-band__count" in html
+        # Band counts render via the count_pill() macro (cpill cpill--band),
+        # consolidated from the old inline wl-band__count span.
+        assert "cpill--band" in html
 
     def test_action_rows_present(self):
         html = _render_fragment(self._build_ctx())
@@ -548,19 +547,66 @@ class TestUnassignedQueueRowRedesign:
         assert ">Hủy<" not in html
 
 
-class TestClaimedTaskSection:
-    """Claimed tasks (source='action_queue_claim') render under their own
-    '🙋 Đã Claim' header, not mixed into the plain urgency-band area."""
+class TestChuaClaimWrapper:
+    """'🎯 Chưa Claim' is the screen's PRIMARY section — expanded by default
+    (unlike Đã Claim) — wrapping two named sub-groups: Hàng Đợi Chung
+    (unassigned manual tasks) first, then Cơ Hội Hệ Thống (unclaimed
+    actions), per explicit user ordering request."""
 
-    def _ctx_with_claimed_task(self, **task_overrides) -> dict:
+    def _ctx_with_both(self) -> dict:
         from datetime import date
-        t = _task("t-claim", priority=2, due_at=str(_TODAY_STR),
-                  source="action_queue_claim", **task_overrides)
+        a = _action("a-001", action_type="CALL_NOW", priority=1)
+        t = _task("t-queue", priority=2, description="Task chưa nhận")
+        row = WorklistRow(kind="task", band=-1, urgency=0, value=0, neglect_days=0,
+                           ref_id=t.task_id, payload=t)
+        result = rank_worklist([a], [], today=date(2026, 6, 23))
+        return _base_ctx(**result, unassigned_tasks=[row], party_extras={})
+
+    def test_chua_claim_header_expanded_by_default(self):
+        """Unlike Đã Claim, Chưa Claim's own <details> must have `open` — it's the
+        primary content, not secondary reference material."""
+        import re
+        html = _render_fragment(self._ctx_with_both())
+        m = re.search(r'<details class="wl-band"[^>]*>.*?>Chưa Claim<', html, re.DOTALL)
+        assert m is not None, "Chưa Claim details block not found"
+        opening_tag = m.group(0).split(">")[0]
+        assert "open" in opening_tag, f"Chưa Claim should be expanded by default: {opening_tag!r}"
+
+    def test_chua_claim_count_combines_queue_and_unassigned(self):
+        import re
+        html = _render_fragment(self._ctx_with_both())
+        # 1 action + 1 unassigned task = 2, shown in Chưa Claim's own count pill
+        m = re.search(r'>Chưa Claim<.*?cpill--band">(\d+)<', html, re.DOTALL)
+        assert m is not None, "Chưa Claim count pill not found"
+        assert m.group(1) == "2"
+
+    def test_hang_doi_chung_renders_before_co_hoi_he_thong(self):
+        html = _render_fragment(self._ctx_with_both())
+        assert html.index("Hàng Đợi Chung") < html.index("Cơ Hội Hệ Thống")
+
+    def test_both_subgroups_present_under_one_header(self):
+        html = _render_fragment(self._ctx_with_both())
+        assert "Hàng Đợi Chung" in html
+        assert "Cơ Hội Hệ Thống" in html
+        assert "t-queue" in html
+        assert "wl-row--action" in html
+
+
+class TestClaimedTaskSection:
+    """'🙋 Đã Claim' = every task that already has an owner — manual tasks
+    assigned to me AND tasks claimed from Cơ Hội Hệ Thống, NOT split by
+    source (a claimed task is a claimed task regardless of how it got an
+    owner). Secondary section: collapsed by default despite rendering first,
+    since the screen's primary focus is the unclaimed queue below it."""
+
+    def _ctx_with_task(self, **task_overrides) -> dict:
+        from datetime import date
+        t = _task("t-claim", priority=2, due_at=str(_TODAY_STR), **task_overrides)
         result = rank_worklist([], [t], today=date(2026, 6, 23))
         return _base_ctx(**result, party_extras={})
 
     def test_shows_da_claim_header_with_count(self):
-        html = _render_fragment(self._ctx_with_claimed_task())
+        html = _render_fragment(self._ctx_with_task(source="action_queue_claim"))
         assert ">Đã Claim<" in html
         assert "t-claim" in html
 
@@ -568,38 +614,41 @@ class TestClaimedTaskSection:
         """Collapsible <details> for the section header — collapsed by default so the
         page starts compact; NOT a full tab (see worklist_fragment.html comment for why
         tabs would break the claim → moved-here feedback loop)."""
-        html = _render_fragment(self._ctx_with_claimed_task())
+        html = _render_fragment(self._ctx_with_task(source="action_queue_claim"))
         import re
         m = re.search(r'<details class="wl-band"[^>]*>.*?>Đã Claim<', html, re.DOTALL)
         assert m is not None, "Đã Claim details block not found"
         opening_tag = m.group(0).split(">")[0]
         assert "open" not in opening_tag, f"Đã Claim should be collapsed by default: {opening_tag!r}"
 
-    def test_no_da_claim_header_when_no_claimed_tasks(self):
-        from datetime import date
-        t = _task("t-manual", priority=2, due_at=str(_TODAY_STR), source="manual")
-        result = rank_worklist([], [t], today=date(2026, 6, 23))
+    def test_manual_task_also_shows_da_claim_header(self):
+        """A manual task assigned to me is owned work too — Đã Claim isn't limited
+        to source='action_queue_claim', it's "has an owner at all"."""
+        html = _render_fragment(self._ctx_with_task(source="manual"))
+        assert ">Đã Claim<" in html
+        assert "t-claim" in html
+
+    def test_no_da_claim_header_when_no_tasks_at_all(self):
+        result = rank_worklist([], [], today=__import__("datetime").date(2026, 6, 23))
         html = _render_fragment(_base_ctx(**result, party_extras={}))
         assert "Đã Claim" not in html
 
-    def test_claimed_task_not_duplicated_in_plain_urgency_area(self):
-        """The claimed row must render exactly once — under Đã Claim, not also
-        under the generic urgency bands below it."""
-        html = _render_fragment(self._ctx_with_claimed_task())
+    def test_claimed_task_not_duplicated_anywhere_else(self):
+        """The task row must render exactly once, inside Đã Claim only."""
+        html = _render_fragment(self._ctx_with_task(source="action_queue_claim"))
         assert html.count('id="task-t-claim"') == 1
 
-    def test_overdue_claimed_task_renders_outside_collapsed_da_claim_section(self):
-        """Regression guard: Quá hạn (band 0) must never be hidden behind the Đã Claim
-        <details> collapse — an overdue claimed task has to be exactly as visible as an
-        overdue manual task. Verify the row sits in the always-open urgency area, not
-        inside the Đã Claim details block."""
+    def test_overdue_task_renders_inside_da_claim_regardless_of_source(self):
+        """claimed_bands is NOT split by source — an overdue task (manual or claimed)
+        renders inside Đã Claim like every other owned task, banded by urgency
+        exactly as before this screen was split into claimed/unclaimed."""
         from datetime import date
         overdue = "2026-06-22"  # 1 day before _TODAY_STR (2026-06-23)
         t = _task("t-claim-overdue", priority=2, due_at=overdue, source="action_queue_claim")
         result = rank_worklist([], [t], today=date(2026, 6, 23))
         html = _render_fragment(_base_ctx(**result, party_extras={}))
 
-        assert "Đã Claim" not in html  # claimed_task_bands empty → section hidden entirely
+        assert ">Đã Claim<" in html
         assert 'id="task-t-claim-overdue"' in html
         assert "quá hạn" in html.lower()  # overdue badge present
 
@@ -623,28 +672,25 @@ class TestBandCollapseAndOverflow:
         return _base_ctx(**result, party_extras={})
 
     def test_band3_has_no_open_attribute(self):
-        """Band 3 details element must NOT have the `open` attribute (collapsed by default)."""
+        """Band 3 details element must NOT have the `open` attribute (collapsed by default).
+
+        Since Chưa Claim now wraps queue_action_bands in its OWN <details class="wl-band"
+        open>, a naive "first <details class='wl-band'> before the label" search would
+        match that outer wrapper instead of band 3's own details tag. Find the NEAREST
+        preceding <details class="wl-band"...> tag instead.
+        """
+        import re
         ctx = self._ctx_with_band3_rows(1)
         html = _render_fragment(ctx)
-        # The band 3 header is: <details class="wl-band" [NO open]>
-        # Bands 0/1/2 have: <details class="wl-band" open>
-        # We check that the Band 3 block does NOT have "open" on its details tag
-        # Strategy: find the wl-band--b3 or the Treo lâu label region
         assert "Treo lâu" in html
-        # After "Treo lâu" we should not immediately see <details class="wl-band" open>
-        # Instead the template emits: {% if band.id != 3 %}open{% endif %}
-        # We verify by checking that the rendered HTML does NOT contain a collapsed+open combo
-        # — the simplest invariant: since B3 is the only band with content, check
-        # that 'open' does NOT appear on the wl-band details that contains "Treo lâu"
-        import re
-        # Find the details block around "Treo lâu"
-        pattern = re.compile(
-            r'<details class="wl-band"([^>]*)>.*?Treo lâu', re.DOTALL
-        )
-        m = pattern.search(html)
-        assert m is not None, "Band 3 details block not found"
-        attrs = m.group(1)
-        assert "open" not in attrs, f"Band 3 should be collapsed but has 'open' in attrs: {attrs!r}"
+
+        label_idx = html.index("Treo lâu")
+        starts = [m.start() for m in re.finditer(r'<details class="wl-band"', html) if m.start() < label_idx]
+        assert starts, "no enclosing <details class=\"wl-band\"> found before 'Treo lâu'"
+        nearest_start = starts[-1]
+        tag_end = html.index(">", nearest_start)
+        opening_tag = html[nearest_start:tag_end]
+        assert "open" not in opening_tag, f"Band 3 should be collapsed but has 'open' in tag: {opening_tag!r}"
 
     def test_bands_012_expanded(self):
         """Bands 0, 1, 2 each have the `open` attribute when they contain rows."""

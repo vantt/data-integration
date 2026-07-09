@@ -103,76 +103,70 @@ elements:
 - [Xem 360 >] → navigate S03 (renamed from "Mở hồ sơ" to match action rows —
   both link to the same destination)
 
-### Section structure (2026-07-09 — queue vs claimed vs my-tasks split)
+### Section structure (2026-07-09 — claimed vs unclaimed, screen's PRIMARY axis)
 
-The page renders 4 top-to-bottom sections so an unclaimed opportunity, claimed-in-progress
-work, and other owned tasks never sit mixed in the same list:
+The page's primary axis is **claim status**, not row kind — this screen's main focus is the
+unclaimed queue (opportunities to decide on); already-claimed work is secondary reference
+material. Two top-level sections:
 
-1. **📥 Hàng Đợi Chung** — unassigned custom (`manual`-source) tasks, visible to the whole
-   team. Row UI is the standard task row (priority pill, description, due date) with the
-   aside swapped for a single **Nhận** button (`PATCH /tasks/{id}/assign-me`). Collapsible
-   `<details>`, collapsed by default.
-2. **🙋 Đã Claim** — tasks with `source='action_queue_claim'` (claimed from Cơ Hội Hệ Thống,
-   still in progress), bands 1/2/3 only (`claimed_task_bands`) — band 0 ("Quá hạn")
-   deliberately excluded, see the band-0 note below. Hidden when empty
-   (`claimed_task_count == 0`), so a claimed row is never confused with a still-unclaimed
-   opportunity — the title format ("Gọi X · N hành động") otherwise mirrors action-item
-   vocabulary closely. Placed before Cơ Hội Hệ Thống — work already claimed is more directly
-   actionable than new opportunities still to be decided on. Collapsible `<details>`,
-   collapsed by default (deliberately NOT a full tab — see below). `show_overflow=false`
-   (see #4 — same band-id collision reasoning).
-3. **🎯 Cơ Hội Hệ Thống** — unclaimed `wh_action_queue` items (`kind='action'`, not yet
-   claimed, not recently contacted). Row UI unchanged from the original action row. Reuses
-   `_wl_bands.html` with `queue_action_bands` (band ids 1/2/3 only — action rows filtered
-   out of the urgency area below), so the existing sub-band defaults still apply: 1 "Khẩn"
-   open, 2 "Trong hạn" open, 3 "Treo lâu" collapsed (VIP/GOLD auto-expand unchanged). The
-   existing `/worklist/band/{id}/more` overflow route already re-ranks actions-only, so it
-   serves this section's "Xem thêm" (`show_overflow=true`) unmodified. Collapsible
-   `<details>`, collapsed by default.
-4. **Urgency bands (`my_task_bands`)** — bands 1/2/3: manual tasks assigned to me only
-   (claimed tasks moved to section 2 above). Never contains an unclaimed action row.
-   **Renders uncapped/eager (`show_overflow=false`), no "Xem thêm" toggle** — band ids 1/2
-   also exist in `queue_action_bands`/`claimed_task_bands`, and `/worklist/band/{id}/more`
-   always re-ranks actions-only, so it cannot safely serve this section's overflow without
-   injecting action rows into a task band. Task-per-band volume (a rep's own open tasks) is
-   expected to stay small enough that this is a safe trade rather than a silent drop.
-   Revisit if the route is ever made kind-aware.
+1. **🙋 Đã Claim** (secondary) — `claimed_bands` (bands 4/0/1/2/3): EVERY `kind='task'` row,
+   NOT split by source — manual tasks assigned to me AND `action_queue_claim` tasks land in
+   the same bands together (Quá hạn/Hôm nay-Khẩn/Trong hạn/Đã liên hệ), exactly like the
+   original unsplit banding. A claimed task is a claimed task regardless of how it got an
+   owner, so there's no "which kind of claimed" sub-distinction to make. Renders FIRST on
+   the page but **collapsed by default** — secondary focus, despite being first.
+   `show_overflow=false`: `/worklist/band/{id}/more` always re-ranks actions-only, so it
+   can't safely serve this task-only section's overflow (ids 1/2/4 overlap with
+   `queue_action_bands` below) — renders uncapped/eager instead; task-per-band volume (a
+   rep's own open/claimed tasks) is expected to stay small enough for that to be a safe
+   trade, not a silent drop.
+2. **🎯 Chưa Claim** (PRIMARY) — everything nobody owns yet. **Expanded by default**
+   (unlike Đã Claim). Two named sub-groups so a system opportunity is never confused with a
+   manually-created task despite sharing one parent:
+   - **📥 Hàng Đợi Chung** (first, per explicit ordering request) — unassigned custom
+     (`manual`-source, no assignee) tasks, visible to the whole team. Row UI is the
+     standard task row (priority pill, description, due date) with the aside swapped for a
+     single **Nhận** button (`PATCH /tasks/{id}/assign-me`).
+   - **🎯 Cơ Hội Hệ Thống** (second) — `queue_action_bands` (bands 1/2/3/4): unclaimed
+     `wh_action_queue` items (`kind='action'`) — always unclaimed by construction (claiming
+     converts an action into a Task and hides it from `all_actions` upstream). Includes
+     band 4 ("Đã liên hệ") for actions whose party was recently contacted but still not
+     claimed — that row has no owner, so it belongs with the queue, not with Đã Claim. Row
+     UI unchanged from the original action row. Sub-band defaults unchanged: 4 collapsed
+     (first), 1 "Khẩn" open, 2 "Trong hạn" open, 3 "Treo lâu" collapsed (VIP/GOLD
+     auto-expand unchanged). The existing `/worklist/band/{id}/more` overflow route already
+     re-ranks actions-only, so it stays correct for every id this list can contain
+     (including 4) — `show_overflow=true`.
 
-**Why collapsible sections instead of tabs (2/3 above)**: a real tab (separate nav/route)
-would hide the "just claimed → moved to Đã Claim" feedback the instant a rep clicks Nhận
-việc — the row would land in a hidden tab instead of the same scroll. `<details>` sections
-default-collapsed keep the page compact without losing that single-glance feedback loop when
-expanded; this mirrors the earlier decision against a full tab split for the whole screen
-(see plan.md).
+**Why collapsible `<details>` instead of tabs**: a real tab (separate nav/route) would hide
+the "just claimed → moved to Đã Claim" feedback the instant a rep clicks Nhận việc — the row
+would land in a hidden tab instead of the same scroll. Collapsed-by-default `<details>` keeps
+the page compact without losing that single-glance feedback loop when expanded.
 
-**Bands 0 and 4 are NOT split by source** — both stay mixed (manual + claimed for band 0;
-unclaimed-but-contacted actions + contacted claimed tasks for band 4) inside `my_task_bands`,
-always in the always-expanded urgency area. Band 0 ("Quá hạn") specifically must never be
-hidden behind Đã Claim's collapsed-by-default toggle — an overdue claimed task is exactly as
-urgent as an overdue manual task, so unlike bands 1/2/3 it is never pulled out of
-`my_task_bands` regardless of claim status. Band 4 stays mixed for the pre-existing reason
-(contacted-party routing already happened inside `rank_worklist()`, excluded from the other
-sections by construction). Splitting band 4 further was out of scope for this pass (see
-plan.md Outcome).
-
-| Band ID | Label | Icon | Default state | Kind/source in `my_task_bands` |
+| Band ID | Label | Icon | Default state | Where |
 |---|---|---|---|---|
-| 4 | Đã liên hệ | ✅ | Collapsed | mixed (task + action, mixed source) — see above |
-| 0 | Quá hạn | 🔴 | Open | mixed (manual + claimed task) — NOT split, see above |
-| 1 | Hôm nay / Khẩn | 🟡 | Open | task, manual-source only (claimed → section 2) |
-| 2 | Đúng hạn | 🟢 | Open | task, manual-source only (claimed → section 2) |
-| 3 | Cần chú ý | 🔵 | Collapsed | always empty (action-only band; lives in `queue_action_bands` instead) |
+| 4 | Đã liên hệ | ✅ | Collapsed | both sections have their own band-4 sub-group (task side → Đã Claim; action side → Cơ Hội Hệ Thống) |
+| 0 | Quá hạn | 🔴 | Open | Đã Claim only (task-only band) |
+| 1 | Hôm nay / Khẩn | 🟡 | Open | both sections |
+| 2 | Đúng hạn | 🟢 | Open | both sections |
+| 3 | Cần chú ý | 🔵 | Collapsed | Cơ Hội Hệ Thống only (action-only band) |
 
-Band 4 collects rows (either kind) whose `party_id` had ANY contact attempt in last 24h
-(regardless of outcome), when `hide_contacted=false`. When `hide_contacted=true`, positive-outcome
-contacts are removed from the list entirely — band 4 stays empty. Band 4 is the one place
-`my_task_bands` still mixes kinds — a contacted-but-unclaimed action has nowhere else to go
-once excluded from `queue_action_bands`, and "already contacted" is a orthogonal signal to
-ownership, so mixing here doesn't reintroduce the original claim/opportunity confusion.
+Band 4 collects rows whose `party_id` had ANY contact attempt in last 24h (regardless of
+outcome), when `hide_contacted=false`. When `hide_contacted=true`, positive-outcome contacts
+are removed from the list entirely — band 4 stays empty on both sides.
 
 `split_worklist_view()` (`application/worklist_ranking.py`) performs this partition from
-`rank_worklist()`'s output — no change to urgency/band/sort logic, purely a `kind` filter per
-band, run before the `display_capacity` cap-slicing so both views see full row counts.
+`rank_worklist()`'s output — no change to urgency/band/sort logic, purely a `kind` filter
+(task → claimed_bands, action → queue_action_bands) per band, run before the
+`display_capacity` cap-slicing so both views see full row counts.
+
+**Design history**: this replaced 3 earlier iterations within the same day (kind-based split
+→ claimed/manual split with a band-0 special case → this claimed/unclaimed reframe) as the
+user's actual mental model surfaced through use — see plan.md for the full trail. The
+takeaway that stuck: the screen's PRIMARY axis is ownership (claimed vs not), not row
+provenance (action vs task) — provenance only matters as a sub-grouping label inside the
+unclaimed section, where two different claim mechanisms ("Nhận việc" vs "Nhận") would
+otherwise be visually ambiguous.
 
 ## States
 

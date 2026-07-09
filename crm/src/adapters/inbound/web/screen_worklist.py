@@ -240,29 +240,27 @@ def make_worklist_router(
             if len(queue_party_ids) >= 50:
                 break
 
-        # Presentation split: queue (unclaimed action-queue opportunities) vs
-        # my_task_bands (owned work — manual-assigned + claimed). Must run
-        # BEFORE the display_capacity cap-slicing below so both views see the
-        # full, unsliced row lists (each band dict's `rows` list is rebound
-        # to a new sliced list afterward — the lists already extracted here
-        # are independent copies, unaffected by that later rebind).
+        # Presentation split: queue_action_bands (unclaimed opportunities —
+        # screen's PRIMARY focus) vs claimed_bands (owned work, secondary
+        # reference). Must run BEFORE the display_capacity cap-slicing below
+        # so both views see the full, unsliced row lists (each band dict's
+        # `rows` list is rebound to a new sliced list afterward — the lists
+        # already extracted here are independent copies, unaffected by that
+        # later rebind).
         view = split_worklist_view(ranked)
 
         # Screen adapter responsibility: cap band.rows to display_capacity before
         # passing to the template so the initial render only processes cap rows.
         # Overflow is loaded lazily via GET /worklist/band/{band_id}/more, which
         # ALWAYS re-ranks actions-only (rank_worklist(actions, [], ...)) keyed by
-        # band id — correct for queue_action_bands (ids 1/2/3 are action-only
-        # there by construction) but NOT kind-aware, so it must never be wired to
-        # my_task_bands or claimed_task_bands: ids 1/2 exist in all three
-        # band-dict lists (band 0 is unique to my_task_bands — see
-        # split_worklist_view()'s docstring on why it isn't split), and reusing
+        # band id — correct for queue_action_bands (every id there is
+        # action-only by construction) but NOT kind-aware, so it must never be
+        # wired to claimed_bands: ids 1/2/4 exist in both lists, and reusing
         # that route for the task side would inject action rows into "owned
-        # work" (exactly the kind-mixing this split exists to prevent). Until
-        # the route is made kind-aware, both task-side band lists render
+        # work". Until the route is made kind-aware, claimed_bands renders
         # uncapped/eager instead of lazy-paginated — task-per-band volume is
-        # expected to stay small (a rep's own open/claimed tasks), so this is a
-        # safe trade, not a silent drop.
+        # expected to stay small (a rep's own open/claimed tasks), so this is
+        # a safe trade, not a silent drop.
         def _cap_rows(bands: list) -> None:
             for band in bands:
                 cap = band["display_capacity"]
@@ -274,9 +272,8 @@ def make_worklist_router(
             **ranked,
             "queue_action_bands": view["queue_action_bands"],
             "queue_action_count": view["queue_action_count"],
-            "claimed_task_bands": view["claimed_task_bands"],
-            "claimed_task_count": view["claimed_task_count"],
-            "my_task_bands": view["my_task_bands"],
+            "claimed_bands": view["claimed_bands"],
+            "claimed_count": view["claimed_count"],
             "party_extras": party_extras,
             "refreshed_at": refreshed_at,
             "is_stale": is_stale,
