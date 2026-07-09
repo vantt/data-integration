@@ -126,18 +126,21 @@ def _task(
     status: str = "open",
     party_id: str | None = None,
     description: str | None = None,
+    source: str = "manual",
+    party_name: str | None = None,
 ) -> Task:
     return Task(
         task_id=task_id,
         title=title,
         priority=priority,
         status=status,
-        source="manual",
+        source=source,
         created_at=_TS,
         updated_at=_TS,
         party_id=party_id,
         due_at=due_at,
         description=description,
+        party_name=party_name,
     )
 
 
@@ -463,6 +466,37 @@ class TestActionRowLabelClarity:
         html = self._render_action_row(customer_name="Nguyễn Văn A", customer_key=self._HASH_KEY)
         assert "Nguyễn Văn A" in html
         assert self._HASH_KEY not in html
+
+
+class TestTaskRowLabelClarity:
+    """Task rows must show the joined party_name, never the raw party_id UUID.
+
+    Regression guard: the row previously read `a.customer_name` — a field
+    Task does not have (only `party_name`, populated by task_repository's
+    LEFT JOIN) — so Jinja's Undefined silently fell through to the raw
+    party_id on every task row, claimed or not.
+    """
+
+    _PARTY_ID = "bf9904af-c395-47c9-a932-fd8f9c053fb1"
+
+    def _render_task_row(self, **task_overrides) -> str:
+        from datetime import date
+        t = _task("t-clarity", party_id=self._PARTY_ID, **task_overrides)
+        result = rank_worklist([], [t], today=date(2026, 6, 23))
+        ctx = _base_ctx(**result, party_extras={})
+        return _render_fragment(ctx)
+
+    def test_party_name_present_uses_name_not_uuid(self):
+        html = self._render_task_row(party_name="Chị Yến", source="action_queue_claim")
+        assert "Chị Yến" in html
+        # party_id legitimately appears in href="/customers/{pid}" links; only the
+        # anchor TEXT (what the staff reads) must never be the raw UUID.
+        assert f">{self._PARTY_ID}</a>" not in html
+
+    def test_no_party_name_falls_back_to_placeholder_not_uuid(self):
+        html = self._render_task_row(party_name=None, source="action_queue_claim")
+        assert f">{self._PARTY_ID}</a>" not in html
+        assert "(chưa xác định)" in html
 
 
 # ── Band collapse/expand and overflow ("Xem thêm") ──────────────────────────
