@@ -1,4 +1,5 @@
 {# @surface P01 · Insight Panel | @source crm/docs/ui-spec/panels/P01-insight-panel.md | @kind PANEL #}
+{% from "macros/card.html" import card %}
 {# HTMX fragment for /customers/{party_id}/panels/insight
    Data: party_id, insight (CacheInsight|None), rep_insights (list[PartyInsight]),
          resolved_action_ids (set[str]), dim_metrics (CustomerDimMetrics|None)
@@ -45,7 +46,7 @@
 
     {% if unresolved_count >= 2 %}
     {# ── Mode A — Session checklist (≥2 unresolved) ── #}
-    <div class="aq-session-card">
+    {% call card(variant='lead', extra_class='aq-session-card-body') %}
       <div class="aq-session-card__head">
         <span class="aq-session-card__pill">{{ unresolved_count }} việc</span>
         <span class="aq-session-card__hint">Tích chọn xong rồi bấm Hoàn tất</span>
@@ -97,7 +98,7 @@
           </button>
         </div>
       </form>
-    </div>
+    {% endcall %}
 
     {% else %}
     {# ── Mode B — Individual card (0–1 unresolved) ── #}
@@ -106,7 +107,7 @@
     {% else %}
     <div class="stack stack-3">
       {% for act in sorted_actions %}{% if act.status != 'dismissed' %}
-      <div class="aq-card">
+      {% call card(variant='lead', extra_class='aq-card-body') %}
         <div class="aq-card__top">
           <span class="{{ act.action_type | bdg_cls('action_type') }}" data-tooltip="{{ act.action_type | bdg_tip('action_type') }}">{{ act.action_type }}</span>
           {% if act.value_at_stake_vnd > 0 %}
@@ -144,7 +145,7 @@
           </button>
         </div>
         {% endif %}
-      </div>
+      {% endcall %}
       {% endif %}{% endfor %}
     </div>
     {% endif %}

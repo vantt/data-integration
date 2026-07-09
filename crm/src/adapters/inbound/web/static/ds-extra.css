@@ -100,14 +100,12 @@
 .phone-prev { font-family: var(--font-mono); font-size: 13px; color: var(--moss-500); letter-spacing: var(--tracking-mono); display: inline-flex; align-items: center; gap: 6px; }
 
 /* ── Action queue card (C03) ────────────────────────────── */
-.aq-card {
-  display: flex; flex-direction: column; gap: var(--sp-3);
-  background: var(--bg-raised); border: 1px solid var(--border); border-left: 3px solid var(--accent);
-  border-radius: 0 var(--radii-soft) var(--radii-soft) 0; padding: var(--sp-4);
-  box-shadow: 0 1px 3px rgba(0,0,0,.08);
-  transition: background var(--dur-fast) var(--ease-fast);
-}
-.aq-card:hover { background: var(--bg-surface); }
+/* aq-card/aq-session-card converged onto the shared scard shell (2026-07-09) using the
+   EXISTING scard--lead variant (ds-app.css) for the accent stripe - the old .aq-card had
+   its own box-shadow + raised background + asymmetric radius that both duplicated
+   scard--lead's accent-stripe idea AND contradicted this design system's own "cards cast
+   no shadow" rule (DESIGN_SYSTEM.md §8); corrected rather than preserved as an exception. */
+.aq-card-body { display: flex; flex-direction: column; gap: var(--sp-3); }
 .aq-card__top { display: flex; align-items: center; justify-content: space-between; gap: var(--sp-3); }
 .aq-card__val { font-family: var(--num-font); font-size: 11px; color: var(--fg-tertiary); letter-spacing: var(--tracking-mono); display: inline-flex; align-items: center; gap: 4px; white-space: nowrap; }
 .aq-card__rationale { font-size: 13.5px; color: var(--fg-1); line-height: 1.55; text-wrap: pretty; }
@@ -130,7 +128,7 @@
 .aq-ctx-chip--discount { color: var(--moss-500); border-color: color-mix(in srgb, var(--moss-500) 30%, transparent); }
 
 /* ── Action session merged card (C03 ≥2 actions) ────────── */
-.aq-session-card { display: flex; flex-direction: column; gap: 0; background: var(--bg-surface); border: 1px solid var(--border); border-left: 3px solid var(--accent); border-radius: 0 var(--radii-control) var(--radii-control) 0; overflow: hidden; }
+.aq-session-card-body { display: flex; flex-direction: column; gap: 0; overflow: hidden; }
 .aq-session-card__head {
   display: flex; align-items: center; min-height: 36px; gap: var(--sp-2);
   padding: var(--sp-2) var(--sp-4);
