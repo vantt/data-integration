@@ -1,8 +1,14 @@
 # Plan: Card & Pill Macro Consolidation (CRM templates)
 
 ## Status
-Phase 1 done (2026-07-09) — `card()`/`facts()` macros built, piloted on `dedup_review.html`,
-reviewed, verified. Phases 2-4 not started.
+Phase 1 + Phase 2 done (2026-07-09). Phase 1: `card()`/`facts()` macros built, piloted on
+`dedup_review.html`. Phase 2: all 7 remaining card-family templates migrated across 3
+batches (see phase-02 for commit hashes) — `tasks_board.html`, note cards, `customer_360`,
+`order_detail`, `conversation_detail`, `c360_insight_panel` (`aq-card`/`aq-session-card`,
+including a deliberate visual fix removing a design-system-contradicting box-shadow).
+New macro: `card_header()`. Card family count went from 6 drifted + 1 canonical down to 1
+canonical (`scard`) + documented variants (`--survive`, `--lead`) + additive layout
+modifier classes. Phase 3 (pill/badge) and Phase 4 (docs) not started.
 
 ## Context
 Survey (2026-07-09) found the Precision design system already has a full token layer

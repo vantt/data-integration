@@ -33,14 +33,30 @@ thái" fact (embeds a `<span class="bdg">` badge as its value) correctly left ha
 not forced into `facts()`. Verified via Jinja render byte-diff (live `crm_conversation`
 table is empty, no real conversations to click through).
 
-Remaining (batch 3 part 2, not started): `fragments/c360_insight_panel.html`
-(`aq-card`/`aq-session-card`). Open design question before touching this: `.aq-card`
-(`ds-extra.css`) has a border-left accent stripe, asymmetric border-radius, and a real
-box-shadow — a deliberately distinct visual treatment, not just a differently-named
-`.scard`. Decide whether this is (a) a legitimate `card()` variant to add (e.g.
-`variant="flagged"`) or (b) a documented exception to leave alone, before doing any
-mechanical migration on it — don't force convergence on a component that may be
-intentionally different by design.
+Batch 3 part 2 done (`60da8be8`) — `fragments/c360_insight_panel.html`'s `aq-card`
+(Mode B)/`aq-session-card` (Mode A) migrated. User was shown that `.aq-card`'s box-shadow
+contradicted `DESIGN_SYSTEM.md` §8's own "cards cast no shadow" rule and chose to fix the
+drift (not preserve as an exception): converged to standard `scard` treatment, reusing the
+EXISTING `.scard--lead` variant (already live elsewhere, `order_context_tab.html`/
+`order_operations_tab.html`) for the accent-stripe identity instead of adding a new
+near-duplicate variant (a code-reviewer pass initially caught a redundant `.scard--flagged`
+that was corrected to reuse `.scard--lead`). Flex/gap/overflow layout preserved via
+`.aq-card-body`/`.aq-session-card-body` modifier classes, same pattern as every prior
+batch. Verified: Mode A against the live server with a real customer; Mode B via an
+isolated Jinja snippet render (the full file needs many unrelated custom filters not worth
+stubbing for a single-block check).
+
+## Phase 2 Status: DONE (2026-07-09)
+All 7 files migrated across 3 batches: `tasks_board.html`, `fragments/note_card.html`,
+`fragments/note_card_typed.html` (batch 1, `68857088`/`a59a9d31`); `customer_360.html`,
+`order_detail.html` (batch 2, `4bbba938`/`3a61d335`); `conversation_detail.html`,
+`fragments/c360_insight_panel.html` (batch 3, `7bfbca76`/`60da8be8`). 2 deliberate
+exceptions left hand-written and documented in-template (order_detail's `<a>`-tag
+Recipient-link card; several mixed-markup facts blocks that embed links/badges facts()
+can't safely express). New shared macros beyond Phase 1's `card()`/`facts()`:
+`card_header(title, edit_href=None)`. Extended `card()` with `eyebrow_accent` and `attrs`
+params along the way. Next: Phase 3 (pill/badge convergence) and Phase 4 (docs).
+
 
 
 ## Context
