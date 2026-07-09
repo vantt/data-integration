@@ -182,7 +182,7 @@
       {# Created #}
       {% if h_tl.created_at %}
       <div class="tl-item tl-item--muted">
-        <div class="tl-time">{{ h_tl.created_at | format_datetime_ict }} <span class="caption" style="margin-left:6px">ICT</span></div>
+        <div class="tl-time">{{ h_tl.created_at | format_datetime_ict }}</div>
         <div class="tl-title">Order created</div>
       </div>
       {% endif %}
@@ -190,7 +190,7 @@
       {# First shipped #}
       {% if h_tl.first_shipped_at %}
       <div class="tl-item">
-        <div class="tl-time">{{ h_tl.first_shipped_at | format_datetime_ict }} <span class="caption" style="margin-left:6px">ICT</span></div>
+        <div class="tl-time">{{ h_tl.first_shipped_at | format_datetime_ict }}</div>
         <div class="tl-title">First shipped</div>
       </div>
       {% endif %}
@@ -200,7 +200,7 @@
         {% set ptimestamp = p.payment_timestamp if p.payment_timestamp else p.paid_on %}
         {% if ptimestamp %}
         <div class="tl-item tl-item--good">
-          <div class="tl-time">{{ ptimestamp | format_datetime_ict }} <span class="caption" style="margin-left:6px">ICT</span></div>
+          <div class="tl-time">{{ ptimestamp | format_datetime_ict }}</div>
           <div class="tl-title">Payment{% if p.payment_method_name %} · {{ p.payment_method_name }}{% endif %}</div>
           <div class="tl-meta">
             {{ p.amount | fmt_vnd }}
@@ -227,7 +227,7 @@
       {# Last updated / completed #}
       {% if h_tl.updated_at %}
       <div class="tl-item tl-item--{{ 'good' if h_tl.time_to_complete_hours is not none else 'muted' }}">
-        <div class="tl-time">{{ h_tl.updated_at | format_datetime_ict }} <span class="caption" style="margin-left:6px">ICT</span></div>
+        <div class="tl-time">{{ h_tl.updated_at | format_datetime_ict }}</div>
         <div class="tl-title">{% if h_tl.time_to_complete_hours is not none %}Completed{% else %}Last updated{% endif %}</div>
         {% if h_tl.time_to_complete_hours is not none %}
         <div class="tl-meta">time to complete: {{ h_tl.time_to_complete_hours }} h</div>

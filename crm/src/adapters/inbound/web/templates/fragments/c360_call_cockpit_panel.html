@@ -525,7 +525,7 @@
           <span class="s14-trust__sep" aria-hidden="true">·</span>
           <span class="s14-trust__item{% if refreshed_at %} js-s14-stale{% endif %}"
                 id="s14-trust-freshness"
-                title="{{ refreshed_at | format_datetime_ict if refreshed_at else '' }} ICT">
+                title="{{ refreshed_at | format_datetime_ict if refreshed_at else '' }}">
             script {{ refreshed_at | format_datetime_ict if refreshed_at else "—" }}
           </span>
           <span class="s14-trust__sep" aria-hidden="true">·</span>
@@ -698,7 +698,7 @@
           <div class="s14-snap__fresh">
             {# R2: refreshed_at always visible #}
             <span class="bdg">
-              {{ insight.insight.refreshed_at | format_datetime_ict }} ICT
+              {{ insight.insight.refreshed_at | format_datetime_ict }}
             </span>
           </div>
           {% endif %}

@@ -1,7 +1,8 @@
 """Date/time formatting helpers for the CRM web adapter.
 
-Parses UTC ISO-8601 strings, displays in ICT (Asia/Ho_Chi_Minh).
-All functions are pure — safe to call from Jinja2 filters.
+Parses ISO-8601 strings (naive/Z-suffixed treated as UTC; +HH:MM-offset strings honor
+their own offset), displays in ICT (Asia/Ho_Chi_Minh). All functions are pure — safe to
+call from Jinja2 filters.
 """
 from __future__ import annotations
 
@@ -27,13 +28,19 @@ _RELATIVE_THRESHOLDS = [
 
 
 def _parse_iso(iso_str: str | None) -> datetime | None:
-    """Parse UTC ISO-8601 string into an aware datetime. Returns None on failure."""
+    """Parse an ISO-8601-ish string into an aware datetime. Returns None on failure.
+
+    Handles both the T/Z-suffixed form (assumed UTC) and a space-separated form carrying
+    its own +HH:MM offset (e.g. order timestamps from the warehouse mart).
+    """
     if not iso_str:
         return None
     for fmt in (
         "%Y-%m-%dT%H:%M:%S.%fZ",
         "%Y-%m-%dT%H:%M:%SZ",
         "%Y-%m-%dT%H:%M:%S",
+        "%Y-%m-%d %H:%M:%S.%f%z",
+        "%Y-%m-%d %H:%M:%S%z",
         "%Y-%m-%d",
     ):
         try:
@@ -65,8 +72,10 @@ def format_datetime_ict(iso_str: str | None) -> str:
     if dt is None:
         return iso_str
     local = dt.astimezone(_ICT)
-    # Date-only inputs (no T) → date only, no time suffix
-    if "T" not in iso_str and not iso_str.endswith("Z"):
+    # Date-only inputs (no time component) → date only, no time suffix. A time component
+    # always has a ":" (T/Z-suffixed UTC form or a space-separated +HH:MM-offset form);
+    # a bare "YYYY-MM-DD" never does.
+    if ":" not in iso_str:
         return local.strftime("%d/%m/%Y")
     return local.strftime("%d/%m/%Y %H:%M ICT")
 
