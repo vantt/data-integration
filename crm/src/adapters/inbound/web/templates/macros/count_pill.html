@@ -3,11 +3,19 @@
           {{ count_pill(band.count, "band") }}
 
    text     any    the count value to display (rendered as-is, no fmt applied)
-   variant  str    which pill treatment: "band" (wl-band__count), "ship" (ship-count),
-                   "session" (aq-session-card__pill). Shell (.cpill) + "ship" live in
-                   ds-app.css (next to .bdg); "band"/"session" live in ds-extra.css (deliberately NOT unified into one
-                   look - see plans/260709-1034-card-badge-macro-consolidation for why
-                   this pulls the shared shape into one class but keeps each variant's
-                   bespoke sizing/color exactly as it was pre-consolidation).
+   variant  str    which pill treatment - each needs a matching .cpill--<variant> CSS
+                   rule (there is no fallback; an unstyled variant silently renders with
+                   only the bare .cpill shell). Known variants as of 2026-07-09:
+                     "band"    - wl-band__count (worklist band header counts)
+                     "ship"    - ship-count (Operations tab shipment/return counts)
+                     "session" - aq-session-card__pill (action-queue checklist count)
+                     "section" - worklist Section/Sub-section header counts (added
+                                 after this macro shipped - larger/filled treatment)
+                   Shell (.cpill) + "ship" live in ds-app.css (next to .bdg); "band"/
+                   "session"/"section" live in ds-extra.css. Deliberately NOT visually
+                   unified into one look - see plans/260709-1034-card-badge-macro-
+                   consolidation for why this only pulls the shared shape (mono font,
+                   pill radius, border width) into one class, keeping each variant's
+                   bespoke sizing/color exactly as it was pre-consolidation.
 #}
 {% macro count_pill(text, variant) %}<span class="cpill cpill--{{ variant }}">{{ text }}</span>{% endmacro %}

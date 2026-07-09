@@ -269,7 +269,10 @@ wrapper, not the inner content, so only the wrapper is centralized).
   "GIỮ LẠI"/"GỘP VÀO" labels).
 - `variant` — state modifier, rendered as `scard--{{ variant }}`. Known variants:
   `survive` (dedup merge highlight), `lead` (accent border-left — shared with the action
-  queue card and Operations-tab recipient panels; reuse this before adding a new variant).
+  queue card and Operations-tab recipient panels), `recipient` (subtler strong-border
+  emphasis, order detail's recipient card — combine with `lead` via `extra_class` when a
+  card needs both, e.g. `variant="recipient", extra_class="scard--lead"`). Reuse one of
+  these before adding a new variant.
 - `extra_class` — escape hatch for one-off layout needs (e.g. `task-card` restoring the
   flex/gap/cursor behavior a pre-migration `.tcard` had beyond what bare `.scard` provides).
   Not for smuggling back a whole parallel class family — if the same `extra_class` shows up
@@ -301,6 +304,23 @@ that do have a button).
 ```jinja
 {% from "macros/card_header.html" import card_header %}
 {{ card_header("Liên Lạc", edit_href="/modals/m15?party_id=" ~ party.party_id ~ "&tab=contacts") }}
+```
+
+**`macros/count_pill.html` → `count_pill(text, variant)`**
+
+Pure macro wrapping the shared `.cpill` count-pill shape (mono font, pill radius, 1px
+border — the only properties actually duplicated across the pre-consolidation
+`wl-band__count`/`ship-count`/`aq-session-card__pill`). Each variant needs its own
+`.cpill--<variant>` CSS rule — **there is no fallback**; passing an undefined variant
+silently renders with only the bare shell (no color/size). Known variants: `band`
+(worklist band header counts), `ship` (Operations tab shipment/return counts), `session`
+(action-queue checklist count), `section` (worklist Section/Sub-section header counts,
+added after this macro shipped). Deliberately NOT visually unified — each variant keeps
+its exact pre-consolidation color/size.
+
+```jinja
+{% from "macros/count_pill.html" import count_pill %}
+{{ count_pill(band.count, "band") }}
 ```
 
 ### Badges (Phase 3 note)

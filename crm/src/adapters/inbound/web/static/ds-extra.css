@@ -229,9 +229,6 @@
 .cand-row__names { font-size: 13.5px; color: var(--fg); }
 .cand-row__rule { font-family: var(--font-mono); font-size: 10px; letter-spacing: var(--tracking-mono); color: var(--fg-tertiary); text-transform: uppercase; }
 .dedup-compare { display: grid; grid-template-columns: 1fr 1fr; gap: var(--sp-4); }
-.dedup-card { background: var(--bg-surface); border: 1px solid var(--border); border-radius: var(--radii-control); padding: var(--sp-4) var(--sp-5); }
-.dedup-card--survive { border-color: var(--accent); border-width: 1px; box-shadow: inset 2px 0 0 var(--accent); }
-.dedup-card__tag { display: inline-flex; margin-bottom: var(--sp-3); }
 .dedup-detail-actions { display: flex; align-items: center; gap: var(--sp-3); margin-top: var(--sp-5); flex-wrap: wrap; }
 
 /* ── Inbox ──────────────────────────────────────────────── */
