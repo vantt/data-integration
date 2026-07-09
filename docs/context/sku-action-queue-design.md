@@ -1,8 +1,8 @@
 # SKU-Level Action Queue — Design & Calculation Reference
 
 > **Scope:** Data Team, CRM Product
-> **Updated:** 2026-06-29
-> **Status:** Design — pre-implementation
+> **Updated:** 2026-07-08
+> **Status:** Implemented — shipped 2026-07-08 (Plan: `plans/260708-1501-gift-purchase-sku-action-scenario`)
 
 ---
 
@@ -21,19 +21,33 @@
 
 ---
 
-## 2. Kiến trúc 3 lớp
+## 2. Kiến trúc 4 lớp
 
 ```
 seed_sku_regimen_config              ← config sản phẩm (static)
         │
         ▼
-int_customer_sku_supply_tracking     ← tính depletion window per (customer × SKU)
+int_customer_sku_supply_tracking     ← tính depletion window per (customer × SKU × supply_stream)
         │
-        ▼
-mart_customer_sku_action_queue       ← queue với action_type + journey touchpoints
+        ├─────────────────────────────────────────┐
+        │                                         │
+        ▼                                         ▼
+mart_customer_sku_action_queue       seed_action_scenario_registry    ← feature-flag layer
+        │                                    │
+        │                                    │
+        └────────────────────┬───────────────┘
+                             ▼
+                    mart_customer_sku_action_queue (final output)
 ```
 
-Queue mới có **grain (customer_id, sku)** — một khách có thể có nhiều rows, mỗi SKU một row độc lập.
+Queue mới có **grain (customer_key, sku, supply_stream)** — một khách có thể có nhiều rows, mỗi (SKU, stream) một row độc lập.
+
+**supply_stream dimension:**
+- `purchased`: mua bằng tiền (dùng normal supply-based timing)
+- `gift_only`: khách chỉ từng được tặng SKU này, chưa bao giờ mua tự nguyện (timeline độc lập, kích hoạt `GIFT_TO_PURCHASE` scenario mới)
+
+**Scenario Registry layer:**
+Sau khi tính toán action_type, check `seed_action_scenario_registry` để decide xem action_type đó có xuất hiện ở output hay không. Mỗi action_type có flag `enabled=true/false` per `mart` — đổi bật/tắt chỉ cần edit seed + `dbt seed && dbt run`, không sửa SQL branching.
 
 ---
 
@@ -94,7 +108,15 @@ Buffer được tính từ hành vi mua lại thực tế, không phải giả �
 ## 5. Supply Tracking — `int_customer_sku_supply_tracking`
 
 ### Grain
-`(customer_key, sku)` — một row per khách per SKU đang active.
+`(customer_key, sku, supply_stream)` — một row per khách per SKU per luồng mua.
+
+**supply_stream values:**
+- `purchased`: khách đã từng tự mua SKU này (dù là lần đầu hay lần N) — tracking supply days bình thường
+- `gift_only`: khách chỉ từng được tặng SKU này (zero non-gift purchase history) — tracking supply days độc lập, trigger scenario `GIFT_TO_PURCHASE`
+
+**Logic xác định stream:**
+- Nếu `EXISTS (khách mua non-gift SKU này, bất kỳ lần nào)` → `purchased`
+- Nếu `NOT EXISTS (khách mua non-gift SKU này)` AND `EXISTS (khách được tặng SKU này)` → `gift_only`
 
 ### Các bước tính
 
@@ -165,9 +187,9 @@ Giữ nguyên logic cũ — chỉ SKU configured mới dùng supply-based timing
 ## 6. Action Types — `mart_customer_sku_action_queue`
 
 ### Grain
-`(customer_key, sku)` — nhiều rows per customer, mỗi SKU một action độc lập.
+`(customer_key, sku, supply_stream)` — nhiều rows per customer, mỗi (SKU, stream) một action độc lập.
 
-### Timeline journey per SKU
+### Timeline journey per SKU — `purchased` stream
 
 ```
 Ngày 0:   Mua hàng ─────────────────────────────────────────────────────
@@ -178,54 +200,106 @@ Day D+:   [REORDER_NUDGE]    "Hết rồi! Tiếp tục không đứt liệu tr�
 Day D+7+: [REORDER_OVERDUE]  "Đã X ngày đứt liều — offer đặc biệt"
 ```
 
+### Timeline journey per SKU — `gift_only` stream
+
+```
+Ngày 0:    Nhận tặng ─────────────────────────────────────────────────
+Day D-R:   [GIFT_TO_PURCHASE] "Đã dùng từng bao giờ? Mở rộng luôn!"  ← ships disabled (enabled=false)
+```
+
+**GIFT_TO_PURCHASE status:** Tính toán logic sẵn sàng; output không xuất hiện khi `seed_action_scenario_registry` có `action_type='GIFT_TO_PURCHASE', enabled=false`. Cần review timing rule trước khi flip `enabled=true`.
+
 ### Điều kiện kích hoạt
 
 ```sql
-CASE
-    -- Journey touchpoints (chỉ khi journey_enabled = TRUE)
-    WHEN cfg.journey_enabled
-     AND days_since_order BETWEEN 5 AND 9
-        THEN 'USAGE_FOLLOWUP'
-    WHEN cfg.journey_enabled
-     AND days_since_order BETWEEN 12 AND 16
-        THEN 'PROGRESS_CHECK'
+-- Tính candidate action_type từ logic, rồi filter qua scenario registry
+WITH candidate_actions AS (
+  SELECT
+    customer_key, sku, supply_stream,
+    CASE
+        -- Purchased stream: journey touchpoints (chỉ khi journey_enabled = TRUE)
+        WHEN supply_stream = 'purchased'
+         AND cfg.journey_enabled
+         AND days_since_order BETWEEN 5 AND 9
+            THEN 'USAGE_FOLLOWUP'
+        WHEN supply_stream = 'purchased'
+         AND cfg.journey_enabled
+         AND days_since_order BETWEEN 12 AND 16
+            THEN 'PROGRESS_CHECK'
 
-    -- Reorder signals (dựa trên depletion_date)
-    WHEN days_until_depletion BETWEEN 0 AND cfg.remind_lead_days
-        THEN 'REORDER_PREEMPT'
-    WHEN days_until_depletion BETWEEN -7 AND -1
-        THEN 'REORDER_NUDGE'
-    WHEN days_until_depletion < -7
-        THEN 'REORDER_OVERDUE'
+        -- Purchased stream: reorder signals (dựa trên depletion_date)
+        WHEN supply_stream = 'purchased'
+         AND days_until_depletion BETWEEN 0 AND cfg.remind_lead_days
+            THEN 'REORDER_PREEMPT'
+        WHEN supply_stream = 'purchased'
+         AND days_until_depletion BETWEEN -7 AND -1
+            THEN 'REORDER_NUDGE'
+        WHEN supply_stream = 'purchased'
+         AND days_until_depletion < -7
+            THEN 'REORDER_OVERDUE'
 
-    ELSE NULL
-END AS action_type
+        -- Gift-only stream: conversion opportunity
+        WHEN supply_stream = 'gift_only'
+         AND days_until_depletion BETWEEN 0 AND cfg.remind_lead_days
+            THEN 'GIFT_TO_PURCHASE'
+
+        ELSE NULL
+    END AS candidate_action_type
+  FROM base_supply_tracking
+  JOIN seed_sku_regimen_config cfg USING (sku)
+)
+SELECT
+  customer_key, sku, supply_stream, candidate_action_type AS action_type
+FROM candidate_actions
+WHERE candidate_action_type IS NOT NULL
+-- Scenario registry filter: only include if enabled for this action_type/mart
+  AND EXISTS (
+    SELECT 1 FROM seed_action_scenario_registry reg
+    WHERE reg.action_type = candidate_action_type
+      AND reg.mart = 'mart_customer_sku_action_queue'
+      AND reg.enabled = true
+  )
 ```
 
 ### Priority rank
 
-| Rank | Action Type | Nguồn | Ý nghĩa |
-|---|---|---|---|
-| 1 | `CALL_NOW` | customer-level | VIP/Gold At-Risk — gọi ngay |
-| 2 | `REORDER_OVERDUE` | sku-level | Đứt liều >7 ngày |
-| 3 | `REORDER_NUDGE` | sku-level | Hết hàng hôm nay |
-| 4 | `WIN_BACK` | customer-level | Churn — cần offer |
-| 5 | `REORDER_PREEMPT` | sku-level | Sắp hết trong R ngày |
-| 6 | `PROGRESS_CHECK` | sku-level | D14 journey |
-| 7 | `USAGE_FOLLOWUP` | sku-level | D7 journey |
-| 8 | `SECOND_ORDER` | customer-level | First-timer push |
-| 9 | `HIGH_CANCEL_RISK` | customer-level | Tỷ lệ huỷ cao |
+| Rank | Action Type | Nguồn | Stream | Ý nghĩa |
+|---|---|---|---|---|
+| 1 | `CALL_NOW` | customer-level | N/A | VIP/Gold At-Risk — gọi ngay |
+| 2 | `REORDER_OVERDUE` | sku-level | purchased | Đứt liều >7 ngày |
+| 3 | `REORDER_NUDGE` | sku-level | purchased | Hết hàng hôm nay |
+| 4 | `WIN_BACK` | customer-level | N/A | Churn — cần offer |
+| 5 | `REORDER_PREEMPT` | sku-level | purchased | Sắp hết trong R ngày |
+| 5.5 | `GIFT_TO_PURCHASE` | sku-level | gift_only | Chuyển đổi khách chỉ được tặng (ships disabled) |
+| 6 | `PROGRESS_CHECK` | sku-level | purchased | D14 journey |
+| 7 | `USAGE_FOLLOWUP` | sku-level | purchased | D7 journey |
+| 8 | `SECOND_ORDER` | customer-level | N/A | First-timer push |
+| 9 | `HIGH_CANCEL_RISK` | customer-level | N/A | Tỷ lệ huỷ cao |
 
 ---
 
-## 7. Tích hợp với queue customer-level cũ
+## 7. Tích hợp với queue customer-level + Tier-aware branching
 
 `mart_customer_action_queue` (customer-level) và `mart_customer_sku_action_queue` (sku-level) tồn tại song song:
 
-- **Customer-level:** CALL_NOW, WIN_BACK, SECOND_ORDER, HIGH_CANCEL_RISK — giữ nguyên, không phụ thuộc SKU
-- **SKU-level:** USAGE_FOLLOWUP, PROGRESS_CHECK, REORDER_PREEMPT, REORDER_NUDGE, REORDER_OVERDUE — mới, dùng supply-based timing
+- **Customer-level:** CALL_NOW, WIN_BACK, SECOND_ORDER, HIGH_CANCEL_RISK — giữ nguyên action types
+- **SKU-level:** USAGE_FOLLOWUP, PROGRESS_CHECK, REORDER_PREEMPT, REORDER_NUDGE, REORDER_OVERDUE, GIFT_TO_PURCHASE — supply-based timing + new gift stream
 
-CRM detailView Actions tab hiển thị cả 2 loại, sort theo `priority_rank`. Mỗi SKU-level action hiện thị tên sản phẩm và `days_until_depletion`.
+**Tier-aware filtering (implemented 2026-07-08):**
+Cả 2 marts hiện join `mart_customer_tier` để lấy:
+- `strategic_tier`: VIP/Gold/Silver/Bronze/Standard/Monitor/Dormant
+- `is_contactable`: từ tier (strictly: phone IS NOT NULL AND phone <> ''), thay vì local expression
+
+Ngoài ra, cả 2 marts loại bỏ `is_us_gift_recipient` customers khỏi eligibility (người nhận hàng US, khác customer Sapo VN).
+
+**Scenario Registry layer (implemented 2026-07-08):**
+Mỗi action_type có flag `enabled=true/false` trong `seed_action_scenario_registry`:
+- Tất cả logic tính toán luôn sẵn sàng chạy
+- Output chỉ xuất hiện khi `enabled=true` cho action_type đó
+- Đổi bật/tắt = edit seed + `dbt seed && dbt run`
+- `GIFT_TO_PURCHASE` ships `enabled=false` pending timing-rule review
+
+CRM detailView Actions tab hiển thị cả 2 loại, sort theo `priority_rank`. Mỗi SKU-level action hiện thị tên sản phẩm, `supply_stream`, và `days_until_depletion`.
 
 **Deduplication rule:** Nếu khách đang CALL_NOW (customer-level), không hiện thêm SKU REORDER_PREEMPT cùng ngày (noise). CS đã biết cần gọi ngay — SKU detail là thông tin bổ sung, không tạo action riêng.
 
@@ -259,31 +333,33 @@ Khi `days_until_depletion < -30` và không có lần mua mới → chuyển v�
 | `customer_key` | FK → dim_customers |
 | `customer_id` | Sapo customer ID |
 | `sku` | Sapo base SKU |
+| `supply_stream` | `purchased` hoặc `gift_only` |
 | `product_group` | Nhóm sản phẩm (8 core) |
 | `product_name` | Tên hiển thị |
-| `action_type` | Loại action (6 types) |
+| `action_type` | Loại action (5-6 types tùy enable status) |
 | `priority_rank` | Số nhỏ hơn = ưu tiên hơn |
 | `days_until_depletion` | Âm = đã hết hàng, dương = còn N ngày |
-| `days_since_order` | Ngày kể từ lần mua cuối |
-| `last_purchase_date` | Ngày mua cuối cùng SKU này |
-| `last_order_qty` | Số lượng mua lần cuối |
+| `days_since_order` | Ngày kể từ lần mua/tặng cuối |
+| `last_purchase_date` | Ngày mua/tặng cuối cùng SKU này |
+| `last_order_qty` | Số lượng mua/tặng lần cuối |
 | `effective_supply_days` | qty × supply_days × buffer |
 | `estimated_depletion_date` | Ngày dự kiến hết hàng |
 | `action_rationale` | String giải thích tiếng Việt |
 | `dose_reduction_buffer` | Buffer đang dùng (từ config) |
 | `supply_days_per_unit` | Liều chuẩn nhà SX |
+| `strategic_tier` | Từ `mart_customer_tier` (VIP/Gold/Silver/…) |
 | `queue_generated_at` | Timestamp tạo queue |
 
 ---
 
-## 10. Unresolved / Cần xác nhận
+## 10. Unresolved / Cần xác nhận (post-implementation)
 
-1. **`supply_days_per_unit` cho 8 SKU** — cần product team xác nhận. Hiện có `median_days_per_unit` từ data, chờ standard để tính buffer cuối.
+1. **`GIFT_TO_PURCHASE` timing rule** — khi nào nhắc khách được tặng: X ngày sau nhận tặng? Hay theo supply_days_per_unit như luồng mua? Chưa chốt. Ships `enabled=false`, cần data-grounded timing review trước khi flip `enabled=true`.
 
-2. **shark_cartilage `avg_order_qty = 47.3`** (median = 3) — nghi đơn vị trong Sapo là `viên` không phải `lọ`. Cần xác minh trước khi đưa vào config.
+2. **`gift_rate` threshold để gán `sku_role` categorical** — báo cáo finejapan gợi ý >40% nhưng chỉ cover 3/8 core SKU. Để riêng nếu có nhu cầu downstream.
 
-3. **Journey D7/D14 delivery mechanism** — queue tạo task trong CRM (manual CS action). Confirmed: không auto-Zalo.
+3. **`is_us_gift_recipient` base signal** — hiện dựa 100% vào manual Sapo group tag, cùng lỗ hổng "chưa tag = RETAIL" như `customer_type`. Real fix (tự động từ `EXISTS (channel='US')`) đã quyết định tách thành plan riêng. Plan này tạm dùng cờ thủ công; follow-up riêng nếu tỷ lệ miss cao.
 
-4. **Suppress REORDER_PREEMPT khi CALL_NOW** — logic nằm ở CRM layer hay ở mart SQL? Đề xuất: suppress ở mart (đơn giản hơn) bằng `WHERE action_type NOT IN ('REORDER_PREEMPT') OR customer_level_action IS NULL`.
+4. **Recursive CTE upgrade path** — nếu error rate từ LAG(1) stacking > 5% sau validation, upgrade lên full N-level stacking. Hiện 90% stacking cases handled.
 
-5. **Recursive CTE upgrade path** — Phase 2 nếu error rate từ LAG(1) stacking > 5% sau validation.
+5. **wh_deadstock_target & mart_product_action_queue** — 2 action-queue engine khác; đánh giá sau nếu cần reuse `is_gift_line`/`supply_stream` logic.
