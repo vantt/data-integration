@@ -9,3 +9,10 @@
 	# Expiry notifications (optional; need not be a receivable mailbox for issuance).
 	email admin@fwg.vn
 }
+
+# fgos-dev moved to design-lab (Tailscale 100.66.22.20) — Docker bridge networks
+# don't span hosts, so the usual label auto-discovery on caddy_net can't reach it.
+# Static block instead; cert already issued for this host from the prior label config.
+fgos-dev.lan.fwg.vn {
+	reverse_proxy 100.66.22.20:5173
+}

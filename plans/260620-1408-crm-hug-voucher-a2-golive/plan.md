@@ -2,7 +2,7 @@
 title: "M5 — A2 Go-Live: Hug Voucher Issuance/Redeem + A2 Campaign"
 description: "Closes the voucher loop (issuance ledger + redeem matcher) and launches A2 to 364 MASKED_REPEAT customers (683M VND CM)."
 status: pending
-# (updated 2026-06-24: untouched by 260623 audit work; all phases P1-P5 not started; 5 open architecture questions unresolved)
+# (updated 2026-07-10: 4/5 architecture decisions chốt 2026-07-10; còn 1 ops check #5 — xem Quyết định chốt section below)
 priority: P1
 effort: 6h
 branch: main
@@ -42,3 +42,13 @@ created: 2026-06-20
 3. **Redeem matcher as CRM job vs dbt model**: plan uses local job (needs write-back to crm.db). Confirm — alternative is a dbt model that reads fact_orders and outputs a mart, but dbt cannot write back to crm.db.
 4. **Push ledger to edge D1 in v1?**: deferred to optional P6. Confirm deferral is acceptable (edge `hug_voucher` empty for now; quota enforcement stays local/Sapo).
 5. **A2 campaign HUG_ZALO_OA_URL**: is the env var already set in production `.env`? Needed for the landing page follow-CTA. Confirm value.
+
+## Quyết định chốt 2026-07-10 (mở khóa go-live)
+
+1. **Ledger: giữ local-master** như plan hiện tại. Edge D1 = P6, không đổi hướng.
+2. **Issuance latency: chấp nhận chu kỳ 15 phút, ĐỔI UX landing** — landing KHÔNG hiện mã ngay; hiển thị "Mã ưu đãi sẽ được gửi qua Zalo OA trong ít phút" → vừa gỡ ràng buộc direct-write, vừa ép khách follow Zalo OA (mục tiêu thật của capture là kênh liên hệ trọn đời, voucher chỉ là token). ⚠ P3/P5 phải sync copy landing theo quyết định này.
+3. **Redeem matcher: CRM job local** (write-back crm.db) — dbt không ghi ngược crm.db, không có phương án thay thế khả thi.
+4. **Edge D1 push: defer P6** — quota enforcement giữ local/Sapo trong v1.
+5. **HUG_ZALO_OA_URL: chưa chốt** — ops check duy nhất còn lại; đưa vào P5 runbook pre-check, owner xác nhận giá trị trong .env production trước ngày go-live.
+
+Nguồn: thảo luận strategy 2026-07-10 (user chốt "theo default đề xuất"); trích xuất câu hỏi từ audit cùng ngày.
