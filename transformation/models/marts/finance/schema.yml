@@ -1,0 +1,24 @@
+version: 2
+
+models:
+  - name: mart_cashflow_unmapped_actuals
+    description: >
+      Orphan report — actuals from fact_cash_movement that don't match any recurring budget
+      row (account_code prefix-match or legacy cashflow_line fallback). See
+      plans/260709-1415-budget-account-level-remap/phase-04-orphan-actual-report.md.
+    columns:
+      - name: unmapped_actual_key
+        tests:
+          - unique
+          - not_null
+      - name: account_code
+        tests:
+          - not_null
+      - name: period_month
+        tests:
+          - not_null
+      - name: direction
+        tests:
+          - not_null
+          - accepted_values:
+              values: ['inflow', 'outflow']

@@ -58,27 +58,28 @@ Google Sheet: `https://docs.google.com/spreadsheets/d/15hba6bzrTRXUDXBeUg5_Dhefr
 
 Mở Google Sheet ngân sách → tab **BUDGET_ITEMS**. Đây là sheet dạng **matrix** (không phải danh sách dòng dài) — mỗi dòng là 1 khoản mục, mỗi tháng là 1 cặp cột.
 
-**Cột A–F (cố định, không đổi theo tháng):**
+**Cột A–G (cố định, không đổi theo tháng):**
 
 | Cột | Tên | Ví dụ | Ghi chú |
 |-----|-----|-------|---------|
-| A | Dòng Tiền | Chi lương | `recurring` → phải chọn đúng tên có trong tab `__REF` (dropdown). `one_off`/`reserve` → tên mô tả tự do, ví dụ "Mua máy tính cho dev team" |
-| B | Chiều | Chi | `Thu` hoặc `Chi` |
-| C | Type | recurring | `recurring` / `one_off` / `reserve` |
-| D | Tháng Cần | _(để trống)_ | Hạn đạt mục tiêu — chỉ dùng cho `reserve` có deadline |
-| E | Tuần TT | 1 | Tuần thanh toán trong tháng: `1`/`2`/`3`/`4`/`spread` |
-| F | Tổng Cần | _(để trống)_ | Mục tiêu tích lũy (VND) — bắt buộc phải có nếu điền cột D |
+| A | Dòng Tiền | Chi lương | `recurring` → chọn từ dropdown tab `__REF` (dạng `<mã account>  <tên account>`, vd `"  3341  Phải trả người lao động - lương"`). `one_off`/`reserve` → tên mô tả tự do, ví dụ "Mua máy tính cho dev team" |
+| B | Ghi chú | Internet | Tự do, không ảnh hưởng logic sync — dùng để phân biệt nhiều dòng cùng chọn 1 account (vd "Internet" và "Cloud Hosting" đều map `642282 Chi phí dịch vụ mua ngoài`) |
+| C | Chiều | Chi | `Thu` hoặc `Chi` |
+| D | Type | recurring | `recurring` / `one_off` / `reserve` |
+| E | Tháng Cần | _(để trống)_ | Hạn đạt mục tiêu — chỉ dùng cho `reserve` có deadline |
+| F | Tuần TT | 1 | Tuần thanh toán trong tháng: `1`/`2`/`3`/`4`/`spread` |
+| G | Tổng Cần | _(để trống)_ | Mục tiêu tích lũy (VND) — bắt buộc phải có nếu điền cột E |
 
-**Từ cột G trở đi — cặp cột theo từng tháng:** mỗi tháng chiếm 2 cột liền nhau, header row 1 ghi tháng (`2026-08`):
+**Từ cột H trở đi — cặp cột theo từng tháng, THÁNG GẦN NHẤT Ở BÊN TRÁI** (giảm dần sang phải, vd H-I=2026-08, J-K=2026-07, L-M=2026-06...) — đổi từ 2026-07-09, trước đó tháng cũ ở bên trái. Mỗi tháng chiếm 2 cột liền nhau, header row 1 ghi tháng (`2026-08`):
 
 | Cột | Ý nghĩa |
 |-----|---------|
-| **Gợi Ý** (ví dụ cột G) | Số gợi ý — hiện tại nhập tay hoặc để trống, KHÔNG được sync đọc. Tự động tính gợi ý (rolling avg thực tế 3 tháng) đã được xây dựng và lên lịch chạy ngày 1 hàng tháng, 08:00 ICT, nhưng **CHƯA kích hoạt** — cần kỹ thuật cấu hình quyền ghi Google Sheet (service account) trước. Trước khi đó, cột Gợi Ý vẫn cần finance tự ước lượng hoặc để trống. |
-| **Budget** (ví dụ cột H) | Số kế hoạch thật — **đây là cột duy nhất sync đọc**. Nhập số VND vào đây (có thể có dấu phẩy/₫, sync tự parse). |
+| **Gợi Ý** (ví dụ cột H) | Số gợi ý — hiện tại nhập tay hoặc để trống, KHÔNG được sync đọc. Tự động tính gợi ý (rolling avg thực tế 3 tháng) đã được xây dựng và lên lịch chạy ngày 1 hàng tháng, 08:00 ICT, nhưng **CHƯA kích hoạt** — cần kỹ thuật cấu hình quyền ghi Google Sheet (service account) trước. Trước khi đó, cột Gợi Ý vẫn cần finance tự ước lượng hoặc để trống. |
+| **Budget** (ví dụ cột I) | Số kế hoạch thật — **đây là cột duy nhất sync đọc**. Nhập số VND vào đây (có thể có dấu phẩy/₫, sync tự parse). |
 
 **Cập nhật số kế hoạch tháng mới:**
 
-1. Kiểm tra sheet đã có sẵn cặp cột `[Gợi Ý][Budget]` cho tháng cần nhập chưa (thường đã pre-build sẵn 12 tháng) — nếu chưa có, tạo thêm 1 cặp cột mới ở cuối, header row 1 ghi đúng định dạng `YYYY-MM` (ví dụ `2026-08`)
+1. Kiểm tra sheet đã có sẵn cặp cột `[Gợi Ý][Budget]` cho tháng cần nhập chưa — nếu chưa có, **chèn 1 cặp cột mới ngay sau cột G (Tổng Cần)**, TRƯỚC cặp cột của tháng hiện có gần nhất (không phải thêm ở cuối — tháng mới luôn ở bên trái nhất trong nhóm cột tháng), header row 1 ghi đúng định dạng `YYYY-MM` (ví dụ `2026-09`)
 2. Với mỗi dòng khoản mục, điền số VND vào cột **Budget** của tháng đó (bỏ qua cột Gợi Ý)
 3. Nếu có chi phí một lần phát sinh (one_off) → thêm dòng riêng với `Type=one_off`, điền tên mô tả ở cột A
 
@@ -147,14 +148,14 @@ Quy trình đúng:
 
 ### Q: Chi phí phát sinh đột ngột (mua thiết bị, sửa chữa, v.v.)?
 
-Thêm 1 dòng mới trong tab **BUDGET_ITEMS** với `Type=one_off` (cột C), ví dụ:
+Thêm 1 dòng mới trong tab **BUDGET_ITEMS** với `Type=one_off` (cột D), ví dụ:
 
 | Cột | Giá trị |
 |-----|---------|
 | A — Dòng Tiền | Mua máy tính cho dev team |
-| B — Chiều | Chi |
-| C — Type | one_off |
-| E — Tuần TT | 2 |
+| C — Chiều | Chi |
+| D — Type | one_off |
+| F — Tuần TT | 2 |
 | cột Budget của tháng phát sinh | 85000000 |
 
 Dòng `one_off` chỉ điền số vào cột Budget của đúng tháng phát sinh, các tháng khác để trống — dashboard sẽ hiển thị riêng trong bảng chi tiết. Sync tự nhặt vào lần chạy đêm kế tiếp (hoặc trigger thủ công như Bước 2).

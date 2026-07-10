@@ -20,8 +20,10 @@ cashflow_line/period_month/direction/item_type/item_label) and seed_cash_allocat
 whole sync (both seeds unchanged, non-zero exit).
 
 Environment:
-  DBT_DATA_LAKE_PATH not required by the default (read-only) sync mode but IS required by
-    --write-suggestions (reads fact_cash_movement / mart_cashflow_reserve_status).
+  DBT_DATA_LAKE_PATH required by BOTH sync modes as of the account-code migration (see
+    plans/260709-1415-budget-account-level-remap/phase-03) — the default sync now also reads
+    dim_gl_account (via serving/olap.duckdb) to validate/derive account_code on recurring rows,
+    not just --write-suggestions (which reads fact_cash_movement / mart_cashflow_reserve_status).
   SOURCES__SPREADSHEET_URL__BUDGET   Google Sheet URL (optional, has a working default)
   GOOGLE_SHEETS_SERVICE_ACCOUNT_KEY_PATH   Shared GCP service-account JSON key path (Editor
     access on this sheet specifically) — required ONLY by --write-suggestions (not --dry-run).
@@ -37,6 +39,7 @@ from .fetch import (  # noqa: F401 — re-exported for `sync.X` compatibility
 )
 from .budget_transform import (  # noqa: F401
     SEED_BUDGET_COLUMNS, parse_budget_matrix, validate_and_build_budget_rows,
+    _parse_account_prefixed_label, _validate_no_prefix_collision,
 )
 from .policy_transform import (  # noqa: F401
     SEED_POLICY_COLUMNS, parse_policy_matrix, validate_and_build_policy_rows,
@@ -48,10 +51,17 @@ from .suggestions import (  # noqa: F401
 )
 from .duckdb_actuals import (  # noqa: F401
     _fetch_recurring_actuals_from_duckdb, _fetch_reserve_status_from_duckdb,
+    _fetch_account_taxonomy_from_duckdb,
 )
 from .sheet_writeback import (  # noqa: F401
     _col_num_to_a1, _to_a1_cell, _fmt_suggestion_value, _write_cells_via_sheets_api,
 )
+
+
+def _serving_db_path() -> str:
+    data_lake = os.environ.get("DBT_DATA_LAKE_PATH", "/app/var/data_lake")
+    return os.path.join(data_lake, "serving", "olap.duckdb")
+
 
 def fetch_transform_and_save(dry_run: bool = False) -> int:
     print("Starting Budget Sheet Sync (gsheet_budget_sync)...")
@@ -64,8 +74,10 @@ def fetch_transform_and_save(dry_run: bool = False) -> int:
     if not ref_lines:
         raise ValidationError("__REF tab trống hoặc không đọc được — recurring cần __REF để validate")
 
+    account_taxonomy = _fetch_account_taxonomy_from_duckdb(_serving_db_path())
+
     _months, budget_items, budget_warnings = parse_budget_matrix(budget_raw)
-    budget_df, budget_errors = validate_and_build_budget_rows(budget_items, ref_lines)
+    budget_df, budget_errors = validate_and_build_budget_rows(budget_items, ref_lines, account_taxonomy)
 
     policy_items, policy_warnings = parse_policy_matrix(policy_raw)
     policy_df, policy_errors = validate_and_build_policy_rows(policy_items)
@@ -78,7 +90,13 @@ def fetch_transform_and_save(dry_run: bool = False) -> int:
         print(f"\nValidation FAILED ({len(all_errors)} error(s)) — seed files NOT written:")
         for e in all_errors:
             print(f"  ERROR: {e}")
-        raise ValidationError(f"{len(all_errors)} validation error(s) — aborted, seeds unchanged")
+        # Full detail in the exception message (not just a count) — the caller (Dagster asset,
+        # orchestration layer) surfaces this to Lark. ingestion must not import orchestration
+        # directly (architectural boundary, plans/260705-1704-modular-monorepo-boundary-hardening).
+        detail = "\n".join(all_errors[:10])
+        raise ValidationError(
+            f"{len(all_errors)} validation error(s) — aborted, seeds unchanged:\n{detail}"
+        )
 
     current_month_start = _current_month_start()
     budget_seed_path = os.path.join(SEEDS_DIR, "seed_cashflow_budget.csv")
@@ -134,17 +152,17 @@ def write_suggestions_to_sheet(target_month: str = None, dry_run: bool = True) -
     for w in warnings:
         print(f"  WARNING: {w}")
 
+    serving_db_path = _serving_db_path()
+    account_taxonomy = _fetch_account_taxonomy_from_duckdb(serving_db_path)
+
     # Reuse the same strict validation the daily sync uses — a structurally malformed sheet
     # must not be written into (this is exactly the class of drift that would mistarget cells).
-    _validated_df, errors = validate_and_build_budget_rows(items, ref_lines)
+    _validated_df, errors = validate_and_build_budget_rows(items, ref_lines, account_taxonomy)
     if errors:
         raise ValidationError(
             f"{len(errors)} validation error(s) trên BUDGET_ITEMS — không thể tính gợi ý an toàn: "
             + "; ".join(errors[:3])
         )
-
-    data_lake = os.environ.get("DBT_DATA_LAKE_PATH", "/app/var/data_lake")
-    serving_db_path = os.path.join(data_lake, "serving", "olap.duckdb")
 
     window_months = _preceding_months(target_month)
     actual_rows = _fetch_recurring_actuals_from_duckdb(serving_db_path, window_months)

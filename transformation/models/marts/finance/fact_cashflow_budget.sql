@@ -15,19 +15,20 @@ SELECT
         'COALESCE(item_label, cashflow_line)'
     ]) }}                                   AS cashflow_budget_key,
 
-    cashflow_line,
-    CAST(period_month AS DATE)              AS period_month,
-    direction,
-    CAST(planned_amount AS BIGINT)          AS planned_amount,
-    payment_week,
-    item_type,
-    item_label,
-    CAST(item_target AS BIGINT)             AS item_target,
-    CAST(target_month AS DATE)              AS target_month,
-    notes,
+    s.cashflow_line,
+    NULLIF(s.account_code, '')              AS account_code,
+    CAST(s.period_month AS DATE)            AS period_month,
+    s.direction,
+    CAST(s.planned_amount AS BIGINT)        AS planned_amount,
+    s.payment_week,
+    s.item_type,
+    s.item_label,
+    CAST(s.item_target AS BIGINT)           AS item_target,
+    CAST(s.target_month AS DATE)            AS target_month,
+    s.notes,
     current_timestamp                       AS loaded_at
 
-FROM {{ ref('seed_cashflow_budget') }}
+FROM {{ ref('seed_cashflow_budget') }} s
 WHERE cashflow_line IS NOT NULL
   AND period_month IS NOT NULL
   AND direction IN ('inflow', 'outflow')

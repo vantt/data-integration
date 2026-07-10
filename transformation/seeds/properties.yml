@@ -91,8 +91,13 @@ seeds:
   - name: seed_cashflow_budget
     description: >
       Monthly cash budget: planned flows per cashflow_line × period_month × direction.
-      Generated from Google Sheet tab BUDGET_ITEMS. Join key to actuals: cashflow_line
-      (exact match to dim_gl_account.cashflow_line) + period_month + direction.
+      Generated from Google Sheet tab BUDGET_ITEMS. Join key to actuals (recurring rows):
+      account_code (prefix-match against fact_cash_movement.offset_account, supports both
+      parent-rollup and child-level budgeting) + period_month + direction — see
+      plans/260709-1415-budget-account-level-remap/. account_code is nullable: empty for
+      item_type=one_off/reserve (plan-side only, never matched to MISA) and, during the
+      migration window, for any recurring row not yet re-entered via the account-code
+      dropdown (falls back to the legacy cashflow_line exact-match join).
       Refresh: dbt seed --select seed_cashflow_budget && dbt build --select fact_cashflow_budget+
     config:
       column_types:
@@ -106,6 +111,7 @@ seeds:
         item_target: double
         target_month: date
         notes: varchar
+        account_code: varchar
 
   - name: seed_cash_allocation_policy
     description: >

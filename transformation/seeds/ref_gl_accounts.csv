@@ -27,6 +27,7 @@ account_code,account_name
 3383,Bảo hiểm xã hội
 3384,Bảo hiểm y tế
 3386,Bảo hiểm thất nghiệp
+33682,Phải trả nội bộ - FGO
 33881,Phải trả phải nộp khác
 411,Vốn đầu tư của chủ sở hữu
 4111,Vốn góp của chủ sở hữu
@@ -44,6 +45,7 @@ account_code,account_name
 642172,Chi phí quảng cáo
 642273,"Chi phí tạp vụ, vệ sinh"
 642282,Chi phí dịch vụ mua ngoài
+642288,Chi phí dịch vụ AI/phần mềm
 711,Thu nhập khác
 7118,Thu nhập khác
 811,Chi phí khác

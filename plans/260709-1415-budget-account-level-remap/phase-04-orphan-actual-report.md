@@ -1,7 +1,13 @@
 # Phase 04 — Orphan-Actual Report
 
-**Status:** NOT STARTED
+**Status:** DONE (2026-07-09)
 **Depends on:** Phase 01 (account_code join)
+
+**Đổi so với sketch ban đầu:** dùng `fact_cashflow_budget` (đã filter `item_type='recurring'` + validated) thay vì query thẳng `seed_cashflow_budget` — nhất quán với nguồn `mart_cashflow_budget_vs_actual` dùng. Join logic copy nguyên từ `mart_cashflow_budget_vs_actual`'s `joined` CTE (prefix-match + legacy cashflow_line fallback) để đảm bảo 2 mart là **complement thật sự** — quan trọng vì nếu chỉ check account_code (bỏ qua fallback), actual đã match qua đường cashflow_line cũ (4 dòng recurring hiện tại) sẽ bị đếm nhầm thành orphan (false positive).
+
+**Quyết định khác với BvA mart:** KHÔNG áp filter `cashflow_line NOT IN ('Chuyển nội bộ tiền', 'Khác')` mà `mart_cashflow_budget_vs_actual` có — vì đó chính là những actual "vô danh" mà orphan report tồn tại để bắt, không phải để ẩn tiếp.
+
+**Verify thật:** conservation check ban đầu tôi viết sai công thức — `SUM(actual_amount)` của `mart_cashflow_budget_vs_actual` gồm CẢ coverage='actual_only' (actual không khớp budget nào, vẫn hiện trong BvA như thông tin tham khảo) LẪN coverage='both' — cộng thẳng với orphan sẽ ra gấp đôi. Công thức đúng: chỉ tính `WHERE coverage='both'` (actual thực sự matched) + orphan = tổng `fact_cash_movement` (trừ internal transfer). Verify thật: `matched(=0, vì seed budget đang rỗng) + orphan(=6,089,208,876) = fact_cash_movement total(=6,089,208,876)` — khớp chính xác, đúng kỳ vọng 100% actual hiện là orphan vì chưa có budget nào được ghi vào seed thật.
 
 ## Context
 

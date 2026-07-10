@@ -36,6 +36,26 @@ def _fetch_recurring_actuals_from_duckdb(serving_db_path: str, window_months: li
         conn.close()
 
 
+def _fetch_account_taxonomy_from_duckdb(serving_db_path: str) -> dict:
+    """Query dim_gl_account for (account_code -> cashflow_line). Used by budget_transform to
+    validate recurring rows' account_code (parsed from the __REF dropdown label) and to derive
+    a display cashflow_line for the seed (legacy bucket, kept for the existing Metabase
+    "Cashflow Line" filter — see plans/260709-1415-budget-account-level-remap/phase-03).
+    """
+    import duckdb
+
+    if not os.path.exists(serving_db_path):
+        raise ValidationError(
+            f"Serving DB không tìm thấy tại {serving_db_path} — cần chạy dbt build trước khi sync budget"
+        )
+    conn = duckdb.connect(serving_db_path, read_only=True)
+    try:
+        rows = conn.execute("SELECT account_code, cashflow_line FROM dim_gl_account").fetchall()
+        return {r[0]: r[1] for r in rows}
+    finally:
+        conn.close()
+
+
 def _fetch_reserve_status_from_duckdb(serving_db_path: str) -> list:
     """Query mart_cashflow_reserve_status for has-a-deadline reserve items."""
     import duckdb

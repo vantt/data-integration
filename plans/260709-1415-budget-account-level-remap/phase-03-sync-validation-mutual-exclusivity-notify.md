@@ -1,7 +1,11 @@
 # Phase 03 — Sync Parse + Mutual-Exclusivity Validation + Lark Reject Notify
 
-**Status:** NOT STARTED
+**Status:** DONE (2026-07-09)
 **Depends on:** Phase 01 (`account_code` seed column), Phase 02 (`__REF` dropdown nguồn thật)
+
+**Đổi so với thiết kế ban đầu:** mục §3 dưới đây (Lark notify) lúc đầu định để `ingestion` gọi thẳng `orchestration.notifications.lark_client` — **vi phạm boundary rule đã có** (`plans/260705-1704-modular-monorepo-boundary-hardening`: ingestion/transformation ↛ orchestration). Phát hiện lúc code thật: `orchestration/sensors/failure_alerting.py::health_alert_failure_sensor` đã là 1 `run_failure_sensor` KHÔNG filter theo job — bắt MỌI Dagster run fail, tự gửi Lark card. Vì `budget_sheet_sync_asset` vốn đã `raise` khi có lỗi (làm run fail), sensor này **tự động cover requirement**, không cần code gì thêm ở phía orchestration — chỉ cần đảm bảo exception message mang đủ chi tiết lỗi (đã làm, xem §3 cập nhật).
+
+**Verify thật (không chỉ unit test):** chạy `python -m ingestion.src.gsheet_budget_sync --dry-run` trên sheet thật — phát hiện finance đã tự dùng dropdown account-code mới, nhập 3 dòng budget tháng 6 (`3341`, `3383`, `642282`) — parse/validate/derive cashflow_line chạy đúng trên dữ liệu thật của người dùng, không chỉ fixture giả lập. 41/41 unit test qua (thêm 15 test mới cho parse/collision/account-code path), test cũ đã sửa 3 chỗ (thêm monkeypatch `_fetch_account_taxonomy_from_duckdb` vì sync giờ luôn cần DuckDB).
 
 ## Context
 
@@ -59,20 +63,16 @@ def _validate_no_prefix_collision(rows: list[dict]) -> list[str]:
 
 **Quan trọng — KHÔNG chạy check này trên `old_kept` (rows lịch sử từ `merge.py`)**, chỉ chạy trên `new_kept`/`out_rows` của lần sync hiện tại (tháng hiện tại + tương lai) — đúng lý do đã phân tích (khó khăn #4 trong plan.md): tháng đã đóng không được xét lại, tránh reject nhầm khi finance đổi granularity giữa các tháng.
 
-### 3. Reject → Lark notify
+### 3. Reject → Lark notify (qua exception message, không gọi trực tiếp)
 
-Khi `errors` non-empty (bao gồm cả lỗi cha/con lẫn lỗi parse account_code cũ), sau khi abort (không ghi seed) — gọi thêm:
+`ingestion` không được import `orchestration` (boundary rule). Thay vào đó: `fetch_transform_and_save` raise `ValidationError` với **nội dung lỗi đầy đủ trong message** (10 dòng đầu), không chỉ đếm số lượng:
 
 ```python
-from orchestration.notifications.lark_client import send_lark_card
-
-send_lark_card(
-    title="Budget sheet sync REJECTED",
-    fields={"errors": "\n".join(errors[:10]), "total_errors": str(len(errors)), "sheet": SHEET_URL},
-    color="red",
-)
+detail = "\n".join(all_errors[:10])
+raise ValidationError(f"{len(all_errors)} validation error(s) — aborted, seeds unchanged:\n{detail}")
 ```
-Giới hạn 10 dòng lỗi đầu trong card (Lark card không nên quá dài) — full list vẫn nằm trong log/exception message như hiện tại.
+
+`budget_sheet_sync_asset` (Dagster, `orchestration/assets/sheets_assets.py`) đã `raise` lại exception này khi bắt được — làm run FAIL. `health_alert_failure_sensor` (`orchestration/sensors/failure_alerting.py`, đã có sẵn, không filter theo job) tự động bắt MỌI run fail và gửi Lark card với `error_msg = context.failure_event.message[:500]` — tức là nội dung lỗi chi tiết ở trên tự động lên Lark, không cần thêm code ở `sheets_assets.py`.
 
 ### 4. Sheet-level cảnh báo (Apps Script, mirror validate)
 

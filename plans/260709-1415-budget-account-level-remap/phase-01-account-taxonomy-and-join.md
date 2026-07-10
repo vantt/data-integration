@@ -1,7 +1,8 @@
 # Phase 01 — Account Taxonomy + BvA Join Redesign
 
-**Status:** NOT STARTED
-**Blocking dependency:** đã thu hẹp qua tra `description` trong sổ cái thật (xem §1) — chỉ còn 1 câu cần hỏi kế toán (quan hệ "FGO"), không còn block toàn phase.
+**Status:** DONE (2026-07-09) — `dim_gl_account` (parent_account_code/name qua nearest-named-ancestor), `mart_cashflow_budget_vs_actual` (grain đổi sang account_code, prefix-match join + fallback cashflow_line cho dòng legacy, `grouped` CTE xử lý đúng cha-rollup không double-count), `fact_cashflow_budget`/seed/`budget_transform.py` đã thêm cột `account_code` (rỗng, phase-03 populate). Verify: `dbt build` xanh toàn bộ 7 model finance liên quan; regression check `SUM(actual_amount)` không đổi (6,088,709,276) trước/sau; test thủ công cha-rollup (338 → 3383+33881) cho kết quả đúng (planned không nhân đôi, actual sum đúng).
+**Bug đã sửa lúc build thật:** parent-lookup ban đầu định dùng `LEFT(code,3)` — sai với family 642 (642172 thuộc 6421, 642273/642282 thuộc 6422, khác cha) — đã đổi sang thuật toán nearest-named-ancestor, verify đúng qua query thật.
+**Blocking dependency (đã hết chặn phase, chỉ còn optional):** 1 câu cần hỏi kế toán (quan hệ "FGO") — không cần cho phần đã làm ở đây, chỉ ảnh hưởng việc có thêm `33682` vào dropdown sau này hay không.
 
 ## Context
 

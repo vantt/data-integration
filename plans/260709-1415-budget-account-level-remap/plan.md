@@ -1,6 +1,6 @@
 # Budget Sheet — Account-Level Mapping cho Recurring Lines
 
-**Status:** DRAFT — chưa implement
+**Status:** Phase 1, 3, 4 DONE (2026-07-09). Phase 2 **PARTIAL** (dropdown one-off thủ công đủ dùng, Dagster auto-refresh `__REF` CHƯA làm — xem phase-02, không phải "toàn bộ plan hoàn thành" như bản cũ ghi nhầm). Xem thêm §Addendum cuối file (cột Ghi chú + đảo thứ tự tháng, thêm sau khi phase 1-3 xong) và §Cập nhật trạng thái 2026-07-10 cuối file.
 **Bối cảnh:** Thảo luận thiết kế 2026-07-09 (không có report riêng — nội dung đầy đủ nằm trong các phase file). Mở rộng `plans/archive/260702-1727-misa-cashflow-budget-planner` (đặc biệt phase-06) sau khi phát hiện `cashflow_line` (bucket ~20 giá trị tự chế trong `dim_gl_account.sql`) quá thô để finance track chi tiết — xem `docs/analytics-handbook/domains/finance.md` dòng "cashflow_line ... provisional — needs finance sign-off", tài liệu này chính là sign-off đó.
 
 ## Mục tiêu
@@ -38,10 +38,10 @@
 
 | # | Phase | File | Phụ thuộc |
 |---|-------|------|-----------|
-| 1 | Account taxonomy + BvA join redesign | `phase-01-account-taxonomy-and-join.md` | Tên account đã tra ra từ data (khó khăn #6) — chỉ cần hỏi kế toán 1 câu (quan hệ FGO), không block bắt đầu |
-| 2 | `__REF` machine-published dropdown | `phase-02-sheet-ref-dropdown-writeback.md` | Phase 1 (cần `dim_gl_account` mới) |
-| 3 | Sync validation: parse + mutual-exclusivity + Lark reject | `phase-03-sync-validation-mutual-exclusivity-notify.md` | Phase 1, 2 |
-| 4 | Orphan-actual report | `phase-04-orphan-actual-report.md` | Phase 1 |
+| 1 | Account taxonomy + BvA join redesign | `phase-01-account-taxonomy-and-join.md` | **DONE 2026-07-09** |
+| 2 | `__REF` machine-published dropdown | `phase-02-sheet-ref-dropdown-writeback.md` | **PARTIAL** — Phase 1 (cần `dim_gl_account` mới) |
+| 3 | Sync validation: parse + mutual-exclusivity + Lark reject | `phase-03-sync-validation-mutual-exclusivity-notify.md` | **DONE 2026-07-09** |
+| 4 | Orphan-actual report | `phase-04-orphan-actual-report.md` | **DONE 2026-07-09** |
 
 Phase 3 và 4 độc lập sau khi Phase 1+2 xong, có thể làm song song (không đụng chung file).
 
@@ -49,7 +49,7 @@ Phase 3 và 4 độc lập sau khi Phase 1+2 xong, có thể làm song song (kh�
 
 - `docs/analytics-handbook/domains/finance.md` — 2 dòng đánh dấu "cashflow_line ... provisional, needs finance sign-off" đã được update trỏ về plan này (sign-off = quyết định trong bảng trên, implementation chưa xong).
 - `plans/archive/260702-1727-misa-cashflow-budget-planner/phase-06-sheet-to-seed-sync.md` — thêm note đầu file trỏ sang plan này (superseded cho phần recurring-account-mapping; phần one_off/reserve/policy giữ nguyên không đổi).
-- `docs/analytics-handbook/guides/finance-budget-user-guide.md` — **CHƯA update** (đây là hướng dẫn vận hành hiện hành cho finance, mô tả behavior đang chạy thật; update vào cuối Phase 3 sau khi ship, tránh finance làm theo hướng dẫn cho tính năng chưa tồn tại).
+- `docs/analytics-handbook/guides/finance-budget-user-guide.md` — **Cập nhật một phần** (2026-07-09): bảng cột A-G + thứ tự tháng đã update theo Addendum dưới. **Còn thiếu:** FAQ "Thêm dòng tiền mới" (mục §2) vẫn mô tả quy trình `cashflow_line` cũ, chưa viết lại theo flow account_code dropdown mới — cần làm riêng, ngoài phạm vi yêu cầu hôm nay.
 - `transformation/models/marts/finance/mart_cashflow_budget_vs_actual.sql`, `dim_gl_account.sql` — đổi trong Phase 1 (xem chi tiết phase file, không lặp lại ở đây).
 
 ## Acceptance criteria (tổng, chi tiết từng phase xem phase file)
@@ -64,6 +64,32 @@ Phase 3 và 4 độc lập sau khi Phase 1+2 xong, có thể làm song song (kh�
 
 ## Câu hỏi mở
 
-1. Quan hệ "FGO" là gì (xuất hiện lặp lại ở `33682` inflow + `13681` outflow, tổng ~116M) — ảnh hưởng tên account chính thức + quyết định có gộp thành 1 dòng budget "Thanh toán FGO" hay để riêng/ngoài scope CHI THƯỜNG XUYÊN.
-2. Xác nhận nhanh tên `642288` (chi phí dịch vụ AI, 1 lần 553K) và `642278` (lệ phí gia hạn, 1 lần 100K) — độ tin cậy thấp vì chỉ có 1 mẫu; hoặc đơn giản bỏ qua, để orphan report bắt vì số tiền quá nhỏ.
-3. Orphan-actual report hiển thị ở đâu — tab riêng trong Metabase dashboard 114, hay mart mới độc lập chưa gắn dashboard? (phase-04 đề xuất mart trước, gắn dashboard là việc riêng sau khi có thật dữ liệu orphan để thiết kế card).
+1. Quan hệ "FGO" là gì (xuất hiện lặp lại ở `33682` inflow + `13681` outflow, tổng ~116M) — ảnh hưởng tên account chính thức + quyết định có gộp thành 1 dòng budget "Thanh toán FGO" hay để riêng/ngoài scope CHI THƯỜNG XUYÊN. **Cập nhật 2026-07-10:** `ref_gl_accounts.csv` đã có tên `33682,Phải trả nội bộ - FGO` (uncommitted trong working tree) — nhưng không tìm thấy report/note nào ghi lại xác nhận thật từ kế toán, chỉ đặt tên theo suy đoán. Coi câu hỏi này **CHƯA đóng** cho tới khi có xác nhận; quyết định gộp/tách dòng budget vẫn chưa làm.
+2. Xác nhận nhanh tên `642288` (chi phí dịch vụ AI, 1 lần 553K) và `642278` (lệ phí gia hạn, 1 lần 100K) — độ tin cậy thấp vì chỉ có 1 mẫu; hoặc đơn giản bỏ qua, để orphan report bắt vì số tiền quá nhỏ. **Cập nhật 2026-07-10:** `642288,Chi phí dịch vụ AI/phần mềm` đã thêm vào seed (uncommitted) — cùng tình trạng #1, chưa rõ nguồn xác nhận. `642278` vẫn chưa thêm (đúng khuyến nghị ban đầu — để orphan report bắt).
+3. Orphan-actual report hiển thị ở đâu — tab riêng trong Metabase dashboard 114, hay mart mới độc lập chưa gắn dashboard? (phase-04 đề xuất mart trước, gắn dashboard là việc riêng sau khi có thật dữ liệu orphan để thiết kế card). **Trạng thái:** phương án (b) đã triển khai — `mart_cashflow_unmapped_actuals.sql` tồn tại, chưa gắn dashboard nào. Vẫn mở cho tới khi có dữ liệu orphan thật để thiết kế card.
+
+## Addendum — Cột Ghi chú + đảo thứ tự tháng (2026-07-09, sau khi Phase 1-3 xong)
+
+**Vấn đề phát sinh:** nhiều khoản recurring riêng biệt cùng map 1 account_code (vd "Internet" và các khoản khác đều lên `642282 Chi phí dịch vụ mua ngoài`) — tính toán BvA vẫn đúng (mart tự SUM đúng), nhưng sheet không có cách nào phân biệt các dòng cùng account bằng mắt. Thực tế: khi kiểm tra sheet thật phát hiện finance đã tự dùng cột "Gợi Ý" làm chỗ ghi note tạm ("Cước internet 06.2026") vì không có chỗ khác — xác nhận nhu cầu này có thật, không phải giả định.
+
+**Đã làm:**
+- Chèn cột **B "Ghi chú"** vào `BUDGET_ITEMS` (ngay sau Dòng Tiền) — tự do, không parse cho logic gì, chỉ hiển thị + lưu vào seed `notes`. Toàn bộ cột dịch phải 1 (Chiều giờ ở C, Type ở D, Tháng Cần ở E, Tuần TT ở F, Tổng Cần ở G, tháng bắt đầu từ H).
+- **Đảo thứ tự cột tháng — tháng gần nhất bên trái**, giảm dần sang phải (H-I=tháng mới nhất, ...). Trước đó tháng cũ ở bên trái. Quy trình thêm tháng mới đổi theo: **chèn cột mới ngay sau G**, không còn "thêm ở cuối".
+- Update: `budget_transform.py` (`BI_COL_*` + đọc/populate `notes`), `validate-budget-sheet.gs` (`BI_COL` block), `seed_cashflow_budget.csv` header, `finance-budget-user-guide.md` (bảng cột + quy trình thêm tháng).
+- Xác nhận bằng code review: `parse_budget_matrix`/`build_suggestion_writes`/`.gs` đều match cột tháng theo GIÁ TRỊ header (vd "2026-07"), không giả định thứ tự vật lý — nên đảo cột không cần sửa logic parse, chỉ sửa `BI_COL_*` cho khối metadata cố định.
+
+**Verify:** fixture CSV viết lại qua helper `_insert_col` CSV-aware, tránh đếm dấu phẩy tay. Live dry-run trước/sau đảo cột cho kết quả giống hệt nhau (3 dòng tháng 6, 9 policy rows) — xác nhận order-independence đúng như code review. **Sửa 2026-07-10:** con số "52/52 test" ghi ở đây trước đó SAI — chạy lại `pytest ingestion/tests/test_gsheet_budget_sync.py` thật cho **41 passed** (khớp con số phase-03, không phải 52). Không rõ 52 từ đâu ra (có thể đếm nhầm hoặc aspirational) — sửa lại theo số đo được.
+
+**Rủi ro đã cân nhắc:** ghi đè cột H:M bằng values thay vì Sheets API `moveDimension` — an toàn vì cột tháng không có data-validation nào gắn (`setupBudgetDropdowns` chỉ áp dụng cột A/C/D/F), nên rewrite giá trị thuần không làm mất validation nào. Đã verify sau khi ghi: header + data thật (Lương/BHXH/Internet tháng 6) di chuyển đúng vị trí L-M, không mất dữ liệu.
+
+**Còn thiếu:** `finance-budget-user-guide.md` §2 FAQ "Thêm dòng tiền mới" chưa viết lại theo flow account_code — vẫn mô tả quy trình `cashflow_line` cũ.
+
+## Cập nhật trạng thái 2026-07-10 (review độc lập)
+
+Đối chiếu claim trong plan/phase file với code + test thật:
+
+- **Đúng như claim:** `dim_gl_account.parent_account_code/name` (nearest-named-ancestor), `mart_cashflow_budget_vs_actual` prefix-match join + legacy fallback, `mart_cashflow_unmapped_actuals.sql` (phase-04) + `schema.yml` đều tồn tại và khớp thiết kế trong phase-01/04. `budget_transform.py` có `_parse_account_prefixed_label` + `_validate_no_prefix_collision` khớp phase-03.
+- **Sai lệch đã sửa (xem inline ở trên):** header top-of-file ghi "Phase 1-4 DONE — toàn bộ plan hoàn thành" nhưng phase-02 tự ghi PARTIAL (Dagster auto-refresh `__REF` chưa làm) — 2 chỗ mâu thuẫn nhau, đã sửa header cho khớp phase file. Con số "52/52 test" ở Addendum sai, thật ra là 41/41 (`pytest ingestion/tests/test_gsheet_budget_sync.py` chạy lại hôm nay, 41 passed, 0 fail).
+- **Chưa rõ nguồn:** `ref_gl_accounts.csv` có thêm tên cho `33682` (FGO) và `642288` trong working tree (uncommitted, không có trong commit `d2837ec9`) — không tìm thấy report nào ghi lại đây là xác nhận thật từ kế toán hay chỉ là suy đoán được điền thêm. Coi Câu hỏi mở #1, #2 là chưa đóng cho tới khi có xác nhận rõ nguồn.
+- **Chưa verify được (ngoài phạm vi review này):** `dbt build` cho 3 model finance đổi (`dim_gl_account`, `mart_cashflow_budget_vs_actual`, `mart_cashflow_unmapped_actuals`) — không chạy lại trong lần review này (cần container `data_platform`, không invoke vì không phải yêu cầu). Các con số "6,088,709,276"/"6,089,208,876" trong phase-01/04 chưa re-verify.
+- **Toàn bộ thay đổi liên quan plan này (seed, SQL, `.gs`, `budget_transform.py`, docs) vẫn UNCOMMITTED** — commit gần nhất chạm plan này là `d2837ec9` ("draft budget account-level remap seeds + plan"); mọi việc sau đó (bao gồm addendum cột Ghi chú + đảo tháng, và 2 tên account 2026-07-10) chưa có commit riêng.

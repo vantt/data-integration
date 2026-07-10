@@ -28,16 +28,20 @@ const TAB_REF      = '__REF';
 // BUDGET_ITEMS column positions (1-indexed, A=1)
 // Khớp với cấu trúc thực tế của Sheet (đọc từ header row).
 // Nếu finance thêm/đổi cột → chỉ cần cập nhật block này.
+// Cột B "Ghi chú" thêm 2026-07-09 — free text hiển thị, KHÔNG parse cho logic gì — dùng để
+// phân biệt nhiều dòng recurring cùng map 1 account_code (vd "Internet" và "Cloud Hosting"
+// cùng lên 642282) — xem plans/260709-1415-budget-account-level-remap/plan.md.
 const BI_COL = {
   CASHFLOW_LINE : 1,   // A — Dòng Tiền:
                        //     recurring  → cashflow_line (phải khớp __REF để join MISA)
                        //     reserve/one_off → tên mô tả tự do (chính là item label)
-  DIRECTION     : 2,   // B — Chiều: Thu | Chi
-  ITEM_TYPE     : 3,   // C — Type: recurring | one_off | reserve
-  TARGET_MONTH  : 4,   // D — Tháng Cần (nullable)
-  PAYMENT_WEEK  : 5,   // E — Tuần TT: 1|2|3|4|spread
-  ITEM_TARGET   : 6,   // F — Tổng Cần (VND, nullable)
-  DATA_START_COL: 7,   // G onwards: [Gợi ý Tx] [Budget Tx] pairs
+  NOTES         : 2,   // B — Ghi chú (tự do, không validate)
+  DIRECTION     : 3,   // C — Chiều: Thu | Chi
+  ITEM_TYPE     : 4,   // D — Type: recurring | one_off | reserve
+  TARGET_MONTH  : 5,   // E — Tháng Cần (nullable)
+  PAYMENT_WEEK  : 6,   // F — Tuần TT: 1|2|3|4|spread
+  ITEM_TARGET   : 7,   // G — Tổng Cần (VND, nullable)
+  DATA_START_COL: 8,   // H onwards: [Gợi ý Tx] [Budget Tx] pairs
 };
 
 // ALLOCATION_POLICY column positions (1-indexed)
@@ -97,6 +101,13 @@ function onEditTrigger(e) {
     }
     const errors = validateBudgetRow(sheet, row);
     highlightRow(sheet, row, errors);
+    // Cha/con trùng (account_code prefix collision) — cross-row, show toast only
+    // (giống pattern validatePolicyCrossRows bên dưới)
+    const crossErrors = validateBudgetCrossRows(sheet);
+    if (crossErrors.length) {
+      SpreadsheetApp.getActiveSpreadsheet()
+        .toast(crossErrors.join('\n'), '⚠️ Cha/con trùng', 8);
+    }
   } else if (name === TAB_POLICY) {
     const row = e.range.getRow();
     if (row <= 2) return; // skip 2 header rows
@@ -181,6 +192,10 @@ function validateBudgetTab(ss) {
     highlightRow(sheet, row, rowErrors);
     rowErrors.forEach(e => errors.push(`[${TAB_BUDGET}] Row ${row}: ${e}`));
   }
+
+  const crossErrors = validateBudgetCrossRows(sheet);
+  crossErrors.forEach(e => errors.push(`[${TAB_BUDGET}] ${e}`));
+
   return errors;
 }
 
@@ -269,6 +284,83 @@ function validateBudgetRow(sheet, row, validLines) {
     if (isNaN(d.getTime())) {
       errors.push(`Tháng Cần không phải ngày hợp lệ: "${targetMonthRaw}". Dùng định dạng YYYY-MM-01`);
     }
+  }
+
+  return errors;
+}
+
+/**
+ * Bóc account_code từ label dạng "  3383  Bảo hiểm xã hội" (fixed-width padded,
+ * xem plans/260709-1415-budget-account-level-remap/phase-02). Trả null nếu label
+ * không có prefix số (dòng cashflow_line kiểu cũ, hoặc one_off/reserve free text)
+ * — các dòng này không tham gia check cha/con.
+ */
+function parseAccountCodeFromLabel(label) {
+  const m = String(label || '').match(/^\s*(\d+)\s+/);
+  return m ? m[1] : null;
+}
+
+/** Tìm mọi cặp (a, b) trong entries mà code của a là tiền tố của code b (hoặc ngược lại). */
+function findPrefixCollisions(entries) {
+  const sorted = entries.slice().sort((x, y) => x.code.localeCompare(y.code));
+  const collisions = [];
+  for (let i = 0; i < sorted.length; i++) {
+    for (let j = i + 1; j < sorted.length; j++) {
+      if (sorted[i].code !== sorted[j].code && sorted[j].code.startsWith(sorted[i].code)) {
+        collisions.push([sorted[i], sorted[j]]);
+      }
+    }
+  }
+  return collisions;
+}
+
+/**
+ * Cha + con account_code không được cùng có Budget trong cùng 1 (tháng, Chiều) —
+ * double-count khi actual match cả 2 dòng (prefix-match join). Scope NGHIÊM NGẶT theo
+ * từng cột tháng riêng biệt (không xét chéo qua các tháng khác) — vì finance có thể
+ * hợp lệ đổi granularity giữa các tháng (tháng này budget ở cha, tháng sau đổi sang con).
+ * Chỉ xét dòng item_type=recurring có prefix account_code (Rule 1 vẫn cho phép cashflow_line
+ * text kiểu cũ tồn tại song song trong lúc migrate — dòng đó không parse được code, bỏ qua).
+ */
+function validateBudgetCrossRows(sheet) {
+  const lastRow = sheet.getLastRow();
+  const lastCol = sheet.getLastColumn();
+  if (lastRow < 3 || lastCol < BI_COL.DATA_START_COL) return [];
+
+  const monthHeader = sheet.getRange(1, 1, 1, lastCol).getValues()[0];
+  const itemTypes   = sheet.getRange(3, BI_COL.ITEM_TYPE, lastRow - 2, 1).getValues().flat();
+  const directions   = sheet.getRange(3, BI_COL.DIRECTION, lastRow - 2, 1).getValues().flat();
+  const cashflowLines = sheet.getRange(3, BI_COL.CASHFLOW_LINE, lastRow - 2, 1).getValues().flat();
+
+  const errors = [];
+
+  for (let col = BI_COL.DATA_START_COL; col + 1 <= lastCol; col += 2) {
+    const budgetCol  = col + 1; // [Gợi ý][Budget] — Budget là cột lẻ tiếp theo
+    const monthLabel = String(monthHeader[col - 1] || '').trim();
+    if (!monthLabel) continue;
+
+    const budgetVals = sheet.getRange(3, budgetCol, lastRow - 2, 1).getValues().flat();
+    const byDirection = { Thu: [], Chi: [] };
+
+    for (let i = 0; i < itemTypes.length; i++) {
+      if (String(itemTypes[i]).trim() !== 'recurring') continue;
+      const direction = String(directions[i]).trim();
+      if (!byDirection[direction]) continue;
+      const budgetVal = budgetVals[i];
+      if (budgetVal === '' || budgetVal === null || budgetVal === undefined) continue;
+      const code = parseAccountCodeFromLabel(cashflowLines[i]);
+      if (!code) continue; // dòng cashflow_line kiểu cũ — không parse được, bỏ qua
+      byDirection[direction].push({ code, row: i + 3 });
+    }
+
+    Object.keys(byDirection).forEach(direction => {
+      findPrefixCollisions(byDirection[direction]).forEach(([a, b]) => {
+        errors.push(
+          `Tháng ${monthLabel} (${direction}): row ${a.row} (account ${a.code}) và row ${b.row} `
+          + `(account ${b.code}) trùng cha/con — chỉ chọn 1 trong 2, không cả hai (double-count khi tính actual)`
+        );
+      });
+    });
   }
 
   return errors;

@@ -10,6 +10,7 @@ plans/260705-1459-budget-cashflow-workable-loop/phase-01-sheet-to-seed-sync.md:
   - reject cases: recurring line not in __REF, policy gap/overlap, missing remainder
   - historical merge preserves rows before the current month, replaces current+future
 """
+import csv as csv_module
 import io
 import os
 import sys
@@ -33,7 +34,28 @@ def _raw_df(csv_text: str) -> pd.DataFrame:
     return df.fillna("")
 
 
-BUDGET_CSV = """\
+def _insert_col(csv_text: str, at: int = 1, value: str = "") -> str:
+    """Insert an empty field at position `at` (0-indexed) in every row of a raw CSV fixture.
+    CSV-aware (uses csv module, not a naive string split) so quoted values containing commas
+    (e.g. "480,000,000 ₫") are never corrupted. Avoids error-prone manual comma-counting
+    whenever the BUDGET_ITEMS column layout shifts (Ghi chú added 2026-07-09, see
+    plans/260709-1415-budget-account-level-remap/plan.md).
+    """
+    reader = csv_module.reader(io.StringIO(csv_text))
+    out = io.StringIO()
+    writer = csv_module.writer(out, lineterminator="\n")
+    for row in reader:
+        row = list(row)
+        row.insert(at, value)
+        writer.writerow(row)
+    return out.getvalue()
+
+
+# BUDGET_ITEMS layout (0-indexed): A=Dòng Tiền, B=Ghi chú, C=Chiều, D=Type, E=Tháng Cần,
+# F=Tuần TT, G=Tổng Cần, H+ =[Gợi Ý][Budget] pairs. Written without the Ghi chú column for
+# readability, then _insert_col() adds it at position 1 — keeps fixtures easy to eyeball while
+# staying correct if the column count ever shifts again.
+BUDGET_CSV = _insert_col("""\
 ,,,,,,2026-07,,2026-08,
 Dòng Tiền,Chiều,Type,Tháng Cần,Tuần TT,Tổng Cần,Gợi Ý,Budget,Gợi Ý,Budget
 ,THU,,,,,,,,
@@ -43,7 +65,7 @@ Chi lương,Chi,recurring,,,1,,"240,000,000 ₫",,
 Quỹ Phúc Lợi Nhân Viên,Chi,reserve,,,,,"6,000,000 ₫",,
 Mua SSD,Chi,one_off,,,"6,000,000 ₫",,,,
 Dòng Zero,Chi,recurring,,,,,0,,
-"""
+""")
 
 REF_CSV = """\
 Thu,Bán hàng & phải thu KH
@@ -64,7 +86,7 @@ def _budget_and_months():
 def test_parse_budget_matrix_skips_section_header_and_blank_name_rows():
     months, items, warnings = _budget_and_months()
 
-    assert months == [(6, "2026-07-01"), (8, "2026-08-01")]
+    assert months == [(7, "2026-07-01"), (9, "2026-08-01")]
     # 5 real item rows kept: Bán hàng, Chi lương, Quỹ Phúc Lợi, Mua SSD, Dòng Zero
     # (section header row + blank-name junk row are skipped)
     labels = [it["cashflow_line"] for it in items]
@@ -129,7 +151,7 @@ def test_ref_trailing_whitespace_is_trimmed_before_matching():
 
 
 def test_recurring_line_not_in_ref_is_rejected():
-    bad_csv = BUDGET_CSV.replace("Chi lương,Chi,recurring", "Chi Không Tồn Tại,Chi,recurring")
+    bad_csv = BUDGET_CSV.replace("Chi lương,,Chi,recurring", "Chi Không Tồn Tại,,Chi,recurring")
     months, items, _warnings = sync.parse_budget_matrix(_raw_df(bad_csv))
     ref_lines = sync.load_ref_lines(_raw_df(REF_CSV))
 
@@ -145,6 +167,105 @@ def test_one_off_and_reserve_rows_never_checked_against_ref():
     ref_lines = sync.load_ref_lines(_raw_df(REF_CSV))
     df, errors = sync.validate_and_build_budget_rows(items, ref_lines)
     assert errors == []
+
+
+# ---------------------------------------------------------------------------
+# Account-code recurring lines (plans/260709-1415-budget-account-level-remap/phase-03)
+# ---------------------------------------------------------------------------
+
+def test_parse_account_prefixed_label_extracts_code_and_name():
+    assert sync._parse_account_prefixed_label("  3383  Bảo hiểm xã hội") == ("3383", "Bảo hiểm xã hội")
+    assert sync._parse_account_prefixed_label("331  Phải trả người bán") == ("331", "Phải trả người bán")
+
+
+def test_parse_account_prefixed_label_no_prefix_returns_none():
+    # legacy plain cashflow_line values and free-text one_off/reserve labels never parse
+    assert sync._parse_account_prefixed_label("Chi lương") == (None, "Chi lương")
+    assert sync._parse_account_prefixed_label("Mua máy tính cho dev team") == (None, "Mua máy tính cho dev team")
+
+
+def test_parse_account_prefixed_label_handles_extra_whitespace():
+    assert sync._parse_account_prefixed_label("   642172    Chi phí quảng cáo  ") == ("642172", "Chi phí quảng cáo")
+
+
+def test_recurring_row_with_account_code_label_validates_against_taxonomy():
+    csv_with_code = BUDGET_CSV.replace(
+        "Chi lương,,Chi,recurring", "  3341  Phải trả người lao động - lương,,Chi,recurring"
+    )
+    months, items, _warnings = sync.parse_budget_matrix(_raw_df(csv_with_code))
+    ref_lines = sync.load_ref_lines(_raw_df(REF_CSV))
+    taxonomy = {"3341": "Chi lương"}  # account_code -> legacy cashflow_line, from dim_gl_account
+
+    df, errors = sync.validate_and_build_budget_rows(items, ref_lines, taxonomy)
+
+    assert errors == []
+    row = next(r for r in df.itertuples() if r.account_code == "3341")
+    assert row.cashflow_line == "Chi lương"  # derived from taxonomy, not the raw label text
+    assert row.planned_amount == "240000000"
+
+
+def test_recurring_row_with_unknown_account_code_is_rejected():
+    csv_with_code = BUDGET_CSV.replace(
+        "Chi lương,,Chi,recurring", "  9999  Không Tồn Tại,,Chi,recurring"
+    )
+    months, items, _warnings = sync.parse_budget_matrix(_raw_df(csv_with_code))
+    ref_lines = sync.load_ref_lines(_raw_df(REF_CSV))
+
+    df, errors = sync.validate_and_build_budget_rows(items, ref_lines, {"3341": "Chi lương"})
+
+    assert df is None
+    assert any("9999" in e and "dim_gl_account" in e for e in errors)
+
+
+def test_prefix_collision_rejected_same_period_and_direction():
+    rows = [
+        {"account_code": "338", "period_month": "2026-07-01", "direction": "outflow"},
+        {"account_code": "3383", "period_month": "2026-07-01", "direction": "outflow"},
+    ]
+    errors = sync._validate_no_prefix_collision(rows)
+    assert len(errors) == 1
+    assert "338" in errors[0] and "3383" in errors[0]
+
+
+def test_prefix_collision_allowed_across_different_periods():
+    # granularity change month-over-month (cha this month, con next month) must NOT reject
+    rows = [
+        {"account_code": "338", "period_month": "2026-07-01", "direction": "outflow"},
+        {"account_code": "3383", "period_month": "2026-08-01", "direction": "outflow"},
+    ]
+    assert sync._validate_no_prefix_collision(rows) == []
+
+
+def test_prefix_collision_allowed_across_different_directions():
+    rows = [
+        {"account_code": "331", "period_month": "2026-07-01", "direction": "inflow"},
+        {"account_code": "3311", "period_month": "2026-07-01", "direction": "outflow"},
+    ]
+    assert sync._validate_no_prefix_collision(rows) == []
+
+
+def test_prefix_collision_unrelated_siblings_not_flagged():
+    rows = [
+        {"account_code": "3383", "period_month": "2026-07-01", "direction": "outflow"},
+        {"account_code": "3341", "period_month": "2026-07-01", "direction": "outflow"},
+    ]
+    assert sync._validate_no_prefix_collision(rows) == []
+
+
+def test_recurring_account_code_cha_con_collision_aborts_whole_sync():
+    csv_two_rows = BUDGET_CSV.replace(
+        "Bán hàng & phải thu KH,,Thu,recurring", "  338  Phải trả phải nộp khác,,Chi,recurring"
+    ).replace(
+        "Chi lương,,Chi,recurring", "  3383  Bảo hiểm xã hội,,Chi,recurring"
+    )
+    months, items, _warnings = sync.parse_budget_matrix(_raw_df(csv_two_rows))
+    ref_lines = sync.load_ref_lines(_raw_df(REF_CSV))
+    taxonomy = {"338": "Phải trả khác & bảo hiểm", "3383": "Phải trả khác & bảo hiểm"}
+
+    df, errors = sync.validate_and_build_budget_rows(items, ref_lines, taxonomy)
+
+    assert df is None
+    assert any("Cha/con" in e for e in errors)
 
 
 # ---------------------------------------------------------------------------
@@ -310,7 +431,7 @@ def test_fetch_tab_csv_rejects_empty_sheet(monkeypatch):
 
 def test_full_sync_aborts_and_does_not_write_seed_on_validation_failure(monkeypatch, tmp_path):
     """End-to-end: a bad recurring line must abort before any seed file is written."""
-    bad_csv = BUDGET_CSV.replace("Chi lương,Chi,recurring", "Chi Không Tồn Tại,Chi,recurring")
+    bad_csv = BUDGET_CSV.replace("Chi lương,,Chi,recurring", "Chi Không Tồn Tại,,Chi,recurring")
 
     budget_seed = tmp_path / "seed_cashflow_budget.csv"
     policy_seed = tmp_path / "seed_cash_allocation_policy.csv"
@@ -327,6 +448,9 @@ def test_full_sync_aborts_and_does_not_write_seed_on_validation_failure(monkeypa
         return _raw_df(REF_CSV)
 
     monkeypatch.setattr(sync, "_fetch_tab_csv", _fake_fetch)
+    # No account-code taxonomy available in this fixture -- every recurring row falls back to
+    # the legacy ref_lines check, which is exactly what this test exercises (bad line rejected).
+    monkeypatch.setattr(sync, "_fetch_account_taxonomy_from_duckdb", lambda path: {})
 
     with pytest.raises(sync.ValidationError):
         sync.fetch_transform_and_save(dry_run=False)
@@ -376,7 +500,7 @@ def test_compute_reserve_suggestions_skips_null_required_monthly_adj():
 
 # --- build_suggestion_writes ------------------------------------------------
 
-_SUGGESTION_MONTHS = [(6, "2026-07-01"), (8, "2026-08-01")]
+_SUGGESTION_MONTHS = [(7, "2026-07-01"), (9, "2026-08-01")]  # BI_COL_DATA_START=7 (H), 2-col pairs
 
 _SUGGESTION_ITEMS = [
     {
@@ -429,8 +553,8 @@ def test_build_suggestion_writes_covers_all_item_type_branches():
     assert 8 not in by_row  # one_off's own due month -> skipped (manual entry)
     assert by_row[9]["value"] == 0  # one_off, different month -> 0
 
-    # Every write must target the "Gợi Ý" column (8), never the adjacent "Budget" column (9)
-    assert all(w["col"] == 8 for w in writes)
+    # Every write must target the "Gợi Ý" column (9), never the adjacent "Budget" column (10)
+    assert all(w["col"] == 9 for w in writes)
 
 
 def test_build_suggestion_writes_returns_empty_when_target_month_column_missing():
@@ -441,16 +565,16 @@ def test_build_suggestion_writes_returns_empty_when_target_month_column_missing(
 
 
 def test_assert_gio_column_rejects_the_budget_column():
-    sync._assert_gio_column(6)  # G — a real "Gợi Ý" column — must not raise
+    sync._assert_gio_column(7)  # H — a real "Gợi Ý" column — must not raise
     with pytest.raises(AssertionError):
-        sync._assert_gio_column(7)  # H — the adjacent "Budget" column — must raise
+        sync._assert_gio_column(8)  # I — the adjacent "Budget" column — must raise
 
 
 # --- cell targeting helpers --------------------------------------------------
 
 def test_col_num_to_a1_matches_sheet_layout():
     assert sync._col_num_to_a1(0) == "A"
-    assert sync._col_num_to_a1(6) == "G"  # BI_COL_DATA_START, first "Gợi Ý" column
+    assert sync._col_num_to_a1(7) == "H"  # BI_COL_DATA_START, first "Gợi Ý" column
     assert sync._col_num_to_a1(25) == "Z"
     assert sync._col_num_to_a1(26) == "AA"
 
@@ -465,13 +589,13 @@ def test_write_suggestions_dry_run_never_touches_budget_and_needs_no_credentials
     """End-to-end dry-run: fetch/parse/validate/compute all mocked or pure — proves the
     whole pipeline works with zero Google credentials and zero real DuckDB access.
     """
-    budget_csv = """\
+    budget_csv = _insert_col("""\
 ,,,,,,2026-07,,2026-08,
 Dòng Tiền,Chiều,Type,Tháng Cần,Tuần TT,Tổng Cần,Gợi Ý,Budget,Gợi Ý,Budget
 Bán hàng & phải thu KH,Thu,recurring,,,,,"480,000,000 ₫",,
 Chi lương,Chi,recurring,,,1,,"240,000,000 ₫",,
 Mua SSD,Chi,one_off,2026-09,,"6,000,000 ₫",,,,
-"""
+""")
 
     def _fake_fetch(url, gid, tab_name):
         if tab_name == "BUDGET_ITEMS":
@@ -479,6 +603,7 @@ Mua SSD,Chi,one_off,2026-09,,"6,000,000 ₫",,,,
         return _raw_df(REF_CSV)
 
     monkeypatch.setattr(sync, "_fetch_tab_csv", _fake_fetch)
+    monkeypatch.setattr(sync, "_fetch_account_taxonomy_from_duckdb", lambda path: {})
     monkeypatch.setattr(
         sync, "_fetch_recurring_actuals_from_duckdb",
         lambda serving_db_path, window_months: [
@@ -501,11 +626,11 @@ Mua SSD,Chi,one_off,2026-09,,"6,000,000 ₫",,,,
 
 
 def test_write_suggestions_aborts_on_structural_validation_error(monkeypatch):
-    bad_csv = """\
+    bad_csv = _insert_col("""\
 ,,,,,,2026-08,
 Dòng Tiền,Chiều,Type,Tháng Cần,Tuần TT,Tổng Cần,Gợi Ý,Budget
 Chi Không Tồn Tại,Chi,recurring,,,,,"1,000 ₫"
-"""
+""")
 
     def _fake_fetch(url, gid, tab_name):
         if tab_name == "BUDGET_ITEMS":
@@ -513,6 +638,7 @@ Chi Không Tồn Tại,Chi,recurring,,,,,"1,000 ₫"
         return _raw_df(REF_CSV)
 
     monkeypatch.setattr(sync, "_fetch_tab_csv", _fake_fetch)
+    monkeypatch.setattr(sync, "_fetch_account_taxonomy_from_duckdb", lambda path: {})
 
     with pytest.raises(sync.ValidationError):
         sync.write_suggestions_to_sheet(target_month="2026-08-01", dry_run=True)
@@ -523,11 +649,11 @@ Chi Không Tồn Tại,Chi,recurring,,,,,"1,000 ₫"
 def test_write_cells_via_sheets_api_requires_env_var(monkeypatch):
     monkeypatch.delenv(gsheet_auth.GOOGLE_SHEETS_SERVICE_ACCOUNT_KEY_PATH_ENV, raising=False)
     with pytest.raises(RuntimeError, match=gsheet_auth.GOOGLE_SHEETS_SERVICE_ACCOUNT_KEY_PATH_ENV):
-        sync._write_cells_via_sheets_api([{"sheet_row": 4, "col": 6, "value": 1, "cashflow_line": "x", "item_type": "recurring"}])
+        sync._write_cells_via_sheets_api([{"sheet_row": 4, "col": 7, "value": 1, "cashflow_line": "x", "item_type": "recurring"}])
 
 
 def test_write_cells_via_sheets_api_requires_key_file_to_exist(monkeypatch, tmp_path):
     missing_key = tmp_path / "does_not_exist.json"
     monkeypatch.setenv(gsheet_auth.GOOGLE_SHEETS_SERVICE_ACCOUNT_KEY_PATH_ENV, str(missing_key))
     with pytest.raises(RuntimeError, match="không tồn tại"):
-        sync._write_cells_via_sheets_api([{"sheet_row": 4, "col": 6, "value": 1, "cashflow_line": "x", "item_type": "recurring"}])
+        sync._write_cells_via_sheets_api([{"sheet_row": 4, "col": 7, "value": 1, "cashflow_line": "x", "item_type": "recurring"}])

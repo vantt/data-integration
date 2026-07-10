@@ -1,1 +1,1 @@
-cashflow_line,period_month,direction,planned_amount,payment_week,item_type,item_label,item_target,target_month,notes
+cashflow_line,account_code,period_month,direction,planned_amount,payment_week,item_type,item_label,item_target,target_month,notes
