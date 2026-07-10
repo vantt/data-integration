@@ -67,6 +67,10 @@ class ActivityService:
                 raise ValueError("outcome_reason is required when contact_outcome is 'refused'")
             if outcome_reason and outcome_reason not in VALID_OUTCOME_REASONS:
                 raise ValueError(f"unknown outcome_reason {outcome_reason!r}")
+            # 'irritation' ("Tác dụng phụ") is a quality signal that must be escalated —
+            # a body note describing what happened is mandatory, not just client-side.
+            if outcome_reason == "irritation" and not (activity_data.get("body") or "").strip():
+                raise ValueError("body is required when outcome_reason is 'irritation'")
 
         now = utc_now()
         activity = Activity(

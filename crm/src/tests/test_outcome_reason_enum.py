@@ -205,3 +205,24 @@ class TestActivityServiceContactOutcomeValidation:
         ))
         assert act.contact_outcome == "refused"
         assert act.outcome_reason == "do_not_contact"
+
+    def test_irritation_reason_without_body_raises(self):
+        """'irritation' ("Tác dụng phụ") is a quality signal — server enforces a note
+        even if the client-side required-field check were bypassed."""
+        svc = _make_service()
+        with pytest.raises(ValueError, match="body is required"):
+            svc.log_activity(_base_data(
+                contact_outcome="answered",
+                outcome_reason="irritation",
+                body="",
+            ))
+
+    def test_irritation_reason_with_body_accepted(self):
+        svc = _make_service()
+        act = svc.log_activity(_base_data(
+            contact_outcome="answered",
+            outcome_reason="irritation",
+            body="Khách bị nổi mẩn đỏ sau khi dùng serum X.",
+        ))
+        assert act.outcome_reason == "irritation"
+        assert act.body == "Khách bị nổi mẩn đỏ sau khi dùng serum X."

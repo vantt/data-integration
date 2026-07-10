@@ -15,6 +15,7 @@
 {% set fb_ids    = fb_ids    | default([]) %}
 {% set email_ids = email_ids | default([]) %}
 {% set note_body = note_body | default('') %}
+{% set prefill_body = prefill_body | default('') %}
 {% set note_type_val = note_type_val | default('general') %}
 {% set note_pinned = note_pinned | default(False) %}
 {% set note_visibility = note_visibility | default('team') %}
@@ -361,11 +362,14 @@
           </div>{# /.m08-htchan__body #}
         </details>
 
-        {# Step 4 — NỘI DUNG #}
+        {# Step 4 — NỘI DUNG — prefill_body: server-side prefill from S14 quick-note
+           (cockpit outcome bar's "Ghi chú tạm" → Gọi được/Hẹn lại/Đã mua). Rendered
+           server-side (not injected client-side) so the value is present the moment
+           this fragment is swapped in — no dependency on HTMX swap/promise timing. #}
         <label class="field" id="m08-body-label">
           <span class="field__label">NỘI DUNG</span>
           <textarea name="body" id="m08-body" class="inp inp--area" rows="3"
-                    placeholder="Ghi chú thêm (không bắt buộc)"></textarea>
+                    placeholder="Ghi chú thêm (không bắt buộc)">{{ prefill_body }}</textarea>
         </label>
 
         {# Kết bạn Zalo — chỉ hiện khi hình thức call/zalo #}
@@ -573,6 +577,9 @@
     visit_: 'Ghi chú thêm (không bắt buộc)',
     other_: 'Nội dung tiếp xúc…',
   };
+  // Reason 'irritation' ("Tác dụng phụ") overrides BODY_PH + forces required —
+  // quality signal that must be escalated, staff must record what happened.
+  var IRRITATION_BODY_PH = 'Khách gặp tác dụng phụ gì? (triệu chứng, sản phẩm nào, mức độ...)';
   function m08UpdateBody(ht, oc) {
     var ta = document.getElementById('m08-body'); if (!ta) return;
     var chatTypes = ['zalo','fb','email'];
@@ -686,7 +693,7 @@
     {v:'timing',        l:'Chưa tới lúc'},
     {v:'still_stocked', l:'Chưa dùng hết'},
     {v:'product_fit',   l:'Không hợp nhu cầu'},
-    {v:'irritation',    l:'Kích ứng/không hợp da'},
+    {v:'irritation',    l:'Tác dụng phụ'},
     {v:'competitor',    l:'Đã mua chỗ khác'},
     {v:'stock',         l:'Hết hàng'},
     {v:'trust',         l:'Nghi ngại'},
@@ -768,6 +775,20 @@
       dncBtn.classList.remove('m08-dnc-btn--confirm', 'm08-dnc-btn--on');
       dncBtn.textContent = '🚫 Đừng gọi nữa';
     }
+    // 'irritation' ("Tác dụng phụ") — force staff to record what happened;
+    // any other reason falls back to the normal outcome/ht placeholder+required.
+    var ta = document.getElementById('m08-body');
+    if (ta) {
+      if (val === 'irritation') {
+        ta.placeholder = IRRITATION_BODY_PH;
+        ta.required = true;
+        var lbl = document.getElementById('m08-body-label');
+        if (lbl) lbl.dataset.required = '1';
+        ta.focus();
+      } else {
+        m08UpdateBody(m08CurHT, m08CurOut);
+      }
+    }
   };
 
   /* ── "Đừng gọi nữa" escalation — needs 2 clicks to confirm (lightweight guard) ── */
@@ -805,6 +826,16 @@
     if (reasonVisible && REASON_REQUIRED_OUTCOMES_JS.indexOf(outVal) >= 0 && !reasonVal) {
       alert('Vui lòng chọn lý do khi kết quả là "Từ chối".');
       return false;
+    }
+    // 'irritation' ("Tác dụng phụ") always needs a note — server re-validates independently.
+    if (reasonVal === 'irritation') {
+      var bodyEl = document.getElementById('m08-body');
+      var bodyVal = bodyEl ? bodyEl.value.trim() : '';
+      if (!bodyVal) {
+        alert('Vui lòng ghi rõ tác dụng phụ khách gặp phải.');
+        if (bodyEl) bodyEl.focus();
+        return false;
+      }
     }
     return true;
   };

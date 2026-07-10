@@ -65,8 +65,11 @@ VALID_OUTCOME_REASONS = [
     #   khác 'timing' (bận/để sau, không nói gì về lượng hàng còn).
     # wait_promo: khách chờ khuyến mãi → trigger liên hệ lại khi có promo,
     #   khác 'budget' (không đủ ngân sách ở mọi mức giá).
-    # irritation: kích ứng/không hợp da → tín hiệu chất lượng cần escalate,
-    #   không upsell cùng dòng sản phẩm; khác 'product_fit' (không đúng nhu cầu).
+    # irritation: tác dụng phụ (kích ứng da, khó chịu tiêu hóa, mệt...) → tín hiệu
+    #   chất lượng cần escalate, không upsell cùng dòng sản phẩm; khác 'product_fit'
+    #   (không đúng nhu cầu). UI label = "Tác dụng phụ" (enum value giữ nguyên
+    #   'irritation' để tương thích dữ liệu cũ). Server requires a non-empty `body`
+    #   when this reason is chosen (see ActivityService.log_activity).
     "still_stocked", "wait_promo", "irritation",
     # do_not_contact: khách yêu cầu KHÔNG liên hệ lại nữa — khác 'refused' (từ chối lần
     #   này, có thể gọi lại sau); dùng để loại vĩnh viễn khỏi action queue/outreach.

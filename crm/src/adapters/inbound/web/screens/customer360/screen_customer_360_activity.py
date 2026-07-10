@@ -76,6 +76,7 @@ def register_activity_routes(
         task_id: str = "",
         resolve_action_ids: str = "",
         resolve_task_ids: str = "",
+        prefill_body: str = "",
     ) -> dict:
         # Normalize legacy mode names → unified 'log'.
         if mode not in ("log", "edit_note", "note_only"):
@@ -139,6 +140,9 @@ def register_activity_routes(
             "note_visibility": note_visibility,
             "resolve_action_ids": resolve_action_ids,
             "resolve_task_ids": resolve_task_ids,
+            # S14 quick-note ("Ghi chú tạm") prefill — rendered server-side into
+            # #m08-body so the value is present at swap time (see A-S14-009 JS comment).
+            "prefill_body": prefill_body,
         }
 
     @router.get("/modals/m08", response_class=HTMLResponse)
@@ -151,11 +155,12 @@ def register_activity_routes(
         task_id: str = "",
         resolve_action_ids: str = "",
         resolve_task_ids: str = "",
+        prefill_body: str = "",
     ) -> Response:
         return templates.TemplateResponse(
             "fragments/modal_log_activity.html",
             _m08_ctx(request, party_id, mode, note_id, party_name, task_id,
-                     resolve_action_ids, resolve_task_ids),
+                     resolve_action_ids, resolve_task_ids, prefill_body),
         )
 
     @router.get("/customers/{party_id}/modal/log-activity", response_class=HTMLResponse)
@@ -167,11 +172,12 @@ def register_activity_routes(
         task_id: str = "",
         resolve_action_ids: str = "",
         resolve_task_ids: str = "",
+        prefill_body: str = "",
     ) -> Response:
         return templates.TemplateResponse(
             "fragments/modal_log_activity.html",
             _m08_ctx(request, party_id, mode, "", party_name, task_id,
-                     resolve_action_ids, resolve_task_ids),
+                     resolve_action_ids, resolve_task_ids, prefill_body),
         )
 
     @router.post("/customers/{party_id}/log-activity", response_class=HTMLResponse)

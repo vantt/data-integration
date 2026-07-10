@@ -128,7 +128,7 @@ Field `contact_outcome` (DB column, replaces free-text `outcome` for new rows) u
 | `timing` | Chưa tới lúc | Bận/để sau — không nói gì về lượng hàng còn |
 | `still_stocked` | Chưa dùng hết | Lý do #1 replenishment call → điều chỉnh chu kỳ gợi ý mua lại |
 | `product_fit` | Không hợp nhu cầu | |
-| `irritation` | Kích ứng/không hợp da | Tín hiệu chất lượng → escalate; không upsell cùng dòng |
+| `irritation` | Tác dụng phụ | Tín hiệu chất lượng → escalate; không upsell cùng dòng. Chọn lý do này → NỘI DUNG bắt buộc (client + server), placeholder đổi thành "Khách gặp tác dụng phụ gì? (triệu chứng, sản phẩm nào, mức độ...)" |
 | `competitor` | Đã mua chỗ khác | |
 | `stock` | Hết hàng | Phía mình hết hàng/chờ hàng |
 | `trust` | Nghi ngại | |

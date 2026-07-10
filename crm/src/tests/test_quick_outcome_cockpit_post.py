@@ -218,6 +218,32 @@ def test_zalo_connected_absent_no_custom_fields_key():
     assert cf is None or "zalo_connected" not in cf
 
 
+def test_quick_outcome_body_is_persisted():
+    """s14QuickOutcomeVals() sends body=<quick-note value> — confirm it reaches
+    ActivityService.log_activity unchanged (fix 260710-1447: quick-note capture)."""
+    import asyncio
+
+    captured_act_data = {}
+
+    activity_log_mock = MagicMock()
+
+    def capturing_log_activity(data):
+        captured_act_data.update(data)
+        return MagicMock(activity_id="act-quicknote-1")
+
+    activity_log_mock.log_activity.side_effect = capturing_log_activity
+
+    handler = _get_log_activity_handler(activity_log_mock)
+
+    asyncio.run(handler(**_base_kwargs(
+        contact_outcome="no_answer",
+        source="call_cockpit",
+        body="Khách hẹn gọi lại chiều mai",
+    )))
+
+    assert captured_act_data.get("body") == "Khách hẹn gọi lại chiều mai"
+
+
 def test_zalo_connected_and_resolve_ids_merge_into_same_custom_fields():
     """zalo_connected must coexist with the existing bulk-resolve custom_fields write."""
     import asyncio
