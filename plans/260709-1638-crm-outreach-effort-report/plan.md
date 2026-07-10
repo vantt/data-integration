@@ -1,6 +1,6 @@
 # Báo cáo hiệu quả tiếp cận khách hàng — đo theo nỗ lực & thông tin thu thập (KHÔNG theo đơn hàng)
 
-> Status: Phase 0, 1 DONE 2026-07-10 — Phase 0 (mart 12 cột mới, contacts_reached định nghĩa đổi; reports/phase-00-implementation-report.md) + Phase 1 (migrations 0043/0044 production, exports+staging+suppression; reports/phase-01-implementation-report.md). Phase 4 Track A dashboard DONE 2026-07-10 — deployed sau khi serving-view blocker (báo cáo phase-04 ban đầu BLOCKED) được fix cùng ngày; xác nhận sống qua Metabase log (dashboard id 147, query 200/202 lúc 22:54). Phase 2-3 (Track B) pending.
+> Status: Phase 0-3 DONE 2026-07-10/11 — Phase 0 (mart 12 cột mới, contacts_reached định nghĩa đổi; reports/phase-00-implementation-report.md) + Phase 1 (migrations 0043/0044 production, exports+staging+suppression; reports/phase-01-implementation-report.md) + Phase 2 (`int_crm_outreach_effort_events`, grain task_id×action_type; reports/phase-02-implementation-report.md) + Phase 3 (`mart_crm_outreach_effort_by_action_weekly`; reports/phase-03-implementation-report.md). Post-implementation fix 2026-07-11: Phase 2's `staff_user_id` was wired from the linked activity's staff (NULL for ~all rows pre-first-call) instead of `crm_task.assignee_user_id` as spec'd — corrected in `int_crm_outreach_effort_events.sql`, Phase 3's redundant task-table re-join for that column removed, both models rebuilt+retested (dbt run/test PASS, mart now shows real `staff_key` on all 4 rows instead of near-all-NULL). Phase 4 Track A dashboard DONE 2026-07-10 — deployed sau khi serving-view blocker (báo cáo phase-04 ban đầu BLOCKED) được fix cùng ngày; xác nhận sống qua Metabase log (dashboard id 147, query 200/202 lúc 22:54). Phase 4 Track B card vẫn pending (chờ vài tuần dữ liệu action_type sau cutover + serving-view bootstrap).
 > Bối cảnh: `mart_staff_performance_weekly` hiện có (staff × tuần: activities, reach_rate, tasks, orders_sold, revenue) nhưng KHÔNG tách theo action_type, và không đo "thông tin mới thu thập" (tag sức khỏe, note outcome). Đo theo đơn hàng hiện không đáng tin vì sales đang rất ế (xem hội thoại 2026-07-09). Cần đo bằng **leading indicator**: nỗ lực gọi + reach rate + thông tin/tình trạng khách thu thập được (tag `health_concern`, note `outcome`), tách theo `action_type` khi có thể.
 
 ## Sự thật đã xác minh (không phải giả định)
@@ -47,22 +47,22 @@ Mapping KPI sprint → nơi đo (sự thật đã verify trong code):
 |---|---|---|---|
 | 0 | Extend `mart_staff_performance_weekly` (Track A, no schema change) | [phase-00-quick-win-extend-staff-performance-mart.md](phase-00-quick-win-extend-staff-performance-mart.md) | ✅ DONE 2026-07-10 |
 | 1 | Schema fix: snapshot action_type lúc claim + nối tag về activity (Track B) | [phase-01-schema-attribution-fix.md](phase-01-schema-attribution-fix.md) | ✅ DONE 2026-07-10 |
-| 2 | Intermediate model: effort events tách theo action_type | [phase-02-effort-events-intermediate-model.md](phase-02-effort-events-intermediate-model.md) | Phụ thuộc phase 1 |
-| 3 | Mart tuần theo (staff, action_type) + dbt tests | [phase-03-outreach-effort-weekly-mart.md](phase-03-outreach-effort-weekly-mart.md) | Phụ thuộc phase 2 |
+| 2 | Intermediate model: effort events tách theo action_type | [phase-02-effort-events-intermediate-model.md](phase-02-effort-events-intermediate-model.md) | ✅ DONE 2026-07-10 — `int_crm_outreach_effort_events` (reports/phase-02-implementation-report.md); chưa có claim thật 2+ action_type để verify explode end-to-end, verify bằng synthetic query |
+| 3 | Mart tuần theo (staff, action_type) + dbt tests | [phase-03-outreach-effort-weekly-mart.md](phase-03-outreach-effort-weekly-mart.md) | ✅ DONE 2026-07-11 — `mart_crm_outreach_effort_by_action_weekly` (Bảng A only, per phase file's own decision; Bảng B intentionally not built, already covered by Phase 0). reports/phase-03-implementation-report.md |
 | 4 | Reporting surface (Metabase blueprint) + validation thủ công | [phase-04-reporting-surface-and-validation.md](phase-04-reporting-surface-and-validation.md) | ✅ Track A DONE 2026-07-10 (dashboard id 147, `docs/analytics-handbook/blueprints/metabase/crm_outreach_effort_weekly.md`; reports/phase-04-dashboard-track-a-implementation-report.md — báo cáo ghi BLOCKED nhưng serving-view đã fix +deploy sau đó cùng ngày, đã verify sống). Track B card chờ phase 2-3 cutover. |
 
 Phase 1-3 có thể để sau nếu Track A đã đủ dùng tạm; không block nhau.
 
 ## Acceptance criteria (tổng — chi tiết từng phase xem phase file)
 
-- [ ] `mart_staff_performance_weekly` có thêm outcome_notes_count, health_concern_tags_new, other_tags_new, channel breakdown — không đổi grain cũ
-- [ ] Phễu gọi sprint đo được từ mart: `calls_dialed`, `contacts_reached` (đã sửa định nghĩa gồm callback+refused), `conversations_count`, `wrong_number_count`
-- [ ] Log Activity có checkbox "Đã kết bạn Zalo" → `zalo_connected_count` lên được mart (Track B/phase 1)
-- [ ] `outcome_reason='do_not_contact'` tồn tại và party có reason này biến mất khỏi worklist
-- [ ] `crm_task.claimed_action_types` được ghi đúng lúc claim (test: claim khách có 2 action → JSON có 2 phần tử)
-- [ ] `crm_party_tag.source_activity_id` được ghi khi tag gắn trong lúc Log Activity (không bắt buộc khi tag gắn ngoài luồng đó — cho phép NULL)
-- [ ] Mart mới `mart_crm_outreach_effort_weekly` (staff × tuần × action_type) có dữ liệu thật từ ngày cutover, action_type=NULL rõ ràng cho dữ liệu trước cutover
-- [ ] Dashboard/blueprint hiển thị được cả 2 track, ghi chú rõ giới hạn lịch sử
+- [x] `mart_staff_performance_weekly` có thêm outcome_notes_count, health_concern_tags_new, other_tags_new, channel breakdown — không đổi grain cũ (Phase 0)
+- [x] Phễu gọi sprint đo được từ mart: `calls_dialed`, `contacts_reached` (đã sửa định nghĩa gồm callback+refused), `conversations_count`, `wrong_number_count` (Phase 0 + dashboard id 147 sống)
+- [~] Log Activity có checkbox "Đã kết bạn Zalo" — UI ✅ (disposition strip T1, `custom_fields.zalo_connected`) + export/staging ✅ (phase 1: `stg_crm__activity_log` derive boolean); **`zalo_connected_count` CHƯA lên `mart_staff_performance_weekly`** — không phase nào trong plan này sở hữu việc thêm cột đó, gap thật, cần 1 phase mới (mini) trước khi dashboard hiển thị được số này.
+- [x] `outcome_reason='do_not_contact'` tồn tại và party có reason này biến mất khỏi worklist (Phase 1, `list_do_not_contact_party_ids()`)
+- [x] `crm_task.claimed_action_types` được ghi đúng lúc claim (Phase 1 migration 0043; Phase 2 model xác nhận đọc được, dù dữ liệu thật vẫn 100% NULL vì chưa có claim 2+ action nào sau cutover)
+- [~] `crm_party_tag.source_activity_id` — schema/write-path sẵn sàng (Phase 1, migration 0044, `TagService.attach_tag()` nhận param) nhưng **UI wiring chưa xong**: không có form tag nào trong cockpit/M08 gửi `source_activity_id` khi gắn tag (verified 2026-07-11: 0 match grep trong `c360_call_cockpit_panel.html`/`modal_log_activity.html`) — cột luôn NULL trong thực tế, đúng như phase-01 report đã cảnh báo ("Handoff wiring" chưa có người nhận). Ngoài scope 2 plan đang cook.
+- [x] Mart mới `mart_crm_outreach_effort_by_action_weekly` (staff × tuần × action_type) built + tested 2026-07-11; hiện 100% `action_type=NULL` vì chưa có claim thật nào sau cutover mang 2+ action_type — đúng theo thiết kế fix-forward, sẽ có dữ liệu action_type thật khi claim mới xảy ra
+- [~] Dashboard/blueprint hiển thị được cả 2 track — Track A ✅ sống (dashboard 147); Track B card chưa làm (Phase 4 Track B pending, chờ data + serving-view bootstrap)
 
 ## Câu hỏi mở
 
@@ -72,3 +72,5 @@ Phase 1-3 có thể để sau nếu Track A đã đủ dùng tạm; không block
 4. *(2026-07-10)* Sửa định nghĩa `contacts_reached` (thêm callback+refused) đổi ngữ nghĩa cột đang có — mart còn trẻ, lịch sử ngắn, chấp nhận đổi tại chỗ hay thêm cột mới `contacts_reached_v2`? Đề xuất: đổi tại chỗ + ghi chú trong schema.yml (tránh 2 cột gần trùng gây nhầm dashboard) — phase-00 chốt.
 5. *(2026-07-10)* Suppression `do_not_contact`: loại khỏi worklist bằng cách nào — filter runtime trong `worklist_query_service` hay cờ trên party (tag `risk`/archived)? Đề xuất: filter runtime từ activity gần nhất có reason này (không đổi schema party) — phase-01 chốt.
 6. *(2026-07-10)* `contact_duration_s` staff có nhập đều không? Nếu đa số NULL → `conversations_count` fallback về proxy "có outcome note đính activity". Kiểm tra tỷ lệ NULL trong 2 tuần đầu sprint rồi chốt ngưỡng 60s.
+7. *(2026-07-11, phát hiện lúc sync-back)* `zalo_connected_count` chưa có cột nào trong `mart_staff_performance_weekly` dù UI+export đã sẵn sàng — không phase nào trong plan này claim sở hữu việc thêm cột mart đó. Cần 1 phase mini (hoặc thêm vào phase 0's scope retroactively) trước khi dashboard hiển thị được KPI "Zalo connect ≥50%" mà Sprint Gọi Ra cần.
+8. *(2026-07-11, phát hiện lúc sync-back)* `crm_party_tag.source_activity_id` write-path đã sẵn (phase 1) nhưng KHÔNG có form nào trong CRM thực sự gửi giá trị này khi gắn tag — cột sẽ mãi NULL cho tới khi ai đó wiring UI (2 hướng (a)/(b) đã đề xuất trong phase-01 report, mục "Handoff"). Ngoài scope 2 plan hiện tại, cần 1 task riêng.

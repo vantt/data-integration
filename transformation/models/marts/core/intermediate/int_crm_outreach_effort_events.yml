@@ -1,0 +1,91 @@
+version: 2
+
+models:
+  - name: int_crm_outreach_effort_events
+    description: >
+      CRM outreach effort joined + exploded per action_type. Grain:
+      (task_id, action_type) — one row per claimed task per action_type it
+      bundled at claim time. A claim with N claimed_action_types produces N
+      rows; a task with no claimed_action_types (NULL — pre-cutover, since
+      claimed_action_types is a fix-forward-only snapshot added in phase 01)
+      produces exactly 1 row with action_type = NULL. Only tasks sourced from
+      action_queue_claim are included.
+
+      Not a mart — this is a join/explode layer feeding the phase 03 weekly
+      mart (staff x week x action_type). No action-queue eligibility filter
+      (e.g. is_us_gift_recipient) is applied here by design: this is an
+      effort/activity-log layer, not an eligibility layer, and a customer
+      excluded from the action queue can still have real activity-log data
+      from a rep calling outside that flow.
+
+      staff_user_id is the raw CRM UUID (task assignee at claim time) — no
+      join to dim_staff here (intermediate models stay close to source; the
+      phase 03 mart denormalizes to a real staff name).
+
+      Info-collected columns (outcome_note_count, health_concern_tags_new,
+      other_tags_new) are computed at the whole-task level (summed across all
+      activities linked to the task) and broadcast to every action_type row
+      of that task — the information gathered by a call belongs to the whole
+      task, not to one action_type over another (phase-02 plan file open
+      decision, adopted as-is).
+
+      See plans/260709-1638-crm-outreach-effort-report/phase-02-effort-events-intermediate-model.md
+      and reports/phase-02-implementation-report.md for full design notes,
+      including one deliberate deviation from that phase file's literal
+      pseudocode: "channel" uses activity channel_type (call|zalo|fb|email|
+      visit|other), not the raw activity.channel value, because channel_type
+      is now staged (phase-01 addendum) and is the semantically correct field
+      (channel is a raw contact value, not a channel type — confirmed in the
+      phase-00 report). is_reached was harmonized post-implementation to match
+      mart_staff_performance_weekly's contacts_reached definition (Phase 0) —
+      see the is_reached column note below.
+    columns:
+      - name: task_id
+        description: "CRM task UUID (crm_task.task_id) — the claimed task this effort row belongs to."
+        tests: [not_null]
+      - name: party_id
+        description: "CRM party UUID (crm_task.party_id) — the customer the task was claimed for."
+      - name: customer_key
+        description: "Surrogate customer key (FK to dim_customers), resolved via crm_task.customer_id (itself already resolved from party_id via crm_party_identity at export time). NULL when the party has no linked Sapo customer or no dim_customers match."
+      - name: action_type
+        description: >
+          One action_type this claimed task bundled at claim time (e.g.
+          REORDER_PREEMPT, PROGRESS_CHECK). NULL for tasks predating the
+          claimed_action_types snapshot (migration 0043, phase 01) or with an
+          empty/absent JSON array.
+      - name: status
+        description: "crm_task.status (open|doing|done) at export time — needed by phase 03 to split tasks_claimed_pending vs tasks_completed."
+      - name: staff_user_id
+        description: "CRM app_user UUID (crm_task.assignee_user_id) — raw, not joined to dim_staff in this model."
+      - name: week_start_date
+        description: "ISO week start (Monday, ICT) of task.completed_at if set, else task.created_at."
+      - name: channel
+        description: >
+          Contact channel type (call|zalo|fb|email|visit|other) from the
+          linked activity's channel_type (migration 0033), falling back to
+          the task's own channel (crm_task.channel — the queued action's
+          intended channel) when no activity is linked yet.
+      - name: contact_outcome
+        description: "contact_outcome of the most recent activity linked to this task (activity_log.contact_outcome). NULL when no activity is linked."
+      - name: is_reached
+        description: >
+          TRUE when contact_outcome IN ('answered','replied','met','callback',
+          'refused','purchased') — same enum as
+          mart_staff_performance_weekly.contacts_reached (Phase 0), so
+          reach_rate_pct means the same thing in both Track A and Track B.
+      - name: outcome_note_count
+        description: "Count of note_type='outcome' notes across ALL activities linked to this task (broadcast to every action_type row of the task)."
+      - name: health_concern_tags_new
+        description: >
+          Count of party tags with category='health_concern', counted only at
+          their first-ever (party_id, tag_id) occurrence, and only when linked
+          via source_activity_id to an activity of this task. Broadcast to
+          every action_type row of the task. Currently always 0 in practice —
+          source_activity_id has no real data yet (phase-01 UI wiring gap,
+          see phase-01 implementation report "Handoff wiring").
+      - name: other_tags_new
+        description: "Same as health_concern_tags_new but for tag_category IS DISTINCT FROM 'health_concern'."
+    tests:
+      - dbt_utils.unique_combination_of_columns:
+          arguments:
+            combination_of_columns: [task_id, action_type]

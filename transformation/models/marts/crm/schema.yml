@@ -128,3 +128,75 @@ models:
           phase-00 để biết tỷ lệ NULL thực tế tại thời điểm ship).
       - name: wrong_number_count
         description: "Số activity contact_outcome='wrong_number' — chỉ số làm sạch danh sách gọi (SĐT chết)."
+
+  - name: mart_crm_outreach_effort_by_action_weekly
+    description: >
+      CRM outreach effort theo staff × tuần × action_type ("Bảng A" — Track B
+      phase 3). Grain: 1 dòng / (staff_key, week_start_date, action_type).
+      Rollup từ int_crm_outreach_effort_events (task_id × action_type, chỉ
+      task nguồn action_queue_claim). KHÔNG kèm info-collected metrics (note
+      count / tag mới) theo action_type — số đó đã có sẵn ở mức staff×tuần
+      (không tách action_type) trong mart_staff_performance_weekly (phase 0);
+      cố tình không lặp lại ở đây để tránh 2 nguồn số cho cùng 1 khái niệm. Xem
+      plans/260709-1638-crm-outreach-effort-report/
+      phase-03-outreach-effort-weekly-mart.md.
+
+      staff attribution dùng int_crm_outreach_effort_events.staff_user_id
+      (đã fix để lấy crm_task.assignee_user_id, không còn lấy staff của
+      activity gần nhất nữa — bug đó đã sửa ở tầng intermediate model).
+      stg_crm__task chỉ còn join riêng để lấy created_at/completed_at (mart
+      intermediate không expose 2 cột raw này, chỉ có week_start_date đã
+      derive).
+
+      action_type breakdown chỉ có dữ liệu thật từ sau ngày claimed_action_types
+      được ship (phase 01) — trước đó action_type luôn NULL (1 dòng gộp cho
+      task chưa có claimed_action_types, không bị mất khỏi mart).
+    tests:
+      - dbt_utils.unique_combination_of_columns:
+          arguments:
+            combination_of_columns: [staff_key, week_start_date, action_type]
+    columns:
+      - name: staff_key
+        description: "Sapo staff surrogate key (dim_staff), bridge qua int_crm_outreach_effort_events.staff_user_id (= crm_task.assignee_user_id)."
+        tests: [not_null]
+      - name: week_start_date
+        description: "Ngày Thứ Hai của tuần ISO (giờ Asia/Ho_Chi_Minh) — completed_at nếu task có, else created_at (kế thừa từ int_crm_outreach_effort_events)."
+        tests: [not_null]
+      - name: action_type
+        description: >
+          Loại action_type task claim tại thời điểm claim (vd REORDER_PREEMPT,
+          PROGRESS_CHECK). NULL cho task pre-cutover (chưa có
+          claimed_action_types) hoặc mảng rỗng.
+        tests:
+          - accepted_values:
+              arguments:
+                values:
+                  - REORDER_OVERDUE
+                  - REORDER_NUDGE
+                  - REORDER_PREEMPT
+                  - PROGRESS_CHECK
+                  - USAGE_FOLLOWUP
+                  - GIFT_TO_PURCHASE
+                  - CALL_NOW
+                  - MANUAL_RISK_REVIEW
+                  - WIN_BACK
+                  - SECOND_ORDER
+                  - HIGH_CANCEL_RISK
+              config:
+                where: "action_type IS NOT NULL"
+      - name: tasks_claimed_pending
+        description: "Số task status IN ('open','doing') — đã claim, chưa xong. 'cancelled' KHÔNG tính vào đây (cũng không tính vào tasks_completed)."
+      - name: tasks_completed
+        description: "Số task status='done'."
+      - name: avg_days_to_complete
+        description: "Số ngày trung bình created_at → completed_at cho các task status='done' trong bucket, làm tròn 1 chữ số. NULL nếu bucket không có task done nào."
+      - name: contacts_attempted
+        description: >
+          Số task (COUNT DISTINCT task_id) đóng góp effort cho action_type này
+          trong tuần — 1 task claim 2 action_type tính là 2 "cuộc gọi" đóng góp
+          riêng cho từng action_type (không chia 0.5/bên — quyết định phase-03
+          "cạm bẫy double-count": effort dùng chung, không chia).
+      - name: contacts_reached
+        description: "Số task có is_reached=TRUE (contact_outcome IN answered/replied/met/callback/refused/purchased — đồng bộ định nghĩa với mart_staff_performance_weekly.contacts_reached)."
+      - name: reach_rate_pct
+        description: "contacts_reached / contacts_attempted * 100, làm tròn 1 chữ số. NULL nếu contacts_attempted=0."
