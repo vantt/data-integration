@@ -10,11 +10,14 @@ from datetime import datetime, timedelta, timezone
 from typing import Optional
 
 from fastapi import APIRouter, Form, Request, Response
-from fastapi.responses import HTMLResponse
+from fastapi.responses import HTMLResponse, JSONResponse
 from fastapi.templating import Jinja2Templates
 
 from domain.entities.party import partition_identities_by_channel
-from domain.entities.profile import Note, PartyIdentity, PartyInsight
+from domain.entities.profile import Note, PartyIdentity
+
+from application.activity_service import ActivityFinalizeConflictError, ActivityNotFoundError
+from application.activity_side_effects import execute_side_effects
 
 from adapters.inbound.web.screens.customer360.outcome_resolve_helpers import (
     parse_id_list as _parse_id_list,
@@ -67,6 +70,18 @@ def register_activity_routes(
 ) -> None:
     """Register M08 modal (GET x2) and activity log POST route on *router*."""
 
+    def _run_side_effects(activity, actor_id: Optional[str], **effects) -> None:
+        """Closure over this router's own profile/notes/task_svc/party_insights/
+        action_state — the SAME instances used everywhere else in this module —
+        so legacy log-activity and the new finalize route share one executor."""
+        execute_side_effects(
+            activity, actor_id,
+            party_id=activity.party_id,
+            profile=profile, notes=notes, task_svc=task_svc,
+            party_insights=party_insights, action_state=action_state,
+            **effects,
+        )
+
     def _m08_ctx(
         request: Request,
         party_id: str,
@@ -77,9 +92,11 @@ def register_activity_routes(
         resolve_action_ids: str = "",
         resolve_task_ids: str = "",
         prefill_body: str = "",
+        activity_id: str = "",
+        draft_activity_id: str = "",
     ) -> dict:
         # Normalize legacy mode names → unified 'log'.
-        if mode not in ("log", "edit_note", "note_only"):
+        if mode not in ("log", "edit_note", "note_only", "edit_activity"):
             mode = "log"
         contact_pref_notes: list[Note] = []
         note_body = ""
@@ -88,7 +105,8 @@ def register_activity_routes(
         note_visibility = "team"
         party_identities: list[PartyIdentity] = []
         task_title = ""
-        if mode == "log":
+        activity_edit = None
+        if mode in ("log", "edit_activity"):
             try:
                 contact_pref_notes = [
                     n for n in notes.list_notes(party_id)
@@ -120,6 +138,14 @@ def register_activity_routes(
                     note_visibility = existing.visibility
             except Exception as exc:
                 log.warning("m08: load edit_note %s: %s", note_id, exc)
+        # edit_activity: load the exact activity pointed to — NEVER "last log for
+        # this party" (anti-pattern per report §V: rep would think they're
+        # creating a new entry and silently overwrite history instead).
+        if mode == "edit_activity" and activity_id.strip() and activity_log is not None:
+            try:
+                activity_edit = activity_log.get_activity(activity_id.strip())
+            except Exception as exc:
+                log.warning("m08: load edit_activity %s: %s", activity_id, exc)
         return {
             "request": request,
             "party_id": party_id,
@@ -143,6 +169,14 @@ def register_activity_routes(
             # S14 quick-note ("Ghi chú tạm") prefill — rendered server-side into
             # #m08-body so the value is present at swap time (see A-S14-009 JS comment).
             "prefill_body": prefill_body,
+            # P1: edit_activity mode — activity_id always the exact target, never
+            # inferred; activity_edit is None until it round-trips through the repo.
+            "activity_id": activity_id,
+            "activity_edit": activity_edit,
+            # P1: set by s14StartCallSession() — mode=log form carries this back as
+            # a hidden field so log-activity finalizes the draft instead of
+            # inserting a fresh row (see handle_log_activity's draft_id branch).
+            "draft_activity_id": draft_activity_id,
         }
 
     @router.get("/modals/m08", response_class=HTMLResponse)
@@ -156,11 +190,14 @@ def register_activity_routes(
         resolve_action_ids: str = "",
         resolve_task_ids: str = "",
         prefill_body: str = "",
+        activity_id: str = "",
+        draft_activity_id: str = "",
     ) -> Response:
         return templates.TemplateResponse(
             "fragments/modal_log_activity.html",
             _m08_ctx(request, party_id, mode, note_id, party_name, task_id,
-                     resolve_action_ids, resolve_task_ids, prefill_body),
+                     resolve_action_ids, resolve_task_ids, prefill_body, activity_id,
+                     draft_activity_id),
         )
 
     @router.get("/customers/{party_id}/modal/log-activity", response_class=HTMLResponse)
@@ -173,11 +210,12 @@ def register_activity_routes(
         resolve_action_ids: str = "",
         resolve_task_ids: str = "",
         prefill_body: str = "",
+        activity_id: str = "",
     ) -> Response:
         return templates.TemplateResponse(
             "fragments/modal_log_activity.html",
             _m08_ctx(request, party_id, mode, "", party_name, task_id,
-                     resolve_action_ids, resolve_task_ids, prefill_body),
+                     resolve_action_ids, resolve_task_ids, prefill_body, activity_id),
         )
 
     @router.post("/customers/{party_id}/log-activity", response_class=HTMLResponse)
@@ -215,123 +253,124 @@ def register_activity_routes(
         # fragment back (no HX-Redirect) so the outcome bar stays in place;
         # every other caller (M08 modal, timeline) keeps the redirect.
         source: str = Form(default=""),
+        # P1: set by the "Gọi" identity-bar flow (POST /api/parties/{id}/call-sessions
+        # ran first) — when present, this submit ADOPTS that draft (PATCH + finalize)
+        # instead of inserting a fresh row, so contact_duration_s gets a real
+        # started_at→finalize_at measurement. Absent for every pre-P1 caller
+        # (standalone M08, quick-outcome buttons, old clients) → identical to the
+        # pre-P1 fresh-insert behaviour below.
+        draft_activity_id: str = Form(default=""),
     ) -> Response:
         current_user = getattr(request.state, "current_user", None)
         actor_id: Optional[str] = current_user.user_id if current_user else None
         utc_occurred = _ict_local_to_utc(occurred_at) if occurred_at.strip() else ""
-        act_data: dict = {
-            "party_id": party_id,
-            "activity_type": _HT_TO_ACT_TYPE.get(hinh_thuc, "other"),
-            "direction": "out",
-            "channel": channel_value.strip() or None,
-            "channel_type": hinh_thuc.strip() or None,
-            # D2 Phase 03: contact_outcome replaces outcome for new rows.
-            # Legacy outcome kept in act_data only when contact_outcome absent (backward compat).
-            "contact_outcome": contact_outcome.strip() or None,
-            "outcome_reason": outcome_reason.strip() or None,
-            "body": body.strip() or None,
-            "occurred_at": utc_occurred,
-            "related_order_code": related_order_code.strip() or None,
-            "staff_user_id": actor_id,
-            "task_id": task_id.strip() or None,
-        }
         # callback_at: check both new contact_outcome and legacy outcome for compat
+        callback_at_utc = ""
         if (contact_outcome == "callback" or outcome == "callback") and callback_at.strip():
-            act_data["callback_at"] = _ict_local_to_utc(callback_at)
-            act_data["create_callback_task"] = create_callback_task == "1"
+            callback_at_utc = _ict_local_to_utc(callback_at)
         # D4: persist resolve IDs in activity custom_fields snapshot (phase-02)
-        _bulk_action_preview = _parse_id_list(resolve_action_ids)
-        _bulk_task_preview = _parse_id_list(resolve_task_ids)
-        _zalo_connected = zalo_connected.strip() == "1"
-        if _bulk_action_preview or _bulk_task_preview or _zalo_connected:
-            cf = act_data.get("custom_fields") or {}
-            if _bulk_task_preview:
-                cf["resolve_task_ids"] = _bulk_task_preview
-            if _bulk_action_preview:
-                cf["resolve_action_ids"] = _bulk_action_preview
-            if _zalo_connected:
-                cf["zalo_connected"] = True
-            act_data["custom_fields"] = cf
-        try:
-            activity = activity_log.log_activity(act_data)
-        except ValueError as exc:
-            return HTMLResponse(str(exc), status_code=400)
-        except Exception as exc:
-            log.error("log activity party %s: %s", party_id, exc)
-            return HTMLResponse("Lỗi ghi log hoạt động", status_code=500)
-        if promote_insight == "1" and insight_type.strip() and insight_body.strip():
-            if party_insights is not None:
-                try:
-                    import uuid as _uuid
-                    party_insights.add_insight(PartyInsight(
-                        insight_id=str(_uuid.uuid4()),
-                        party_id=party_id,
-                        insight_type=insight_type.strip(),
-                        body=insight_body.strip(),
-                        confidence=insight_confidence.strip() or "medium",
-                        created_by=actor_id,
-                        source_note_id=None,
-                        created_at=datetime.now(timezone.utc).strftime("%Y-%m-%dT%H:%M:%S.000Z"),
-                    ))
-                except Exception as exc:
-                    log.warning("promote_insight party %s: %s", party_id, exc)
-            else:
-                log.warning(
-                    "promote_insight requested for party %s (type=%s) but party_insights not wired",
-                    party_id, insight_type.strip(),
-                )
-        # Auto-claim: create a claim task when contact is logged without prior claiming.
-        # Skip when task_id is present — staff is already in the structured task flow.
-        # Check contact_outcome (D2) OR legacy outcome field so both paths trigger claim.
-        if (contact_outcome.strip() or outcome.strip()) and actor_id and task_svc is not None and not task_id.strip():
-            try:
-                party360 = profile.get_party_360(party_id)
-                customer_name = party360.display_name if party360 else ""
-                task_svc.auto_claim_from_contact(party_id, customer_name, actor_id)
-            except Exception as exc:
-                log.warning("m08: auto-claim %s: %s", party_id, exc)
-        if save_as_note == "1" and body.strip():
-            try:
-                notes.add_note(
-                    party_id, body.strip(),
-                    author_user_id=actor_id,
-                    note_type=note_type or "outcome",
-                    pinned=pinned == "1",
-                    visibility=visibility or "team",
-                    source_activity_id=getattr(activity, "activity_id", None),
-                )
-            except Exception as exc:
-                log.warning("m08: linked note %s: %s", party_id, exc)
-        if task_svc is not None and schedule_followup_at.strip():
-            try:
-                party360 = profile.get_party_360(party_id)
-                name = party360.display_name if party360 else party_id
-                task_svc.create_task({
-                    "party_id": party_id,
-                    "title": f"Theo dõi: {name}",
-                    "due_at": schedule_followup_at.strip(),
-                    "source": "manual",
-                    "priority": 0,
-                })
-            except Exception as exc:
-                log.warning("m08: schedule followup task %s: %s", party_id, exc)
-        if complete_task == "1" and task_id.strip() and task_svc is not None:
-            try:
-                task_svc.transition_status(task_id.strip(), "done")
-            except Exception as exc:
-                log.warning("m08: complete_task %s: %s", task_id, exc)
-        # Outcome bulk-resolve: dismiss action_ids + complete task_ids from cockpit outcome bar.
-        # skip_task_id prevents double-resolution when the same task_id already completed above.
         bulk_action_ids = _parse_id_list(resolve_action_ids)
         bulk_task_ids = _parse_id_list(resolve_task_ids)
-        if bulk_action_ids or bulk_task_ids:
-            _bulk_resolve(
-                action_ids=bulk_action_ids,
-                task_ids=bulk_task_ids,
-                action_state=action_state,
-                task_svc=task_svc,
-                skip_task_id=task_id.strip() if complete_task == "1" else "",
-                actor_id=actor_id or "",
+        _zalo_connected = zalo_connected.strip() == "1"
+
+        draft_id = draft_activity_id.strip()
+        activity = None
+        already_final = False
+        if draft_id:
+            patch_fields: dict = {
+                "contact_outcome": contact_outcome.strip() or None,
+                "outcome_reason": outcome_reason.strip() or None,
+                "body": body.strip() or None,
+                "related_order_code": related_order_code.strip() or None,
+            }
+            if utc_occurred:
+                patch_fields["occurred_at"] = utc_occurred
+            custom_patch: dict = {}
+            if bulk_task_ids:
+                custom_patch["resolve_task_ids"] = bulk_task_ids
+            if bulk_action_ids:
+                custom_patch["resolve_action_ids"] = bulk_action_ids
+            if _zalo_connected:
+                custom_patch["zalo_connected"] = True
+            if callback_at_utc:
+                custom_patch["callback_at"] = callback_at_utc
+            if custom_patch:
+                patch_fields["custom_fields_patch"] = custom_patch
+            try:
+                activity_log.patch_activity(draft_id, patch_fields, actor_id)
+                activity, already_final = activity_log.finalize_activity(draft_id)
+            except ActivityNotFoundError:
+                # Draft vanished/expired — fall back to the fresh-insert path below
+                # rather than failing the submit outright.
+                draft_id = ""
+            except ActivityFinalizeConflictError as exc:
+                return HTMLResponse(str(exc), status_code=409)
+            except ValueError as exc:
+                return HTMLResponse(str(exc), status_code=422)
+
+        if not draft_id:
+            act_data: dict = {
+                "party_id": party_id,
+                "activity_type": _HT_TO_ACT_TYPE.get(hinh_thuc, "other"),
+                "direction": "out",
+                "channel": channel_value.strip() or None,
+                "channel_type": hinh_thuc.strip() or None,
+                # D2 Phase 03: contact_outcome replaces outcome for new rows.
+                # Legacy outcome kept in act_data only when contact_outcome absent (backward compat).
+                "contact_outcome": contact_outcome.strip() or None,
+                "outcome_reason": outcome_reason.strip() or None,
+                "body": body.strip() or None,
+                "occurred_at": utc_occurred,
+                "related_order_code": related_order_code.strip() or None,
+                "staff_user_id": actor_id,
+                "task_id": task_id.strip() or None,
+            }
+            if bulk_task_ids or bulk_action_ids or _zalo_connected:
+                cf = act_data.get("custom_fields") or {}
+                if bulk_task_ids:
+                    cf["resolve_task_ids"] = bulk_task_ids
+                if bulk_action_ids:
+                    cf["resolve_action_ids"] = bulk_action_ids
+                if _zalo_connected:
+                    cf["zalo_connected"] = True
+                act_data["custom_fields"] = cf
+            try:
+                activity = activity_log.log_activity(act_data)
+            except ValueError as exc:
+                return HTMLResponse(str(exc), status_code=400)
+            except Exception as exc:
+                log.error("log activity party %s: %s", party_id, exc)
+                return HTMLResponse("Lỗi ghi log hoạt động", status_code=500)
+
+        # "Một đường ghi duy nhất": every write side-effect (insight/auto-claim/
+        # note/callback-task/followup/complete-task/bulk-resolve) runs through the
+        # SAME executor the new finalize route uses — see _run_side_effects above.
+        complete_task_ids = [task_id.strip()] if (complete_task == "1" and task_id.strip()) else []
+        # already_final=True only happens when a draft-adopt submit double-fires
+        # (e.g. accidental double-click) — skip side effects the second time so
+        # note/task/insight writes are not duplicated (finalize_activity is
+        # idempotent on the row itself; this mirrors that at the write-executor level).
+        if not already_final:
+            _run_side_effects(
+                activity, actor_id,
+                complete_task_ids=complete_task_ids,
+                resolve_action_ids=bulk_action_ids,
+                resolve_task_ids=bulk_task_ids,
+                create_callback_task=(create_callback_task == "1"),
+                callback_at=callback_at_utc or None,
+                schedule_followup_at=schedule_followup_at.strip() or None,
+                save_as_note=(
+                    {"body": body, "note_type": note_type, "pinned": pinned == "1", "visibility": visibility}
+                    if save_as_note == "1" and body.strip() else None
+                ),
+                promote_insight=(
+                    {"insight_type": insight_type.strip(), "body": insight_body.strip(), "confidence": insight_confidence.strip()}
+                    if promote_insight == "1" and insight_type.strip() and insight_body.strip() else None
+                ),
+                # Auto-claim: only when contact was logged without prior claiming and
+                # staff isn't already in a structured task flow. Checks contact_outcome
+                # (D2) OR legacy outcome so both paths trigger it — same guard as before.
+                auto_claim=bool((contact_outcome.strip() or outcome.strip()) and not task_id.strip()),
             )
         if source.strip() == "call_cockpit":
             outcome_val = contact_outcome.strip()
@@ -443,3 +482,178 @@ def register_activity_routes(
                 log.warning("r14_ack: activity write failed %s: %s", party_id, exc)
 
         return Response(status_code=204)
+
+    # ── P1 (activity-log disposition API): draft + PATCH + finalize ──────────
+    # Appended after every existing POST route so index-based test lookups
+    # (router_mock.post.call_args_list[N]) for the routes above stay stable.
+
+    @router.post("/api/parties/{party_id}/call-sessions")
+    async def handle_create_call_session(
+        request: Request,
+        party_id: str,
+        channel_identity_id: str = Form(default=""),
+        task_id: str = Form(default=""),
+    ) -> Response:
+        """Create (or adopt) the open call draft for (staff, party) — fired when
+        staff presses "Gọi" on the identity bar. Idempotent: repeat calls for the
+        same (staff, party) return the same draft, never a second one."""
+        current_user = getattr(request.state, "current_user", None)
+        actor_id: Optional[str] = current_user.user_id if current_user else None
+        if not actor_id:
+            return JSONResponse({"error": "unauthenticated"}, status_code=401)
+
+        cid = channel_identity_id.strip()
+        channel_val = ""
+        if cid and identities is not None:
+            try:
+                for idn in identities.list_identities(party_id):
+                    if idn.identity_id == cid:
+                        channel_val = idn.identity_value
+                        break
+            except Exception as exc:
+                log.warning("call-sessions: resolve channel_identity_id %s: %s", cid, exc)
+
+        try:
+            activity = activity_log.create_draft(
+                party_id, actor_id,
+                channel_identity_id=cid or None,
+                channel_value=channel_val or None,
+                task_id=task_id.strip() or None,
+            )
+        except ValueError as exc:
+            return JSONResponse({"error": str(exc)}, status_code=400)
+
+        return JSONResponse({
+            "activity_id": activity.activity_id,
+            "status": activity.status,
+            "started_at": activity.started_at,
+            "channel_value": activity.channel,
+        })
+
+    @router.patch("/api/activities/{activity_id}", response_class=HTMLResponse)
+    async def handle_patch_activity(
+        request: Request,
+        activity_id: str,
+        contact_outcome: Optional[str] = Form(default=None),
+        outcome_reason: Optional[str] = Form(default=None),
+        body: Optional[str] = Form(default=None),
+        callback_at: Optional[str] = Form(default=None),
+        related_order_code: Optional[str] = Form(default=None),
+        occurred_at: Optional[str] = Form(default=None),
+        channel_identity_id: Optional[str] = Form(default=None),
+        zalo_connected: Optional[str] = Form(default=None),
+        # "1" when submitted from M08 edit_activity mode — triggers the audit
+        # trail (edited_at/edited_by/previous_outcome) + redirects back to
+        # timeline instead of returning 204 (matches every other M08 submit).
+        edit_mode: str = Form(default=""),
+    ) -> Response:
+        """Autosave a subset of fields onto a draft (or edit an existing activity
+        via M08 edit_activity mode). No side effects — see finalize for those."""
+        current_user = getattr(request.state, "current_user", None)
+        actor_id: Optional[str] = current_user.user_id if current_user else None
+
+        fields: dict = {}
+        if contact_outcome is not None:
+            fields["contact_outcome"] = contact_outcome.strip() or None
+        if outcome_reason is not None:
+            fields["outcome_reason"] = outcome_reason.strip() or None
+        if body is not None:
+            fields["body"] = body.strip() or None
+        if related_order_code is not None:
+            fields["related_order_code"] = related_order_code.strip() or None
+        if occurred_at is not None and occurred_at.strip():
+            fields["occurred_at"] = _ict_local_to_utc(occurred_at)
+
+        custom_patch: dict = {}
+        if callback_at is not None and callback_at.strip():
+            custom_patch["callback_at"] = _ict_local_to_utc(callback_at)
+        if channel_identity_id is not None:
+            custom_patch["channel_identity_id"] = channel_identity_id.strip() or None
+        if zalo_connected is not None:
+            custom_patch["zalo_connected"] = zalo_connected.strip() == "1"
+        if custom_patch:
+            fields["custom_fields_patch"] = custom_patch
+
+        try:
+            activity = activity_log.patch_activity(
+                activity_id, fields, actor_id, is_edit_mode=(edit_mode == "1"),
+            )
+        except ActivityNotFoundError:
+            return HTMLResponse("Không tìm thấy hoạt động", status_code=404)
+        except ValueError as exc:
+            return HTMLResponse(str(exc), status_code=422)
+
+        if edit_mode == "1":
+            return HTMLResponse(content="", headers={"HX-Redirect": f"/customers/{activity.party_id}?tab=timeline"})
+        return Response(status_code=204)
+
+    @router.post("/api/activities/{activity_id}/finalize", response_class=HTMLResponse)
+    async def handle_finalize_activity(
+        request: Request,
+        activity_id: str,
+        complete_task_ids: str = Form(default=""),
+        resolve_action_ids: str = Form(default=""),
+        resolve_task_ids: str = Form(default=""),
+        create_callback_task: str = Form(default=""),
+        schedule_followup_at: str = Form(default=""),
+        save_as_note: str = Form(default=""),
+        note_type: str = Form(default="outcome"),
+        pinned: str = Form(default="0"),
+        visibility: str = Form(default="team"),
+        promote_insight: str = Form(default="0"),
+        insight_type: str = Form(default=""),
+        insight_body: str = Form(default=""),
+        insight_confidence: str = Form(default=""),
+        contact_duration_s: str = Form(default=""),
+    ) -> Response:
+        """Finalize a draft — 409 if it has no contact_outcome yet, idempotent
+        otherwise. Runs every side effect through the same executor as the
+        legacy log-activity route. Returns a small "✓ đã chốt" fragment — never
+        a redirect (decision: cockpit stays put after finalize)."""
+        current_user = getattr(request.state, "current_user", None)
+        actor_id: Optional[str] = current_user.user_id if current_user else None
+
+        try:
+            duration_override = int(contact_duration_s) if contact_duration_s.strip() else None
+        except ValueError:
+            duration_override = None
+
+        try:
+            activity, already_final = activity_log.finalize_activity(
+                activity_id, contact_duration_s_override=duration_override,
+            )
+        except ActivityNotFoundError:
+            return HTMLResponse("Không tìm thấy hoạt động", status_code=404)
+        except ActivityFinalizeConflictError as exc:
+            return HTMLResponse(str(exc), status_code=409)
+
+        if not already_final:
+            callback_at_val = None
+            if activity.custom_fields:
+                callback_at_val = activity.custom_fields.get("callback_at")
+            _run_side_effects(
+                activity, actor_id,
+                complete_task_ids=_parse_id_list(complete_task_ids),
+                resolve_action_ids=_parse_id_list(resolve_action_ids),
+                resolve_task_ids=_parse_id_list(resolve_task_ids),
+                create_callback_task=(create_callback_task == "1"),
+                callback_at=callback_at_val,
+                schedule_followup_at=schedule_followup_at.strip() or None,
+                save_as_note=(
+                    {"body": activity.body, "note_type": note_type, "pinned": pinned == "1", "visibility": visibility}
+                    if save_as_note == "1" and (activity.body or "").strip() else None
+                ),
+                promote_insight=(
+                    {"insight_type": insight_type.strip(), "body": insight_body.strip(), "confidence": insight_confidence.strip()}
+                    if promote_insight == "1" and insight_type.strip() and insight_body.strip() else None
+                ),
+                auto_claim=bool(activity.contact_outcome and not activity.task_id),
+            )
+
+        label = _OUTCOME_LABELS_VI.get(activity.contact_outcome or "", activity.contact_outcome or "đã ghi nhận")
+        frag = (
+            '<div class="s14-outcome__done">'
+            f'<span class="s14-outcome__done-txt">✓ Đã chốt: {label}</span>'
+            '</div>'
+        )
+        return HTMLResponse(content=frag)

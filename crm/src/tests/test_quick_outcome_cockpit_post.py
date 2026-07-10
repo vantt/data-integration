@@ -79,6 +79,7 @@ def _base_kwargs(**overrides) -> dict:
         insight_confidence="",
         zalo_connected="",
         source="",
+        draft_activity_id="",
     )
     kwargs.update(overrides)
     return kwargs

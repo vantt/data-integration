@@ -21,10 +21,14 @@
 {% set note_visibility = note_visibility | default('team') %}
 {% set resolve_action_ids = resolve_action_ids | default('') %}
 {% set resolve_task_ids = resolve_task_ids | default('') %}
+{% set activity_id = activity_id | default('') %}
+{% set activity_edit = activity_edit | default(None) %}
+{% set draft_activity_id = draft_activity_id | default('') %}
 
-{% if mode == 'edit_note' %}{% set modal_title = 'Sửa ghi chú' %}{% set save_url = '/customers/' ~ party_id ~ '/notes/' ~ note_id %}
-{% elif mode == 'note_only' %}{% set modal_title = 'Thêm ghi chú' %}{% set save_url = '/customers/' ~ party_id ~ '/notes' %}
-{% else %}{% set modal_title = 'Ghi nhận tiếp xúc' %}{% set save_url = '/customers/' ~ party_id ~ '/log-activity' %}{% endif %}
+{% if mode == 'edit_note' %}{% set modal_title = 'Sửa ghi chú' %}{% set save_url = '/customers/' ~ party_id ~ '/notes/' ~ note_id %}{% set http_verb = 'post' %}
+{% elif mode == 'note_only' %}{% set modal_title = 'Thêm ghi chú' %}{% set save_url = '/customers/' ~ party_id ~ '/notes' %}{% set http_verb = 'post' %}
+{% elif mode == 'edit_activity' %}{% set modal_title = 'Sửa hoạt động' %}{% set save_url = '/api/activities/' ~ activity_id %}{% set http_verb = 'patch' %}
+{% else %}{% set modal_title = 'Ghi nhận tiếp xúc' %}{% set save_url = '/customers/' ~ party_id ~ '/log-activity' %}{% set http_verb = 'post' %}{% endif %}
 
 {# ── Identity section macro ─────────────────────────────────────────────── #}
 {% macro identity_section(sec_id, label, ids) %}
@@ -103,13 +107,18 @@
       </button>
     </div>
 
-    <form hx-post="{{ save_url }}" hx-target="#modal-root" hx-swap="innerHTML">
+    <form {% if http_verb == 'patch' %}hx-patch{% else %}hx-post{% endif %}="{{ save_url }}" hx-target="#modal-root" hx-swap="innerHTML">
       <input type="hidden" name="party_id" value="{{ party_id }}">
       {% if note_id %}<input type="hidden" name="note_id" value="{{ note_id }}">{% endif %}
       {% if task_id %}<input type="hidden" name="task_id" value="{{ task_id }}">{% endif %}
       {# Bulk-resolve IDs from S14 outcome bar (phase-02) #}
       {% if resolve_action_ids %}<input type="hidden" name="resolve_action_ids" value="{{ resolve_action_ids }}">{% endif %}
       {% if resolve_task_ids   %}<input type="hidden" name="resolve_task_ids"   value="{{ resolve_task_ids }}">{% endif %}
+      {# P1: draft-adopt hand-off — carried back so log-activity finalizes THIS
+         draft (real duration) instead of inserting a fresh row. #}
+      {% if draft_activity_id %}<input type="hidden" name="draft_activity_id" value="{{ draft_activity_id }}">{% endif %}
+      {# P1: edit_activity mode — PATCH audit trail + redirect-back-to-timeline signal #}
+      {% if mode == 'edit_activity' %}<input type="hidden" name="edit_mode" value="1">{% endif %}
 
       <div class="modal__body">
 
@@ -226,6 +235,10 @@
             <span class="field__label">HẸN GỌI LẠI LÚC</span>
             <input type="datetime-local" name="callback_at" id="m08-callback-at" class="inp inp--mono">
           </label>
+          {# P1: PATCH (edit_activity) has no side effects — hide the auto-create-task
+             checkbox so the UI never promises a write it won't perform. callback_at
+             itself stays editable above (a legitimate patchable field). #}
+          {% if mode != 'edit_activity' %}
           <label class="chk-row" onclick="m08ToggleTask()">
             <span class="chk-box chk-box--on" id="m08-task-box">
               <svg width="10" height="10" viewBox="0 0 12 12" fill="none" stroke="currentColor"
@@ -236,9 +249,12 @@
             <input type="checkbox" name="create_callback_task" value="1" id="m08-task-chk" checked class="sr-only">
             <span class="chk-row__text">Tạo task nhắc tự động</span>
           </label>
+          {% endif %}
         </div>
 
-        {# Step 3c — LÊN LỊCH THEO DÕI (positive outcomes: answered, met, replied) #}
+        {# Step 3c — LÊN LỊCH THEO DÕI (positive outcomes: answered, met, replied)
+           — P1: hidden in edit_activity mode (PATCH runs no side effects, see above). #}
+        {% if mode != 'edit_activity' %}
         <div id="m08-followup-sec" class="m8-notebox" style="display:none">
           <label class="chk-row" onclick="m08ToggleFollowup()">
             <span class="chk-box" id="m08-followup-box">
@@ -259,6 +275,7 @@
             </div>
           </div>
         </div>
+        {% endif %}
 
         {# Step 1+2 — HÌNH THỨC + KÊNH, thu gọn 1 dòng compact đã điền sẵn (đảo outcome-first) #}
         <details class="m08-htchan" id="m08-htchan-sel">
@@ -399,7 +416,9 @@
           <summary class="m08-advanced__summary">Nâng cao</summary>
           <div class="m08-advanced__body">
 
-        {# Step 5 — LƯU THÀNH GHI CHÚ HỒ SƠ #}
+        {# Step 5 — LƯU THÀNH GHI CHÚ HỒ SƠ — P1: hidden in edit_activity mode
+           (PATCH runs no side effects, so this checkbox would silently no-op). #}
+        {% if mode != 'edit_activity' %}
         <div>
           <label class="chk-row" onclick="m08OnSaveNote()">
             <span class="chk-box" id="m08-sanote-box"></span>
@@ -446,6 +465,7 @@
         </div>
 
         <div class="m8-rule"></div>
+        {% endif %}
 
         {# Step 6 — THỜI GIAN & ĐƠN LIÊN QUAN #}
         <div class="field-row">
@@ -459,8 +479,9 @@
           </label>
         </div>
 
-        {# Item 2 (Phase 06): promote insight from activity log #}
-        {% if mode not in ('edit_note', 'note_only') %}
+        {# Item 2 (Phase 06): promote insight from activity log — P1: hidden in
+           edit_activity mode too (PATCH runs no side effects). #}
+        {% if mode not in ('edit_note', 'note_only', 'edit_activity') %}
         <div class="m8-rule"></div>
         <details class="m08-insight-promo" style="margin-top:0.5rem">
           <summary style="cursor:pointer;font-weight:600;font-size:var(--fs-sm,0.875rem);user-select:none">
@@ -943,6 +964,59 @@
     var firstOpt = document.querySelector('#m08-ht-sel .m08-ht-sel__opt');
     if (firstOpt) m08PickHT(firstOpt);
   })();
+
+  {% if mode == 'edit_activity' and activity_edit %}
+  /* ── P1: edit_activity prefill — loads the EXACT activity pointed to, never
+     "last log for this party" (report §V anti-pattern). Reuses the same
+     m08PickHT/m08OnOutcome/m08OnReason pill-rendering so there is one source
+     of truth for what each outcome set looks like. ── */
+  (function () {
+    var editHT      = {{ (activity_edit.channel_type or 'call') | tojson }};
+    var editOutcome = {{ (activity_edit.contact_outcome or '') | tojson }};
+    var editReason  = {{ (activity_edit.outcome_reason or '') | tojson }};
+    var editBody    = {{ (activity_edit.body or '') | tojson }};
+    var editOrder   = {{ (activity_edit.related_order_code or '') | tojson }};
+    var editOccUtc  = {{ (activity_edit.occurred_at or '') | tojson }};
+
+    var htOpt = document.querySelector('#m08-ht-sel .m08-ht-sel__opt[data-ht="' + editHT + '"]');
+    if (htOpt) m08PickHT(htOpt);
+
+    if (editOutcome) {
+      var pill = Array.prototype.find.call(
+        document.querySelectorAll('#m08-outcome-pills .radio-pill'),
+        function (p) { var inp = p.querySelector('input'); return inp && inp.value === editOutcome; }
+      );
+      m08OnOutcome(editOutcome, pill || null);
+      if (editReason) {
+        var reasonPill = Array.prototype.find.call(
+          document.querySelectorAll('#m08-reason-pills .radio-pill'),
+          function (p) { var inp = p.querySelector('input'); return inp && inp.value === editReason; }
+        );
+        if (reasonPill) m08OnReason(editReason, reasonPill);
+      }
+    }
+    var bodyEl = document.getElementById('m08-body');
+    if (bodyEl && editBody) bodyEl.value = editBody;
+    var orderEl = document.getElementById('m08-order-code');
+    if (orderEl && editOrder) orderEl.value = editOrder;
+    if (editOccUtc) {
+      var d = new Date(editOccUtc);
+      if (!isNaN(d.getTime())) {
+        var ict = new Date(d.getTime() + 7 * 3600000);
+        var p2 = function (n) { return String(n).padStart(2, '0'); };
+        var occEl2 = document.getElementById('m08-occurred-at');
+        if (occEl2) {
+          occEl2.value = ict.getUTCFullYear() + '-' + p2(ict.getUTCMonth() + 1) + '-' + p2(ict.getUTCDate())
+                        + 'T' + p2(ict.getUTCHours()) + ':' + p2(ict.getUTCMinutes());
+        }
+      }
+    }
+    // Editing an existing record — open "Nâng cao" so occurred_at/order code
+    // (the only fields still in there for this mode) are visible immediately.
+    var adv = document.getElementById('m08-advanced-sec');
+    if (adv) adv.open = true;
+  })();
+  {% endif %}
 })();
 {% endif %}
 </script>

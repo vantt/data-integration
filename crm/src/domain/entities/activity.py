@@ -79,6 +79,15 @@ VALID_OUTCOME_REASONS = [
 # Server enforces reason when contact_outcome is in this set
 REASON_REQUIRED_OUTCOMES: set[str] = {"refused"}
 
+# ---------------------------------------------------------------------------
+# status constants (P1 — draft lifecycle, migration 0045)
+# ---------------------------------------------------------------------------
+# NULL in the DB is treated as ACTIVITY_STATUS_FINAL — every row written before
+# migration 0045 predates the draft concept and is, by definition, already a
+# finished record. Never write NULL for new rows; always one of these two.
+ACTIVITY_STATUS_DRAFT = "draft"
+ACTIVITY_STATUS_FINAL = "final"
+
 
 # ---------------------------------------------------------------------------
 # Entity
@@ -104,3 +113,9 @@ class Activity:
     channel_type: Optional[str] = None      # call|zalo|fb|email|visit|other — labels `channel` value
     contact_outcome: Optional[str] = None   # enum per D2; replaces free-text outcome for new rows
     outcome_reason: Optional[str] = None    # nullable; required when contact_outcome in REASON_REQUIRED_OUTCOMES
+    # P1 — draft lifecycle (migration 0045). status=None is read as ACTIVITY_STATUS_FINAL
+    # (legacy rows + every other log_activity() call site that never adopts a draft).
+    status: Optional[str] = None            # draft|final|None(=final)
+    started_at: Optional[str] = None        # UTC ISO-8601; set when a draft session begins
+    finalize_at: Optional[str] = None       # UTC ISO-8601; set when finalize() runs
+    contact_duration_s: Optional[int] = None  # finalize_at - started_at seconds; manual entry wins

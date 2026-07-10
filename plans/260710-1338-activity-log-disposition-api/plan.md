@@ -11,7 +11,7 @@
 | # | Phase | File | Scope | Trạng thái |
 |---|---|---|---|---|
 | 1 | M08 form lightening + quick outcomes | [phase-01-m08-form-lightening-quick-outcomes.md](phase-01-m08-form-lightening-quick-outcomes.md) | pill busy/wrong_number/purchased, outcome-first + accordion "Nâng cao", 3 quick-outcome pill POST thẳng không modal | ✅ DONE 2026-07-10 (reports/phase-01-implementation-report.md; 993 tests pass) |
-| 2 | Draft + PATCH + finalize API | [phase-02-draft-patch-finalize-api.md](phase-02-draft-patch-finalize-api.md) | 3 endpoint mới, edit_activity mode, duration tự đo, draft lifecycle | P1 — pending |
+| 2 | Draft + PATCH + finalize API | [phase-02-draft-patch-finalize-api.md](phase-02-draft-patch-finalize-api.md) | 3 endpoint mới, edit_activity mode, duration tự đo, draft lifecycle | ✅ DONE 2026-07-10 (reports/phase-02-implementation-report.md; 1031 tests pass) |
 | 3 | Disposition Strip v2 (state machine T0-T3) | [phase-03-disposition-strip-v2.md](phase-03-disposition-strip-v2.md) | outcome_bar → disposition strip đầy đủ, sheet-up, phím tắt, spec S14 update | P2 — pending |
 
 ## Dependencies
@@ -26,8 +26,8 @@
 - [ ] M08 có đủ 3 pill mới (busy/wrong_number/purchased) ở cả HTML lẫn JS `OUTCOMES.call`.
 - [ ] M08 form outcome-first; Step 5 (save-as-note) + insight + Step 6 (thời gian/đơn) nằm trong 1 accordion "Nâng cao" đóng mặc định.
 - [ ] Cockpit outcome_bar: bấm ✗ Không bắt / ☎ Bận / ☠ Sai số → POST thẳng `/log-activity`, KHÔNG mở modal, trả fragment (không HX-Redirect) khi `source=call_cockpit`.
-- [ ] (P1) Draft/PATCH/finalize endpoint hoạt động đúng contract mục III của ux report; `contact_duration_s` tự đo từ `finalize_at − started_at`.
-- [ ] (P1) M08 có mode `edit_activity` dùng chính PATCH API.
+- [x] (P1) Draft/PATCH/finalize endpoint hoạt động đúng contract mục III của ux report; `contact_duration_s` tự đo từ `finalize_at − started_at`.
+- [x] (P1) M08 có mode `edit_activity` dùng chính PATCH API.
 - [ ] (P2) Disposition strip theo state machine T0-T3; spec S14 (`outcome_bar` → `disposition_strip`) cập nhật cùng commit với template.
 - [ ] Không có regression: test suite `crm/src/tests/*` hiện tại (test_outcome_reason_enum.py, test_bulk_resolve_endpoint.py, test_claim_context_snooze_r14.py) vẫn pass.
 

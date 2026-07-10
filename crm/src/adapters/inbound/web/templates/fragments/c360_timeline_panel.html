@@ -35,6 +35,15 @@
           <span class="muted caption">{{ act.direction }}</span>
           {% endif %}
           <span class="timeline-item__time mono muted">{{ act.occurred_at | format_ict }}</span>
+          {# P1 (activity-log disposition API): only rows with a structured
+             contact_outcome are editable this way — plain notes/system entries
+             use their own edit surface (c360_notes panel). Loads THIS exact
+             activity, never "the last log" (see modal_log_activity.html §V). #}
+          {% if act.contact_outcome %}
+          <button type="button" class="ghost-link caption" style="margin-left:auto"
+                  onclick="htmx.ajax('GET','/modals/m08?party_id={{ party_id }}&mode=edit_activity&activity_id={{ act.activity_id }}',{target:'#modal-root',swap:'innerHTML'})"
+                  aria-label="Sửa hoạt động">✏️ Sửa</button>
+          {% endif %}
         </div>
         {% if act.subject %}
         <div class="timeline-item__subject">{{ act.subject }}</div>

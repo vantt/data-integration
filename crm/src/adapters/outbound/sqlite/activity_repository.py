@@ -20,20 +20,50 @@ INSERT INTO crm_activity_log (
   activity_id, party_id, activity_type, direction, channel,
   subject, body, outcome, related_order_code,
   staff_user_id, occurred_at, created_at, custom_fields, task_id, channel_type,
-  contact_outcome, outcome_reason
-) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+  contact_outcome, outcome_reason, status, started_at, finalize_at, contact_duration_s
+) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
 """
 
-_LIST_BY_PARTY = """
-SELECT
+# P1 — full-row UPDATE keyed by activity_id. party_id/staff_user_id/created_at are
+# immutable identity/audit columns and intentionally excluded.
+_UPDATE = """
+UPDATE crm_activity_log SET
+  activity_type = ?, direction = ?, channel = ?, subject = ?, body = ?, outcome = ?,
+  related_order_code = ?, occurred_at = ?, custom_fields = ?, task_id = ?, channel_type = ?,
+  contact_outcome = ?, outcome_reason = ?, status = ?, started_at = ?, finalize_at = ?,
+  contact_duration_s = ?
+WHERE activity_id = ?
+"""
+
+_SELECT_COLUMNS = """
   activity_id, party_id, activity_type, direction, channel,
   subject, body, outcome, related_order_code,
   staff_user_id, occurred_at, created_at, custom_fields, task_id, channel_type,
-  contact_outcome, outcome_reason
+  contact_outcome, outcome_reason, status, started_at, finalize_at, contact_duration_s
+"""
+
+_LIST_BY_PARTY = f"""
+SELECT {_SELECT_COLUMNS}
 FROM crm_activity_log
 WHERE party_id = ?
 ORDER BY occurred_at DESC
 LIMIT ?
+"""
+
+_GET_BY_ID = f"""
+SELECT {_SELECT_COLUMNS}
+FROM crm_activity_log
+WHERE activity_id = ?
+"""
+
+# Most recent open draft for (staff, party) — ActivityService.create_draft() adopts
+# this row instead of inserting a new one (idempotent draft-per-session).
+_FIND_OPEN_DRAFT = f"""
+SELECT {_SELECT_COLUMNS}
+FROM crm_activity_log
+WHERE staff_user_id = ? AND party_id = ? AND status = 'draft'
+ORDER BY created_at DESC
+LIMIT 1
 """
 
 # Suppression (plan 260709-1638 phase-01, câu hỏi mở #5): a party is suppressed
@@ -80,6 +110,11 @@ def _activity_from_row(row: sqlite3.Row) -> Activity:
         channel_type=row["channel_type"],
         contact_outcome=row["contact_outcome"] if "contact_outcome" in keys else None,
         outcome_reason=row["outcome_reason"] if "outcome_reason" in keys else None,
+        # P1 (migration 0045) — same fallback-for-old-DB convention as above.
+        status=row["status"] if "status" in keys else None,
+        started_at=row["started_at"] if "started_at" in keys else None,
+        finalize_at=row["finalize_at"] if "finalize_at" in keys else None,
+        contact_duration_s=row["contact_duration_s"] if "contact_duration_s" in keys else None,
     )
 
 
@@ -116,6 +151,10 @@ class SQLiteActivityRepository:
             activity.channel_type,
             activity.contact_outcome,
             activity.outcome_reason,
+            activity.status,
+            activity.started_at,
+            activity.finalize_at,
+            activity.contact_duration_s,
         ))
         return activity
 
@@ -123,6 +162,40 @@ class SQLiteActivityRepository:
         """Return activities for a party ordered by occurred_at DESC (newest first)."""
         rows = self._conn.execute(_LIST_BY_PARTY, (party_id, limit)).fetchall()
         return [_activity_from_row(r) for r in rows]
+
+    def get_by_id(self, activity_id: str) -> Optional[Activity]:
+        """Return one activity by id, or None if it does not exist."""
+        row = self._conn.execute(_GET_BY_ID, (activity_id,)).fetchone()
+        return _activity_from_row(row) if row is not None else None
+
+    def find_open_draft(self, staff_user_id: str, party_id: str) -> Optional[Activity]:
+        """Return the most recent status='draft' row for (staff, party), or None."""
+        row = self._conn.execute(_FIND_OPEN_DRAFT, (staff_user_id, party_id)).fetchone()
+        return _activity_from_row(row) if row is not None else None
+
+    def update(self, activity: Activity) -> Activity:
+        """Persist every mutable field of an existing activity row, keyed by activity_id."""
+        self._conn.execute(_UPDATE, (
+            activity.activity_type,
+            activity.direction,
+            activity.channel,
+            activity.subject,
+            activity.body,
+            activity.outcome,
+            activity.related_order_code,
+            activity.occurred_at,
+            json.dumps(activity.custom_fields) if activity.custom_fields else None,
+            activity.task_id,
+            activity.channel_type,
+            activity.contact_outcome,
+            activity.outcome_reason,
+            activity.status,
+            activity.started_at,
+            activity.finalize_at,
+            activity.contact_duration_s,
+            activity.activity_id,
+        ))
+        return activity
 
     def list_do_not_contact_party_ids(self) -> set[str]:
         """Return party_ids whose MOST RECENT activity has outcome_reason='do_not_contact'.

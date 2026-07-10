@@ -252,6 +252,7 @@ def test_custom_fields_snapshot_written():
         insight_confidence="",
         zalo_connected="",    # P0: pass explicit defaults for direct calls
         source="",
+        draft_activity_id="",
     ))
 
     assert "custom_fields" in captured_act_data, "custom_fields must be set on act_data"
@@ -337,6 +338,7 @@ def test_idempotent_double_submit_skip_task_id():
         insight_confidence="",
         zalo_connected="",    # P0: pass explicit defaults for direct calls
         source="",
+        draft_activity_id="",
     ))
 
     # transition_status("t1", "done") called once via complete_task path.
@@ -414,6 +416,7 @@ def test_empty_ids_no_custom_fields():
         insight_confidence="",
         zalo_connected="",    # P0: pass explicit defaults for direct calls
         source="",
+        draft_activity_id="",
     ))
 
     cf = captured_act_data.get("custom_fields")
