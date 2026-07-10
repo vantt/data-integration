@@ -33,6 +33,24 @@ class ActivityNotFoundError(Exception):
     """Raised by patch_activity/finalize_activity/get_activity when the id is unknown."""
 
 
+def _reason_required_violation(contact_outcome, outcome_reason) -> Optional[str]:
+    """Shared invariant: REASON_REQUIRED_OUTCOMES must carry a reason.
+
+    Used by both finalize_activity (draft commit point) and patch_activity
+    (when editing an already-FINAL row, which has no future finalize call).
+    """
+    if contact_outcome in REASON_REQUIRED_OUTCOMES and not outcome_reason:
+        return "outcome_reason is required when contact_outcome is 'refused'"
+    return None
+
+
+def _irritation_body_violation(outcome_reason, body) -> Optional[str]:
+    """Shared invariant: outcome_reason='irritation' must carry a body note."""
+    if outcome_reason == "irritation" and not (body or "").strip():
+        return "body is required when outcome_reason is 'irritation'"
+    return None
+
+
 class ActivityFinalizeConflictError(Exception):
     """Raised by finalize_activity when the activity has no contact_outcome yet.
 
@@ -143,6 +161,18 @@ class ActivityService:
             return None
         return self._repo.get_by_id(activity_id)
 
+    def find_open_draft(self, staff_user_id: str, party_id: str) -> Optional[Activity]:
+        """Return the open call draft for (staff, party), or None.
+
+        Thin public wrapper around the repo lookup `create_draft` already uses
+        for idempotency (see below) — exposed so the cockpit controller can
+        recover disposition-strip state (T1/T2) after a page reload mid-call
+        (phase-03 disposition strip v2) without creating a second draft.
+        """
+        if not staff_user_id or not party_id:
+            return None
+        return self._repo.find_open_draft(staff_user_id, party_id)
+
     # ── P1: draft lifecycle (create_draft → patch_activity* → finalize_activity) ──
 
     def create_draft(
@@ -216,6 +246,26 @@ class ActivityService:
         ghi audit"). We audit every edit_activity PATCH of a final row, not only
         ones after the 02:30 ICT export cutoff — a strictly safer superset that
         avoids needing exact cutoff-time logic in P1.
+
+        Note: "field must be present before commit" cross-field checks (reason
+        required for certain outcomes, body required for outcome_reason=
+        'irritation') are enforced ONLY in finalize_activity for DRAFT rows,
+        not here. Callers (e.g. the disposition strip) legitimately PATCH one
+        field at a time in either order across separate requests — outcome
+        first, reason later — so an intermediate PATCH on a still-open draft
+        must never reject a value that is valid on its own merits just because
+        a companion field hasn't arrived yet.
+
+        EXCEPTION: when the target row is already ACTIVITY_STATUS_FINAL (the
+        M08 "edit_activity" path against a committed row), there is no future
+        finalize_activity call left to catch a bad combination — this method
+        is the only commit point for that edit. So the same cross-field checks
+        ARE enforced here in that one case, using the resulting (post-patch)
+        outcome/reason/body values.
+
+        Per-field validation (enum membership, value-vs-channel_type validity)
+        always stays here regardless of status — it depends only on the field
+        being set in THIS call.
         """
         activity = self._repo.get_by_id(activity_id)
         if activity is None:
@@ -226,6 +276,8 @@ class ActivityService:
             if "contact_outcome" in fields else activity.contact_outcome
         next_reason = fields.get("outcome_reason", activity.outcome_reason) \
             if "outcome_reason" in fields else activity.outcome_reason
+        next_body = fields.get("body", activity.body) \
+            if "body" in fields else activity.body
 
         if "contact_outcome" in fields and next_outcome:
             valid_for_channel = CONTACT_OUTCOMES_BY_CHANNEL_TYPE.get(
@@ -235,13 +287,14 @@ class ActivityService:
                 raise ValueError(
                     f"contact_outcome {next_outcome!r} not valid for channel_type {channel_type!r}"
                 )
-        if next_outcome in REASON_REQUIRED_OUTCOMES and not next_reason:
-            raise ValueError("outcome_reason is required when contact_outcome is 'refused'")
         if next_reason and next_reason not in VALID_OUTCOME_REASONS:
             raise ValueError(f"unknown outcome_reason {next_reason!r}")
-        next_body = fields.get("body", activity.body) if "body" in fields else activity.body
-        if next_reason == "irritation" and not (next_body or "").strip():
-            raise ValueError("body is required when outcome_reason is 'irritation'")
+
+        if activity.status == ACTIVITY_STATUS_FINAL:
+            violation = _reason_required_violation(next_outcome, next_reason) \
+                or _irritation_body_violation(next_reason, next_body)
+            if violation:
+                raise ValueError(violation)
 
         custom_fields = dict(activity.custom_fields) if activity.custom_fields else {}
         custom_patch = fields.get("custom_fields_patch")
@@ -288,7 +341,12 @@ class ActivityService:
         on the same activity_id does NOT re-run and returns already_finalized=True
         so the caller (route layer) can skip side effects on the second call.
         Raises ActivityFinalizeConflictError (→ 409) when contact_outcome is still
-        empty — never invents one.
+        empty — never invents one. Also enforces the cross-field "must be present
+        before commit" rules that patch_activity intentionally does NOT enforce
+        (see its docstring): outcome_reason required for REASON_REQUIRED_OUTCOMES,
+        and a body note required when outcome_reason is 'irritation'. Finalize is
+        the single commit point, so it's the only place these are checked —
+        intermediate PATCH calls may set the fields in any order first.
         """
         activity = self._repo.get_by_id(activity_id)
         if activity is None:
@@ -301,6 +359,10 @@ class ActivityService:
             raise ActivityFinalizeConflictError(
                 "contact_outcome is required before an activity can be finalized"
             )
+        violation = _reason_required_violation(activity.contact_outcome, activity.outcome_reason) \
+            or _irritation_body_violation(activity.outcome_reason, activity.body)
+        if violation:
+            raise ActivityFinalizeConflictError(violation)
 
         now = utc_now()
         duration = contact_duration_s_override

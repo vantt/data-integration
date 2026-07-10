@@ -1295,12 +1295,10 @@ edges:
     from: S14
     element: btn_call
     trigger: click
-    action: open_overlay
-    target: M08
-    payload:
-      party_id: $party.id
-      mode: contact_attempt
-      channel: phone
+    action: mutate
+    effects:
+      - activity_log.create_or_adopt_draft
+      - disposition_strip.transition_t0_to_t1
     region: identity_bar
   - id: A-S14-007
     from: S14
@@ -1322,13 +1320,20 @@ edges:
     from: S14
     element: btn_log_outcome
     trigger: click
-    action: open_overlay
-    target: M08
-    payload:
-      party_id: $party.id
-      mode: outcome
-      source: call_cockpit
-    region: outcome_bar
+    action: mutate
+    effects:
+      - activity_log.patch_contact_outcome
+      - disposition_strip.transition_t1_to_t2
+    region: disposition_strip
+  - id: A-S14-009b
+    from: S14
+    element: btn_save_and_next
+    trigger: click
+    action: mutate
+    effects:
+      - activity_log.finalize
+      - disposition_strip.transition_t2_to_t3
+    region: disposition_strip
   - id: A-S14-010
     from: S14
     element: btn_next_in_queue
@@ -1337,7 +1342,7 @@ edges:
     target: S14
     payload:
       party_id: $queue.next_party_id
-    region: outcome_bar
+    region: disposition_strip
   - id: A-S14-011
     from: S14
     element: btn_verify_account
@@ -1406,7 +1411,7 @@ edges:
     action: mutate
     effects:
       - reason.toggle_mentioned
-      - outcome_bar.fold_secondary_id_into_bulk_resolve
+      - disposition_strip.fold_secondary_id_into_bulk_resolve
     region: reason_to_call
   - id: A-S14-026
     from: S14
@@ -1427,6 +1432,14 @@ edges:
       - s14_content.unlock
       - activity_log.write_r14_ack
     region: stop_banner
+  - id: A-S14-028
+    from: S14
+    element: btn_zalo_followup
+    trigger: click
+    action: mutate
+    effects:
+      - activity_log.append_async_attempt
+    region: disposition_strip
   - id: A-S14-LSN01
     from: S14
     listens_to: cache.refreshed

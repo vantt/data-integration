@@ -20,6 +20,9 @@ from application.reason_rail import assemble_reason_rail
 from domain.entities.cache_insight import CustomerDimMetrics
 from domain.entities.profile import PartyIdentity, PartyInsight
 from domain.entities.task import TASK_KIND_CONTACT, TASK_STATUS_OPEN, TASK_STATUS_DOING
+from adapters.inbound.web.screens.customer360.screen_call_cockpit import (
+    build_draft_activity_ctx,
+)
 
 log = logging.getLogger(__name__)
 
@@ -42,6 +45,7 @@ def register_panel_routes(
     app_users=None,
     approach_repo=None,
     tags=None,           # Phase 02 (260706-0833): health_domain gap detection
+    activity_log=None,   # Phase 03 (disposition strip v2): draft recovery on reload
     _load_base,
     _load_insight,
     _sapo_customer_id,
@@ -262,6 +266,11 @@ def register_panel_routes(
             # Item 2 (Phase 02, 260706-0833): health_domain gap detection for collect row 1
             health_ctx = load_health_domain_collect_context(tags, party_id)
 
+            # Phase 03 (disposition strip v2): mid-call reload recovery — same
+            # helper the full-screen host uses, so both hosts agree on state.
+            current_user = getattr(request.state, "current_user", None)
+            draft_activity = build_draft_activity_ctx(activity_log, current_user, party_id)
+
             return templates.TemplateResponse(
                 "fragments/c360_call_cockpit_panel.html",
                 {
@@ -276,6 +285,7 @@ def register_panel_routes(
                     "meta": meta_dict,
                     "rail_primary": rail_primary,
                     "rail_secondary": rail_secondary,
+                    "draft_activity": draft_activity,
                     **health_ctx,
                 },
             )

@@ -2,7 +2,7 @@
 
 # Chip Coverage Audit (generated)
 
-Surfaces: 40 · Tokens: 288 · Mapped: 163 · Unmapped: 125
+Surfaces: 40 · Tokens: 295 · Mapped: 163 · Unmapped: 132
 
 ## Unmapped Chips
 
@@ -252,15 +252,22 @@ Each unmapped chip is one of:
 | collect | `+` |
 | collect | `+` |
 | collect | `Sửa` |
+| disposition_strip | `⋯Ghi thủ công` |
+| disposition_strip | `⏳Hẹn lại` |
+| disposition_strip | `■Kết thúc` |
+| disposition_strip | `☎Bận` |
+| disposition_strip | `☠Sai số` |
+| disposition_strip | `✓Nghe` |
+| disposition_strip | `✗Không bắt` |
+| disposition_strip | `📞Gọi ▾` |
+| disposition_strip | `🚫Từ chối` |
+| disposition_strip | `🛒Mua` |
+| disposition_strip | `Khách kế→` |
+| disposition_strip | `nháp autosave…` |
 | identity_bar | `💬Zalo` |
 | identity_bar | `active` |
 | identity_bar | `GOLD` |
 | objection_handling | `🔍 khách vừa nói gì?` |
-| outcome_bar | `⏳Hẹn lại` |
-| outcome_bar | `✓Gọi được` |
-| outcome_bar | `✗Không nghe` |
-| outcome_bar | `🛒Đã mua` |
-| outcome_bar | `ghi chú tạm…` |
 | stop_banner | `Tạo task xác minh` |
 | stop_banner | `Tôi đã xác minh — vẫn tiếp tục` |
 | stop_banner | `Xem hồ sơ 360` |

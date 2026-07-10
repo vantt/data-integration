@@ -251,7 +251,7 @@ surfaces:
       - reason_to_call
       - collect
       - trust_footer
-      - outcome_bar
+      - disposition_strip
       - stop_banner
   S15:
     type: screen

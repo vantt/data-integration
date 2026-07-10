@@ -691,48 +691,80 @@
 .s14-conf--bad { color: var(--coral-500); }
 .s14-trust__caveat { display: inline-flex; align-items: center; gap: 5px; color: var(--fg-muted); }
 
-/* outcome bar — fixed to viewport bottom; left/width set by JS to match .detail-main */
-.s14-outcome {
+/* disposition strip v2 (phase-03) — fixed to viewport bottom; left/width set
+   by JS (s14AlignStrip) to match .detail-main, same technique the old outcome
+   bar used. 4 sub-blocks (T0/T1/T2/T3) share this one fragment; JS toggles
+   [hidden] on exactly one at a time (see c360_call_cockpit_panel.html). */
+.s14-strip {
   position: fixed; bottom: 0; z-index: 100;
-  display: block;
   padding: var(--sp-2) var(--sp-4) var(--sp-3);
   background: color-mix(in srgb, var(--bg-page) 95%, transparent);
   backdrop-filter: blur(12px); border-top: 1px solid var(--border-strong);
 }
-/* Phase-01 P0 fix (260710-1512): 2-row layout — row1 = note (full width),
-   row2 = outcome buttons. Previously both sat in one flex row (.s14-outcome__row)
-   depending on .s14-outcome's JS-set width to give the flex:1 textarea room; when
-   that JS never ran (see c360_call_cockpit_panel.html s14AlignBar comment) the bar
-   fell back to shrink-to-fit sizing and the textarea collapsed to ~10ch. Splitting
-   into two rows removes the dependency: row1 has no sibling to share space with. */
-.s14-outcome__row1 { display: flex; margin-bottom: var(--sp-2); }
-.s14-outcome__row2 { display: flex; align-items: center; gap: var(--sp-2) var(--sp-3); flex-wrap: wrap; }
-.s14-outcome__btns { display: flex; align-items: center; gap: var(--sp-2); flex-wrap: wrap; }
-.s14-outcome__err { color: var(--coral-700, #b91c1c); font-size: 12px; font-weight: 500; }
-.s14-quick-note {
-  flex: 1 1 100%; width: 100%; min-width: 0; box-sizing: border-box;
+.s14-strip__phase--row { display: flex; align-items: center; gap: var(--sp-2) var(--sp-3); flex-wrap: wrap; }
+.s14-strip__timer { font-size: 13px; color: var(--fg-1); min-width: 42px; }
+.s14-strip__sep { color: var(--border-strong); }
+.s14-strip__chansel { font-size: 12.5px; padding: 5px 8px; border-radius: var(--radii-control); border: 1px solid var(--border-strong); background: var(--bg-surface); color: var(--fg-1); }
+.s14-strip__note {
+  flex: 1 1 240px; min-width: 0; box-sizing: border-box;
   background: var(--bg-surface); border: 1px solid var(--border-strong);
   border-radius: var(--radii-control); color: var(--fg-1);
-  font-family: var(--font-body); font-size: 14px; line-height: 1.5; /* matches .inp, not smaller */
-  padding: 7px 10px; resize: none; outline: none;
-  /* Auto-grow: 2 rows by default, up to ~5 lines, then scrolls. min/max-height are
-     the CSS-only baseline + cap; s14AutoGrowNote() (JS) drives the actual height on
-     input so it works in every browser. Keep max-height in sync with
-     S14_QUICK_NOTE_MAX_H in c360_call_cockpit_panel.html. */
-  min-height: 54px;
-  max-height: 122px;
-  overflow-y: auto;
-  field-sizing: content;
-  transition: border-color var(--dur-fast) var(--ease-fast), height var(--dur-fast) var(--ease-fast);
+  font-family: var(--font-body); font-size: 13.5px; line-height: 1.5;
+  padding: 6px 9px; resize: none; outline: none;
+  min-height: 34px; max-height: 90px; overflow-y: auto;
+  transition: border-color var(--dur-fast) var(--ease-fast);
 }
-.s14-quick-note:focus { border-color: var(--accent); }
-.s14-quick-note::placeholder { color: var(--fg-muted); }
-.s14-oc { display: inline-flex; align-items: center; gap: 7px; cursor: pointer; background: var(--bg-surface); border: 1px solid var(--border-strong); border-radius: var(--radii-control); padding: 9px 14px; font-family: var(--font-body); font-size: 13px; color: var(--fg-1); white-space: nowrap; transition: all var(--dur-fast) var(--ease-fast); }
-.s14-oc:hover { border-color: var(--fg-muted); }
-.s14-oc--good:hover { border-color: var(--moss-500); color: var(--moss-500); }
-.s14-oc--miss:hover { border-color: var(--coral-500); color: var(--coral-500); }
-.s14-oc--later:hover { border-color: var(--honey-500); color: var(--honey-500); }
-.s14-oc--buy:hover { border-color: var(--accent); color: var(--accent); }
+.s14-strip__note:focus { border-color: var(--accent); }
+.s14-strip__note::placeholder { color: var(--fg-muted); }
+.s14-strip__zalo { display: inline-flex; align-items: center; gap: 5px; font-size: 12.5px; color: var(--fg-1); white-space: nowrap; }
+.s14-strip__link { background: transparent; border: 0; cursor: pointer; color: var(--accent); font-size: 12px; padding: 0; text-decoration: underline; white-space: nowrap; }
+
+/* T2 — row1 (timer/note summary/actions) + row2 (7 pills) */
+.s14-strip__row1 { display: flex; align-items: center; gap: var(--sp-2) var(--sp-3); flex-wrap: wrap; margin-bottom: var(--sp-2); }
+.s14-strip__notesummary { flex: 1 1 auto; min-width: 0; font-size: 12.5px; color: var(--fg-tertiary); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.s14-strip__save { margin-left: auto; }
+.s14-strip__save:disabled { opacity: .45; cursor: default; }
+.s14-strip__pills { display: flex; align-items: center; gap: var(--sp-2); flex-wrap: wrap; }
+.s14-pill {
+  display: inline-flex; align-items: center; gap: 6px; cursor: pointer;
+  background: var(--bg-surface); border: 1px solid var(--border-strong);
+  border-radius: var(--radii-control); padding: 8px 12px;
+  font-family: var(--font-body); font-size: 13px; color: var(--fg-1);
+  white-space: nowrap; transition: all var(--dur-fast) var(--ease-fast);
+}
+.s14-pill:hover { border-color: var(--fg-muted); }
+.s14-pill--on { border-color: var(--accent); color: var(--fg); background: color-mix(in srgb, var(--accent) 10%, transparent); }
+.s14-pill__key { font-size: 10px; color: var(--fg-tertiary); border: 1px solid var(--border); border-radius: var(--radii-hairline); padding: 0 4px; }
+
+/* Sheet — mọc LÊN TRÊN (~180px) khi outcome cần thêm info (che vùng talk_track/
+   guardrails cột trái đã "chết" — call đã cúp). "Phương án B" (takeover cột
+   trái) đã bị loại bỏ, xem ux-design report mục IV.b. */
+.s14-strip__sheet {
+  position: absolute; left: 0; right: 0; bottom: 100%;
+  max-height: 180px; overflow-y: auto;
+  background: var(--bg-surface); border: 1px solid var(--border-strong); border-bottom: 0;
+  border-radius: var(--radii-soft) var(--radii-soft) 0 0;
+  padding: var(--sp-3) var(--sp-4);
+  box-shadow: 0 -6px 18px rgba(0, 0, 0, .08);
+}
+.s14-strip__sheetbody { display: flex; align-items: center; gap: var(--sp-2); flex-wrap: wrap; }
+.s14-strip__sheetlabel { font-family: var(--font-mono); font-size: 10px; letter-spacing: var(--tracking-eyebrow); text-transform: uppercase; color: var(--fg-tertiary); margin-right: 4px; }
+.s14-strip__reasons { display: flex; gap: var(--sp-2); flex-wrap: wrap; }
+.s14-strip__donotcontact { background: transparent; border: 0; cursor: pointer; margin-left: auto; color: var(--coral-500); font-size: 12.5px; white-space: nowrap; }
+.s14-strip__cbtask { display: inline-flex; align-items: center; gap: 5px; font-size: 12.5px; color: var(--fg-1); white-space: nowrap; }
+
+.s14-strip__done { font-size: 13px; font-weight: 600; color: var(--moss-500); }
+
+@media (max-width: 750px) {
+  .s14-strip__pills { flex-wrap: wrap; }
+}
+
+/* .btn--danger / .btn--sm — used by the R14 banner ack button and the
+   disposition strip's "■ Kết thúc"; defined here (previously referenced with
+   no rule anywhere, a pre-existing gap this phase also closes). */
+.btn--sm { padding: 6px 11px; font-size: 12.5px; }
+.btn--danger { background: var(--coral-500); color: var(--ink-000, #fff); border-color: var(--coral-500); }
+.btn--danger:hover { background: var(--coral-700, #b91c1c); border-color: var(--coral-700, #b91c1c); }
 
 /* STOP state (R14) */
 .s14-stop {

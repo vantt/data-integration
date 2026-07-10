@@ -155,11 +155,12 @@ A-S14-002,S14,toggle_channel,click,mutate,,,talk_track
 A-S14-003,S14,talking_point_checkbox,click,mutate,,,talking_points
 A-S14-004,S14,objection_card,click,mutate,,,objection_handling
 A-S14-005,S14,objection_search,change,mutate,,,objection_handling
-A-S14-006,S14,btn_call,click,open_overlay,M08,,identity_bar
+A-S14-006,S14,btn_call,click,mutate,,,identity_bar
 A-S14-007,S14,btn_view_360,click,navigate,S03,,identity_bar
 A-S14-008,S14,btn_back_worklist,click,navigate,S01,,topbar
-A-S14-009,S14,btn_log_outcome,click,open_overlay,M08,,outcome_bar
-A-S14-010,S14,btn_next_in_queue,click,navigate,S14,,outcome_bar
+A-S14-009,S14,btn_log_outcome,click,mutate,,,disposition_strip
+A-S14-009b,S14,btn_save_and_next,click,mutate,,,disposition_strip
+A-S14-010,S14,btn_next_in_queue,click,navigate,S14,,disposition_strip
 A-S14-011,S14,btn_verify_account,click,open_overlay,M05,,stop_banner
 A-S14-020,S14,btn_collect_channel_add,click,mutate,,,collect
 A-S14-021,S14,btn_collect_core_save,click,mutate,,,collect
@@ -169,6 +170,7 @@ A-S14-024,S14,btn_reason_schedule,click,open_overlay,M05,,reason_to_call
 A-S14-025,S14,reason_mentioned_checkbox,click,mutate,,,reason_to_call
 A-S14-026,S14,btn_reason_resolve_async,click,mutate,,,reason_to_call
 A-S14-027,S14,btn_r14_ack,click,mutate,,,stop_banner
+A-S14-028,S14,btn_zalo_followup,click,mutate,,,disposition_strip
 A-S14-LSN01,S14,,cache.refreshed,mutate,,,
 A-S15-001,S15,btn_start,click,mutate,,,lifecycle
 A-S15-002,S15,btn_edit,click,open_overlay,M05,,lifecycle

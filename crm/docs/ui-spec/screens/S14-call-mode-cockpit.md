@@ -7,7 +7,7 @@ hosts: []
 status: active
 design_ref: ""
 rules: [R1, R2, R6, R14]
-regions: [topbar, identity_bar, alert_row, strategy_summary, snapshot, talk_track, talking_points, objection_handling, guardrails, reason_to_call, collect, trust_footer, outcome_bar, stop_banner]
+regions: [topbar, identity_bar, alert_row, strategy_summary, snapshot, talk_track, talking_points, objection_handling, guardrails, reason_to_call, collect, trust_footer, disposition_strip, stop_banner]
 ---
 
 # S14 — Call Mode / Strategy Cockpit
@@ -23,14 +23,14 @@ Phân vùng không gian tách bạch **"vì sao gọi"** (RIGHT rail — action 
 - **Full-screen** — route riêng `/customers/{id}/call`, vào từ S01 Worklist (nút "Vào chế độ gọi"). Thêm chrome topbar: `[← Worklist]` · queue counter `#n/N` · `[Khách kế →]`.
 - **Từ Task Detail (S15)** — contact-task bấm "Vào phiên gọi" (A-S15-006) mở phiên gọi customer-grained này với **task context**: reason của task đó được ghim làm PRIMARY; sau khi log outcome, quay lại S15 (chrome "Khách kế →" đổi thành "Quay lại task"). Cockpit vẫn là 1 phiên/khách, không phải 1 phiên/task.
 
-Khi `recommended=false` (nghi B2B gán nhầm / margin mâu thuẫn / chết-sâu margin âm) → **R14-WARN state** (Phase 05): sticky banner cảnh báo đỏ + nội dung che mờ (`s14-locked`). Nút "Tôi đã xác minh" (A-S14-027) ẩn banner + mở khoá nội dung (pure JS, ghi audit `r14_ack`). Identity bar + alert row + outcome bar luôn hiển thị.
+Khi `recommended=false` (nghi B2B gán nhầm / margin mâu thuẫn / chết-sâu margin âm) → **R14-WARN state** (Phase 05): sticky banner cảnh báo đỏ + nội dung che mờ (`s14-locked`). Nút "Tôi đã xác minh" (A-S14-027) ẩn banner + mở khoá nội dung (pure JS, ghi audit `r14_ack`). Identity bar + alert row + disposition strip luôn hiển thị.
 
 ## Data sourcing
 
 Panel nạp (tất cả **cache SQLite, rẻ**): `party` (Party360), `identities` (crm_party_identity), `insight` (CacheInsight — RFM + action queue), `warning_notes`, `resolved_action_ids`, `script` (ApproachScriptRepository — file JSON), `meta`.
 
 - **Kịch bản** (LEFT + guardrails): approach-script JSON (`ApproachScriptRepository`) — profile_read, value_assessment, opportunity, risk, approach{opening_message, fallback_message, talking_points[], cross_sell[], objection_handling[], do_not[], timing}, confidence, data_gaps, recommended. Pilot: JSON tĩnh cho tới khi batch ghi cache. Freshness: `refreshed_at` (R6 — ICT).
-- **Vì sao gọi** (reason_to_call): `insight.actions` (ActionQueueItem: action_type, rationale_vi, value_at_stake_vnd, last_order_code, last_purchase_date, estimated_depletion_date) + `resolved_action_ids` + **open/doing CONTACT-TASKS** (`crm_task` kind=contact, party_id=current). Rail tổ chức thành 1 lý do PRIMARY (call trigger chín muồi nhất) + SECONDARY "tranh thủ nếu thuận" (sắp xếp theo ripeness). Read-context — claim/dismiss vẫn thuộc P01 (không rebuild ở cockpit). Outcome bar resolve NHIỀU task_id/action_id cùng lúc (bulk); item nào backed bởi contact-task thì outcome **cập nhật luôn `task.status`** (đồng bộ với S15 — một nguồn sự thật).
+- **Vì sao gọi** (reason_to_call): `insight.actions` (ActionQueueItem: action_type, rationale_vi, value_at_stake_vnd, last_order_code, last_purchase_date, estimated_depletion_date) + `resolved_action_ids` + **open/doing CONTACT-TASKS** (`crm_task` kind=contact, party_id=current). Rail tổ chức thành 1 lý do PRIMARY (call trigger chín muồi nhất) + SECONDARY "tranh thủ nếu thuận" (sắp xếp theo ripeness). Read-context — claim/dismiss vẫn thuộc P01 (không rebuild ở cockpit). Disposition strip (finalize) resolve NHIỀU task_id/action_id cùng lúc (bulk); item nào backed bởi contact-task thì outcome **cập nhật luôn `task.status`** (đồng bộ với S15 — một nguồn sự thật).
 - **Snapshot** (cache-first, DuckDB-fallback): dùng `insight.insight` (LTV `lifetime_contribution_margin`, AOV `avg_order_spend`, số đơn, chu kỳ `avg_days_between_orders`, recency). Nếu `insight` thiếu (None) → fallback `dim_metrics` (olap.duckdb, on-demand) để không rỗng. KHÔNG bê RFM grid / discount buckets / profitability — đó là P01.
 - **Identity/kênh** (identity_bar + collect): `crm_party_identity` — kênh `is_preferred`, `contact_status` (active/invalid/unreachable), `display_label`.
 - **Cảnh giác** (alert_row): `script.risk` + signals (`customer_status`, `is_high_cancel_risk`, `is_high_discount_sensitivity`, `is_margin_negative`) + `contact_status='invalid'` + `party.consent_contact` + `warning_notes` + chip **"liên hệ gần nhất X ngày"** (contact recency từ rollup activity log: `last_contacted_at`, `last_response_at`, `contact_attempts`, `response_count`, `responsiveness`). Engagement meta dùng cho chọn kênh; lưu trữ là impl phase riêng.
@@ -49,7 +49,7 @@ areas:
   - [objection_handling, collect]
   - [guardrails, collect]
   - [trust_footer, trust_footer]
-  - [outcome_bar, outcome_bar]
+  - [disposition_strip, disposition_strip]
 floating:
   - region: stop_banner
     when: "recommended == false"
@@ -72,7 +72,7 @@ samples:
   snapshot: "LTV 8.2tr · 3 đơn · 45d · gần nhất 11d"
   collect: "• Zalo [+] • Email [+] • Sinh nhật [+] • SĐT phụ invalid → [Sửa]"
   trust_footer: "độ tin vừa · script 24/6 07:15 ICT · ⚠ AI gợi ý, dùng phán đoán"
-  outcome_bar: "[ghi chú tạm…] [✓Gọi được][✗Không nghe][⏳Hẹn lại][🛒Đã mua]"
+  disposition_strip: "T0 [📞Gọi ▾][⋯Ghi thủ công] · T1 ⏱[nháp autosave…]☑Zalo[■Kết thúc] · T2 [✓Nghe][🛒Mua][⏳Hẹn lại][✗Không bắt][☎Bận][🚫Từ chối][☠Sai số] · T3 ✓Đã lưu [Khách kế→]"
   stop_banner: "⛔ KHÔNG GỌI THEO KỊCH BẢN — CẦN XÁC MINH · Lý do: ... · [Tạo task xác minh] [Xem hồ sơ 360] [Tôi đã xác minh — vẫn tiếp tục]"
 elements:
   "📞Gọi": A-S14-006
@@ -108,8 +108,8 @@ elements:
 │TRUST_FOOTER                                                                │
 │· độ tin vừa · script 24/6 07:15 ICT · ! AI gợi ý, dùng phán đoán           │
 ├────────────────────────────────────────────────────────────────────────────┤
-│OUTCOME_BAR                                                                 │
-│· [ghi chú tạm…] [vGọi được][xKhông nghe][(t)Hẹn lại][$Đã mua]              │
+│DISPOSITION_STRIP                                                           │
+│· T0 [>Gọi v][⋯Ghi thủ công] · T1 (t)[nháp autosave…][x]Zalo[#Kết thúc] · T…│
 └────────────────────────────────────────────────────────────────────────────┘
 
 [variant: full_screen]
@@ -141,8 +141,8 @@ elements:
 │TRUST_FOOTER                                                                │
 │· độ tin vừa · script 24/6 07:15 ICT · ! AI gợi ý, dùng phán đoán           │
 ├────────────────────────────────────────────────────────────────────────────┤
-│OUTCOME_BAR                                                                 │
-│· [ghi chú tạm…] [vGọi được][xKhông nghe][(t)Hẹn lại][$Đã mua]              │
+│DISPOSITION_STRIP                                                           │
+│· T0 [>Gọi v][⋯Ghi thủ công] · T1 (t)[nháp autosave…][x]Zalo[#Kết thúc] · T…│
 └────────────────────────────────────────────────────────────────────────────┘
 
 [STOP variant — when: recommended == false]
@@ -178,6 +178,18 @@ elements:
 - **New endpoint — `POST /customers/{party_id}/tags/inline`** (`crm/src/adapters/inbound/web/screens/modals/screen_modal_tags.py`): body `category` (Form) + `tag_names` (repeated Form field). **Hard whitelist**: `category` must be in `INLINE_ALLOWED_CATEGORIES = {"health_domain", "health_concern"}` — any other category → `400` before any DB lookup/write (prevents assigning sensitive categories like `risk`/`vip_tier` through this fast inline path; those still require the full M03 tag modal). Looks up `crm_tag` by `name` + `category`, attaches via `TagService.attach_tag(..., source="crm_user")` (now writes `crm_party_tag.source` explicitly rather than relying on the column default), returns the `_s14_collect_row.html` fragment with `saved=True`.
 - **`skin_type` / `preferred_contact` unchanged**: both keep their Phase 06 `custom_select` behaviour untouched; the two new rows are additive only.
 
+## Implementation Notes (Phase 03 — 260710 disposition strip v2)
+
+- **`outcome_bar` → `disposition_strip`, 4-state machine**: replaces the old single-row static bar entirely (no dual code path kept — `s14OpenOutcome`/`s14QuickOutcomeVals`/etc removed from `c360_call_cockpit_panel.html`). One sticky-bottom fragment, JS toggles exactly one of 4 sub-blocks via `[hidden]` + `data-phase` on `#s14-strip`:
+  - **T0** (before call, ~52px): `[📞 Gọi <số> ▾ số khác]` `[⋯ Ghi thủ công]`. Bấm 📞 = `s14StripStartCall()` → `POST /api/parties/{id}/call-sessions` (phase-02, idempotent per staff+party) → straight to T1, no modal.
+  - **T1** (in call): `⏱ mm:ss` · draft note (`PATCH /api/activities/{id}` body, debounced 1.5s + on blur) · `☑ Zalo` (immediate PATCH `custom_fields.zalo_connected`) · `[⋯ Chi tiết]` (M08 `mode=edit_activity`) · `[■ Kết thúc]` → T2.
+  - **T2** (disposition, ~96px w/o sheet): row1 = timer + note summary + `[Lưu & Khách kế →]` (disabled until a valid outcome is chosen); row2 = 7 pills in display order **Nghe(1)/Mua(2)/Hẹn lại(3)/Không bắt(4)/Bận(5)/Từ chối(6)/Sai số(7)** — the digit is also the keyboard shortcut. Pill click autosaves `contact_outcome` immediately (`PATCH`). Outcomes needing more info (`answered`/`purchased`/`callback`/`refused`/`wrong_number`) open a **sheet growing UP** (`#s14-strip-sheet`, max-height 180px, `position:absolute; bottom:100%`) over the now-dead talk_track/guardrails column — "phương án B" (swap the live left column instead) was considered and rejected (see ux-design report §IV.b: breaks the eye-anchor across 50 calls/week + a large-region re-render would violate Invariant §9). `refused`'s sheet requires a reason pill (6: còn hàng/chờ KM/giá/không hợp/kích ứng/mua chỗ khác — subset of `VALID_OUTCOME_REASONS`) before `[Lưu & Khách kế →]` enables; `[🚫 Đừng gọi nữa]` is an escalation button that sets `outcome_reason='do_not_contact'` (REFERENCE only — plan `260709-1638-crm-outreach-effort-report` owns any runtime suppression filter; no new party-level column added here).
+  - **T3** (saved, no auto-advance): `✓ Đã lưu: <outcome> (<reason>) · <duration>` + `[Khách kế →]` (reuses `queue_total`/`queue_next_party_id` when present — full-screen host only, same A2 scope note above — else falls back to `/customers`). After `no_answer`, `[＋Nhắn Zalo]` appears (A-S14-028) — creates a **second, separate** activity via the existing `POST /customers/{id}/reason/resolve-async` (A-S14-026), never merged into the just-finalized call activity (multi-channel-per-session = 2 activities, per decision #3).
+- **Keyboard shortcuts**: `1`-`7` pick the outcome pill at that display position; `Enter` triggers `[Lưu & Khách kế →]` when a valid outcome is selected. Both are guarded to fire **only** while `data-phase="t2"` and **never** while `document.activeElement` is a textarea/input/contenteditable — this is the only global `keydown` listener in the fragment (`s14ToggleTP`/`s14ToggleObj` bind via `onclick`, no conflict).
+- **Mid-call reload recovery**: `build_draft_activity_ctx()` (`screen_call_cockpit.py`, shared by both cockpit hosts) looks up the current staff's open draft for this party and passes it as `draft_activity` into the template. On load, JS resumes **T1** (draft exists, no `contact_outcome` yet) or **T2** (outcome was already chosen before the reload) instead of restarting at T0 — never creates a second draft (`create_draft` is idempotent server-side too).
+- **M08's role is now exactly two exceptions**: `[⋯ Ghi thủ công]` (T0, no draft — plain `mode=log`) and `[⋯ Chi tiết]` (T1/T2/T3, once a draft exists — `mode=edit_activity&activity_id=<draft>`, pre-filled). Every other outcome-logging path goes through the strip's own PATCH/finalize calls (plain `fetch()`, not `htmx.ajax` — mirrors the pattern phase-02's `s14StartCallSession` established; T3's displayed duration is the client timer's value at the moment "Lưu" was clicked, not re-fetched from the server, since both are computed within the same round-trip).
+- **Known accepted gap**: `screen_customer_360_activity.py`'s legacy `POST /customers/{id}/log-activity` `source=call_cockpit` confirmation fragment still emits `onclick="s14OpenOutcome(...)"` (a function phase-03 removed from the template). This is unreachable dead code — nothing in the new strip sets `source=call_cockpit` any more (the 3 old quick-outcome buttons that did are gone) — left as-is because that Python file is outside phase-03's file-edit scope; tracked as a follow-up, not a live regression (existing tests for that route, e.g. `test_quick_outcome_cockpit_post.py`, only assert on the returned HTML string, not on the JS actually executing).
+
 ## States
 
 - **ST-CALL-NO-SCRIPT**: không có file approach-script cho customer_id → empty + CTA Worklist / 360.
@@ -188,7 +200,7 @@ elements:
 - **ST-CALL-CONSENT-WARN** (R1): `consent_contact='denied'` → chip đỏ ở alert_row **nhưng KHÔNG chặn** nút Gọi/Zalo (chỉ cảnh báo; rep tự chịu trách nhiệm — quyết định sản phẩm, nới nhẹ R14 gating trên kênh gọi).
 - Stale → dùng `ST-STALE-CACHE`; loading → `ST-LOADING`.
 
-**Outcome bar (bulk resolve):** A-S14-009 (btn_log_outcome → M08) resolve được NHIỀU task_id/action_id cùng lúc — M08 payload nhận danh sách khi có nhiều context items trong phiên. `rail_primary` luôn nằm trong danh sách; mỗi `rail_secondary` item chỉ được gộp vào SAU KHI NV tick "đã nói" (A-S14-025) — tick vừa là ghi nhớ trực quan vừa là cơ chế chọn item để đóng cùng outcome.
+**Disposition strip (bulk resolve):** A-S14-009 (btn_log_outcome → finalize, phase-03) resolve được NHIỀU task_id/action_id cùng lúc — finalize nhận danh sách qua 2 hidden input (`#s14-resolve-action-ids`/`#s14-resolve-task-ids`) khi có nhiều context items trong phiên. `rail_primary` luôn nằm trong danh sách; mỗi `rail_secondary` item chỉ được gộp vào SAU KHI NV tick "đã nói" (A-S14-025) — tick vừa là ghi nhớ trực quan vừa là cơ chế chọn item để đóng cùng outcome.
 
 **Async resolve (low-stakes items):** A-S14-026 cho phép resolve rail item thấp stakes qua Zalo/email trực tiếp từ rail (tái dùng channel toggle) mà không cần mở cuộc gọi.
 
@@ -230,9 +242,11 @@ interactions:
     element: btn_call
     region: identity_bar
     trigger: click
-    action: open_overlay
-    target: M08
-    payload: { party_id: "$party.id", mode: "contact_attempt", channel: "phone" }
+    action: mutate
+    effects: [activity_log.create_or_adopt_draft, disposition_strip.transition_t0_to_t1]
+    # phase-03: KHÔNG còn mở M08 — tạo/adopt draft (POST /api/parties/{id}/call-sessions,
+    # idempotent per staff+party) rồi chuyển thẳng disposition_strip sang T1 (timer chạy).
+    # Cùng hàm JS (s14StripStartCall) với nút [📞Gọi] trong disposition_strip T0.
   - id: A-S14-007
     element: btn_view_360
     region: identity_bar
@@ -248,15 +262,28 @@ interactions:
     target: S01
   - id: A-S14-009
     element: btn_log_outcome
-    region: outcome_bar
+    region: disposition_strip
     trigger: click
-    action: open_overlay
-    target: M08
-    payload: { party_id: "$party.id", mode: "outcome", source: "call_cockpit" }
-    # phase-02: truyền resolve_action_ids / resolve_task_ids qua query string → M08 forward vào form ẩn.
+    action: mutate
+    effects: [activity_log.patch_contact_outcome, disposition_strip.transition_t1_to_t2]
+    # phase-03: pill click trong T2 KHÔNG mở M08 nữa — PATCH /api/activities/{id}
+    # contact_outcome=<key> ngay (autosave), pill cần thêm info thì sheet mọc LÊN TRÊN
+    # (~180px). [⋯ Chi tiết] (mọi pha có draft) mới mở M08 (mode=edit_activity),
+    # là exception duy nhất còn lại — xem Implementation Notes Phase 03.
+  - id: A-S14-009b
+    element: btn_save_and_next
+    region: disposition_strip
+    trigger: click
+    action: mutate
+    effects: [activity_log.finalize, disposition_strip.transition_t2_to_t3]
+    # "Lưu & Khách kế →" (T2) — POST /api/activities/{id}/finalize; resolve_action_ids/
+    # resolve_task_ids đọc từ 2 hidden input sẵn có (rail bulk-resolve, không đổi contract).
+    # Phím tắt: 1-7 chọn pill theo thứ tự hiển thị, Enter = nút này (chỉ active ở T2,
+    # không bắt khi đang gõ trong textarea/input — document.activeElement guard).
+    # KHÔNG auto-advance sau khi lưu — T3 hiện "Khách kế →" nhưng phải bấm chủ động.
   - id: A-S14-010
     element: btn_next_in_queue
-    region: outcome_bar
+    region: disposition_strip
     trigger: click
     action: navigate
     target: S14
@@ -306,7 +333,7 @@ interactions:
     region: reason_to_call
     trigger: click
     action: mutate
-    effects: [reason.toggle_mentioned, outcome_bar.fold_secondary_id_into_bulk_resolve]
+    effects: [reason.toggle_mentioned, disposition_strip.fold_secondary_id_into_bulk_resolve]
     # secondary items only; primary is always in the bulk-resolve set (server-rendered default)
   - id: A-S14-026
     element: btn_reason_resolve_async
@@ -321,6 +348,15 @@ interactions:
     action: mutate
     effects: [stop_banner.hide, s14_content.unlock, activity_log.write_r14_ack]
     # POST /customers/{party_id}/r14-ack → 204; unlock is pure JS (Invariant §9, no panel re-render)
+  - id: A-S14-028
+    element: btn_zalo_followup
+    region: disposition_strip
+    trigger: click
+    action: mutate
+    effects: [activity_log.append_async_attempt]
+    # phase-03, quyết định #3: chỉ hiện ở T3 sau khi outcome='no_answer' — tạo activity
+    # THỨ HAI riêng biệt (không gộp field vào activity call vừa chốt). Tái dùng nguyên
+    # A-S14-026 (POST /customers/{id}/reason/resolve-async), KHÔNG viết endpoint mới.
   - id: A-S14-LSN01
     listens_to: cache.refreshed
     action: mutate

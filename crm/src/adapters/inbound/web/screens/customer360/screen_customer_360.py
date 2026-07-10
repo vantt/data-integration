@@ -294,6 +294,7 @@ def make_customer_360_router(
         app_users=app_users,
         approach_repo=approach_repo,
         tags=tags,
+        activity_log=activity_log,
         _load_base=_load_base,
         _load_insight=_load_insight,
         _sapo_customer_id=_sapo_customer_id,
@@ -330,6 +331,7 @@ def make_customer_360_router(
         approach_repo=approach_repo,
         action_task_resolver=action_task_resolver,
         tags=tags,
+        activity_log=activity_log,
     )
 
     return router

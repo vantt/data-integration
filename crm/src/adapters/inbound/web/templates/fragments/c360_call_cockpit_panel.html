@@ -37,6 +37,10 @@
 {% set meta_rec = (meta if meta else {}) %}
 {# Item 1 (Phase 06): parsed custom fields dict — passed from screen_call_cockpit.py #}
 {% set party_custom = party_custom | default({}) %}
+{# Phase-03 (disposition strip v2): open call draft for (staff, party), or None —
+   built by build_draft_activity_ctx() in screen_call_cockpit.py, used to resume
+   T1/T2 after a page reload mid-call instead of restarting at T0. #}
+{% set draft_activity = draft_activity | default(none) %}
 {% set is_stop = (meta_rec.recommended == false) if meta else false %}
 {% set confidence = script.confidence | default('medium') if script else 'medium' %}
 {# Inline confidence lookups — avoids requiring confidence_label/confidence_tone filters in test env #}
@@ -235,13 +239,14 @@
       {% endif %}
     </div>
     <div class="s14-idbar__act">
-      {# A-S14-006: Gọi → M08 contact_attempt phone. R1: NOT disabled when consent=denied.
-         P1 (activity-log disposition API): first creates/adopts the call draft
-         (POST /api/parties/{id}/call-sessions, idempotent per (staff, party)) so
-         contact_duration_s gets a real started_at→finalize_at measurement when
-         this submit lands — see s14StartCallSession() below. #}
+      {# A-S14-006: Gọi → disposition strip T0→T1 (phase-03). R1: NOT disabled
+         when consent=denied. Creates/adopts the call draft (POST
+         /api/parties/{id}/call-sessions, idempotent per (staff, party)) and
+         switches the strip straight into T1 (timer running) — no M08 modal
+         anymore (M08 is now the "⋯ Chi tiết"/"⋯ Ghi thủ công" exception only,
+         see s14StripStartCall() below). #}
       <button class="btn btn--primary" type="button"
-              onclick="s14StartCallSession('{{ party_id }}')"
+              onclick="s14StripStartCall()"
               aria-label="Gọi điện">
         <svg class="ico" width="14" height="14" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.3" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 3.5c0 5.5 4 9.5 10 10l1.5-3-2.5-1.5-1 1.5c-1.5-.5-3.5-2.5-4-4l1.5-1L7 3 3 3.5z"/></svg>
         Gọi
@@ -793,229 +798,514 @@
   </div>{# /.s14-frame #}
   </div>{# /#s14-content #}
 
-  {# ── OUTCOME BAR (sticky, §outcome_bar) — renders regardless of R14 state ──
-     ✗ Không bắt / ☎ Bận / ☠ Sai số POST thẳng /log-activity (no modal, no note/order
-     needed — phase-01 P0). ✓ Gọi được / ⏳ Hẹn lại / 🛒 Đã mua still open M08 (need
-     note/callback-time/order-code). #}
-  <div class="s14-outcome" role="group" aria-label="Ghi kết quả cuộc gọi">
-    <div class="s14-outcome__inner">
-      {# Hidden fields carry rail provenance so log-activity can bulk-resolve §11 #}
-      <input type="hidden" id="s14-resolve-action-ids"
-             value="{{ rail_primary.action_id or '' if rail_primary else '' }}">
-      <input type="hidden" id="s14-resolve-task-ids"
-             value="{{ rail_primary.task_id or '' if rail_primary else '' }}">
-      <div class="s14-outcome__row1">
-        <textarea id="s14-quick-note"
-                  class="s14-quick-note"
-                  rows="2"
-                  placeholder="Ghi chú tạm khi gọi…"
-                  aria-label="Ghi chú cuộc gọi"
-                  oninput="s14AutoGrowNote(this)"></textarea>
+  {# ── DISPOSITION STRIP v2 (§disposition_strip, phase-03) — replaces the old
+     static outcome_bar + s14OpenOutcome (M08-per-click) ENTIRELY, no dual code
+     path kept. Sticky bottom, single fragment, 4 sub-blocks shown/hidden by JS
+     (T0 idle → T1 in-call → T2 disposition, sheet mọc LÊN TRÊN ~180px → T3
+     saved, no auto-advance). "Phương án B" (takeover of the left talk-track
+     column while the call is still live) was considered and rejected — see
+     ux-design report mục IV.b (breaks the eye-anchor over 50 calls/week +
+     violates Invariant §9's "only swap your own sub-region"). #}
+  {% set call_identities = [] %}
+  {% for idn in (identities or []) %}
+    {% if idn.identity_type in ('phone', 'mobile') %}{% set _ = call_identities.append(idn) %}{% endif %}
+  {% endfor %}
+  {% set OUTCOME_PILLS = [
+    {'key': 'answered',     'icon': '✓',  'label': 'Nghe'},
+    {'key': 'purchased',    'icon': '🛒', 'label': 'Mua'},
+    {'key': 'callback',     'icon': '⏳', 'label': 'Hẹn lại'},
+    {'key': 'no_answer',    'icon': '✗',  'label': 'Không bắt'},
+    {'key': 'busy',         'icon': '☎',  'label': 'Bận'},
+    {'key': 'refused',      'icon': '🚫', 'label': 'Từ chối'},
+    {'key': 'wrong_number', 'icon': '☠',  'label': 'Sai số'},
+  ] %}
+  {# 6 lý do hiện trong sheet "Từ chối" — subset của VALID_OUTCOME_REASONS
+     (activity.py), khớp mockup report mục IV.b. 'do_not_contact' là pill leo
+     thang riêng (nút [🚫 Đừng gọi nữa]), không nằm trong danh sách chọn thường. #}
+  {% set REFUSAL_REASON_PILLS = [
+    {'key': 'still_stocked', 'label': 'Còn hàng'},
+    {'key': 'wait_promo',    'label': 'Chờ KM'},
+    {'key': 'budget',        'label': 'Giá'},
+    {'key': 'product_fit',   'label': 'Không hợp'},
+    {'key': 'irritation',    'label': 'Kích ứng'},
+    {'key': 'competitor',    'label': 'Mua chỗ khác'},
+  ] %}
+  {% set _initial_phase = 't0' %}
+  {% if draft_activity %}
+    {% set _initial_phase = 't2' if draft_activity.contact_outcome else 't1' %}
+  {% endif %}
+  <div class="s14-strip" id="s14-strip" role="group" aria-label="Ghi kết quả cuộc gọi"
+       data-phase="{{ _initial_phase }}">
+    {# Hidden fields carry rail provenance so finalize can bulk-resolve §11 —
+       same ids/values the old outcome bar used, untouched contract. #}
+    <input type="hidden" id="s14-resolve-action-ids"
+           value="{{ rail_primary.action_id or '' if rail_primary else '' }}">
+    <input type="hidden" id="s14-resolve-task-ids"
+           value="{{ rail_primary.task_id or '' if rail_primary else '' }}">
+
+    {# ── T0 — before call ("Gọi <số> ▾ số khác" · "⋯ Ghi thủ công") ──────── #}
+    <div class="s14-strip__phase s14-strip__phase--row" id="s14-strip-t0"{% if _initial_phase != 't0' %} hidden{% endif %}>
+      <button class="btn btn--primary" type="button" onclick="s14StripStartCall()">
+        📞 Gọi{% if pref_phone %} {{ pref_phone }}{% endif %}
+      </button>
+      {% if call_identities | length > 1 %}
+      <select class="s14-strip__chansel" id="s14-strip-chansel" aria-label="Chọn số khác"
+              onchange="S14_STRIP.chanId=this.value">
+        {% for idn in call_identities %}
+        <option value="{{ idn.identity_id }}"{% if idn.identity_id == pref_phone_id %} selected{% endif %}>{{ idn.identity_value }}</option>
+        {% endfor %}
+      </select>
+      {% endif %}
+      <button class="btn btn--ghost" type="button" onclick="s14StripOpenManual()">⋯ Ghi thủ công</button>
+    </div>
+
+    {# ── T1 — in call: timer · draft note (autosave PATCH) · Zalo · Kết thúc #}
+    <div class="s14-strip__phase s14-strip__phase--row" id="s14-strip-t1" hidden>
+      <span class="s14-strip__timer mono" id="s14-strip-timer">00:00</span>
+      <span class="s14-strip__sep" aria-hidden="true">·</span>
+      <textarea class="s14-strip__note" id="s14-strip-note"
+                placeholder="nháp autosave…" aria-label="Ghi chú cuộc gọi" rows="1"
+                oninput="s14StripNoteInput()" onblur="s14StripFlushNote()"></textarea>
+      <label class="s14-strip__zalo">
+        <input type="checkbox" id="s14-strip-zalo" onchange="s14StripZaloToggle(this)"> Zalo
+      </label>
+      <button class="s14-strip__link" type="button" onclick="s14StripOpenDetail()">⋯ Chi tiết</button>
+      <button class="btn btn--danger btn--sm" type="button" onclick="s14StripEndCall()">■ Kết thúc</button>
+    </div>
+
+    {# ── T2 — disposition (2 rows): row1 = timer + note summary + Lưu; row2 =
+       7 outcome pills. Pills needing more info open the sheet below. ──────── #}
+    <div class="s14-strip__phase" id="s14-strip-t2" hidden>
+      <div class="s14-strip__row1">
+        <span class="s14-strip__timer mono" id="s14-strip-timer2">00:00</span>
+        <span class="s14-strip__notesummary" id="s14-strip-notesummary"></span>
+        <button class="s14-strip__link" type="button" onclick="s14StripEditNote()">sửa nháp</button>
+        <button class="s14-strip__link" type="button" onclick="s14StripOpenDetail()">⋯ Chi tiết</button>
+        <button class="btn btn--primary s14-strip__save" id="s14-strip-save-btn" type="button"
+                onclick="s14StripSave()" disabled>Lưu &amp; Khách kế →</button>
       </div>
-      <div class="s14-outcome__row2">
-        <div class="s14-outcome__btns" id="s14-outcome-btns">
-          {# A-S14-009: log outcome → M08; quick-note injected client-side #}
-          <button class="s14-oc s14-oc--good" type="button"
-                  onclick="s14OpenOutcome('answered')">
-            <svg class="ico" width="14" height="14" viewBox="0 0 14 14" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M2 7l4 4L12 3"/></svg>
-            Gọi được
-          </button>
-          {# Quick-outcome: POST thẳng /log-activity, source=call_cockpit → fragment thay hàng nút.
-             hx-vals="js:{...fn()}" — MUST start with '{' (spread) so htmx's bn() does not wrap
-             a bare function-call expression in "{"+expr+"}" (that produces the invalid object
-             literal "{fn()}" → SyntaxError inside htmx's value-eval, silently aborting the
-             request before it's ever sent). Root-caused via htmx.min.js bn()/vn(); see
-             plans/260710-1338-activity-log-disposition-api/reports/phase-01-implementation-report.md
-             "Fix outcome bar 260710-1512". #}
-          <button class="s14-oc s14-oc--miss" type="button"
-                  hx-post="/customers/{{ party_id }}/log-activity"
-                  hx-target="#s14-outcome-btns" hx-swap="innerHTML"
-                  hx-vals="js:{...s14QuickOutcomeVals('no_answer')}"
-                  hx-disabled-elt="#s14-outcome-btns button"
-                  hx-on::after-request="if(event.detail.successful){s14ClearQuickNote();}else{s14QuickOutcomeError();}">
-            <svg class="ico" width="14" height="14" viewBox="0 0 14 14" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" aria-hidden="true"><line x1="1" y1="1" x2="13" y2="13"/><line x1="13" y1="1" x2="1" y2="13"/></svg>
-            Không nghe
-          </button>
-          <button class="s14-oc s14-oc--busy" type="button"
-                  hx-post="/customers/{{ party_id }}/log-activity"
-                  hx-target="#s14-outcome-btns" hx-swap="innerHTML"
-                  hx-vals="js:{...s14QuickOutcomeVals('busy')}"
-                  hx-disabled-elt="#s14-outcome-btns button"
-                  hx-on::after-request="if(event.detail.successful){s14ClearQuickNote();}else{s14QuickOutcomeError();}">
-            <svg class="ico" width="14" height="14" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.3" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 3.5c0 5.5 4 9.5 10 10l1.5-3-2.5-1.5-1 1.5c-1.5-.5-3.5-2.5-4-4l1.5-1L7 3 3 3.5z"/></svg>
-            Bận
-          </button>
-          <button class="s14-oc s14-oc--wrong" type="button"
-                  hx-post="/customers/{{ party_id }}/log-activity"
-                  hx-target="#s14-outcome-btns" hx-swap="innerHTML"
-                  hx-vals="js:{...s14QuickOutcomeVals('wrong_number')}"
-                  hx-disabled-elt="#s14-outcome-btns button"
-                  hx-on::after-request="if(event.detail.successful){s14ClearQuickNote();}else{s14QuickOutcomeError();}">
-            <svg class="ico" width="14" height="14" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.3" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M8 3 2 13h12L8 3z"/><line x1="8" y1="7" x2="8" y2="10"/><circle cx="8" cy="12" r="0.4" fill="currentColor" stroke="none"/></svg>
-            Sai số
-          </button>
-          <button class="s14-oc s14-oc--later" type="button"
-                  onclick="s14OpenOutcome('callback')">
-            <svg class="ico" width="14" height="14" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.3" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="8" cy="8" r="5.5"/><path d="M8 5v3.5l2 1.5"/></svg>
-            Hẹn lại
-          </button>
-          <button class="s14-oc s14-oc--buy" type="button"
-                  onclick="s14OpenOutcome('purchased')">
-            <svg class="ico" width="14" height="14" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.3" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="6.5" cy="12.5" r="1.2" fill="currentColor" stroke="none"/><circle cx="11.5" cy="12.5" r="1.2" fill="currentColor" stroke="none"/><path d="M1.5 2.5h2l2 7h6l1.5-5h-11"/></svg>
-            Đã mua
-          </button>
+      <div class="s14-strip__pills" id="s14-strip-pills">
+        {% for od in OUTCOME_PILLS %}
+        <button class="s14-pill" type="button" data-outcome="{{ od.key }}"
+                onclick="s14StripPickOutcome('{{ od.key }}')" aria-pressed="false">
+          <span aria-hidden="true">{{ od.icon }}</span> {{ od.label }}
+          <span class="s14-pill__key mono" aria-hidden="true">{{ loop.index }}</span>
+        </button>
+        {% endfor %}
+      </div>
+      {# Sheet mọc LÊN TRÊN (~180px) khi outcome cần thêm info — che đúng vùng
+         talk_track/guardrails cột trái đã "chết" (call đã cúp lúc này). Không
+         dùng "phương án B" (takeover cột trái) — xem ux-design report IV.b. #}
+      <div class="s14-strip__sheet" id="s14-strip-sheet" hidden>
+        <div class="s14-strip__sheetbody" id="s14-sheet-answered" hidden>
+          <span class="s14-strip__sheetlabel">Theo dõi lại</span>
+          <button class="chip-pill" type="button" onclick="s14StripPickFollowup(7)">+7 ngày</button>
+          <button class="chip-pill" type="button" onclick="s14StripPickFollowup(14)">+14 ngày</button>
+          <button class="chip-pill" type="button" onclick="s14StripPickFollowup(30)">+30 ngày</button>
+          <button class="btn btn--secondary btn--sm" type="button" onclick="s14StripPickOutcome('purchased')">🛒 Đã mua → nhập mã đơn</button>
         </div>
-        {# Phase-01 P0 fix (260710-1512): quick-outcome POST failed — surfaced inline, no alert() #}
-        <span class="s14-outcome__err" id="s14-outcome-err" style="display:none" role="alert">
-          ⚠ Ghi thất bại — thử lại
-        </span>
+        <div class="s14-strip__sheetbody" id="s14-sheet-purchased" hidden>
+          <span class="s14-strip__sheetlabel">Mã đơn (không bắt buộc)</span>
+          <input type="text" class="inp" id="s14-strip-order-code" placeholder="VD: DH2093"
+                 onblur="s14StripFlushOrderCode()">
+        </div>
+        <div class="s14-strip__sheetbody" id="s14-sheet-callback" hidden>
+          <span class="s14-strip__sheetlabel">Hẹn lại lúc</span>
+          <button class="chip-pill" type="button" onclick="s14StripPickCallbackChip('plus2h')">+2h</button>
+          <button class="chip-pill" type="button" onclick="s14StripPickCallbackChip('this_afternoon')">chiều nay</button>
+          <button class="chip-pill" type="button" onclick="s14StripPickCallbackChip('tomorrow_morning')">mai sáng</button>
+          <label class="s14-strip__cbtask">
+            <input type="checkbox" id="s14-strip-cbtask" checked
+                   onchange="S14_STRIP.createCallbackTask=this.checked"> tạo task nhắc
+          </label>
+        </div>
+        <div class="s14-strip__sheetbody" id="s14-sheet-refused" hidden>
+          <span class="s14-strip__sheetlabel">Lý do từ chối (bắt buộc)</span>
+          <div class="s14-strip__reasons">
+            {% for rd in REFUSAL_REASON_PILLS %}
+            <button class="chip-pill" type="button" data-reason="{{ rd.key }}"
+                    onclick="s14StripPickReason('{{ rd.key }}')">{{ rd.label }}</button>
+            {% endfor %}
+          </div>
+          <button class="s14-strip__donotcontact" type="button" onclick="s14StripDoNotContact()">🚫 Đừng gọi nữa</button>
+        </div>
+        <div class="s14-strip__sheetbody" id="s14-sheet-wrong_number" hidden>
+          <span class="s14-strip__sheetlabel">Số không đúng</span>
+          <button class="s14-strip__link" type="button"
+                  hx-get="/modals/m15?party_id={{ party_id }}&tab=contacts"
+                  hx-target="#modal-root" hx-swap="innerHTML">Đánh dấu SĐT lỗi</button>
+        </div>
       </div>
+    </div>
+
+    {# ── T3 — saved; KHÔNG auto-advance (chốt UX) — "Khách kế →" phải bấm chủ động #}
+    <div class="s14-strip__phase s14-strip__phase--row" id="s14-strip-t3" hidden>
+      <span class="s14-strip__done" id="s14-strip-donetext">✓ Đã lưu</span>
+      <button class="btn btn--secondary btn--sm" id="s14-strip-zalofollowup" type="button"
+              style="display:none" onclick="s14StripZaloFollowup()">＋Nhắn Zalo</button>
+      {# Đa kênh 1 phiên = 2 activity riêng (quyết định #3) — tái dùng
+         /reason/resolve-async có sẵn (A-S14-026), KHÔNG viết endpoint mới. #}
+      {% if queue_total is defined and queue_total and queue_next_party_id %}
+      <a class="btn btn--primary" id="s14-strip-nextlink"
+         href="/customers/{{ queue_next_party_id }}/call?queue_ids={{ queue_ids }}&queue_pos={{ (queue_pos or 0) + 1 }}">Khách kế →</a>
+      {% else %}
+      <a class="btn btn--primary" id="s14-strip-nextlink" href="/customers">Khách kế →</a>
+      {% endif %}
     </div>
   </div>
 
 </div>{# /#s14-panel-root #}
 
-{# ── Phase-01 P0: quick-outcome disable/spinner + confirmation-state styles ──
-   Scoped to .s14-oc so this never bleeds into unrelated htmx elements elsewhere
-   on the page (htmx-request is a global class). #}
-<style>
-.s14-oc:disabled { opacity: .5; cursor: default; pointer-events: none; }
-.s14-oc.htmx-request { opacity: .6; }
-.s14-oc.htmx-request::after {
-  content: ''; width: 10px; height: 10px; margin-left: 6px; display: inline-block;
-  border: 2px solid currentColor; border-right-color: transparent; border-radius: 50%;
-  animation: s14spin .6s linear infinite; vertical-align: middle;
-}
-@keyframes s14spin { to { transform: rotate(360deg); } }
-.s14-outcome__done { display: flex; align-items: center; gap: 10px; font-size: 13px; color: var(--fg-1); padding: 9px 4px; }
-.s14-outcome__done-txt { font-weight: 600; color: var(--moss-500); }
-.s14-oc-undo { background: none; border: none; color: var(--accent); font-size: 12px; cursor: pointer; text-decoration: underline; padding: 0; }
-</style>
-
-{# ── Phase-01 P0: quick-outcome POST payload builder — unconditional (must work
-   even in ST-CALL-NO-SCRIPT, i.e. script=None) since the outcome bar itself
-   renders regardless of R14/script state. #}
+{# ── Disposition strip state machine (phase-03) — T0→T1→T2→T3, unconditional
+   (must work even in ST-CALL-NO-SCRIPT, i.e. script=None) since the strip
+   renders regardless of R14/script state, same as the old outcome bar. #}
 <script>
 (function () {
-  var S14_PREF_PHONE_ID  = {{ pref_phone_id | tojson }};
-  var S14_PREF_PHONE_VAL = {{ pref_phone | tojson }};
+  var PARTY_ID       = {{ party_id | tojson }};
+  var PREF_PHONE_ID  = {{ pref_phone_id | tojson }};
+  var DRAFT          = {{ (draft_activity | tojson) if draft_activity else 'null' }};
+  var OUTCOME_ORDER  = {{ OUTCOME_PILLS | map(attribute='key') | list | tojson }};
+  var SHEET_OUTCOMES = ['answered', 'purchased', 'callback', 'refused', 'wrong_number'];
+  var VI_LABEL = {
+    answered: 'Đã nghe', purchased: 'Đã mua', callback: 'Hẹn lại',
+    no_answer: 'Không bắt', busy: 'Bận', refused: 'Từ chối', wrong_number: 'Sai số'
+  };
+  var REASON_VI_LABEL = {
+    still_stocked: 'còn hàng', wait_promo: 'chờ KM', budget: 'giá',
+    product_fit: 'không hợp', irritation: 'kích ứng', competitor: 'mua chỗ khác',
+    do_not_contact: 'đừng gọi nữa'
+  };
 
-  // P1 (activity-log disposition API, decision #1): "Gọi" creates/adopts the call
-  // draft FIRST (idempotent — a reopened cockpit just adopts the already-open
-  // draft, never a second one), then opens M08 pre-filled from that draft. M08's
-  // own submit carries draft_activity_id back (hidden field), so log-activity
-  // finalizes THIS row instead of inserting a fresh one — real call duration.
-  window.s14StartCallSession = function (partyId) {
-    var chanId = S14_PREF_PHONE_ID || '';
-    fetch('/api/parties/' + encodeURIComponent(partyId) + '/call-sessions', {
+  // Mutable session state — client-side convenience only; the activity row
+  // itself is always the server's truth via PATCH/finalize (P1 API).
+  var S = {
+    draftId: DRAFT ? DRAFT.activity_id : null,
+    startedAtMs: (DRAFT && DRAFT.started_at) ? Date.parse(DRAFT.started_at) : null,
+    chosenOutcome: DRAFT ? (DRAFT.contact_outcome || null) : null,
+    chosenReason: DRAFT ? (DRAFT.outcome_reason || null) : null,
+    chanId: PREF_PHONE_ID || '',
+    createCallbackTask: true,
+    followupAt: '',
+    lastDisplayedDuration: '00:00',
+    timerHandle: null,
+    noteDebounce: null
+  };
+  window.S14_STRIP = S; // read by the T0 "▾ số khác" <select> onchange handler
+
+  var root = document.getElementById('s14-strip');
+  function $(id) { return document.getElementById(id); }
+
+  function showPhase(phase) {
+    ['t0', 't1', 't2', 't3'].forEach(function (p) {
+      var el = $('s14-strip-' + p);
+      if (el) el.hidden = (p !== phase);
+    });
+    if (root) root.setAttribute('data-phase', phase);
+  }
+
+  function fmtMMSS(totalSec) {
+    var m = Math.floor(totalSec / 60), s = totalSec % 60;
+    return String(m).padStart(2, '0') + ':' + String(s).padStart(2, '0');
+  }
+  function tickTimer() {
+    if (!S.startedAtMs) return;
+    var sec = Math.max(0, Math.floor((Date.now() - S.startedAtMs) / 1000));
+    S.lastDisplayedDuration = fmtMMSS(sec);
+    var t1 = $('s14-strip-timer'); if (t1) t1.textContent = S.lastDisplayedDuration;
+    var t2 = $('s14-strip-timer2'); if (t2) t2.textContent = S.lastDisplayedDuration;
+  }
+  function startTimer() { stopTimer(); tickTimer(); S.timerHandle = setInterval(tickTimer, 1000); }
+  function stopTimer() { if (S.timerHandle) { clearInterval(S.timerHandle); S.timerHandle = null; } }
+
+  // ICT-local "YYYY-MM-DDTHH:MM" from a UTC Date — matches _ict_local_to_utc()
+  // parser in screen_customer_360_activity.py (both PATCH callback_at and
+  // finalize schedule_followup_at expect this exact shape).
+  function ictLocalFromDate(d) {
+    var ict = new Date(d.getTime() + 7 * 3600000);
+    var p = function (n) { return String(n).padStart(2, '0'); };
+    return ict.getUTCFullYear() + '-' + p(ict.getUTCMonth() + 1) + '-' + p(ict.getUTCDate())
+         + 'T' + p(ict.getUTCHours()) + ':' + p(ict.getUTCMinutes());
+  }
+
+  function patchDraft(fields) {
+    if (!S.draftId) return;
+    var body = Object.keys(fields).map(function (k) {
+      return encodeURIComponent(k) + '=' + encodeURIComponent(fields[k]);
+    }).join('&');
+    fetch('/api/activities/' + encodeURIComponent(S.draftId), {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+      body: body
+    }).then(function (r) {
+      // fetch() only rejects on network failure — a 4xx/5xx response still
+      // resolves here, so r.ok must be checked explicitly or a rejected
+      // patch (e.g. validation error) silently vanishes (bug: patch swallowed).
+      if (r.ok) return;
+      return r.text().then(function (msg) {
+        throw new Error(msg || ('PATCH thất bại (' + r.status + ')'));
+      });
+    }).catch(function (e) {
+      console.warn('disposition strip PATCH failed', e);
+      // Visible error — same UX pattern as s14StripSave's failure path below,
+      // not console-only (a rep must see a failed autosave, not lose it silently).
+      window.alert('Lưu thất bại — thử lại. (' + (e && e.message ? e.message : 'lỗi không xác định') + ')');
+    });
+  }
+
+  // ── T0 → T1 — creates/adopts the call draft (idempotent per staff+party;
+  // reopening the cockpit never creates a second one) and goes straight to
+  // T1, no M08 modal (decision: M08 is now only the "⋯ Chi tiết"/"⋯ Ghi thủ
+  // công" exception, see report mục V). ─────────────────────────────────
+  window.s14StripStartCall = function () {
+    fetch('/api/parties/' + encodeURIComponent(PARTY_ID) + '/call-sessions', {
       method: 'POST',
       headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
-      body: 'channel_identity_id=' + encodeURIComponent(chanId),
+      body: 'channel_identity_id=' + encodeURIComponent(S.chanId || '')
     }).then(function (r) {
       if (!r.ok) throw new Error('call-sessions ' + r.status);
       return r.json();
     }).then(function (d) {
-      var qs = 'party_id=' + encodeURIComponent(partyId)
-             + '&mode=log&hinh_thuc=call&draft_activity_id=' + encodeURIComponent(d.activity_id || '');
-      htmx.ajax('GET', '/modals/m08?' + qs, { target: '#modal-root', swap: 'innerHTML' });
+      S.draftId = d.activity_id;
+      S.startedAtMs = d.started_at ? Date.parse(d.started_at) : Date.now();
+      startTimer();
+      showPhase('t1');
     }).catch(function () {
-      // Draft creation failed (network/auth) — fall back to the classic flow so
-      // staff can still log the call; it just won't carry a measured duration.
-      htmx.ajax('GET', '/modals/m08?party_id=' + encodeURIComponent(partyId) + '&mode=log&hinh_thuc=call',
+      // Draft creation failed (network/auth) — fall back so staff can still
+      // log the call manually; it just won't carry a measured duration.
+      htmx.ajax('GET', '/modals/m08?party_id=' + encodeURIComponent(PARTY_ID) + '&mode=log&hinh_thuc=call',
         { target: '#modal-root', swap: 'innerHTML' });
     });
   };
 
-  function s14IctNow() {
-    var d = new Date(Date.now() + 7 * 3600000);
-    var p = function (n) { return String(n).padStart(2, '0'); };
-    return d.getUTCFullYear() + '-' + p(d.getUTCMonth() + 1) + '-' + p(d.getUTCDate())
-         + 'T' + p(d.getUTCHours()) + ':' + p(d.getUTCMinutes());
+  window.s14StripOpenManual = function () {
+    htmx.ajax('GET', '/modals/m08?party_id=' + encodeURIComponent(PARTY_ID) + '&mode=log&hinh_thuc=call',
+      { target: '#modal-root', swap: 'innerHTML' });
+  };
+
+  // Requirement 6: [⋯ Chi tiết] (mọi pha có draft) → M08 edit_activity, pre-filled.
+  window.s14StripOpenDetail = function () {
+    if (!S.draftId) return;
+    htmx.ajax('GET', '/modals/m08?party_id=' + encodeURIComponent(PARTY_ID)
+      + '&mode=edit_activity&activity_id=' + encodeURIComponent(S.draftId),
+      { target: '#modal-root', swap: 'innerHTML' });
+  };
+
+  // ── T1: autosave note (debounced + on blur) + Zalo checkbox (immediate) ──
+  window.s14StripNoteInput = function () {
+    if (S.noteDebounce) clearTimeout(S.noteDebounce);
+    S.noteDebounce = setTimeout(window.s14StripFlushNote, 1500);
+  };
+  window.s14StripFlushNote = function () {
+    var ta = $('s14-strip-note');
+    if (ta) patchDraft({ body: ta.value });
+  };
+  window.s14StripZaloToggle = function (cb) {
+    patchDraft({ zalo_connected: cb.checked ? '1' : '0' });
+  };
+
+  // ── T1 → T2 ─────────────────────────────────────────────────────────────
+  window.s14StripEndCall = function () {
+    window.s14StripFlushNote();
+    var ta = $('s14-strip-note');
+    var summary = $('s14-strip-notesummary');
+    if (summary) {
+      var v = ta ? ta.value : '';
+      summary.textContent = v ? ('"' + v.slice(0, 60) + (v.length > 60 ? '…' : '') + '"') : '';
+    }
+    showPhase('t2');
+    if (S.chosenOutcome) restoreOutcomeSelection(S.chosenOutcome);
+  };
+
+  function highlightPill(key) {
+    document.querySelectorAll('#s14-strip-pills .s14-pill').forEach(function (b) {
+      var on = b.getAttribute('data-outcome') === key;
+      b.classList.toggle('s14-pill--on', on);
+      b.setAttribute('aria-pressed', on ? 'true' : 'false');
+    });
+  }
+  function openSheet(key) {
+    var sheet = $('s14-strip-sheet');
+    if (!sheet) return;
+    sheet.hidden = false;
+    SHEET_OUTCOMES.forEach(function (k) {
+      var el = $('s14-sheet-' + k);
+      if (el) el.hidden = (k !== key);
+    });
+  }
+  function closeSheet() { var sheet = $('s14-strip-sheet'); if (sheet) sheet.hidden = true; }
+
+  function outcomeRequirementMet() {
+    if (!S.chosenOutcome) return false;
+    if (S.chosenOutcome === 'refused') return !!S.chosenReason;
+    return true;
+  }
+  function updateSaveEnabled() {
+    var btn = $('s14-strip-save-btn');
+    if (btn) btn.disabled = !outcomeRequirementMet();
   }
 
-  // "Ghi chú tạm" auto-grow: 2 rows default → up to ~5 lines, then scrolls.
-  // JS-driven (not CSS field-sizing alone) so it works on every browser; keep
-  // S14_QUICK_NOTE_MAX_H in sync with .s14-quick-note max-height in ds-extra.css.
-  var S14_QUICK_NOTE_MAX_H = 122;
-  window.s14AutoGrowNote = function (el) {
-    var ta = el || document.getElementById('s14-quick-note');
-    if (!ta) return;
-    ta.style.height = 'auto';
-    ta.style.height = Math.min(ta.scrollHeight, S14_QUICK_NOTE_MAX_H) + 'px';
+  function restoreOutcomeSelection(key) {
+    highlightPill(key);
+    if (SHEET_OUTCOMES.indexOf(key) !== -1) openSheet(key); else closeSheet();
+    updateSaveEnabled();
+  }
+
+  // Pill click → autosave contact_outcome immediately ("mỗi lần commit field").
+  window.s14StripPickOutcome = function (key) {
+    S.chosenOutcome = key;
+    if (key !== 'refused') S.chosenReason = null;
+    highlightPill(key);
+    if (SHEET_OUTCOMES.indexOf(key) !== -1) openSheet(key); else closeSheet();
+    patchDraft({ contact_outcome: key });
+    updateSaveEnabled();
   };
 
-  // Quick-outcome buttons (Không nghe/Bận/Sai số) POST body=quick-note and stay on
-  // this page (fragment swap, no redirect) — clear + collapse the note afterwards
-  // so it doesn't look like it silently vanished or, worse, get resubmitted on the
-  // next outcome click.
-  window.s14ClearQuickNote = function () {
-    var ta = document.getElementById('s14-quick-note');
-    if (ta) { ta.value = ''; ta.style.height = ''; }
-    var err = document.getElementById('s14-outcome-err');
-    if (err) err.style.display = 'none';
+  window.s14StripPickReason = function (key) {
+    S.chosenReason = key;
+    document.querySelectorAll('#s14-sheet-refused .chip-pill').forEach(function (b) {
+      b.classList.toggle('chip-pill--on', b.getAttribute('data-reason') === key);
+    });
+    patchDraft({ outcome_reason: key });
+    updateSaveEnabled();
   };
 
-  // Quick-outcome POST failed (network error or non-2xx) — inline red text next
-  // to the buttons, never alert(). Cleared on the next successful attempt via
-  // s14ClearQuickNote() above.
-  window.s14QuickOutcomeError = function () {
-    var err = document.getElementById('s14-outcome-err');
-    if (err) err.style.display = '';
+  // [🚫 Đừng gọi nữa] — escalation pill, sets outcome_reason='do_not_contact'
+  // (REFERENCE plan 260709-1638 câu hỏi mở #5 — suppression filter runtime,
+  // KHÔNG thêm cột party ở đây).
+  window.s14StripDoNotContact = function () { window.s14StripPickReason('do_not_contact'); };
+
+  window.s14StripPickFollowup = function (days) {
+    S.followupAt = ictLocalFromDate(new Date(Date.now() + days * 86400000));
+    updateSaveEnabled();
   };
 
-  // Payload for the 3 direct-POST quick-outcome buttons (no_answer/busy/wrong_number):
-  // hinh_thuc=call, channel=số chính, occurred_at=ICT now, carries bulk-resolve ids +
-  // quick-note, source=call_cockpit so the handler returns a small fragment (no redirect).
-  window.s14QuickOutcomeVals = function (outcome) {
-    return {
-      hinh_thuc: 'call',
-      contact_outcome: outcome,
-      occurred_at: s14IctNow(),
-      channel_identity_id: S14_PREF_PHONE_ID || '',
-      channel_value: S14_PREF_PHONE_VAL || '',
-      resolve_action_ids: (document.getElementById('s14-resolve-action-ids') || {}).value || '',
-      resolve_task_ids: (document.getElementById('s14-resolve-task-ids') || {}).value || '',
-      body: (document.getElementById('s14-quick-note') || {}).value || '',
-      source: 'call_cockpit'
-    };
+  window.s14StripFlushOrderCode = function () {
+    var inp = $('s14-strip-order-code');
+    if (inp) patchDraft({ related_order_code: inp.value });
   };
 
-  // ── A-S14-009: open outcome modal, carry quick-note into #m08-body ──
-  // Server-side prefill (query param → Jinja renders it into the textarea), NOT a
-  // client-side inject-after-swap: M08 loads async via HTMX and #m08-body only
-  // exists once the swap has settled, so a post-hoc `.then()` write depended on
-  // htmx.ajax's promise resolving strictly after DOM insertion — true today but a
-  // fragile assumption to hang note capture on. Passing the note through the GET
-  // query string and letting screen_customer_360_activity.py render it as the
-  // textarea's initial value removes that dependency entirely.
-  // Moved out of the {% raw %}{% if script and ap %}{% endraw %} block (Phase-01 P0
-  // fix 260710-1512): the outcome bar renders regardless of script/R14 state, so
-  // this must be defined unconditionally too — it was previously undefined (silent
-  // ReferenceError on click) whenever a customer had no approach-script.
-  window.s14OpenOutcome = function (outcome) {
-    var note        = (document.getElementById('s14-quick-note') || {}).value || '';
-    var actionIds   = (document.getElementById('s14-resolve-action-ids') || {}).value || '';
-    var taskIds     = (document.getElementById('s14-resolve-task-ids') || {}).value || '';
-    var qs = 'party_id={{ party_id }}&mode=log&hinh_thuc=call&outcome=' + outcome;
-    if (actionIds) qs += '&resolve_action_ids=' + encodeURIComponent(actionIds);
-    if (taskIds)   qs += '&resolve_task_ids='   + encodeURIComponent(taskIds);
-    if (note)      qs += '&prefill_body='       + encodeURIComponent(note);
-    htmx.ajax('GET', '/modals/m08?' + qs, { target: '#modal-root', swap: 'innerHTML' });
+  window.s14StripPickCallbackChip = function (which) {
+    var now = new Date(), target;
+    if (which === 'plus2h') {
+      target = new Date(now.getTime() + 2 * 3600000);
+    } else if (which === 'this_afternoon') {
+      target = new Date(now); target.setUTCHours(7, 0, 0, 0); // 14:00 ICT = 07:00 UTC
+      if (target.getTime() < now.getTime()) target = new Date(now.getTime() + 2 * 3600000);
+    } else { // tomorrow_morning: 08:00 ICT = 01:00 UTC next day
+      target = new Date(now); target.setUTCDate(target.getUTCDate() + 1); target.setUTCHours(1, 0, 0, 0);
+    }
+    patchDraft({ callback_at: ictLocalFromDate(target) });
+    updateSaveEnabled();
   };
 
-  // ── Align outcome bar left/right to .detail-main column ──────────────
-  // Moved out of the {% raw %}{% if script and ap %}{% endraw %} block (Phase-01 P0
-  // fix 260710-1512) — root cause of the "textarea only ~10ch wide" bug: .s14-outcome
-  // is position:fixed with no CSS left/right/width (only JS sets them), so whenever
-  // this script never ran (ST-CALL-NO-SCRIPT, i.e. script=None), the bar fell back to
-  // shrink-to-fit sizing and the flex:1 textarea collapsed to its min-content width.
-  (function s14AlignBar() {
+  window.s14StripEditNote = function () {
+    // Reopen the note for editing from T2 — jump back to T1's textarea
+    // without touching the running draft/timer.
+    showPhase('t1');
+    var ta = $('s14-strip-note');
+    if (ta) ta.focus();
+  };
+
+  // ── T2 → T3 (finalize) — no auto-advance after save (chốt UX). ─────────
+  window.s14StripCanSave = outcomeRequirementMet;
+  window.s14StripSave = function () {
+    if (!S.draftId || !outcomeRequirementMet()) return;
+    var btn = $('s14-strip-save-btn');
+    if (btn) btn.disabled = true;
+    window.s14StripFlushNote();
+    var actionIds = ($('s14-resolve-action-ids') || {}).value || '';
+    var taskIds = ($('s14-resolve-task-ids') || {}).value || '';
+    var body = [
+      'resolve_action_ids=' + encodeURIComponent(actionIds),
+      'resolve_task_ids=' + encodeURIComponent(taskIds),
+      'create_callback_task=' + ((S.chosenOutcome === 'callback' && S.createCallbackTask) ? '1' : '0'),
+      'schedule_followup_at=' + encodeURIComponent(S.followupAt || '')
+    ].join('&');
+    fetch('/api/activities/' + encodeURIComponent(S.draftId) + '/finalize', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+      body: body
+    }).then(function (r) {
+      if (!r.ok) throw new Error('finalize ' + r.status);
+      stopTimer();
+      var reasonTxt = S.chosenReason ? (' (' + (REASON_VI_LABEL[S.chosenReason] || S.chosenReason) + ')') : '';
+      var doneEl = $('s14-strip-donetext');
+      if (doneEl) {
+        doneEl.textContent = '✓ Đã lưu: ' + (VI_LABEL[S.chosenOutcome] || S.chosenOutcome) + reasonTxt
+          + ' · ' + S.lastDisplayedDuration;
+      }
+      var zaloBtn = $('s14-strip-zalofollowup');
+      if (zaloBtn) zaloBtn.style.display = (S.chosenOutcome === 'no_answer') ? '' : 'none';
+      showPhase('t3');
+    }).catch(function () {
+      if (btn) btn.disabled = false;
+      window.alert('Lưu thất bại — thử lại.');
+    });
+  };
+
+  // ── T3: [＋Nhắn Zalo] — a SEPARATE activity (quyết định #3), reuses the
+  // existing async-resolve endpoint (A-S14-026), no new endpoint written. ──
+  window.s14StripZaloFollowup = function () {
+    var btn = $('s14-strip-zalofollowup');
+    var actionId = ($('s14-resolve-action-ids') || {}).value || '';
+    var taskId = ($('s14-resolve-task-ids') || {}).value || '';
+    fetch('/customers/' + encodeURIComponent(PARTY_ID) + '/reason/resolve-async', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+      body: 'channel=zalo&action_id=' + encodeURIComponent(actionId) + '&task_id=' + encodeURIComponent(taskId)
+    }).then(function (r) {
+      if (btn) { btn.disabled = true; btn.textContent = r.ok ? '✓ Đã nhắn Zalo' : '⚠ Lỗi — thử lại'; }
+    });
+  };
+
+  // ── Keyboard shortcuts: 1-7 pick outcome pill (display order), Enter =
+  // "Lưu & Khách kế →" when a valid outcome is selected. Only active in T2;
+  // never fires while typing (document.activeElement guard). This is the
+  // ONLY global keydown listener in this fragment — s14ToggleTP/s14ToggleObj
+  // bind via onclick, so there is no conflict to guard against. ──────────
+  document.addEventListener('keydown', function (e) {
+    if (!root || root.getAttribute('data-phase') !== 't2') return;
+    var ae = document.activeElement;
+    var typing = ae && (ae.tagName === 'TEXTAREA' || ae.tagName === 'INPUT' || ae.isContentEditable);
+    if (typing) return;
+    if (e.key >= '1' && e.key <= '7') {
+      var idx = parseInt(e.key, 10) - 1;
+      if (OUTCOME_ORDER[idx]) { window.s14StripPickOutcome(OUTCOME_ORDER[idx]); e.preventDefault(); }
+    } else if (e.key === 'Enter') {
+      if (outcomeRequirementMet()) { window.s14StripSave(); e.preventDefault(); }
+    }
+  });
+
+  // ── Init: mid-call reload recovery — an open draft for (staff, party)
+  // resumes T1 (no outcome yet) or T2 (outcome chosen before the reload)
+  // instead of forcing T0's "Gọi" click again; never creates a 2nd draft
+  // (create_draft is idempotent server-side too — belt & suspenders). ────
+  (function initPhase() {
+    if (!DRAFT) { showPhase('t0'); return; }
+    var noteTa = $('s14-strip-note');
+    if (noteTa && DRAFT.body) noteTa.value = DRAFT.body;
+    var zaloCb = $('s14-strip-zalo');
+    if (zaloCb) zaloCb.checked = !!DRAFT.zalo_connected;
+    startTimer();
+    if (DRAFT.contact_outcome) {
+      showPhase('t2');
+      restoreOutcomeSelection(DRAFT.contact_outcome);
+      var oc = $('s14-strip-order-code');
+      if (oc && DRAFT.related_order_code) oc.value = DRAFT.related_order_code;
+    } else {
+      showPhase('t1');
+    }
+  }());
+
+  // ── Align strip left/right to .detail-main column (unchanged technique
+  // from the old outcome bar — .s14-strip is position:fixed, JS-sized). ───
+  (function s14AlignStrip() {
     var anchor = document.querySelector('.detail-main') || document.querySelector('.s14-main');
-    var bar    = document.querySelector('.s14-outcome');
+    var bar = document.querySelector('.s14-strip');
     if (!anchor || !bar) return;
     function apply() {
       var r = anchor.getBoundingClientRect();
-      bar.style.left  = r.left + 'px';
+      bar.style.left = r.left + 'px';
       bar.style.right = (window.innerWidth - r.right) + 'px';
       bar.style.width = 'auto';
     }

@@ -27,6 +27,37 @@ from domain.entities.task import TASK_KIND_CONTACT, TASK_STATUS_OPEN, TASK_STATU
 log = logging.getLogger(__name__)
 
 
+def build_draft_activity_ctx(activity_log, current_user, party_id: str) -> Optional[dict]:
+    """Look up the open call draft (if any) for (staff, party) and shape it
+    into the small JSON-serializable dict the disposition strip's JS (phase-03)
+    reads to resume T1/T2 after a page reload mid-call. Returns None whenever
+    there is no activity_log/staff/open draft — the strip then starts at T0.
+
+    Shared by both cockpit hosts (full-screen `screen_call_cockpit.py` and the
+    embedded S03 tab in `screen_customer_360_panels.py`) since they render the
+    same fragment and must agree on initial strip state.
+    """
+    if activity_log is None or current_user is None:
+        return None
+    try:
+        draft = activity_log.find_open_draft(current_user.user_id, party_id)
+    except Exception:
+        log.warning("cockpit: find_open_draft %s", party_id, exc_info=True)
+        return None
+    if draft is None:
+        return None
+    custom = draft.custom_fields or {}
+    return {
+        "activity_id": draft.activity_id,
+        "started_at": draft.started_at,
+        "contact_outcome": draft.contact_outcome,
+        "outcome_reason": draft.outcome_reason,
+        "body": draft.body,
+        "related_order_code": draft.related_order_code,
+        "zalo_connected": bool(custom.get("zalo_connected")),
+    }
+
+
 def register_call_cockpit_route(
     router: APIRouter,
     templates: Jinja2Templates,
@@ -39,6 +70,7 @@ def register_call_cockpit_route(
     approach_repo=None,
     action_task_resolver=None,
     tags=None,           # Phase 02 (260706-0833): health_domain gap detection
+    activity_log=None,   # Phase 03 (disposition strip v2): draft recovery on reload
 ) -> None:
     """Register GET /customers/{party_id}/call on *router*."""
 
@@ -63,6 +95,12 @@ def register_call_cockpit_route(
 
         customer_id = _sapo_customer_id(ids)
         ins = _load_insight(ids)
+
+        # Phase 03 (disposition strip v2): open draft (if any) for the current
+        # staff — lets the strip resume T1/T2 instead of restarting at T0 on
+        # a mid-call page reload.
+        current_user = getattr(request.state, "current_user", None)
+        draft_activity = build_draft_activity_ctx(activity_log, current_user, party_id)
 
         # Warning notes (type=warning)
         warning_notes: list = []
@@ -167,6 +205,8 @@ def register_call_cockpit_route(
                 "rail_secondary": rail_secondary,
                 "pinned_task_id": pinned_task_id,
                 "return_target": return_target,
+                # Phase 03 (disposition strip v2): mid-call reload recovery
+                "draft_activity": draft_activity,
                 # A2: queue context
                 "queue_ids": queue_ids,
                 "queue_total": queue_total,

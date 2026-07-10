@@ -204,6 +204,78 @@ class TestFinalizeActivity:
             svc.finalize_activity("does-not-exist")
 
 
+class TestTwoStepPatchThenFinalize:
+    """Regression coverage for the disposition-strip bug (260711): the strip's
+    JS PATCHes contact_outcome the instant a pill is clicked, BEFORE the reason
+    is known (the reason sheet opens after) — reason arrives in a SEPARATE,
+    later PATCH call. patch_activity used to validate REASON_REQUIRED_OUTCOMES
+    on every intermediate call, computing next_reason from the not-yet-patched
+    activity — so the very first PATCH (outcome only) always raised, and
+    contact_outcome was never actually committed. Finalize then always 409'd.
+    Fix: patch_activity no longer enforces this; finalize_activity does, as the
+    single commit point."""
+
+    def test_outcome_then_reason_in_separate_patches_then_finalize_succeeds(self, seeded_crm_db):
+        svc = _make_service(seeded_crm_db)
+        party_id = str(uuid.uuid4())
+        _insert_party(seeded_crm_db, party_id)
+        for _sid in ("staff-1", "staff-2", "staff-a", "staff-b"):
+            _insert_staff(seeded_crm_db, _sid)
+        draft = svc.create_draft(party_id, "staff-1")
+
+        # Step 1: the exact click-through — pill click PATCHes contact_outcome
+        # alone. This must NOT raise (previously raised immediately).
+        after_outcome = svc.patch_activity(
+            draft.activity_id, {"contact_outcome": "refused"}, "staff-1",
+        )
+        assert after_outcome.contact_outcome == "refused"
+        assert after_outcome.outcome_reason is None
+        assert after_outcome.status == "draft"
+
+        # Step 2: reason sheet closes — a SEPARATE, later PATCH call.
+        after_reason = svc.patch_activity(
+            draft.activity_id, {"outcome_reason": "budget"}, "staff-1",
+        )
+        assert after_reason.contact_outcome == "refused"
+        assert after_reason.outcome_reason == "budget"
+
+        # Step 3: finalize must now succeed — both fields present by commit time.
+        activity, already_final = svc.finalize_activity(draft.activity_id)
+        assert already_final is False
+        assert activity.status == "final"
+        assert activity.contact_outcome == "refused"
+        assert activity.outcome_reason == "budget"
+
+    def test_finalize_still_rejects_refused_outcome_missing_reason(self, seeded_crm_db):
+        """Enforcement is relocated to finalize, not removed."""
+        svc = _make_service(seeded_crm_db)
+        party_id = str(uuid.uuid4())
+        _insert_party(seeded_crm_db, party_id)
+        for _sid in ("staff-1", "staff-2", "staff-a", "staff-b"):
+            _insert_staff(seeded_crm_db, _sid)
+        draft = svc.create_draft(party_id, "staff-1")
+
+        svc.patch_activity(draft.activity_id, {"contact_outcome": "refused"}, "staff-1")
+
+        with pytest.raises(ActivityFinalizeConflictError, match="outcome_reason is required"):
+            svc.finalize_activity(draft.activity_id)
+
+    def test_finalize_still_rejects_irritation_reason_missing_body(self, seeded_crm_db):
+        """Same relocation applies to the 'irritation' body-required check."""
+        svc = _make_service(seeded_crm_db)
+        party_id = str(uuid.uuid4())
+        _insert_party(seeded_crm_db, party_id)
+        for _sid in ("staff-1", "staff-2", "staff-a", "staff-b"):
+            _insert_staff(seeded_crm_db, _sid)
+        draft = svc.create_draft(party_id, "staff-1")
+
+        svc.patch_activity(draft.activity_id, {"contact_outcome": "answered"}, "staff-1")
+        svc.patch_activity(draft.activity_id, {"outcome_reason": "irritation"}, "staff-1")
+
+        with pytest.raises(ActivityFinalizeConflictError, match="body is required"):
+            svc.finalize_activity(draft.activity_id)
+
+
 class TestEditActivityAudit:
     def test_edit_mode_on_final_row_stamps_audit_trail(self, seeded_crm_db):
         svc = _make_service(seeded_crm_db)
@@ -245,3 +317,63 @@ class TestEditActivityAudit:
             is_edit_mode=True,
         )
         assert (edited.custom_fields or {}).get("previous_outcome") is None
+
+    def test_edit_mode_on_final_row_rejects_refused_without_reason(self, seeded_crm_db):
+        """Editing an already-FINAL row has no future finalize_activity call to
+        catch a missing reason — patch_activity itself must enforce it here,
+        server-side, not rely on the client-side M08 form guard alone."""
+        svc = _make_service(seeded_crm_db)
+        party_id = str(uuid.uuid4())
+        _insert_party(seeded_crm_db, party_id)
+        for _sid in ("staff-1", "staff-2"):
+            _insert_staff(seeded_crm_db, _sid)
+        draft = svc.create_draft(party_id, "staff-1")
+        svc.patch_activity(draft.activity_id, {"contact_outcome": "no_answer"}, "staff-1")
+        svc.finalize_activity(draft.activity_id)
+
+        with pytest.raises(ValueError, match="outcome_reason is required"):
+            svc.patch_activity(
+                draft.activity_id,
+                {"contact_outcome": "refused"},
+                "staff-2",
+                is_edit_mode=True,
+            )
+
+    def test_edit_mode_on_final_row_rejects_irritation_without_body(self, seeded_crm_db):
+        svc = _make_service(seeded_crm_db)
+        party_id = str(uuid.uuid4())
+        _insert_party(seeded_crm_db, party_id)
+        for _sid in ("staff-1", "staff-2"):
+            _insert_staff(seeded_crm_db, _sid)
+        draft = svc.create_draft(party_id, "staff-1")
+        svc.patch_activity(draft.activity_id, {"contact_outcome": "no_answer"}, "staff-1")
+        svc.finalize_activity(draft.activity_id)
+
+        with pytest.raises(ValueError, match="body is required"):
+            svc.patch_activity(
+                draft.activity_id,
+                {"contact_outcome": "refused", "outcome_reason": "irritation"},
+                "staff-2",
+                is_edit_mode=True,
+            )
+
+    def test_edit_mode_on_final_row_accepts_refused_with_reason(self, seeded_crm_db):
+        """Sanity check: the guard only blocks the invalid combination, not
+        'refused' edits in general."""
+        svc = _make_service(seeded_crm_db)
+        party_id = str(uuid.uuid4())
+        _insert_party(seeded_crm_db, party_id)
+        for _sid in ("staff-1", "staff-2"):
+            _insert_staff(seeded_crm_db, _sid)
+        draft = svc.create_draft(party_id, "staff-1")
+        svc.patch_activity(draft.activity_id, {"contact_outcome": "no_answer"}, "staff-1")
+        svc.finalize_activity(draft.activity_id)
+
+        edited = svc.patch_activity(
+            draft.activity_id,
+            {"contact_outcome": "refused", "outcome_reason": "still_stocked"},
+            "staff-2",
+            is_edit_mode=True,
+        )
+        assert edited.contact_outcome == "refused"
+        assert edited.outcome_reason == "still_stocked"
