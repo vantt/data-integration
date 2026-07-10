@@ -198,9 +198,13 @@ def test_list_customer_ids_ignores_non_matching_files(tmp_path):
 
 
 def test_list_customer_ids_reflects_new_file_without_reinit(tmp_path):
-    """Newly dropped file appears on next call — no restart / re-init required."""
+    """Newly dropped file appears on next call — no restart / re-init required.
+
+    ttl=0 makes the TTL cache deterministic (default 60s cache would make this
+    test flaky, since a second call within 60s would return the stale set).
+    """
     _write_json(tmp_path, 10, _VALID_DATA)
-    repo = FileApproachScriptRepository(tmp_path)
+    repo = FileApproachScriptRepository(tmp_path, ttl=0)
 
     first_call = repo.list_customer_ids()
     assert first_call == {10}

@@ -157,3 +157,21 @@ Render Jinja thật cho 1 party CÓ script (`794cf94b-...`) và 4 party KHÔNG c
 
 ### Unresolved
 - Chưa QA bằng mắt trên trình duyệt thật (môi trường agent không có browser) — đề nghị user xác nhận lại trên browser thật sau khi `docker compose restart crm` + hard-refresh (cache-bust `?v=14` đã bump nên refresh thường cũng đủ).
+
+## Fix 2 pre-existing tests 260710
+
+Sửa 2 test hỏng tiền tồn ghi nhận ở các mục trước (không phải do phase này gây ra).
+
+1. **`test_approach_script_handler.py`** — ImportError: test import `wire_approach_script_router` (API cũ, module-level globals) nhưng handler hiện tại (`approach_script_handler.py`) dùng factory pattern `make_approach_script_router(party_repo, approach_repo) -> APIRouter` (khớp convention chung của repo — verify qua `composition.py` dòng 521 và pattern tương tự ở `test_task_detail_and_cockpit.py`). Sửa: đổi import + `_make_app()` gọi thẳng `make_approach_script_router(...)` rồi `include_router`; bỏ fixture `reset_handler_globals` (không còn module-level state để reset) + bỏ import `pytest` không dùng nữa. Không đổi assertion nào — 7 test giữ nguyên logic.
+2. **`test_approach_script_file_repository.py::test_list_customer_ids_reflects_new_file_without_reinit`** — flaky do TTL cache 60s (`time.monotonic()`) trong `list_customer_ids()`: gọi 2 lần liên tiếp trong cùng giây có thể trả set cũ nếu implementation trước đây không cache — thật ra bug ngược lại, cache khiến lần gọi 2 đôi khi (tùy timing CI) không thấy file mới. Sửa production code `approach_script_file_repository.py`: thêm param `ttl: float = _SCRIPT_IDS_TTL` vào `__init__` (backward-compatible — mọi call site hiện có đều gọi `FileApproachScriptRepository(dir)` 1 tham số, không đổi behavior mặc định), dùng `self._ttl` thay hằng số module trong check cache. Test flaky gọi `FileApproachScriptRepository(tmp_path, ttl=0)` → cache luôn miss → deterministic.
+
+**Validation:**
+```
+docker compose exec -T crm pytest crm/src/tests/test_approach_script_handler.py crm/src/tests/test_approach_script_file_repository.py -q
+→ chạy 3 lần liên tiếp: 19 passed mỗi lần (0 flaky)
+
+docker compose exec -T crm pytest -q
+→ 1008 passed, 0 failed (full suite xanh 100%, không còn --ignore)
+```
+
+Phạm vi sửa: 2 file test (theo yêu cầu) + 1 thay đổi production nhỏ, backward-compatible (`approach_script_file_repository.py` thêm optional `ttl` param) — cần để làm test #2 deterministic một cách sạch, đã được cho phép trước trong yêu cầu task.

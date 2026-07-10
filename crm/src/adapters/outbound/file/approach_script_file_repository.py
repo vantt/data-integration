@@ -27,8 +27,9 @@ log = logging.getLogger(__name__)
 class FileApproachScriptRepository:
     """Read-only file adapter: {scripts_dir}/{customer_id}.json → ApproachScript."""
 
-    def __init__(self, scripts_dir: str | Path) -> None:
+    def __init__(self, scripts_dir: str | Path, ttl: float = _SCRIPT_IDS_TTL) -> None:
         self._scripts_dir = Path(scripts_dir)
+        self._ttl = ttl
         self._ids_cache: set[int] | None = None
         self._ids_cache_ts: float = 0.0
 
@@ -70,13 +71,15 @@ class FileApproachScriptRepository:
         )
 
     def list_customer_ids(self) -> set[int]:
-        """Return set of customer_ids with a script file, cached for _SCRIPT_IDS_TTL seconds.
+        """Return set of customer_ids with a script file, cached for self._ttl seconds
+        (default _SCRIPT_IDS_TTL = 60s; override via constructor `ttl` param, e.g. ttl=0
+        for tests that need deterministic no-cache behavior).
 
         Uses os.scandir for efficiency; ignores non-matching filenames silently.
         Pattern: ^(\\d+)\\.json$  — e.g. 603264280.json → 603264280.
         """
         now = time.monotonic()
-        if self._ids_cache is not None and (now - self._ids_cache_ts) < _SCRIPT_IDS_TTL:
+        if self._ids_cache is not None and (now - self._ids_cache_ts) < self._ttl:
             return self._ids_cache
 
         _PATTERN = re.compile(r"^(\d+)\.json$")

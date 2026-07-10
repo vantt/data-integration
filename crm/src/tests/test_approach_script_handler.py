@@ -24,8 +24,6 @@ import pathlib
 import sys
 from unittest.mock import MagicMock
 
-import pytest
-
 _REPO_ROOT = str(pathlib.Path(__file__).parents[4])    # .../data-integration
 _PYTHON_ROOT = str(pathlib.Path(__file__).parents[1])  # .../crm/src
 for _p in (_REPO_ROOT, _PYTHON_ROOT):
@@ -34,8 +32,7 @@ for _p in (_REPO_ROOT, _PYTHON_ROOT):
 
 from fastapi import FastAPI                                                      # noqa: E402
 from starlette.testclient import TestClient                                      # noqa: E402
-from adapters.inbound.http import approach_script_handler                        # noqa: E402
-from adapters.inbound.http.approach_script_handler import wire_approach_script_router  # noqa: E402
+from adapters.inbound.http.approach_script_handler import make_approach_script_router  # noqa: E402
 from adapters.outbound.file.approach_script_file_repository import FileApproachScriptRepository  # noqa: E402
 from domain.entities.party import PartyIdentity                                  # noqa: E402
 
@@ -87,9 +84,8 @@ def _make_identity(identity_type: str, identity_value: str) -> PartyIdentity:
 
 def _make_app(party_repo, approach_repo) -> FastAPI:
     """Build a minimal FastAPI app with approach_script_handler wired."""
-    wire_approach_script_router(party_repo, approach_repo)
     app = FastAPI()
-    app.include_router(approach_script_handler.router)
+    app.include_router(make_approach_script_router(party_repo, approach_repo))
     return app
 
 
@@ -108,21 +104,6 @@ def _party_repo_no_identity():
     repo.list_identities.return_value = []
     return repo
 
-
-# ── Isolation fixture ─────────────────────────────────────────────────────────
-
-@pytest.fixture(autouse=True)
-def reset_handler_globals():
-    """Reset module-level repo globals before AND after every test.
-
-    Prevents state from one test leaking into the next regardless of test
-    ordering or which file imported the handler first.
-    """
-    approach_script_handler._party_repo = None
-    approach_script_handler._approach_repo = None
-    yield
-    approach_script_handler._party_repo = None
-    approach_script_handler._approach_repo = None
 
 
 # ── Tests ─────────────────────────────────────────────────────────────────────
