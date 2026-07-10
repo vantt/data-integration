@@ -155,7 +155,7 @@ Go-live sequence:
 
 ## Todo
 
-- [ ] Confirm `HUG_ZALO_OA_URL` is set in `.env` (check with user — **Open Question #5**)
+- [x] Confirm `HUG_ZALO_OA_URL` — ✅ chốt + deploy 2026-07-10: `https://zalo.me/4578048148495215534`, set trong `webhook_receiver/cloudflareD1/wrangler.toml` `[vars]`, live trên `hug.fjp.vn` (Version ID `5225dc64-c763-47bf-839a-a9d045192e05`).
 - [ ] B0: create HUG50 coupon in Sapo admin (manual step, document price_rule ID)
 - [ ] Seed A2 campaign via C2 UI + verify D1 row via wrangler
 - [ ] Smoke test full loop (steps 4a–4g above)

@@ -92,7 +92,12 @@
       "Bash(MSYS_NO_PATHCONV=1 docker exec *)",
       "Bash(MSYS_NO_PATHCONV=1 docker cp \"C:/Users/Vantt/AppData/Local/Temp/claude/D--Vantt-app-data-integration/8dc7334d-80b9-49b2-befb-649be999a0db/scratchpad/baseline_sku_action_queue.parquet\" data_platform:/tmp/baseline_sku_action_queue.parquet)",
       "Bash(MSYS_NO_PATHCONV=1 docker cp \"C:/Users/Vantt/AppData/Local/Temp/claude/D--Vantt-app-data-integration/8dc7334d-80b9-49b2-befb-649be999a0db/scratchpad/baseline_customer_action_queue.parquet\" data_platform:/tmp/baseline_customer_action_queue.parquet)",
-      "Bash(powershell -Command \"New-Item -ItemType Directory -Force -Path 'D:\\\\Vantt\\\\app\\\\data-integration\\\\plans\\\\260708-1501-gift-purchase-sku-action-scenario\\\\reports' | Out-Null; Write-Output ok\")"
+      "Bash(powershell -Command \"New-Item -ItemType Directory -Force -Path 'D:\\\\Vantt\\\\app\\\\data-integration\\\\plans\\\\260708-1501-gift-purchase-sku-action-scenario\\\\reports' | Out-Null; Write-Output ok\")",
+      "Bash(curl -s \"http://127.0.0.1:3000/graphql\" -H \"Content-Type: application/json\" -d '{\"query\":\"{ instigationStateOrError\\(instigationSelector: {repositoryName: \\\\\"__repository__\\\\\", repositoryLocationName: \\\\\"orchestration\\\\\", name: \\\\\"pipeline_hug_realtime_schedule\\\\\"}\\) { ... on InstigationState { status } } }\"}')",
+      "Bash(curl -s \"http://127.0.0.1:3000/graphql\" -H \"Content-Type: application/json\" -d '{\"query\":\"{ repositoriesOrError { ... on RepositoryConnection { nodes { name location { name } schedules { name scheduleState { status } } } } } }\"}')",
+      "Bash(curl -s \"http://127.0.0.1:3000/graphql\" -H \"Content-Type: application/json\" -d '{\"query\":\"{ runsOrError\\(filter: {pipelineName: \\\\\"pipeline_hug_realtime_job\\\\\"}, limit: 5\\) { ... on Runs { results { runId status startTime endTime } } } }\"}')",
+      "Bash(wrangler deploy *)",
+      "Bash(curl *)"
     ]
   },
   "hooks": {

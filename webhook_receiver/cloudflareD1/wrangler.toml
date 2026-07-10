@@ -20,7 +20,7 @@ HUG_FALLBACK_URL = "https://finejapanvietnam.com"
 # Zalo OA follow link shown on the opt-in landing page (/optin/:token).
 # Override per environment: `wrangler secret put HUG_ZALO_OA_URL` for prod,
 # or set below for a non-secret public value. Replace with the real OA URL before going live.
-HUG_ZALO_OA_URL = "https://zalo.me/YOUR_OA_ID"
+HUG_ZALO_OA_URL = "https://zalo.me/4578048148495215534"
 
 [[d1_databases]]
 binding = "DB"
