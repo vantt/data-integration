@@ -1,0 +1,12 @@
+-- Migration 0043 UP: snapshot action_type(s) covered by a customer claim.
+-- crm_task.claimed_action_types is a JSON array string, e.g.
+-- '["REORDER_PREEMPT","PROGRESS_CHECK"]', written ONCE at claim time by
+-- TaskService.claim_customer_actions (application/task_service.py). NULL for:
+--   - all pre-migration rows (fix-forward only, no backfill — see
+--     plans/260709-1638-crm-outreach-effort-report/plan.md "Sự thật đã xác minh" #1)
+--   - tasks not created via the action_queue_claim source (manual/action_queue/campaign)
+-- Deliberately NOT re-synced when the customer's live action_type mix changes
+-- after claim (e.g. dbt refresh promotes REORDER_PREEMPT -> REORDER_OVERDUE) —
+-- this column answers "what was the reason for outreach at decision time", not
+-- "what is true right now" (plan.md câu hỏi mở #1).
+ALTER TABLE crm_task ADD COLUMN claimed_action_types TEXT;

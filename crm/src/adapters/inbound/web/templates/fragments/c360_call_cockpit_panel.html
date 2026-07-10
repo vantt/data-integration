@@ -129,18 +129,29 @@
   {% set _ = alert_chips.append({'label':'⚠ '~(n.body | truncate_str(40)),'tone':'warn'}) %}
 {% endfor %}
 
-{# ── Preferred phone for identity bar ────────────────────────────────────────#}
-{% set pref_phone = '' %}
+{# ── Preferred phone for identity bar ────────────────────────────────────────
+   Uses a namespace() because plain {% set %} inside {% for %} does NOT leak
+   to the outer scope in Jinja2 (pref_phone was silently always '' before this
+   fix — the identity-bar phone line rendered blank, and this P0 change's own
+   quick-outcome channel_value/channel_identity_id would have inherited the
+   same bug had it stayed as plain {% set %}). #}
+{% set pp = namespace(phone='', phone_id='') %}
 {% for idn in (identities or []) %}
   {% if idn.identity_type in ('phone','mobile') and idn.is_preferred %}
-    {% set pref_phone = idn.identity_value %}
+    {% set pp.phone = idn.identity_value %}
+    {% set pp.phone_id = idn.identity_id %}
   {% endif %}
 {% endfor %}
-{% if not pref_phone %}
+{% if not pp.phone %}
   {% for idn in (identities or []) %}
-    {% if idn.identity_type in ('phone','mobile') %}{% set pref_phone = idn.identity_value %}{% endif %}
+    {% if idn.identity_type in ('phone','mobile') %}
+      {% set pp.phone = idn.identity_value %}
+      {% set pp.phone_id = idn.identity_id %}
+    {% endif %}
   {% endfor %}
 {% endif %}
+{% set pref_phone = pp.phone %}
+{% set pref_phone_id = pp.phone_id %}
 
 {# ── Avatar initial ─────────────────────────────────────────────────────────#}
 {% set avatar_init = '' %}
@@ -778,7 +789,10 @@
   </div>{# /.s14-frame #}
   </div>{# /#s14-content #}
 
-  {# ── OUTCOME BAR (sticky, §outcome_bar) — renders regardless of R14 state ── #}
+  {# ── OUTCOME BAR (sticky, §outcome_bar) — renders regardless of R14 state ──
+     ✗ Không bắt / ☎ Bận / ☠ Sai số POST thẳng /log-activity (no modal, no note/order
+     needed — phase-01 P0). ✓ Gọi được / ⏳ Hẹn lại / 🛒 Đã mua still open M08 (need
+     note/callback-time/order-code). #}
   <div class="s14-outcome" role="group" aria-label="Ghi kết quả cuộc gọi">
     <div class="s14-outcome__inner">
       {# Hidden fields carry rail provenance so log-activity can bulk-resolve §11 #}
@@ -792,17 +806,37 @@
                   rows="1"
                   placeholder="Ghi chú tạm khi gọi…"
                   aria-label="Ghi chú cuộc gọi"></textarea>
-        <div class="s14-outcome__btns">
+        <div class="s14-outcome__btns" id="s14-outcome-btns">
           {# A-S14-009: log outcome → M08; quick-note injected client-side #}
           <button class="s14-oc s14-oc--good" type="button"
                   onclick="s14OpenOutcome('answered')">
             <svg class="ico" width="14" height="14" viewBox="0 0 14 14" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M2 7l4 4L12 3"/></svg>
             Gọi được
           </button>
+          {# Quick-outcome: POST thẳng /log-activity, source=call_cockpit → fragment thay hàng nút #}
           <button class="s14-oc s14-oc--miss" type="button"
-                  onclick="s14OpenOutcome('no_answer')">
+                  hx-post="/customers/{{ party_id }}/log-activity"
+                  hx-target="#s14-outcome-btns" hx-swap="innerHTML"
+                  hx-vals="js:s14QuickOutcomeVals('no_answer')"
+                  hx-disabled-elt="#s14-outcome-btns button">
             <svg class="ico" width="14" height="14" viewBox="0 0 14 14" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" aria-hidden="true"><line x1="1" y1="1" x2="13" y2="13"/><line x1="13" y1="1" x2="1" y2="13"/></svg>
             Không nghe
+          </button>
+          <button class="s14-oc s14-oc--busy" type="button"
+                  hx-post="/customers/{{ party_id }}/log-activity"
+                  hx-target="#s14-outcome-btns" hx-swap="innerHTML"
+                  hx-vals="js:s14QuickOutcomeVals('busy')"
+                  hx-disabled-elt="#s14-outcome-btns button">
+            <svg class="ico" width="14" height="14" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.3" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 3.5c0 5.5 4 9.5 10 10l1.5-3-2.5-1.5-1 1.5c-1.5-.5-3.5-2.5-4-4l1.5-1L7 3 3 3.5z"/></svg>
+            Bận
+          </button>
+          <button class="s14-oc s14-oc--wrong" type="button"
+                  hx-post="/customers/{{ party_id }}/log-activity"
+                  hx-target="#s14-outcome-btns" hx-swap="innerHTML"
+                  hx-vals="js:s14QuickOutcomeVals('wrong_number')"
+                  hx-disabled-elt="#s14-outcome-btns button">
+            <svg class="ico" width="14" height="14" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.3" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M8 3 2 13h12L8 3z"/><line x1="8" y1="7" x2="8" y2="10"/><circle cx="8" cy="12" r="0.4" fill="currentColor" stroke="none"/></svg>
+            Sai số
           </button>
           <button class="s14-oc s14-oc--later" type="button"
                   onclick="s14OpenOutcome('callback')">
@@ -820,6 +854,57 @@
   </div>
 
 </div>{# /#s14-panel-root #}
+
+{# ── Phase-01 P0: quick-outcome disable/spinner + confirmation-state styles ──
+   Scoped to .s14-oc so this never bleeds into unrelated htmx elements elsewhere
+   on the page (htmx-request is a global class). #}
+<style>
+.s14-oc:disabled { opacity: .5; cursor: default; pointer-events: none; }
+.s14-oc.htmx-request { opacity: .6; }
+.s14-oc.htmx-request::after {
+  content: ''; width: 10px; height: 10px; margin-left: 6px; display: inline-block;
+  border: 2px solid currentColor; border-right-color: transparent; border-radius: 50%;
+  animation: s14spin .6s linear infinite; vertical-align: middle;
+}
+@keyframes s14spin { to { transform: rotate(360deg); } }
+.s14-outcome__done { display: flex; align-items: center; gap: 10px; font-size: 13px; color: var(--fg-1); padding: 9px 4px; }
+.s14-outcome__done-txt { font-weight: 600; color: var(--moss-500); }
+.s14-oc-undo { background: none; border: none; color: var(--accent); font-size: 12px; cursor: pointer; text-decoration: underline; padding: 0; }
+</style>
+
+{# ── Phase-01 P0: quick-outcome POST payload builder — unconditional (must work
+   even in ST-CALL-NO-SCRIPT, i.e. script=None) since the outcome bar itself
+   renders regardless of R14/script state. #}
+<script>
+(function () {
+  var S14_PREF_PHONE_ID  = {{ pref_phone_id | tojson }};
+  var S14_PREF_PHONE_VAL = {{ pref_phone | tojson }};
+
+  function s14IctNow() {
+    var d = new Date(Date.now() + 7 * 3600000);
+    var p = function (n) { return String(n).padStart(2, '0'); };
+    return d.getUTCFullYear() + '-' + p(d.getUTCMonth() + 1) + '-' + p(d.getUTCDate())
+         + 'T' + p(d.getUTCHours()) + ':' + p(d.getUTCMinutes());
+  }
+
+  // Payload for the 3 direct-POST quick-outcome buttons (no_answer/busy/wrong_number):
+  // hinh_thuc=call, channel=số chính, occurred_at=ICT now, carries bulk-resolve ids +
+  // quick-note, source=call_cockpit so the handler returns a small fragment (no redirect).
+  window.s14QuickOutcomeVals = function (outcome) {
+    return {
+      hinh_thuc: 'call',
+      contact_outcome: outcome,
+      occurred_at: s14IctNow(),
+      channel_identity_id: S14_PREF_PHONE_ID || '',
+      channel_value: S14_PREF_PHONE_VAL || '',
+      resolve_action_ids: (document.getElementById('s14-resolve-action-ids') || {}).value || '',
+      resolve_task_ids: (document.getElementById('s14-resolve-task-ids') || {}).value || '',
+      body: (document.getElementById('s14-quick-note') || {}).value || '',
+      source: 'call_cockpit'
+    };
+  };
+})();
+</script>
 
 {# ── A-S14-027: R14 unlock — loaded whenever banner is shown (script may be None) #}
 {% if is_stop %}

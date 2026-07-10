@@ -33,7 +33,16 @@ class TagService:
         tag_id: str,
         user_id: Optional[str] = None,
         source: str = "crm_user",
+        source_activity_id: Optional[str] = None,
     ) -> None:
+        """Attach a tag to a party.
+
+        source_activity_id (migration 0044) links the attach back to the
+        crm_activity_log row it was captured during (e.g. Log Activity /
+        S14 call cockpit inline tagging) — optional and backward-compatible;
+        omit or pass None when the tag is attached outside that flow (M03
+        modal, sync, governance normalize).
+        """
         tag = self._tags.get_tag(tag_id)
         if tag is None:
             raise ValueError(f"tag service: tag {tag_id!r} not found")
@@ -46,6 +55,7 @@ class TagService:
             color=tag.color,
             tagged_by=user_id,
             source=source,
+            source_activity_id=source_activity_id,
         )
         self._tags.attach_tag(pt)
         if self._db:

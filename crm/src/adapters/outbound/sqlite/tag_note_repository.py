@@ -88,10 +88,11 @@ class SQLiteTagRepository:
     # the next reconcile pass (which only ever touches source='sapo_v2_sync' rows)
     # leaves it alone from then on. See plan 260619-0830-crm-tag-acl-sync phase-03.
     _SQL_ATTACH = """
-        INSERT INTO crm_party_tag (party_id, tag_id, tagged_by, tagged_at, source)
-        VALUES (?, ?, ?, ?, ?)
+        INSERT INTO crm_party_tag (party_id, tag_id, tagged_by, tagged_at, source, source_activity_id)
+        VALUES (?, ?, ?, ?, ?, ?)
         ON CONFLICT(party_id, tag_id)
-        DO UPDATE SET source = 'crm_user', tagged_by = excluded.tagged_by
+        DO UPDATE SET source = 'crm_user', tagged_by = excluded.tagged_by,
+                      source_activity_id = COALESCE(excluded.source_activity_id, crm_party_tag.source_activity_id)
     """
 
     _SQL_DETACH = """
@@ -190,11 +191,15 @@ class SQLiteTagRepository:
         on the crm_party_tag.source column DEFAULT. On conflict (row already
         exists, e.g. sync-owned), the source is upgraded to 'crm_user' — a CRM
         user assigning a tag always wins over a prior sync mirror.
+
+        source_activity_id (migration 0044) is only overwritten on conflict when
+        the new value is non-NULL — a re-attach with no activity context (e.g.
+        M03 modal) never erases a previously-recorded call link.
         """
         self._db.conn.execute(
             self._SQL_ATTACH,
             (party_tag.party_id, party_tag.tag_id, party_tag.tagged_by, party_tag.tagged_at,
-             party_tag.source or "crm_user"),
+             party_tag.source or "crm_user", party_tag.source_activity_id),
         )
 
     def detach_tag(self, party_id: str, tag_id: str) -> None:

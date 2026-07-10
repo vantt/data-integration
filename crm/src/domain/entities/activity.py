@@ -35,7 +35,7 @@ DIRECTION_OUT = "out"
 # contact_outcome constants (D2 — per channel enum)
 # ---------------------------------------------------------------------------
 CONTACT_OUTCOMES_CALL = [
-    "answered", "no_answer", "busy", "wrong_number", "callback", "refused",
+    "answered", "no_answer", "busy", "wrong_number", "callback", "refused", "purchased",
 ]
 CONTACT_OUTCOMES_MESSAGING = [
     "replied", "no_reply", "pending_reply", "refused", "blocked",
@@ -68,6 +68,10 @@ VALID_OUTCOME_REASONS = [
     # irritation: kích ứng/không hợp da → tín hiệu chất lượng cần escalate,
     #   không upsell cùng dòng sản phẩm; khác 'product_fit' (không đúng nhu cầu).
     "still_stocked", "wait_promo", "irritation",
+    # do_not_contact: khách yêu cầu KHÔNG liên hệ lại nữa — khác 'refused' (từ chối lần
+    #   này, có thể gọi lại sau); dùng để loại vĩnh viễn khỏi action queue/outreach.
+    #   Không nằm trong REASON_REQUIRED_OUTCOMES — chỉ chọn được khi outcome='refused'.
+    "do_not_contact",
 ]
 # Server enforces reason when contact_outcome is in this set
 REASON_REQUIRED_OUTCOMES: set[str] = {"refused"}

@@ -1,0 +1,130 @@
+version: 2
+
+models:
+  - name: mart_staff_performance_weekly
+    description: >
+      Hiệu quả CRM theo staff × tuần (ISO week, Monday ICT). Grain: 1 dòng /
+      (staff_key, week_start_date). Đo nỗ lực tiếp cận (activities/calls),
+      thông tin thu thập được (outcome notes, tag health_concern), và kết quả
+      (tasks, orders). Xem plans/260709-1638-crm-outreach-effort-report/
+      phase-00-quick-win-extend-staff-performance-mart.md.
+    columns:
+      - name: staff_key
+        description: "Sapo staff surrogate key (dim_staff)."
+        tests:
+          - not_null
+      - name: staff_id
+        description: "Sapo account_id (string), bridge CRM UUID ↔ dim_staff."
+      - name: crm_user_id
+        description: "CRM app_user UUID (crm_app_user.user_id)."
+      - name: full_name
+        description: "Tên nhân viên."
+      - name: week_start_date
+        description: "Ngày Thứ Hai của tuần ISO (giờ Asia/Ho_Chi_Minh)."
+        tests:
+          - not_null
+
+      # ── Activity KPIs ──────────────────────────────────────────────────
+      - name: activities_total
+        description: "Tổng số activity (mọi channel, mọi direction) trong tuần."
+      - name: activities_outbound
+        description: "Số activity direction='out' (mọi channel — gồm cả zalo/email/visit, không riêng cuộc gọi; xem calls_dialed cho riêng kênh gọi)."
+      - name: contacts_reached
+        description: >
+          Số activity mà người thật đã phản hồi (contact_outcome IN
+          ('answered','replied','met','callback','refused','purchased')).
+          THAY ĐỔI NGỮ NGHĨA 2026-07-10: trước đó chỉ gồm
+          ('answered','replied','met'); bổ sung 'callback' + 'refused' vì
+          người thật đã nghe máy/trả lời dù chưa xong cuộc gọi hoặc từ chối
+          (vẫn là "reached", khác no_answer/busy). 'purchased' là
+          contact_outcome enum CHƯA ship (xem
+          plans/reports/ux-design-260710-1313-activity-log-api-cockpit-integration-report.md)
+          — liệt kê sẵn để forward-compatible, không tạo cột riêng (quyết định
+          plan.md câu hỏi mở #4 — đổi tại chỗ, không giữ song song 2 cột).
+          Dữ liệu lịch sử trước 2026-07-10 vẫn tính lại theo định nghĩa mới
+          (không có snapshot cũ lưu riêng) — số liệu tuần cũ sẽ tăng nhẹ đúng
+          bằng số callback+refused của tuần đó.
+      - name: call_duration_s
+        description: "Tổng contact_duration_s cộng dồn trong tuần (giây), mọi channel."
+      - name: reach_rate_pct
+        description: "contacts_reached / activities_outbound * 100, làm tròn 1 chữ số thập phân. NULL nếu activities_outbound = 0."
+
+      # ── Task KPIs ──────────────────────────────────────────────────────
+      - name: tasks_assigned
+        description: "Số task được tạo/gán trong tuần (theo created_at)."
+      - name: tasks_completed
+        description: "Số task hoàn thành trong tuần (theo completed_at)."
+
+      # ── Sales KPIs ─────────────────────────────────────────────────────
+      - name: orders_sold
+        description: "Số đơn hàng Sapo active bán trong tuần, gán theo seller_staff_key."
+      - name: revenue_vnd
+        description: "Tổng net_revenue (VND) của các đơn trên."
+
+      # ── Information-collected KPIs (2026-07-10) ───────────────────────
+      - name: outcome_notes_count
+        description: >
+          Số note note_type='outcome' do staff này viết trong tuần (theo
+          created_at). note_type='outcome' là mặc định của form Log Activity
+          (M08) — dữ liệu "thông tin thu thập" đáng tin, không cần thay đổi gì
+          ở nguồn.
+      - name: health_concern_tags_new
+        description: >
+          Số tag category='health_concern' được gắn LẦN ĐẦU cho một khách
+          hàng (party_id, tag_id) trong tuần, theo staff thực hiện lần gắn đầu
+          tiên đó (tagged_at). Đếm theo lần-đầu-xuất-hiện của cặp
+          (party_id, tag_id), không đếm trùng nếu tag cũ được gắn lại
+          (plan.md câu hỏi mở #2).
+      - name: other_tags_new
+        description: >
+          Tương tự health_concern_tags_new nhưng cho mọi category khác
+          health_concern (kể cả category NULL — dùng IS DISTINCT FROM để
+          không âm thầm bỏ sót tag chưa phân loại category).
+
+      # ── Channel mix (activity_type proxy) ─────────────────────────────
+      - name: activities_call
+        description: >
+          Số activity activity_type='call'. Proxy CHÍNH XÁC cho
+          channel_type='call' (crm_activity_log.channel_type, migration 0033)
+          — vì channel_type chưa được export ra warehouse
+          (crm_activity_log_export thiếu cột này, cùng loại gap với
+          crm_task ở plan.md #6), mart dùng activity_type thay thế. Theo
+          mapping hinh_thuc→activity_type của app (_HT_TO_ACT_TYPE,
+          screen_customer_360_activity.py), chỉ hinh_thuc='call' mới tạo ra
+          activity_type='call' nên đây là ánh xạ 1:1 chính xác, không phải
+          suy đoán.
+      - name: activities_chat
+        description: >
+          Số activity activity_type='chat'. GỘP cả zalo và fb (cả hai đều map
+          vào activity_type='chat' theo _HT_TO_ACT_TYPE) — không tách được
+          zalo/fb riêng cho đến khi channel_type được export (gap mở, chưa xử
+          lý trong phase này).
+      - name: activities_email
+        description: "Số activity activity_type='email'."
+      - name: activities_visit
+        description: "Số activity activity_type='visit'."
+      - name: activities_other
+        description: "Số activity activity_type='other'."
+      - name: activities_unknown
+        description: >
+          Fallback: activity_type NULL hoặc giá trị lạ ngoài
+          (call, chat, email, visit, other) — gồm cả 'note' (enum có định
+          nghĩa nhưng chưa có write path nào tạo ra giá trị này trong app
+          hiện tại). Không âm thầm bỏ (silently drop) khỏi tổng.
+
+      # ── Call funnel (Sprint Gọi Ra 45 ngày, 2026-07-10) ───────────────
+      - name: calls_dialed
+        description: >
+          Số cuộc gọi ra (direction='out' AND activity_type='call'), kể cả
+          không nghe máy. Mẫu số reach rate riêng kênh gọi — khác
+          activities_outbound (gộp mọi channel).
+      - name: conversations_count
+        description: >
+          Số "cuộc nói chuyện thật": contact_outcome='answered' AND
+          (contact_duration_s >= 60 HOẶC có note outcome đính vào đúng
+          activity đó qua source_activity_id). Ngưỡng 60s là ước tính ban đầu
+          — cần kiểm tra tỷ lệ NULL của contact_duration_s trong 2 tuần đầu
+          sprint để chốt lại (plan.md câu hỏi mở #6, xem báo cáo implementation
+          phase-00 để biết tỷ lệ NULL thực tế tại thời điểm ship).
+      - name: wrong_number_count
+        description: "Số activity contact_outcome='wrong_number' — chỉ số làm sạch danh sách gọi (SĐT chết)."

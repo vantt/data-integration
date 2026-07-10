@@ -77,10 +77,10 @@ CRM_WRITEBACK_TABLES: list[CrmWritebackTable] = [
         # created_at = DB insert time; avoids missing late-logged activities vs occurred_at
         export_query="""
             SELECT a.activity_id, a.party_id, pi.identity_value AS customer_id,
-                   a.activity_type, a.direction, a.channel, a.outcome,
+                   a.activity_type, a.direction, a.channel, a.channel_type, a.outcome,
                    a.contact_outcome, a.outcome_reason, a.callback_at, a.contact_duration_s,
                    a.task_id, a.related_order_code, a.staff_user_id,
-                   a.occurred_at, a.created_at
+                   a.occurred_at, a.created_at, a.custom_fields
             FROM crm_activity_log a
             """ + _dedup_identity_join("a") + """
             WHERE a.created_at > '{cursor}'
@@ -125,7 +125,10 @@ CRM_WRITEBACK_TABLES: list[CrmWritebackTable] = [
                    t.source, t.source_ref,
                    t.assignee_user_id, t.created_by,
                    t.due_at, t.completed_at,
-                   t.created_at, t.updated_at
+                   t.created_at, t.updated_at,
+                   t.outcome, t.task_kind, t.channel,
+                   t.value_at_stake_vnd, t.top_affinity_product,
+                   t.claimed_action_types
             FROM crm_task t
             """ + _dedup_identity_join("t") + """
             WHERE t.updated_at > '{cursor}'
@@ -149,7 +152,7 @@ CRM_WRITEBACK_TABLES: list[CrmWritebackTable] = [
         name="crm_party_tag", mode="snapshot",
         export_query="""
             SELECT pt.party_id, pi.identity_value AS customer_id, pt.tag_id, pt.tagged_by, pt.tagged_at,
-                   pt.source AS source
+                   pt.source AS source, pt.source_activity_id
             FROM crm_party_tag pt
             """ + _dedup_identity_join("pt")),
     CrmWritebackTable(

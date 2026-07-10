@@ -110,6 +110,7 @@ class PartyTag:
     tagged_by: Optional[str] = None         # FK → crm_app_user (nullable)
     display_label: Optional[str] = None     # denormalised from crm_tag.display_label
     source: str = "crm_user"                # crm_user|ops_normalized|sapo_v2_sync|merged (migration 0039)
+    source_activity_id: Optional[str] = None  # FK -> crm_activity_log (nullable, migration 0044)
 
 
 @dataclass

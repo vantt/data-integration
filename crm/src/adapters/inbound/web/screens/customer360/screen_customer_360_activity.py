@@ -30,6 +30,18 @@ _HT_TO_ACT_TYPE = {
     "email": "email", "visit": "visit", "other": "other",
 }
 
+# Vietnamese labels for the small confirmation fragment returned to the call
+# cockpit (source=call_cockpit) — covers contact_outcome values reachable from
+# the outcome bar / M08 (call + messaging + visit channels).
+_OUTCOME_LABELS_VI = {
+    "answered": "Đã nghe", "no_answer": "Không bắt", "busy": "Bận",
+    "wrong_number": "Sai số", "callback": "Hẹn lại", "refused": "Từ chối",
+    "purchased": "Đã mua",
+    "met": "Gặp được", "not_met": "Không gặp được",
+    "replied": "Đã phản hồi", "no_reply": "Không phản hồi",
+    "pending_reply": "Chờ phản hồi", "blocked": "Chặn",
+}
+
 
 def _ict_local_to_utc(ict_str: str) -> str:
     """Parse datetime-local input (assumed ICT/UTC+7) → UTC ISO-8601 string."""
@@ -191,6 +203,12 @@ def register_activity_routes(
         insight_type: str = Form(default=""),
         insight_body: str = Form(default=""),
         insight_confidence: str = Form(default=""),
+        # P0 (activity-log disposition API): zalo-connect checkbox (M08 (d))
+        zalo_connected: str = Form(default=""),
+        # P0: entry-point marker — "call_cockpit" gets a small confirmation
+        # fragment back (no HX-Redirect) so the outcome bar stays in place;
+        # every other caller (M08 modal, timeline) keeps the redirect.
+        source: str = Form(default=""),
     ) -> Response:
         current_user = getattr(request.state, "current_user", None)
         actor_id: Optional[str] = current_user.user_id if current_user else None
@@ -218,12 +236,15 @@ def register_activity_routes(
         # D4: persist resolve IDs in activity custom_fields snapshot (phase-02)
         _bulk_action_preview = _parse_id_list(resolve_action_ids)
         _bulk_task_preview = _parse_id_list(resolve_task_ids)
-        if _bulk_action_preview or _bulk_task_preview:
+        _zalo_connected = zalo_connected.strip() == "1"
+        if _bulk_action_preview or _bulk_task_preview or _zalo_connected:
             cf = act_data.get("custom_fields") or {}
             if _bulk_task_preview:
                 cf["resolve_task_ids"] = _bulk_task_preview
             if _bulk_action_preview:
                 cf["resolve_action_ids"] = _bulk_action_preview
+            if _zalo_connected:
+                cf["zalo_connected"] = True
             act_data["custom_fields"] = cf
         try:
             activity = activity_log.log_activity(act_data)
@@ -306,6 +327,17 @@ def register_activity_routes(
                 skip_task_id=task_id.strip() if complete_task == "1" else "",
                 actor_id=actor_id or "",
             )
+        if source.strip() == "call_cockpit":
+            outcome_val = contact_outcome.strip()
+            label = _OUTCOME_LABELS_VI.get(outcome_val, outcome_val or "đã ghi nhận")
+            frag = (
+                '<div class="s14-outcome__done">'
+                f'<span class="s14-outcome__done-txt">✓ Đã ghi: {label}</span>'
+                f'<button type="button" class="s14-oc-undo" '
+                f'onclick="s14OpenOutcome(\'{outcome_val}\')">Hoàn tác</button>'
+                '</div>'
+            )
+            return HTMLResponse(content=frag)
         return HTMLResponse(content="", headers={"HX-Redirect": f"/customers/{party_id}?tab=timeline"})
 
     # ── A-S14-026: Async-resolve (Zalo / email without a call) ───────────────

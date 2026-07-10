@@ -4,6 +4,7 @@ Pure domain + ports only; no adapter imports.
 """
 from __future__ import annotations
 
+import json
 import logging
 import uuid
 from shared.timestamps import utc_now
@@ -250,6 +251,26 @@ class TaskService:
             if best_action else ""
         )
 
+        # Migration 0043: snapshot claimed action_type(s) ONCE at claim time — never
+        # re-synced later (plan.md câu hỏi mở #1: keeps "why this customer was called
+        # at decision time", not "what's true now"). `actions` is already ordered by
+        # priority_rank ascending (cache_repository.list_all_action_queue ORDER BY
+        # priority ASC), so this list preserves that order.
+        claimed_action_types: Optional[str] = None
+        action_types = [
+            getattr(a, "action_type", None) for a in actions if getattr(a, "action_type", None)
+        ]
+        if action_types:
+            try:
+                claimed_action_types = json.dumps(action_types)
+                json.loads(claimed_action_types)  # validate round-trip before persisting
+            except (TypeError, ValueError) as exc:
+                log.warning(
+                    "claim_customer_actions: failed to serialize action_types for party %s: %s",
+                    party_id, exc,
+                )
+                claimed_action_types = None
+
         now = utc_now()
         task = Task(
             task_id=str(uuid.uuid4()),
@@ -266,6 +287,7 @@ class TaskService:
             task_kind="contact",  # claim always means outreach to a customer
             value_at_stake_vnd=value_at_stake_vnd or None,  # store None if sum is 0
             top_affinity_product=top_affinity_product or None,
+            claimed_action_types=claimed_action_types,
         )
         self._task_repo.insert(task)
         if self._db:

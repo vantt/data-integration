@@ -455,8 +455,8 @@ class _ProfileTagCFComposite:
     def list_party_tags(self, party_id):
         return self._tags.list_party_tags(party_id)
 
-    def attach_tag(self, party_id, tag_id, user_id=None, source="crm_user"):
-        return self._tags.attach_tag(party_id, tag_id, user_id, source)
+    def attach_tag(self, party_id, tag_id, user_id=None, source="crm_user", source_activity_id=None):
+        return self._tags.attach_tag(party_id, tag_id, user_id, source, source_activity_id)
 
     def list_tags_by_category_ordered_by_usage(self, category):
         return self._tags.list_tags_by_category_ordered_by_usage(category)
@@ -574,6 +574,7 @@ def _register_web_routes(
     worklist_svc = WorklistQueryService(
         action_queue=CachingActionQueueRepository(sqlite_repos["cache"]),
         last_contact=sqlite_repos["last_contact"],
+        suppression=sqlite_repos["activity"],
     )
     app.include_router(make_worklist_router(
         templates=templates,

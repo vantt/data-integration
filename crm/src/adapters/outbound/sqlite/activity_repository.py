@@ -36,6 +36,21 @@ ORDER BY occurred_at DESC
 LIMIT ?
 """
 
+# Suppression (plan 260709-1638 phase-01, câu hỏi mở #5): a party is suppressed
+# from the worklist when their MOST RECENT activity (by occurred_at) carries
+# outcome_reason='do_not_contact'. Compares the literal string only — does not
+# import the enum from domain.entities.activity (kept out of scope here; see
+# plan phase-01 for why).  Runtime filter, no schema/party changes — data stays
+# intact, only the worklist view hides it.
+_LIST_DO_NOT_CONTACT_PARTY_IDS = """
+SELECT a.party_id
+FROM crm_activity_log a
+WHERE a.outcome_reason = 'do_not_contact'
+  AND a.occurred_at = (
+    SELECT MAX(b.occurred_at) FROM crm_activity_log b WHERE b.party_id = a.party_id
+  )
+"""
+
 
 # ---------------------------------------------------------------------------
 # Row mapper
@@ -108,3 +123,12 @@ class SQLiteActivityRepository:
         """Return activities for a party ordered by occurred_at DESC (newest first)."""
         rows = self._conn.execute(_LIST_BY_PARTY, (party_id, limit)).fetchall()
         return [_activity_from_row(r) for r in rows]
+
+    def list_do_not_contact_party_ids(self) -> set[str]:
+        """Return party_ids whose MOST RECENT activity has outcome_reason='do_not_contact'.
+
+        Used by WorklistQueryService to suppress those parties from the worklist
+        (runtime filter — crm_party_tag/crm_party are untouched, data preserved).
+        """
+        rows = self._conn.execute(_LIST_DO_NOT_CONTACT_PARTY_IDS).fetchall()
+        return {row["party_id"] for row in rows}

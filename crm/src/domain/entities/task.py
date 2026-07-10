@@ -85,6 +85,10 @@ class Task:
     # Action-queue claim context — set once at claim time (migration 0036)
     value_at_stake_vnd: Optional[int] = None   # SUM of all actions' value_at_stake_vnd
     top_affinity_product: Optional[str] = None  # product name from highest-value action
+    # Migration 0043 — JSON array string of action_type(s) claimed, snapshotted ONCE
+    # at claim time (action_queue_claim source only). NULL for pre-migration rows and
+    # non-claim sources. See TaskService.claim_customer_actions.
+    claimed_action_types: Optional[str] = None
     # Denormalised display fields — populated by list queries via LEFT JOIN
     party_name: Optional[str] = None        # crm_party.display_name
     assignee_name: Optional[str] = None     # crm_app_user.full_name

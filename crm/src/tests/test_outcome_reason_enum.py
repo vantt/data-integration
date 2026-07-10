@@ -53,6 +53,9 @@ class TestContactOutcomeConstants:
         assert "busy" in CONTACT_OUTCOMES_CALL
         assert "wrong_number" in CONTACT_OUTCOMES_CALL
 
+    def test_call_has_purchased(self):
+        assert "purchased" in CONTACT_OUTCOMES_CALL
+
     def test_messaging_has_blocked(self):
         assert "blocked" in CONTACT_OUTCOMES_MESSAGING
 
@@ -77,7 +80,7 @@ class TestContactOutcomeConstants:
 
 class TestOutcomeReasonConstants:
     def test_valid_reasons_count(self):
-        assert len(VALID_OUTCOME_REASONS) == 11
+        assert len(VALID_OUTCOME_REASONS) == 12
 
     def test_refused_in_required_set(self):
         assert "refused" in REASON_REQUIRED_OUTCOMES
@@ -94,6 +97,12 @@ class TestOutcomeReasonConstants:
     def test_unknown_reason_not_in_list(self):
         assert "xyz" not in VALID_OUTCOME_REASONS
         assert "price" not in VALID_OUTCOME_REASONS
+
+    def test_do_not_contact_present_but_not_required_set(self):
+        """do_not_contact is a valid reason (escalation on top of 'refused') but
+        is NOT itself a REASON_REQUIRED_OUTCOMES key — only 'refused' outcome is."""
+        assert "do_not_contact" in VALID_OUTCOME_REASONS
+        assert "do_not_contact" not in REASON_REQUIRED_OUTCOMES
 
 
 # ── ActivityService validation ────────────────────────────────────────────────
@@ -179,3 +188,20 @@ class TestActivityServiceContactOutcomeValidation:
             contact_outcome="answered",
         ))
         assert act.contact_outcome == "answered"
+
+    def test_purchased_accepted_without_reason(self):
+        """purchased is a positive call outcome — no outcome_reason required."""
+        svc = _make_service()
+        act = svc.log_activity(_base_data(contact_outcome="purchased"))
+        assert act.contact_outcome == "purchased"
+        assert act.outcome_reason is None
+
+    def test_refused_with_do_not_contact_reason_accepted(self):
+        """do_not_contact is a valid outcome_reason — escalation on top of 'refused'."""
+        svc = _make_service()
+        act = svc.log_activity(_base_data(
+            contact_outcome="refused",
+            outcome_reason="do_not_contact",
+        ))
+        assert act.contact_outcome == "refused"
+        assert act.outcome_reason == "do_not_contact"

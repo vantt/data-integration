@@ -51,9 +51,43 @@
 </div>
 {% endmacro %}
 
+{% if mode not in ('edit_note', 'note_only') %}
+<style>
+/* M08 log-form UX (P0 activity-log): outcome-first layout, accordion must never
+   push the footer actions off-screen — body scrolls internally instead. */
+.modal--scroll { display: flex; flex-direction: column; max-height: 86vh; }
+.modal--scroll .modal__body { overflow-y: auto; flex: 1 1 auto; min-height: 0; }
+
+/* HÌNH THỨC + KÊNH compacted into one pre-filled line — click "Đổi" to expand */
+.m08-htchan { border: 1px solid var(--border-strong); border-radius: var(--radii-control); background: var(--bg-surface); }
+.m08-htchan > summary { list-style: none; display: flex; align-items: center; gap: 8px; padding: 8px 12px; cursor: pointer; font-size: 13.5px; color: var(--fg-1); }
+.m08-htchan > summary::-webkit-details-marker { display: none; }
+.m08-htchan__ico { flex: none; display: flex; align-items: center; opacity: .7; }
+.m08-htchan__txt { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.m08-htchan__edit { flex: none; font-size: 12px; color: var(--accent); }
+.m08-htchan__body { padding: 10px 12px 12px; border-top: 1px solid var(--border); display: flex; flex-direction: column; gap: var(--sp-3); }
+
+/* "Nâng cao" accordion — save-as-note + insight + time/order, closed by default */
+.m08-advanced { margin-top: var(--sp-1); }
+.m08-advanced > summary { cursor: pointer; font-weight: 600; font-size: var(--fs-sm, 0.875rem); user-select: none; list-style: none; color: var(--fg-1); }
+.m08-advanced > summary::-webkit-details-marker { display: none; }
+.m08-advanced__body { margin-top: var(--sp-3); display: flex; flex-direction: column; gap: var(--sp-4); }
+
+/* "Đừng gọi nữa" escalation pill — heavier weight than normal reasons, 2-click confirm */
+.m08-dnc-wrap { margin-top: var(--sp-2); }
+.m08-dnc-btn {
+  display: inline-flex; align-items: center; gap: 6px; cursor: pointer;
+  background: color-mix(in srgb, var(--coral-500, #e53e3e) 10%, transparent);
+  border: 1px solid var(--coral-500, #e53e3e); color: var(--coral-700, #b91c1c);
+  border-radius: var(--radii-control); padding: 7px 12px; font-size: 13px;
+}
+.m08-dnc-btn--confirm { background: var(--coral-500, #e53e3e); color: #fff; }
+.m08-dnc-btn--on { background: var(--coral-700, #b91c1c); color: #fff; border-color: var(--coral-700, #b91c1c); }
+</style>
+{% endif %}
 <div class="modal-scrim"
      onclick="if(!event.target.closest('.modal')) document.getElementById('modal-root').innerHTML=''">
-  <div class="modal" role="dialog" aria-modal="true" aria-label="{{ modal_title }}">
+  <div class="modal{% if mode not in ('edit_note', 'note_only') %} modal--scroll{% endif %}" role="dialog" aria-modal="true" aria-label="{{ modal_title }}">
 
     <div class="modal__head">
       <div>
@@ -158,6 +192,82 @@
         {# contact_outcome replaces outcome for new rows (D2 Phase 03) #}
         <input type="hidden" name="contact_outcome" id="m08-out" value="">
 
+        {# Step 3 — KẾT QUẢ, outcome-first (JS rebuilds pills on ht change) #}
+        <div id="m08-outcome-sec" class="field">
+          <span class="field__label">KẾT QUẢ<span class="field__req"> *</span></span>
+          <div class="radioset" id="m08-outcome-pills">
+            {# initial call outcomes; JS replaces innerHTML on ht switch #}
+            {% for val, lbl in [('answered','Đã nghe'),('no_answer','Không bắt'),('busy','Bận'),('wrong_number','Sai số'),('callback','Hẹn lại'),('refused','Từ chối'),('purchased','Đã mua')] %}
+            <label class="radio-pill" onclick="m08OnOutcome('{{ val }}',this)">
+              <span class="radio-pill__dot"></span>{{ lbl }}
+              <input type="radio" name="contact_outcome" value="{{ val }}" hidden>
+            </label>
+            {% endfor %}
+          </div>
+        </div>
+
+        {# Step 3b1 — LÝ DO (D2 Phase 03 — shown when refused or answered) #}
+        <div id="m08-reason-sec" class="field" style="display:none">
+          <span class="field__label" id="m08-reason-lbl">LÝ DO</span>
+          <div class="radioset" id="m08-reason-pills"></div>
+          <input type="hidden" name="outcome_reason" id="m08-reason-val" value="">
+          {# Escalation pill — separate from normal reasons, heavier weight, needs 2 clicks #}
+          <div class="m08-dnc-wrap" id="m08-dnc-wrap" style="display:none">
+            <button type="button" class="m08-dnc-btn" id="m08-dnc-btn" onclick="m08OnDNC(this)">
+              🚫 Đừng gọi nữa
+            </button>
+          </div>
+        </div>
+
+        {# Step 3b — HẸN LẠI (call + callback only) #}
+        <div id="m08-callback-sec" class="m8-notebox" style="display:none">
+          <label class="field">
+            <span class="field__label">HẸN GỌI LẠI LÚC</span>
+            <input type="datetime-local" name="callback_at" id="m08-callback-at" class="inp inp--mono">
+          </label>
+          <label class="chk-row" onclick="m08ToggleTask()">
+            <span class="chk-box chk-box--on" id="m08-task-box">
+              <svg width="10" height="10" viewBox="0 0 12 12" fill="none" stroke="currentColor"
+                   stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                <path d="M2 6l3 3 5-5"/>
+              </svg>
+            </span>
+            <input type="checkbox" name="create_callback_task" value="1" id="m08-task-chk" checked class="sr-only">
+            <span class="chk-row__text">Tạo task nhắc tự động</span>
+          </label>
+        </div>
+
+        {# Step 3c — LÊN LỊCH THEO DÕI (positive outcomes: answered, met, replied) #}
+        <div id="m08-followup-sec" class="m8-notebox" style="display:none">
+          <label class="chk-row" onclick="m08ToggleFollowup()">
+            <span class="chk-box" id="m08-followup-box">
+              <!-- no checkmark SVG — unchecked by default -->
+            </span>
+            <input type="checkbox" name="schedule_followup" value="1" id="m08-followup-chk" class="sr-only">
+            <span class="chk-row__text">Lên lịch theo dõi</span>
+          </label>
+          <div id="m08-followup-opts" style="display:none; margin-top: var(--sp-3)">
+            <label class="field">
+              <span class="field__label">NGÀY THEO DÕI</span>
+              <input type="date" name="schedule_followup_at" id="m08-followup-at" class="inp inp--mono">
+            </label>
+            <div style="display:flex; gap: var(--sp-2); margin-top: var(--sp-1)">
+              <button type="button" class="ghost-link caption" onclick="m08FillFollowup(7)">+7 ngày</button>
+              <button type="button" class="ghost-link caption" onclick="m08FillFollowup(14)">+14 ngày</button>
+              <button type="button" class="ghost-link caption" onclick="m08FillFollowup(30)">+30 ngày</button>
+            </div>
+          </div>
+        </div>
+
+        {# Step 1+2 — HÌNH THỨC + KÊNH, thu gọn 1 dòng compact đã điền sẵn (đảo outcome-first) #}
+        <details class="m08-htchan" id="m08-htchan-sel">
+          <summary class="m08-htchan__trigger">
+            <span class="m08-htchan__ico" id="m08-htchan-ico">{% include "icons/phone.svg" %}</span>
+            <span class="m08-htchan__txt" id="m08-htchan-txt">Cuộc gọi</span>
+            <span class="m08-htchan__edit">Đổi</span>
+          </summary>
+          <div class="m08-htchan__body">
+
         {# Step 1 — HÌNH THỨC (custom select with icon) #}
         <div class="field">
           <span class="field__label">HÌNH THỨC<span class="field__req"> *</span></span>
@@ -203,7 +313,7 @@
             {% if ids | length == 0 %}
             <div class="caveat caveat--info" style="margin-bottom:var(--sp-2)">Không có {{ chan_lbl }} trong hồ sơ — nhập thủ công hoặc bỏ qua.</div>
             <input class="inp inp--mono" placeholder="{{ place_lbl }}"
-                   oninput="document.getElementById('m08-chan-val').value=this.value;document.getElementById('m08-chan-id').value=''">
+                   oninput="document.getElementById('m08-chan-val').value=this.value;document.getElementById('m08-chan-id').value='';m08UpdateHTChanSummary()">
             {% elif ids | length == 1 %}
             {% set only = ids[0] %}
             <div class="m8-chan m8-chan--on m8-chan--solo" id="m08-solo-{{ ht_val }}">
@@ -214,7 +324,7 @@
                     onclick="m08ShowCustom('{{ ht_val }}')">Dùng {{ chan_lbl }} khác</button>
             <div id="m08-custom-{{ ht_val }}" style="display:none;margin-top:var(--sp-2)">
               <input class="inp inp--mono" placeholder="{{ place_lbl }}"
-                     oninput="document.getElementById('m08-chan-val').value=this.value;document.getElementById('m08-chan-id').value=''">
+                     oninput="document.getElementById('m08-chan-val').value=this.value;document.getElementById('m08-chan-id').value='';m08UpdateHTChanSummary()">
             </div>
             <input type="hidden" id="m08-presel-{{ ht_val }}-id" value="{{ only.identity_id }}">
             <input type="hidden" id="m08-presel-{{ ht_val }}-val" value="{{ only.identity_value }}">
@@ -239,7 +349,7 @@
                 <div id="m08-custom-inp-{{ ht_val }}" style="display:none;margin-top:var(--sp-2)">
                   <input class="inp inp--mono" placeholder="{{ place_lbl }}"
                          onclick="event.stopPropagation()"
-                         oninput="document.getElementById('m08-chan-val').value=this.value;document.getElementById('m08-chan-id').value=''">
+                         oninput="document.getElementById('m08-chan-val').value=this.value;document.getElementById('m08-chan-id').value='';m08UpdateHTChanSummary()">
                 </div>
               </div>
             </div>
@@ -248,66 +358,8 @@
         </div>
         {% endfor %}
 
-        {# Step 3 — KẾT QUẢ (JS rebuilds pills on ht change) #}
-        <div id="m08-outcome-sec" class="field">
-          <span class="field__label">KẾT QUẢ<span class="field__req"> *</span></span>
-          <div class="radioset" id="m08-outcome-pills">
-            {# initial call outcomes; JS replaces innerHTML on ht switch #}
-            {% for val, lbl in [('answered','Đã nghe'),('no_answer','Không bắt'),('callback','Hẹn lại'),('refused','Từ chối')] %}
-            <label class="radio-pill" onclick="m08OnOutcome('{{ val }}',this)">
-              <span class="radio-pill__dot"></span>{{ lbl }}
-              <input type="radio" name="contact_outcome" value="{{ val }}" hidden>
-            </label>
-            {% endfor %}
-          </div>
-        </div>
-
-        {# Step 3b1 — LÝ DO (D2 Phase 03 — shown when refused or answered) #}
-        <div id="m08-reason-sec" class="field" style="display:none">
-          <span class="field__label" id="m08-reason-lbl">LÝ DO</span>
-          <div class="radioset" id="m08-reason-pills"></div>
-          <input type="hidden" name="outcome_reason" id="m08-reason-val" value="">
-        </div>
-
-        {# Step 3b — HẸN LẠI (call + callback only) #}
-        <div id="m08-callback-sec" class="m8-notebox" style="display:none">
-          <label class="field">
-            <span class="field__label">HẸN GỌI LẠI LÚC</span>
-            <input type="datetime-local" name="callback_at" id="m08-callback-at" class="inp inp--mono">
-          </label>
-          <label class="chk-row" onclick="m08ToggleTask()">
-            <span class="chk-box chk-box--on" id="m08-task-box">
-              <svg width="10" height="10" viewBox="0 0 12 12" fill="none" stroke="currentColor"
-                   stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
-                <path d="M2 6l3 3 5-5"/>
-              </svg>
-            </span>
-            <input type="checkbox" name="create_callback_task" value="1" id="m08-task-chk" checked class="sr-only">
-            <span class="chk-row__text">Tạo task nhắc tự động</span>
-          </label>
-        </div>
-
-        {# Step 3c — LÊN LỊCH THEO DÕI (positive outcomes: answered, met, replied) #}
-        <div id="m08-followup-sec" class="m8-notebox" style="display:none">
-          <label class="chk-row" onclick="m08ToggleFollowup()">
-            <span class="chk-box" id="m08-followup-box">
-              <!-- no checkmark SVG — unchecked by default -->
-            </span>
-            <input type="checkbox" name="schedule_followup" value="1" id="m08-followup-chk" class="sr-only">
-            <span class="chk-row__text">Lên lịch theo dõi</span>
-          </label>
-          <div id="m08-followup-opts" style="display:none; margin-top: var(--sp-3)">
-            <label class="field">
-              <span class="field__label">NGÀY THEO DÕI</span>
-              <input type="date" name="schedule_followup_at" id="m08-followup-at" class="inp inp--mono">
-            </label>
-            <div style="display:flex; gap: var(--sp-2); margin-top: var(--sp-1)">
-              <button type="button" class="ghost-link caption" onclick="m08FillFollowup(7)">+7 ngày</button>
-              <button type="button" class="ghost-link caption" onclick="m08FillFollowup(14)">+14 ngày</button>
-              <button type="button" class="ghost-link caption" onclick="m08FillFollowup(30)">+30 ngày</button>
-            </div>
-          </div>
-        </div>
+          </div>{# /.m08-htchan__body #}
+        </details>
 
         {# Step 4 — NỘI DUNG #}
         <label class="field" id="m08-body-label">
@@ -315,6 +367,33 @@
           <textarea name="body" id="m08-body" class="inp inp--area" rows="3"
                     placeholder="Ghi chú thêm (không bắt buộc)"></textarea>
         </label>
+
+        {# Kết bạn Zalo — chỉ hiện khi hình thức call/zalo #}
+        <label class="chk-row" id="m08-zalo-row" style="display:none" onclick="m08ToggleZalo()">
+          <span class="chk-box" id="m08-zalo-box"></span>
+          <input type="checkbox" name="zalo_connected" value="1" id="m08-zalo-chk" class="sr-only">
+          <span class="chk-row__text">Đã kết bạn Zalo</span>
+        </label>
+
+        {# ── Đánh dấu task hoàn thành (log mode + task_id only) ── #}
+        {% if task_id %}
+        <div class="m8-rule"></div>
+        <label class="chk-row" onclick="m08ToggleCompleteTask()">
+          <span class="chk-box" id="m08-complete-task-box">
+            <svg width="10" height="10" viewBox="0 0 12 12" fill="none" stroke="currentColor"
+                 stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+              <path d="M2 6l3 3 5-5"/>
+            </svg>
+          </span>
+          <input type="checkbox" name="complete_task" value="1" id="m08-complete-task-chk" class="sr-only">
+          <span class="chk-row__text">Đánh dấu task "{{ task_title or task_id }}" hoàn thành</span>
+        </label>
+        {% endif %}
+
+        {# Nâng cao — Step 5 (lưu thành ghi chú) + insight + Step 6 (thời gian/đơn liên quan), đóng mặc định #}
+        <details class="m08-advanced" id="m08-advanced-sec">
+          <summary class="m08-advanced__summary">Nâng cao</summary>
+          <div class="m08-advanced__body">
 
         {# Step 5 — LƯU THÀNH GHI CHÚ HỒ SƠ #}
         <div>
@@ -372,24 +451,9 @@
           </label>
           <label class="field">
             <span class="field__label">ĐƠN LIÊN QUAN</span>
-            <input type="text" name="related_order_code" class="inp inp--mono" placeholder="ORD-… (tùy chọn)">
+            <input type="text" name="related_order_code" id="m08-order-code" class="inp inp--mono" placeholder="ORD-… (tùy chọn)">
           </label>
         </div>
-
-        {# ── Đánh dấu task hoàn thành (log mode + task_id only) ── #}
-        {% if task_id %}
-        <div class="m8-rule"></div>
-        <label class="chk-row" onclick="m08ToggleCompleteTask()">
-          <span class="chk-box" id="m08-complete-task-box">
-            <svg width="10" height="10" viewBox="0 0 12 12" fill="none" stroke="currentColor"
-                 stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
-              <path d="M2 6l3 3 5-5"/>
-            </svg>
-          </span>
-          <input type="checkbox" name="complete_task" value="1" id="m08-complete-task-chk" class="sr-only">
-          <span class="chk-row__text">Đánh dấu task "{{ task_title or task_id }}" hoàn thành</span>
-        </label>
-        {% endif %}
 
         {# Item 2 (Phase 06): promote insight from activity log #}
         {% if mode not in ('edit_note', 'note_only') %}
@@ -452,6 +516,9 @@
         </script>
         {% endif %}
 
+          </div>{# /.m08-advanced__body #}
+        </details>
+
         {% endif %}
 
       </div>{# /.modal__body #}
@@ -488,7 +555,7 @@
 
   /* ── Outcome sets ─────────────────────────────────────── */
   var OUTCOMES = {
-    call:  [{v:'answered',l:'Đã nghe'},{v:'no_answer',l:'Không bắt'},{v:'callback',l:'Hẹn lại'},{v:'refused',l:'Từ chối'}],
+    call:  [{v:'answered',l:'Đã nghe'},{v:'no_answer',l:'Không bắt'},{v:'busy',l:'Bận'},{v:'wrong_number',l:'Sai số'},{v:'callback',l:'Hẹn lại'},{v:'refused',l:'Từ chối'},{v:'purchased',l:'Đã mua'}],
     chat:  [{v:'replied',l:'Đã phản hồi'},{v:'pending',l:'Chưa phản hồi'},{v:'no_reply',l:'Không phản hồi'}],
     visit: [{v:'met',l:'Gặp được'},{v:'not_met',l:'Không gặp được'}],
   };
@@ -498,6 +565,7 @@
   var BODY_PH = {
     call_answered: 'Nội dung trao đổi với khách…',
     call_callback: 'Lý do hẹn lại, nội dung cần trao đổi…',
+    call_purchased: 'Sản phẩm đã mua — ghi mã đơn ở mục Nâng cao nếu có…',
     call_: 'Ghi chú thêm (không bắt buộc)',
     chat_replied: 'Nội dung phản hồi của khách…',
     chat_: 'Ghi chú thêm (không bắt buộc)',
@@ -561,10 +629,23 @@
     var ico = btn.querySelector('.m08-ht-sel__ico');
     document.getElementById('m08-ht-lbl').textContent = btn.dataset.lbl;
     if (ico) document.getElementById('m08-ht-ico').innerHTML = ico.innerHTML;
+    if (ico) {
+      var htchanIco = document.getElementById('m08-htchan-ico');
+      if (htchanIco) htchanIco.innerHTML = ico.innerHTML;
+    }
     document.querySelectorAll('#m08-ht-sel .m08-ht-sel__opt').forEach(function(o) { o.classList.remove('m08-ht-sel__opt--on'); });
     btn.classList.add('m08-ht-sel__opt--on');
     document.getElementById('m08-ht-sel').removeAttribute('open');
     m08OnHinhThuc(val);
+  };
+
+  /* ── Compact HÌNH THỨC + KÊNH summary line ─────────────── */
+  window.m08UpdateHTChanSummary = function () {
+    var txt = document.getElementById('m08-htchan-txt');
+    if (!txt) return;
+    var htLbl = (document.getElementById('m08-ht-lbl') || {}).textContent || '';
+    var chanVal = (document.getElementById('m08-chan-val') || {}).value || '';
+    txt.textContent = chanVal ? (htLbl + ' · ' + chanVal) : htLbl;
   };
 
   /* ── HT change ────────────────────────────────────────── */
@@ -583,6 +664,19 @@
     var nt = document.getElementById('m08-note-type');
     if (nt) nt.value = (val==='email'||val==='other') ? 'general' : 'outcome';
     m08UpdateBody(val, null);
+    // Zalo-connect checkbox only makes sense for call/zalo contact
+    var zaloRow = document.getElementById('m08-zalo-row');
+    if (zaloRow) {
+      var showZalo = (val === 'call' || val === 'zalo');
+      zaloRow.style.display = showZalo ? '' : 'none';
+      if (!showZalo) {
+        var zchk = document.getElementById('m08-zalo-chk');
+        if (zchk) zchk.checked = false;
+        var zbox = document.getElementById('m08-zalo-box');
+        if (zbox) zbox.classList.remove('chk-box--on');
+      }
+    }
+    m08UpdateHTChanSummary();
   };
 
   /* ── Outcome reason pills (D2 Phase 03) ──────────────── */
@@ -612,7 +706,7 @@
     document.getElementById('m08-callback-sec').style.display = (val==='callback' && m08CurHT==='call') ? '' : 'none';
     var followupSec = document.getElementById('m08-followup-sec');
     if (followupSec) {
-      var positive = ['answered', 'met', 'replied'];
+      var positive = ['answered', 'met', 'replied', 'purchased'];
       var show = positive.indexOf(val) >= 0;
       followupSec.style.display = show ? '' : 'none';
       if (!show) {
@@ -645,6 +739,20 @@
       }
       if (reasonVal) reasonVal.value = '';
     }
+    // Escalation pill only applies to 'refused' — reset its confirm state on any outcome change
+    var dncWrap = document.getElementById('m08-dnc-wrap');
+    var dncBtn = document.getElementById('m08-dnc-btn');
+    if (dncBtn) {
+      m08DNCConfirming = false;
+      dncBtn.classList.remove('m08-dnc-btn--confirm', 'm08-dnc-btn--on');
+      dncBtn.textContent = '🚫 Đừng gọi nữa';
+    }
+    if (dncWrap) dncWrap.style.display = (val === 'refused') ? '' : 'none';
+    // purchased: encourage entering the order code — open "Nâng cao" so it's visible
+    if (val === 'purchased') {
+      var adv = document.getElementById('m08-advanced-sec');
+      if (adv && !adv.open) adv.open = true;
+    }
   };
 
   /* ── Outcome reason selection ─────────────────────────── */
@@ -653,6 +761,39 @@
     if (reasonVal) reasonVal.value = val;
     document.querySelectorAll('#m08-reason-pills .radio-pill').forEach(function(p) { p.classList.remove('radio-pill--on'); });
     if (pill) pill.classList.add('radio-pill--on');
+    // Picking a normal reason cancels any pending/confirmed "Đừng gọi nữa" escalation
+    var dncBtn = document.getElementById('m08-dnc-btn');
+    if (dncBtn) {
+      m08DNCConfirming = false;
+      dncBtn.classList.remove('m08-dnc-btn--confirm', 'm08-dnc-btn--on');
+      dncBtn.textContent = '🚫 Đừng gọi nữa';
+    }
+  };
+
+  /* ── "Đừng gọi nữa" escalation — needs 2 clicks to confirm (lightweight guard) ── */
+  var m08DNCConfirming = false;
+  window.m08OnDNC = function(btn) {
+    if (!btn) return;
+    if (!m08DNCConfirming) {
+      m08DNCConfirming = true;
+      btn.classList.add('m08-dnc-btn--confirm');
+      btn.textContent = 'Bấm lần nữa để xác nhận';
+      setTimeout(function () {
+        if (!btn.classList.contains('m08-dnc-btn--on')) {
+          m08DNCConfirming = false;
+          btn.classList.remove('m08-dnc-btn--confirm');
+          btn.textContent = '🚫 Đừng gọi nữa';
+        }
+      }, 3000);
+      return;
+    }
+    m08DNCConfirming = false;
+    document.querySelectorAll('#m08-reason-pills .radio-pill').forEach(function(p) { p.classList.remove('radio-pill--on'); });
+    var reasonVal = document.getElementById('m08-reason-val');
+    if (reasonVal) reasonVal.value = 'do_not_contact';
+    btn.classList.remove('m08-dnc-btn--confirm');
+    btn.classList.add('m08-dnc-btn--on');
+    btn.textContent = '🚫 Đừng gọi nữa ✓';
   };
 
   /* ── Submit validation (D2 Phase 03) ─────────────────── */
@@ -669,7 +810,7 @@
   };
 
   /* ── Smart default: complete_task checkbox ────────────── */
-  var COMPLETE_TASK_OUTCOMES = ['answered', 'met', 'replied', 'refused'];
+  var COMPLETE_TASK_OUTCOMES = ['answered', 'met', 'replied', 'refused', 'purchased'];
   function m08SmartCompleteTask(outcome) {
     var chk = document.getElementById('m08-complete-task-chk');
     if (!chk) return;
@@ -694,6 +835,7 @@
     el.classList.add('m8-chan--on');
     document.getElementById('m08-chan-id').value = id;
     document.getElementById('m08-chan-val').value = val;
+    m08UpdateHTChanSummary();
   };
 
   /* ── "Dùng khác" for 1-identity ──────────────────────── */
@@ -704,6 +846,16 @@
     if (cw) { cw.style.display=''; var inp=cw.querySelector('input'); if(inp) inp.focus(); }
     document.getElementById('m08-chan-id').value='';
     document.getElementById('m08-chan-val').value='';
+    m08UpdateHTChanSummary();
+  };
+
+  /* ── Zalo-connected toggle ─────────────────────────────── */
+  window.m08ToggleZalo = function() {
+    var chk = document.getElementById('m08-zalo-chk');
+    if (!chk) return;
+    chk.checked = !chk.checked;
+    var box = document.getElementById('m08-zalo-box');
+    if (box) box.classList.toggle('chk-box--on', chk.checked);
   };
 
   /* ── Custom row (2+ identities) ──────────────────────── */
@@ -714,6 +866,7 @@
     if (inpWrap) { inpWrap.style.display=''; var inp=inpWrap.querySelector('input'); if(inp) inp.focus(); }
     document.getElementById('m08-chan-id').value='';
     document.getElementById('m08-chan-val').value='';
+    m08UpdateHTChanSummary();
   };
 
   /* ── Save-as-note toggle ──────────────────────────────── */

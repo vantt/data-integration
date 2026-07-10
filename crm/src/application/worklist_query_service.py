@@ -26,6 +26,10 @@ class _LastContactPort(Protocol):
     def get_map_for_parties(self, party_ids: list[str]) -> dict[str, LastContact]: ...
 
 
+class _SuppressionPort(Protocol):
+    def list_do_not_contact_party_ids(self) -> set[str]: ...
+
+
 # ── Service ────────────────────────────────────────────────────────────────────
 
 
@@ -40,12 +44,32 @@ class WorklistQueryService:
         self,
         action_queue: _ActionQueuePort,
         last_contact: Optional[_LastContactPort] = None,
+        suppression: Optional[_SuppressionPort] = None,
     ) -> None:
         self._action_queue = action_queue
         self._last_contact = last_contact
+        self._suppression = suppression
 
     def list_all_action_queue(self) -> list[ActionQueueItem]:
-        return self._action_queue.list_all_action_queue()
+        """Return open action-queue items, minus suppressed (do_not_contact) parties.
+
+        Suppression (plan 260709-1638 phase-01): a party whose MOST RECENT
+        activity has outcome_reason='do_not_contact' is filtered out here — the
+        party disappears from the worklist queue but no underlying data is
+        deleted (crm_activity_log / crm_party untouched).
+        """
+        actions = self._action_queue.list_all_action_queue()
+        if self._suppression is None:
+            return actions
+        try:
+            suppressed = self._suppression.list_do_not_contact_party_ids()
+        except Exception:
+            # Suppression is a visibility nicety, not a correctness requirement —
+            # a query failure here must not blank the whole worklist.
+            return actions
+        if not suppressed:
+            return actions
+        return [a for a in actions if getattr(a, "party_id", None) not in suppressed]
 
     def invalidate_cache(self) -> None:
         self._action_queue.invalidate_cache()

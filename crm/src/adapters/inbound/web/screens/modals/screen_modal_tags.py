@@ -131,11 +131,18 @@ def make_tags_modal_router(templates: Jinja2Templates, profile: ProfileSvc) -> A
         party_id: str,
         category: str = Form(""),
         tag_names: List[str] = Form(default=[]),
+        source_activity_id: str = Form(default=""),
     ) -> Response:
         """Phase 02 (260706-0833): S14 collect-row inline multi-tag assign.
 
         Whitelist enforced hard — category outside INLINE_ALLOWED_CATEGORIES
         is rejected with 400 before any lookup/attach happens.
+
+        source_activity_id (migration 0044, plan 260709-1638 phase-01) is an
+        OPTIONAL form field — empty/absent today because no caller sends it yet
+        (the S14 call cockpit template that renders this form is out of scope
+        for this change; see plan phase-01 report "Handoff wiring"). When a
+        caller does pass it, the attach is linked back to that activity log row.
         """
         category = category.strip()
         if category not in INLINE_ALLOWED_CATEGORIES:
@@ -159,7 +166,10 @@ def make_tags_modal_router(templates: Jinja2Templates, profile: ProfileSvc) -> A
             )
         try:
             for tag in matched:
-                profile.attach_tag(party_id, tag.tag_id, actor_id, source="crm_user")
+                profile.attach_tag(
+                    party_id, tag.tag_id, actor_id, source="crm_user",
+                    source_activity_id=source_activity_id.strip() or None,
+                )
         except Exception as exc:
             log.error("post_tags_inline attach %s %s: %s", party_id, category, exc)
             return HTMLResponse("Lỗi lưu tag", status_code=500)
