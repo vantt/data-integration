@@ -4,7 +4,7 @@ scope_indicator: "[CRM]"
 layer: L2
 uses_concepts: []
 issues:
-  - "[blocked] 2026-07-10: main_marts.mart_staff_performance_weekly serving view (olap.duckdb) is FROZEN at an older CREATE VIEW snapshot (2026-07-08) and does NOT expose the columns this blueprint queries (calls_dialed, contacts_reached, conversations_count, wrong_number_count, outcome_notes_count, health_concern_tags_new, other_tags_new). The underlying rolling parquet already has them (dbt ran today). Fix: `docker compose stop metabase && docker compose exec -T data_platform python scripts/provisioning/bootstrap_serving_views.py && docker compose start metabase`, then deploy this blueprint. DO NOT deploy before this is done — every card below will Binder Error."
+  - "[resolved] 2026-07-10: serving view was stale at deploy-write time (blocked on missing columns); fixed via bootstrap_serving_views.py same day ~15:41, deployed ~15:43 as dashboard id 147, verified live (queries 200/202, no Binder Errors) as of 22:54."
 ---
 
 # 📘 Blueprint: Sprint Gọi Ra — KPI tuần

@@ -2,7 +2,7 @@
 title: "M5 — A2 Go-Live: Hug Voucher Issuance/Redeem + A2 Campaign"
 description: "Closes the voucher loop (issuance ledger + redeem matcher) and launches A2 to 364 MASKED_REPEAT customers (683M VND CM)."
 status: pending
-# (updated 2026-07-10: 4/5 architecture decisions chốt 2026-07-10; còn 1 ops check #5 — xem Quyết định chốt section below)
+# (updated 2026-07-10: 5/5 quyết định kiến trúc/ops chốt — HUG_ZALO_OA_URL set + Worker deployed (Version 5225dc64), xem Quyết định chốt section below. Phases P1-P5 vẫn pending — chưa có implementation report nào trong plan dir này.)
 priority: P1
 effort: 6h
 branch: main
@@ -41,7 +41,7 @@ created: 2026-06-20
 2. **Issuance trigger latency**: 15-min /admin/refresh cycle means voucher shows up in ledger ~15 min after opt-in. Is that acceptable for the landing page "show code immediately" UX? (If not, consider a lightweight direct-write path at opt-in ingest time.)
 3. **Redeem matcher as CRM job vs dbt model**: plan uses local job (needs write-back to crm.db). Confirm — alternative is a dbt model that reads fact_orders and outputs a mart, but dbt cannot write back to crm.db.
 4. **Push ledger to edge D1 in v1?**: deferred to optional P6. Confirm deferral is acceptable (edge `hug_voucher` empty for now; quota enforcement stays local/Sapo).
-5. **A2 campaign HUG_ZALO_OA_URL**: is the env var already set in production `.env`? Needed for the landing page follow-CTA. Confirm value.
+5. ~~**A2 campaign HUG_ZALO_OA_URL**: is the env var already set in production `.env`? Needed for the landing page follow-CTA. Confirm value.~~ **RESOLVED 2026-07-10** — see Quyết định chốt #5.
 
 ## Quyết định chốt 2026-07-10 (mở khóa go-live)
 
@@ -49,6 +49,6 @@ created: 2026-06-20
 2. **Issuance latency: chấp nhận chu kỳ 15 phút, ĐỔI UX landing** — landing KHÔNG hiện mã ngay; hiển thị "Mã ưu đãi sẽ được gửi qua Zalo OA trong ít phút" → vừa gỡ ràng buộc direct-write, vừa ép khách follow Zalo OA (mục tiêu thật của capture là kênh liên hệ trọn đời, voucher chỉ là token). ⚠ P3/P5 phải sync copy landing theo quyết định này.
 3. **Redeem matcher: CRM job local** (write-back crm.db) — dbt không ghi ngược crm.db, không có phương án thay thế khả thi.
 4. **Edge D1 push: defer P6** — quota enforcement giữ local/Sapo trong v1.
-5. **HUG_ZALO_OA_URL: chưa chốt** — ops check duy nhất còn lại; đưa vào P5 runbook pre-check, owner xác nhận giá trị trong .env production trước ngày go-live.
+5. **HUG_ZALO_OA_URL: ✅ chốt + deploy 2026-07-10** — `https://zalo.me/4578048148495215534`, set trong `webhook_receiver/cloudflareD1/wrangler.toml` `[vars]`, Worker live trên `hug.fjp.vn` (Version `5225dc64-c763-47bf-839a-a9d045192e05`, commit `6b049e49`). 5/5 M5 decisions resolved — không còn ops check nào chặn go-live ở mức kiến trúc/config. **Phases P1-P5 (migration, edge landing, issuance writer, redeem matcher, runbook) vẫn ở trạng thái `pending` — chưa implement, chỉ mới xong phần config.**
 
 Nguồn: thảo luận strategy 2026-07-10 (user chốt "theo default đề xuất"); trích xuất câu hỏi từ audit cùng ngày.

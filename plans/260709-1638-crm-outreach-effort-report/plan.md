@@ -1,6 +1,6 @@
 # Báo cáo hiệu quả tiếp cận khách hàng — đo theo nỗ lực & thông tin thu thập (KHÔNG theo đơn hàng)
 
-> Status: Phase 0-1 DONE 2026-07-10 — Phase 0 (mart 12 cột mới, contacts_reached định nghĩa đổi; reports/phase-00-implementation-report.md) + Phase 1 (migrations 0043/0044 production, exports+staging+suppression; reports/phase-01-implementation-report.md). Phase 2-4 pending.
+> Status: Phase 0, 1 DONE 2026-07-10 — Phase 0 (mart 12 cột mới, contacts_reached định nghĩa đổi; reports/phase-00-implementation-report.md) + Phase 1 (migrations 0043/0044 production, exports+staging+suppression; reports/phase-01-implementation-report.md). Phase 4 Track A dashboard DONE 2026-07-10 — deployed sau khi serving-view blocker (báo cáo phase-04 ban đầu BLOCKED) được fix cùng ngày; xác nhận sống qua Metabase log (dashboard id 147, query 200/202 lúc 22:54). Phase 2-3 (Track B) pending.
 > Bối cảnh: `mart_staff_performance_weekly` hiện có (staff × tuần: activities, reach_rate, tasks, orders_sold, revenue) nhưng KHÔNG tách theo action_type, và không đo "thông tin mới thu thập" (tag sức khỏe, note outcome). Đo theo đơn hàng hiện không đáng tin vì sales đang rất ế (xem hội thoại 2026-07-09). Cần đo bằng **leading indicator**: nỗ lực gọi + reach rate + thông tin/tình trạng khách thu thập được (tag `health_concern`, note `outcome`), tách theo `action_type` khi có thể.
 
 ## Sự thật đã xác minh (không phải giả định)
@@ -49,7 +49,7 @@ Mapping KPI sprint → nơi đo (sự thật đã verify trong code):
 | 1 | Schema fix: snapshot action_type lúc claim + nối tag về activity (Track B) | [phase-01-schema-attribution-fix.md](phase-01-schema-attribution-fix.md) | ✅ DONE 2026-07-10 |
 | 2 | Intermediate model: effort events tách theo action_type | [phase-02-effort-events-intermediate-model.md](phase-02-effort-events-intermediate-model.md) | Phụ thuộc phase 1 |
 | 3 | Mart tuần theo (staff, action_type) + dbt tests | [phase-03-outreach-effort-weekly-mart.md](phase-03-outreach-effort-weekly-mart.md) | Phụ thuộc phase 2 |
-| 4 | Reporting surface (Metabase blueprint) + validation thủ công | [phase-04-reporting-surface-and-validation.md](phase-04-reporting-surface-and-validation.md) | Phụ thuộc phase 0 (ngay) và phase 3 (sau cutover) |
+| 4 | Reporting surface (Metabase blueprint) + validation thủ công | [phase-04-reporting-surface-and-validation.md](phase-04-reporting-surface-and-validation.md) | ✅ Track A DONE 2026-07-10 (dashboard id 147, `docs/analytics-handbook/blueprints/metabase/crm_outreach_effort_weekly.md`; reports/phase-04-dashboard-track-a-implementation-report.md — báo cáo ghi BLOCKED nhưng serving-view đã fix +deploy sau đó cùng ngày, đã verify sống). Track B card chờ phase 2-3 cutover. |
 
 Phase 1-3 có thể để sau nếu Track A đã đủ dùng tạm; không block nhau.
 

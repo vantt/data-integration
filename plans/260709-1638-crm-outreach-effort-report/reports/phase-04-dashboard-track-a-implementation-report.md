@@ -1,6 +1,8 @@
 # Phase 4 — Dashboard Track A implementation report
 
-## Status: BLOCKED
+## Status: BLOCKED (at time of writing) → RESOLVED same day 2026-07-10
+
+> Update 2026-07-10 (post-report): serving view was rebuilt (`olap.duckdb` mtime 15:41, now exposes all 26 columns) and the blueprint was deployed minutes later — Metabase log confirms `POST /api/dashboard`, 8× `POST /api/card`, dashboard id **147** created ~15:43. Verified live: `GET/POST /api/dashboard/147/dashcard/*/query` at 22:54 same day returned 200/202 with no Binder Errors. Track A dashboard is deployed and working; the blocker described below no longer applies.
 
 ## Summary
 
