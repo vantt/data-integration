@@ -35,8 +35,8 @@ def _get_create_task_handler(task_creator_mock=None):
     APIRouter to intercept and capture the mock router it constructs.
 
     make_tasks_board_router registers, in order: GET /tasks, GET /tasks/dismissed,
-    GET /tasks/modal/create, POST /tasks (handle_create_task), PATCH /tasks/{id}/status,
-    POST /tasks/generate. handle_create_task is the FIRST @router.post call.
+    POST /tasks (handle_create_task), PATCH /tasks/{id}/status, POST /tasks/generate.
+    handle_create_task is the FIRST @router.post call.
 
     Returns: (handle_create_task_handler, task_creator_mock)
     """

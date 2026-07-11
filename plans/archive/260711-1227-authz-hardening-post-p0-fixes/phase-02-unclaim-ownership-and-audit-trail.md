@@ -73,6 +73,8 @@ dependencies: [1]
 10. `c360_insight_panel.html`: same inline reason-picker treatment for its own "Trả việc" button.
 11. Manual verify (UI change): unclaim own claim with a reason selected → succeeds, note appears in customer's notes/timeline (visibility=team) — **actually check the note row exists in the DB/UI, don't just check the HTTP response**, since this is exactly the part that silently failed in the original design. Attempt unclaim on a customer claimed by someone else (2 sessions/users) → 403, claim unchanged. Attempt unclaim with no reason selected → button stays disabled, can't submit. Attempt unclaim with a cleared/expired session (no `current_user`) → 401, claim unchanged (this is the specific scenario the fail-open bug missed — test it explicitly).
 
+**Done in a same-plan follow-up session (2026-07-11)**: verified live via browser against a real claimed party. Select-gates-button JS confirmed working (disabled → enabled on selection); click fired the real PATCH request; this dev environment has no CF Access token (`current_user` always `None` locally), so the click genuinely exercised the unauthenticated-rejection path — server logged 401, claim state confirmed unchanged in the DB. The "rightful owner succeeds" case remains pytest-only (DB-verified) — this environment has no way to authenticate as a real user without a genuine CF Access token. See `plan.md`'s "Follow-up session" log.
+
 ## Success Criteria
 
 - [x] Non-assignee unclaim attempt → rejected (403), claim state unchanged, verified with a test using 2 different `actor_id`s.

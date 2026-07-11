@@ -121,14 +121,6 @@ def make_tasks_board_router(
             {"request": request, "dismissals": dismissals},
         )
 
-    @router.get("/tasks/modal/create", response_class=HTMLResponse)
-    async def handle_modal_create_task(request: Request) -> Response:
-        party_id = request.query_params.get("party_id", "")
-        return templates.TemplateResponse(
-            "fragments/modal_create_task.html",
-            {"request": request, "party_id": party_id},
-        )
-
     @router.post("/tasks", response_class=HTMLResponse)
     async def handle_create_task(
         request: Request,
