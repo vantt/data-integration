@@ -904,10 +904,15 @@
       <div class="s14-strip__sheet" id="s14-strip-sheet" hidden>
         <div class="s14-strip__sheetbody" id="s14-sheet-answered" hidden>
           <span class="s14-strip__sheetlabel">Theo dõi lại</span>
-          <button class="chip-pill" type="button" onclick="s14StripPickFollowup(7)">+7 ngày</button>
-          <button class="chip-pill" type="button" onclick="s14StripPickFollowup(14)">+14 ngày</button>
-          <button class="chip-pill" type="button" onclick="s14StripPickFollowup(30)">+30 ngày</button>
-          <button class="btn btn--secondary btn--sm" type="button" onclick="s14StripPickOutcome('purchased')">🛒 Đã mua → nhập mã đơn</button>
+          <button class="chip-pill" type="button" onclick="s14StripPickFollowup(7, this)">+7 ngày</button>
+          <button class="chip-pill" type="button" onclick="s14StripPickFollowup(14, this)">+14 ngày</button>
+          <button class="chip-pill" type="button" onclick="s14StripPickFollowup(30, this)">+30 ngày</button>
+          {# Not a chip-pill on purpose — this switches the outcome to "purchased" entirely
+             (a different action, not a followup-date choice); .btn--secondary's accent-color
+             border used to read as "an already-selected chip" sitting right next to the 3
+             real chips above, per user report — s14-strip__link matches the plain-text-action
+             style already used for "⋯ Chi tiết" elsewhere in this same sheet, no border at all. #}
+          <button class="s14-strip__link" type="button" onclick="s14StripPickOutcome('purchased')">🛒 Đã mua → nhập mã đơn</button>
         </div>
         <div class="s14-strip__sheetbody" id="s14-sheet-purchased" hidden>
           <span class="s14-strip__sheetlabel">Mã đơn (không bắt buộc)</span>
@@ -916,9 +921,9 @@
         </div>
         <div class="s14-strip__sheetbody" id="s14-sheet-callback" hidden>
           <span class="s14-strip__sheetlabel">Hẹn lại lúc</span>
-          <button class="chip-pill" type="button" onclick="s14StripPickCallbackChip('plus2h')">+2h</button>
-          <button class="chip-pill" type="button" onclick="s14StripPickCallbackChip('this_afternoon')">chiều nay</button>
-          <button class="chip-pill" type="button" onclick="s14StripPickCallbackChip('tomorrow_morning')">mai sáng</button>
+          <button class="chip-pill" type="button" onclick="s14StripPickCallbackChip('plus2h', this)">+2h</button>
+          <button class="chip-pill" type="button" onclick="s14StripPickCallbackChip('this_afternoon', this)">chiều nay</button>
+          <button class="chip-pill" type="button" onclick="s14StripPickCallbackChip('tomorrow_morning', this)">mai sáng</button>
           <label class="s14-strip__cbtask">
             <input type="checkbox" id="s14-strip-cbtask" checked
                    onchange="S14_STRIP.createCallbackTask=this.checked"> tạo task nhắc
@@ -1178,8 +1183,14 @@
   // KHÔNG thêm cột party ở đây).
   window.s14StripDoNotContact = function () { window.s14StripPickReason('do_not_contact'); };
 
-  window.s14StripPickFollowup = function (days) {
+  window.s14StripPickFollowup = function (days, btn) {
     S.followupAt = ictLocalFromDate(new Date(Date.now() + days * 86400000));
+    // Same visual-selection feedback s14StripPickReason already has — this
+    // function was missing it entirely, so clicking a chip silently updated
+    // state with zero visible change (user report: "can't select").
+    document.querySelectorAll('#s14-sheet-answered .chip-pill').forEach(function (b) {
+      b.classList.toggle('chip-pill--on', b === btn);
+    });
     updateSaveEnabled();
   };
 
@@ -1188,7 +1199,7 @@
     if (inp) patchDraft({ related_order_code: inp.value });
   };
 
-  window.s14StripPickCallbackChip = function (which) {
+  window.s14StripPickCallbackChip = function (which, btn) {
     var now = new Date(), target;
     if (which === 'plus2h') {
       target = new Date(now.getTime() + 2 * 3600000);
@@ -1198,6 +1209,11 @@
     } else { // tomorrow_morning: 08:00 ICT = 01:00 UTC next day
       target = new Date(now); target.setUTCDate(target.getUTCDate() + 1); target.setUTCHours(1, 0, 0, 0);
     }
+    // Same missing-feedback bug as s14StripPickFollowup — clicking a chip here
+    // wrote callback_at server-side but never visibly marked which one was picked.
+    document.querySelectorAll('#s14-sheet-callback .chip-pill').forEach(function (b) {
+      b.classList.toggle('chip-pill--on', b === btn);
+    });
     patchDraft({ callback_at: ictLocalFromDate(target) });
     updateSaveEnabled();
   };
