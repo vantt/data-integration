@@ -178,3 +178,13 @@ class SQLiteActionStateRepository:
         )
         with self._conn:
             self._conn.execute(sql, (action_id,))
+
+    def resolve_party_id(self, action_id: str) -> Optional[str]:
+        """Phase-03 IDOR fix: expose party_id resolution as a port method so
+        bulk-resolve callers can verify an action_id genuinely belongs to the
+        party they claim before dismiss()/snooze() mutates it. Thin wrapper —
+        reuses _resolve_party_and_action_type() verbatim (same cache-join
+        lookup dismiss() already depends on for its own TTL-dismissal write),
+        no duplicated SQL. Returns None when unresolvable."""
+        resolved = self._resolve_party_and_action_type(action_id)
+        return resolved[0] if resolved else None

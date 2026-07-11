@@ -22,8 +22,18 @@ for _p in (_REPO_ROOT, _PYTHON_ROOT):
 
 from application.activity_service import ActivityService  # noqa: E402
 from application.activity_side_effects import execute_side_effects  # noqa: E402
+from application.authorization_service import AuthorizationService  # noqa: E402
 from adapters.outbound.sqlite.activity_repository import SQLiteActivityRepository  # noqa: E402
 import adapters.inbound.web.screens.customer360.screen_customer_360_activity as mod  # noqa: E402
+
+
+def _authz_ok() -> MagicMock:
+    """Phase-03 IDOR guard stand-in for tests not specifically exercising the
+    guard itself — always reports "same party" so pre-existing dismiss/
+    snooze/transition_status assertions are unaffected by the new check."""
+    m = MagicMock(spec=AuthorizationService)
+    m.is_same_party.return_value = True
+    return m
 
 
 def _insert_party(db, party_id: str) -> None:
@@ -59,6 +69,7 @@ def _register(db, **overrides):
         identities=identities_mock,
         notes=notes_mock,
         activity_log=activity_svc,
+        authz=_authz_ok(),
         task_svc=task_svc_mock,
         app_users=None,
         action_state=MagicMock(),
@@ -128,10 +139,15 @@ class TestCreateCallSession:
 
 def _register_real_task_svc(db, **overrides):
     from application.task_service import TaskService  # noqa: E402 (local import, test-only)
+    from application.authorization_service import AuthorizationService  # noqa: E402
     from adapters.outbound.sqlite.task_repository import SQLiteTaskRepository  # noqa: E402
 
     task_repo = SQLiteTaskRepository(db)
-    task_svc = TaskService(task_repo, MagicMock(), db=db)
+    task_svc = TaskService(
+        task_repo, MagicMock(),
+        authz=AuthorizationService(), notes=MagicMock(),
+        db=db,
+    )
     router_mock, activity_svc, _, task_svc_out = _register(db, task_svc=task_svc, **overrides)
     return router_mock, activity_svc, task_svc_out, task_repo
 
@@ -450,7 +466,7 @@ class TestSideEffectsTaskAssignee:
         task_svc = MagicMock()
         execute_side_effects(
             MagicMock(activity_id="act-cb-1"), "staff-1",
-            party_id="party-cb-1", task_svc=task_svc,
+            party_id="party-cb-1", authz=_authz_ok(), task_svc=task_svc,
             create_callback_task=True, callback_at="2026-07-13T10:00:00Z",
         )
         task_data = task_svc.create_task.call_args.args[0]
@@ -462,7 +478,7 @@ class TestSideEffectsTaskAssignee:
         task_svc = MagicMock()
         execute_side_effects(
             MagicMock(activity_id="act-fu-1"), "staff-2",
-            party_id="party-fu-1", task_svc=task_svc,
+            party_id="party-fu-1", authz=_authz_ok(), task_svc=task_svc,
             schedule_followup_at="2026-07-14T09:00:00Z",
         )
         task_data = task_svc.create_task.call_args.args[0]
@@ -476,7 +492,7 @@ class TestSideEffectsTaskAssignee:
         task_svc = MagicMock()
         execute_side_effects(
             MagicMock(activity_id="act-cb-2"), None,
-            party_id="party-cb-2", task_svc=task_svc,
+            party_id="party-cb-2", authz=_authz_ok(), task_svc=task_svc,
             create_callback_task=True, callback_at="2026-07-13T10:00:00Z",
         )
         task_data = task_svc.create_task.call_args.args[0]
@@ -497,7 +513,7 @@ class TestSideEffectsBulkResolveOutcomeAware:
         task_svc = MagicMock()
         execute_side_effects(
             MagicMock(activity_id="act-na-1", contact_outcome="no_answer"), "staff-1",
-            party_id="party-na-1", action_state=action_state, task_svc=task_svc,
+            party_id="party-na-1", authz=_authz_ok(), action_state=action_state, task_svc=task_svc,
             resolve_action_ids=["a1"], resolve_task_ids=["t1"],
         )
         action_state.snooze.assert_called_once()
@@ -513,7 +529,7 @@ class TestSideEffectsBulkResolveOutcomeAware:
         task_svc = MagicMock()
         execute_side_effects(
             MagicMock(activity_id="act-busy-1", contact_outcome="busy"), "staff-1",
-            party_id="party-busy-1", action_state=action_state, task_svc=task_svc,
+            party_id="party-busy-1", authz=_authz_ok(), action_state=action_state, task_svc=task_svc,
             resolve_action_ids=["a2"], resolve_task_ids=["t2"],
         )
         action_state.snooze.assert_called_once_with(
@@ -528,7 +544,7 @@ class TestSideEffectsBulkResolveOutcomeAware:
         task_svc = MagicMock()
         execute_side_effects(
             MagicMock(activity_id="act-ans-1", contact_outcome="answered"), "staff-1",
-            party_id="party-ans-1", action_state=action_state, task_svc=task_svc,
+            party_id="party-ans-1", authz=_authz_ok(), action_state=action_state, task_svc=task_svc,
             resolve_action_ids=["a3"], resolve_task_ids=["t3"],
         )
         action_state.dismiss.assert_called_once_with("a3", user_id="staff-1")
@@ -542,12 +558,72 @@ class TestSideEffectsBulkResolveOutcomeAware:
         task_svc = MagicMock()
         execute_side_effects(
             MagicMock(activity_id="act-none-1", contact_outcome=None), "staff-1",
-            party_id="party-none-1", action_state=action_state, task_svc=task_svc,
+            party_id="party-none-1", authz=_authz_ok(), action_state=action_state, task_svc=task_svc,
             resolve_action_ids=["a4"], resolve_task_ids=["t4"],
         )
         action_state.dismiss.assert_called_once_with("a4", user_id="staff-1")
         task_svc.transition_status.assert_called_once_with("t4", "done")
         action_state.snooze.assert_not_called()
+
+
+# ---------------------------------------------------------------------------
+# execute_side_effects — phase-03 IDOR fix: step 6 (complete_task_ids) and
+# step 7 (resolve_action_ids/resolve_task_ids) each independently guard
+# against a client-supplied id that doesn't belong to this activity's party.
+# Uses a REAL AuthorizationService so the resolve-then-compare logic is
+# actually exercised (not bypassed via a forced-True stand-in).
+# ---------------------------------------------------------------------------
+
+class TestSideEffectsIdorGuard:
+    def test_step6_mismatched_complete_task_id_skipped(self):
+        """Step 6 (complete_task_ids) is a SEPARATE code path from step 7
+        (resolve_task_ids) — this must be guarded independently."""
+        task_svc = MagicMock()
+        task_svc.get_task.side_effect = lambda tid: {
+            "t-own": MagicMock(party_id="party-owner"),
+            "t-foreign": MagicMock(party_id="party-other"),
+        }[tid]
+        execute_side_effects(
+            MagicMock(activity_id="act-complete-1", contact_outcome="answered"), "staff-1",
+            party_id="party-owner", authz=AuthorizationService(), task_svc=task_svc,
+            complete_task_ids=["t-own", "t-foreign"],
+        )
+        task_svc.transition_status.assert_called_once_with("t-own", "done")
+
+    def test_step6_unresolvable_complete_task_id_fails_closed(self):
+        task_svc = MagicMock()
+        task_svc.get_task.return_value = None
+        execute_side_effects(
+            MagicMock(activity_id="act-complete-2", contact_outcome="answered"), "staff-1",
+            party_id="party-owner", authz=AuthorizationService(), task_svc=task_svc,
+            complete_task_ids=["ghost-task"],
+        )
+        task_svc.transition_status.assert_not_called()
+
+    def test_step7_mismatched_resolve_action_id_skipped_valid_still_dismissed(self):
+        action_state = MagicMock()
+        action_state.resolve_party_id.side_effect = lambda aid: {
+            "a-own": "party-owner", "a-foreign": "party-other",
+        }[aid]
+        execute_side_effects(
+            MagicMock(activity_id="act-resolve-1", contact_outcome="answered"), "staff-1",
+            party_id="party-owner", authz=AuthorizationService(), action_state=action_state,
+            resolve_action_ids=["a-own", "a-foreign"],
+        )
+        action_state.dismiss.assert_called_once_with("a-own", user_id="staff-1")
+
+    def test_step7_mismatched_resolve_task_id_skipped_valid_still_transitioned(self):
+        task_svc = MagicMock()
+        task_svc.get_task.side_effect = lambda tid: {
+            "t-own": MagicMock(party_id="party-owner"),
+            "t-foreign": MagicMock(party_id="party-other"),
+        }[tid]
+        execute_side_effects(
+            MagicMock(activity_id="act-resolve-2", contact_outcome="answered"), "staff-1",
+            party_id="party-owner", authz=AuthorizationService(), task_svc=task_svc,
+            resolve_task_ids=["t-own", "t-foreign"],
+        )
+        task_svc.transition_status.assert_called_once_with("t-own", "done")
 
 
 # ---------------------------------------------------------------------------

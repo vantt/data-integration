@@ -25,6 +25,15 @@ for _p in (_REPO_ROOT, _PYTHON_ROOT):
         sys.path.insert(0, _p)
 
 
+def _authz_ok() -> MagicMock:
+    """Phase-03 IDOR guard stand-in — always reports "same party" so these
+    pre-existing tests (not about the IDOR guard itself) are unaffected."""
+    from application.authorization_service import AuthorizationService
+    m = MagicMock(spec=AuthorizationService)
+    m.is_same_party.return_value = True
+    return m
+
+
 def _get_log_activity_handler(activity_log_mock, task_svc=None, profile=None):
     """Register the routes on a mock router and recover handle_log_activity."""
     import crm.src.adapters.inbound.web.screens.customer360.screen_customer_360_activity as mod
@@ -39,6 +48,7 @@ def _get_log_activity_handler(activity_log_mock, task_svc=None, profile=None):
         identities=MagicMock(),
         notes=MagicMock(),
         activity_log=activity_log_mock,
+        authz=_authz_ok(),
         task_svc=task_svc,
         app_users=None,
         action_state=None,
@@ -67,6 +77,7 @@ def _get_patch_activity_handler(activity_log_mock, task_svc=None, profile=None):
         identities=MagicMock(),
         notes=MagicMock(),
         activity_log=activity_log_mock,
+        authz=_authz_ok(),
         task_svc=task_svc,
         app_users=None,
         action_state=None,

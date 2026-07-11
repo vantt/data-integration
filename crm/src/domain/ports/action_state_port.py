@@ -18,3 +18,10 @@ class ActionStatePort(Protocol):
     def reopen(self, action_id: str) -> None:
         """Reset a dismissed or snoozed action back to open."""
         ...
+
+    def resolve_party_id(self, action_id: str) -> Optional[str]:
+        """Resolve action_id to its true party_id (cache-join lookup) —
+        used to verify an action genuinely belongs to the party a
+        bulk-resolve request claims it does, before dismiss/snooze mutates
+        it. Returns None when the action cannot be resolved."""
+        ...

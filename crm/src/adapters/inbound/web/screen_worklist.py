@@ -14,14 +14,14 @@ from typing import Optional, Protocol
 
 from domain.entities.last_contact import LastContact, POSITIVE_OUTCOMES
 
-from fastapi import APIRouter, Request, Response
+from fastapi import APIRouter, Form, Request, Response
 from fastapi.responses import HTMLResponse
 from fastapi.templating import Jinja2Templates
 
 from domain.entities.cache_insight import ActionQueueItem
 from domain.entities.profile import Note
 from domain.entities.party import PartyIdentity
-from domain.entities.task import Task
+from domain.entities.task import Task, VALID_UNCLAIM_REASONS
 from application.worklist_ranking import (
     WorklistRow,
     rank_worklist,
@@ -74,7 +74,9 @@ class ActionStateWriter(Protocol):
 
 class TaskClaimWriter(Protocol):
     def claim_customer_actions(self, party_id: str, actions: list, assignee_id: str) -> tuple: ...
-    def unclaim_customer_actions(self, party_id: str) -> bool: ...
+    def unclaim_customer_actions(
+        self, party_id: str, actor_id: Optional[str] = None, reason: Optional[str] = None
+    ) -> str: ...
 
 
 class PartyContactReader(Protocol):
@@ -524,13 +526,34 @@ def make_worklist_router(
         return await _render_worklist_fragment(request)
 
     @router.patch("/worklist/customers/{party_id}/unclaim", response_class=HTMLResponse)
-    async def handle_unclaim_customer(request: Request, party_id: str) -> Response:
-        """Cancel the per-customer claim task, returning all their actions to the queue."""
-        if task_claim is not None:
-            try:
-                task_claim.unclaim_customer_actions(party_id)
-            except Exception as exc:
-                log.error("worklist: unclaim customer %s: %s", party_id, exc)
+    async def handle_unclaim_customer(
+        request: Request, party_id: str, reason: str = Form(default="")
+    ) -> Response:
+        """Cancel the per-customer claim task, returning all their actions to the queue.
+
+        Only the current assignee may unclaim (403 otherwise); unauthenticated
+        requests are rejected explicitly (401) before ever reaching TaskService —
+        belt-and-suspenders on top of TaskService's own fail-closed ownership
+        check. Requires a valid reason (422 otherwise), written to an audit note.
+        """
+        uid = _current_user_id(request)
+        if not uid:
+            return HTMLResponse("", status_code=401)
+        if reason not in VALID_UNCLAIM_REASONS:
+            return HTMLResponse("", status_code=422)
+
+        if task_claim is None:
+            return await _render_worklist_fragment(request)
+
+        try:
+            result = task_claim.unclaim_customer_actions(party_id, actor_id=uid, reason=reason)
+        except Exception as exc:
+            log.error("worklist: unclaim customer %s: %s", party_id, exc)
+            return HTMLResponse("", status_code=500)
+
+        if result == "forbidden":
+            return HTMLResponse("", status_code=403)
+
         try:
             worklist_svc.invalidate_cache()
         except Exception as exc:

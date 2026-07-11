@@ -46,6 +46,30 @@ TASK_PRIORITY_HIGH = 1
 TASK_PRIORITY_URGENT = 2
 
 # ---------------------------------------------------------------------------
+# unclaim reason constants ("Trả việc") — flat code-string list, matching
+# activity.py's VALID_OUTCOME_REASONS shape exactly (every VALID_* constant in
+# this codebase is a flat list, not (code, label) tuples). Kept intentionally
+# short — this is a lightweight audit signal, not a taxonomy project (YAGNI).
+# VN labels live in UNCLAIM_REASON_LABELS below (consumed by TaskService when
+# composing the audit-note body) — templates render their own VN-labeled
+# <select> options directly (matching this codebase's existing reason-picker
+# convention, e.g. c360_call_cockpit_panel.html's REFUSAL_REASON_PILLS), not
+# threaded through context.
+# ---------------------------------------------------------------------------
+VALID_UNCLAIM_REASONS = [
+    "wrong_region", "wrong_specialty", "duplicate_lead",
+    "reassign_colleague", "other",
+]
+
+UNCLAIM_REASON_LABELS: dict[str, str] = {
+    "wrong_region": "Sai khu vực",
+    "wrong_specialty": "Sai chuyên môn/nhu cầu",
+    "duplicate_lead": "Lead trùng lặp",
+    "reassign_colleague": "Chuyển cho đồng nghiệp",
+    "other": "Khác",
+}
+
+# ---------------------------------------------------------------------------
 # Allowed status transitions: current → set of reachable next statuses
 # ---------------------------------------------------------------------------
 TASK_ALLOWED_TRANSITIONS: dict[str, list[str]] = {

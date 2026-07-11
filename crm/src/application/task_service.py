@@ -16,6 +16,8 @@ from domain.entities.task import (
     TASK_STATUS_DONE,
     TASK_STATUS_CANCELLED,
     VALID_TASK_STATUSES,
+    VALID_UNCLAIM_REASONS,
+    UNCLAIM_REASON_LABELS,
     TASK_ALLOWED_TRANSITIONS,
     TASK_SOURCE_MANUAL,
     TASK_SOURCE_ACTION_QUEUE,
@@ -25,6 +27,8 @@ from domain.ports.task_repository import TaskRepository
 from domain.ports.cache_repository import CacheRepository
 from domain.ports.party_repository import PartyRepository
 from application.task_kind import derive_task_kind
+from application.authorization_service import AuthorizationService
+from application.note_service import NoteService
 
 if TYPE_CHECKING:
     from adapters.outbound.sqlite.connection import CRMDatabase
@@ -65,11 +69,16 @@ class TaskService:
         self,
         task_repo: TaskRepository,
         cache_repo: CacheRepository,
+        *,
+        authz: AuthorizationService,
+        notes: NoteService,
         db: Optional[CRMDatabase] = None,
         party_repo: Optional[PartyRepository] = None,
     ) -> None:
         self._task_repo = task_repo
         self._cache_repo = cache_repo
+        self._authz = authz
+        self._notes = notes
         self._db = db
         self._party_repo = party_repo
 
@@ -294,17 +303,49 @@ class TaskService:
             self._db.commit()
         return task, True
 
-    def unclaim_customer_actions(self, party_id: str) -> bool:
-        """Cancel the per-customer claim task, returning all actions to the unclaimed queue."""
+    def unclaim_customer_actions(
+        self,
+        party_id: str,
+        actor_id: Optional[str] = None,
+        reason: Optional[str] = None,
+    ) -> str:
+        """Cancel the per-customer claim task, returning all actions to the unclaimed queue.
+
+        Returns "ok" | "not_found" | "forbidden". Only the current assignee may
+        unclaim — an empty/missing actor_id is rejected the SAME way as a genuine
+        ownership mismatch (fail-closed; see AuthorizationService.is_owner). A
+        valid unclaim with a recognized reason writes an audit note via
+        NoteService — best-effort, never blocks the unclaim itself.
+        """
         existing = self._task_repo.get_customer_claim(party_id)
         if existing is None:
-            return False
+            return "not_found"
+        if not actor_id or not self._authz.is_owner(existing.assignee_user_id, actor_id):
+            return "forbidden"
+
         existing.status = TASK_STATUS_CANCELLED
         existing.completed_at = utc_now()
         self._task_repo.update(existing)
         if self._db:
             self._db.commit()
-        return True
+
+        if reason in VALID_UNCLAIM_REASONS:
+            try:
+                reason_label = UNCLAIM_REASON_LABELS.get(reason, reason)
+                self._notes.add_note(
+                    party_id,
+                    f"Trả việc — lý do: {reason_label}",
+                    author_user_id=actor_id,
+                    note_type="unclaim_reason",
+                    visibility="team",
+                )
+            except Exception as exc:
+                log.error(
+                    "task service: unclaim audit note for party %s failed: %s",
+                    party_id, exc,
+                )
+
+        return "ok"
 
     def auto_claim_from_contact(self, party_id: str, customer_name: str, assignee_id: str) -> tuple:
         """Create a minimal claim task when contact is logged without prior claiming.

@@ -27,6 +27,15 @@ for _p in (_REPO_ROOT, _PYTHON_ROOT):
 from crm.src.adapters.inbound.web.screens.customer360.outcome_resolve_helpers import (
     parse_id_list as _parse_id_list,
 )
+from crm.src.application.authorization_service import AuthorizationService
+
+
+def _authz_ok() -> MagicMock:
+    """Phase-03 IDOR guard stand-in — always reports "same party" so these
+    pre-existing tests (not about the IDOR guard itself) are unaffected."""
+    m = MagicMock(spec=AuthorizationService)
+    m.is_same_party.return_value = True
+    return m
 
 
 # ---------------------------------------------------------------------------
@@ -115,6 +124,7 @@ def test_m08_ctx_forwards_ids():
         identities=identities_mock,
         notes=notes_mock,
         activity_log=MagicMock(),
+        authz=_authz_ok(),
         task_svc=task_svc_mock,
         app_users=None,
         action_state=None,
@@ -210,6 +220,7 @@ def test_custom_fields_snapshot_written():
         identities=MagicMock(),
         notes=MagicMock(),
         activity_log=activity_log_mock,
+        authz=_authz_ok(),
         task_svc=None,
         app_users=None,
         action_state=None,
@@ -298,6 +309,7 @@ def test_idempotent_double_submit_skip_task_id():
         identities=MagicMock(),
         notes=MagicMock(),
         activity_log=activity_log_mock,
+        authz=_authz_ok(),
         task_svc=task_svc_mock,
         app_users=None,
         action_state=MagicMock(),
@@ -376,6 +388,7 @@ def test_empty_ids_no_custom_fields():
         identities=MagicMock(),
         notes=MagicMock(),
         activity_log=activity_log_mock,
+        authz=_authz_ok(),
         task_svc=None,
         app_users=None,
         action_state=None,

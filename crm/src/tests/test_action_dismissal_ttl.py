@@ -374,6 +374,50 @@ class TestLegacySnoozeUnaffected:
         assert items == []
 
 
+class TestResolvePartyId:
+    """Phase-03 (260711-1227) IDOR fix: resolve_party_id() is a thin wrapper
+    around _resolve_party_and_action_type() — exercised here against the real
+    DB-backed cache-join, not a mock, so the actual SQL path (shared with
+    dismiss()'s own internal TTL-dismissal write) is verified."""
+
+    def test_resolves_customer_level_action_to_its_party_id(self):
+        with tempfile.TemporaryDirectory() as d:
+            db, cache_repo, action_state_repo, cache_conn = _make_repos(d)
+            party_id = str(uuid.uuid4())
+            _link_party(db.conn, party_id, 2001)
+            _insert_action(cache_conn, "aq-resolve-1", "ck-2001", "CALL_NOW", customer_id=2001)
+            cache_conn.close()
+
+            resolved = action_state_repo.resolve_party_id("aq-resolve-1")
+            db.close()
+
+        assert resolved == party_id
+
+    def test_unknown_action_id_returns_none(self):
+        with tempfile.TemporaryDirectory() as d:
+            db, cache_repo, action_state_repo, cache_conn = _make_repos(d)
+            cache_conn.close()
+
+            resolved = action_state_repo.resolve_party_id("aq-does-not-exist")
+            db.close()
+
+        assert resolved is None
+
+    def test_action_not_yet_linked_to_a_party_returns_none(self):
+        """customer_id present in wh_action_queue/wh_party_seed but no
+        crm_party_identity row yet (customer not linked to a CRM party) —
+        must fail closed, not resolve to a stray/empty value."""
+        with tempfile.TemporaryDirectory() as d:
+            db, cache_repo, action_state_repo, cache_conn = _make_repos(d)
+            _insert_action(cache_conn, "aq-unlinked", "ck-2002", "CALL_NOW", customer_id=2002)
+            cache_conn.close()
+
+            resolved = action_state_repo.resolve_party_id("aq-unlinked")
+            db.close()
+
+        assert resolved is None
+
+
 class TestListActiveDismissals:
     def test_list_active_dismissals_returns_enriched_row(self):
         with tempfile.TemporaryDirectory() as d:

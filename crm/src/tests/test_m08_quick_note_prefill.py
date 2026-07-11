@@ -55,10 +55,15 @@ def _build_m08_app() -> TestClient:
     identities_mock = MagicMock()
     identities_mock.list_identities.return_value = []
 
+    from application.authorization_service import AuthorizationService
+
+    authz_mock = MagicMock(spec=AuthorizationService)
+    authz_mock.is_same_party.return_value = True
     mod.register_activity_routes(
         router, templates,
         profile=MagicMock(), identities=identities_mock, notes=notes_mock,
-        activity_log=MagicMock(), task_svc=None, app_users=None, action_state=None,
+        activity_log=MagicMock(), authz=authz_mock,
+        task_svc=None, app_users=None, action_state=None,
     )
     app.include_router(router)
     return TestClient(app, raise_server_exceptions=False)

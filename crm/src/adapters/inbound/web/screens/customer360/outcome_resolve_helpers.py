@@ -9,6 +9,7 @@ import logging
 from typing import Optional
 
 from application.activity_side_effects import resolve_actions_and_tasks
+from application.authorization_service import AuthorizationService
 
 log = logging.getLogger(__name__)
 
@@ -26,6 +27,9 @@ def bulk_resolve(
     skip_task_id: str = "",
     actor_id: str = "",
     contact_outcome: Optional[str] = None,
+    *,
+    party_id: str,
+    authz: AuthorizationService,
 ) -> None:
     """Dismiss action_ids + mark task_ids done — outcome-aware (delegates to
     application.activity_side_effects.resolve_actions_and_tasks, the SAME gate
@@ -57,6 +61,13 @@ def bulk_resolve(
         S.chosenOutcome in the cockpit JS). None/absent → treated like any
         other non-no-contact outcome (prior dismiss+done behavior), matching
         every pre-amendment caller that doesn't pass it.
+    party_id:
+        the party this resolve request is scoped to (the /reason/resolve-async
+        route's own party_id path segment) — every action_id/task_id is
+        verified to genuinely resolve to this party before mutation (phase-03
+        IDOR fix); mismatches are skipped, not mutated.
+    authz:
+        shared AuthorizationService instance used for the party-match check.
     """
     filtered_task_ids = [
         tid for tid in task_ids if not (skip_task_id and tid == skip_task_id)
@@ -64,4 +75,5 @@ def bulk_resolve(
     resolve_actions_and_tasks(
         action_ids, filtered_task_ids, action_state, task_svc,
         contact_outcome, actor_id or None,
+        party_id=party_id, authz=authz,
     )

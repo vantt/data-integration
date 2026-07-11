@@ -10,7 +10,7 @@ import logging
 from datetime import datetime, timezone
 from typing import Optional
 
-from fastapi import APIRouter, Request, Response
+from fastapi import APIRouter, Form, Request, Response
 from fastapi.responses import HTMLResponse
 from fastapi.templating import Jinja2Templates
 
@@ -19,7 +19,9 @@ from application.health_domain_collect import load_health_domain_collect_context
 from application.reason_rail import assemble_reason_rail
 from domain.entities.cache_insight import CustomerDimMetrics
 from domain.entities.profile import PartyIdentity, PartyInsight
-from domain.entities.task import TASK_KIND_CONTACT, TASK_STATUS_OPEN, TASK_STATUS_DOING
+from domain.entities.task import (
+    TASK_KIND_CONTACT, TASK_STATUS_OPEN, TASK_STATUS_DOING, VALID_UNCLAIM_REASONS,
+)
 from adapters.inbound.web.screens.customer360.screen_call_cockpit import (
     build_draft_activity_ctx,
 )
@@ -129,14 +131,32 @@ def register_panel_routes(
 
     @router.patch("/customers/{party_id}/unclaim", response_class=HTMLResponse)
     async def handle_c360_unclaim_customer(
-        request: Request, party_id: str
+        request: Request, party_id: str, reason: str = Form(default="")
     ) -> Response:
-        """Cancel the per-customer claim task from C360."""
-        if task_svc is not None:
-            try:
-                task_svc.unclaim_customer_actions(party_id)
-            except Exception as exc:
-                log.error("c360: unclaim customer %s: %s", party_id, exc)
+        """Cancel the per-customer claim task from C360.
+
+        Same ownership/reason rules as the worklist unclaim route (S01): 401
+        unauthenticated, 422 missing/invalid reason, 403 non-assignee — logic
+        itself lives once in TaskService.unclaim_customer_actions.
+        """
+        uid = getattr(getattr(request.state, "current_user", None), "user_id", "")
+        if not uid:
+            return HTMLResponse("", status_code=401)
+        if reason not in VALID_UNCLAIM_REASONS:
+            return HTMLResponse("", status_code=422)
+
+        if task_svc is None:
+            return await _render_insight_panel_response(request, party_id)
+
+        try:
+            result = task_svc.unclaim_customer_actions(party_id, actor_id=uid, reason=reason)
+        except Exception as exc:
+            log.error("c360: unclaim customer %s: %s", party_id, exc)
+            return HTMLResponse("", status_code=500)
+
+        if result == "forbidden":
+            return HTMLResponse("", status_code=403)
+
         return await _render_insight_panel_response(request, party_id)
 
     @router.get("/customers/{party_id}/panels/{panel}", response_class=HTMLResponse)

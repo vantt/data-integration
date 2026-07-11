@@ -22,6 +22,7 @@ from datetime import datetime, timedelta, timezone
 from typing import Optional
 
 from domain.entities.profile import PartyInsight
+from application.authorization_service import AuthorizationService
 
 log = logging.getLogger(__name__)
 
@@ -48,6 +49,9 @@ def resolve_actions_and_tasks(
     task_svc,
     contact_outcome: Optional[str],
     actor_id: Optional[str] = None,
+    *,
+    party_id: str,
+    authz: AuthorizationService,
 ) -> None:
     """Outcome-aware bulk resolve — dismiss+done normally, snooze+leave-open for
     `_NO_CONTACT_OUTCOMES`. Shared by execute_side_effects() step 7 and
@@ -61,6 +65,11 @@ def resolve_actions_and_tasks(
     Any other outcome (including None/empty) → prior behavior: dismiss
     `action_ids` (TTL 30d) and transition `task_ids` to "done".
 
+    IDOR guard (phase-03): every action_id/task_id is resolved to its real
+    party_id server-side and compared against `party_id` (the activity's own
+    party) via `authz.is_same_party()` BEFORE the mutating call — a mismatch
+    (including an unresolvable id) is skipped with a warning, never mutated.
+
     Never raises — each item is independently try/except-logged.
     """
     uid: Optional[str] = actor_id or None
@@ -72,6 +81,13 @@ def resolve_actions_and_tasks(
         if action_state is not None:
             for aid in action_ids:
                 try:
+                    resolved_party = action_state.resolve_party_id(aid)
+                    if not authz.is_same_party(resolved_party, party_id):
+                        log.warning(
+                            "resolve: action %s does not resolve to party %s — snooze skipped",
+                            aid, party_id,
+                        )
+                        continue
                     action_state.snooze(aid, until_date, user_id=uid)
                 except Exception as exc:
                     log.warning("resolve: snooze action %s: %s", aid, exc)
@@ -79,12 +95,27 @@ def resolve_actions_and_tasks(
         if action_state is not None:
             for aid in action_ids:
                 try:
+                    resolved_party = action_state.resolve_party_id(aid)
+                    if not authz.is_same_party(resolved_party, party_id):
+                        log.warning(
+                            "resolve: action %s does not resolve to party %s — dismiss skipped",
+                            aid, party_id,
+                        )
+                        continue
                     action_state.dismiss(aid, user_id=uid)
                 except Exception as exc:
                     log.warning("resolve: dismiss action %s: %s", aid, exc)
         if task_svc is not None:
             for tid in task_ids:
                 try:
+                    task = task_svc.get_task(tid)
+                    resolved_party = task.party_id if task else None
+                    if not authz.is_same_party(resolved_party, party_id):
+                        log.warning(
+                            "resolve: task %s does not resolve to party %s — transition skipped",
+                            tid, party_id,
+                        )
+                        continue
                     task_svc.transition_status(tid, "done")
                 except Exception as exc:
                     log.warning("resolve: transition task %s: %s", tid, exc)
@@ -95,6 +126,7 @@ def execute_side_effects(
     actor_id: Optional[str],
     *,
     party_id: str,
+    authz: AuthorizationService,
     profile=None,
     notes=None,
     task_svc=None,
@@ -227,10 +259,21 @@ def execute_side_effects(
             except Exception as exc:
                 log.warning("side_effects: schedule_followup %s: %s", party_id, exc)
 
-    # 6. Complete linked task(s)
+    # 6. Complete linked task(s) — IDOR guard (phase-03): complete_task_ids is
+    # client-supplied (Form param on both /finalize and /log-activity), so each
+    # tid is resolved and compared against this activity's own party_id before
+    # transitioning it, same pattern as resolve_actions_and_tasks() step 7 below.
     if complete_task_ids and task_svc is not None:
         for tid in complete_task_ids:
             try:
+                task = task_svc.get_task(tid)
+                resolved_party = task.party_id if task else None
+                if not authz.is_same_party(resolved_party, party_id):
+                    log.warning(
+                        "side_effects: complete_task %s does not resolve to party %s — skipped",
+                        tid, party_id,
+                    )
+                    continue
                 task_svc.transition_status(tid, "done")
             except Exception as exc:
                 log.warning("side_effects: complete_task %s: %s", tid, exc)
@@ -246,4 +289,5 @@ def execute_side_effects(
         resolve_actions_and_tasks(
             resolve_action_ids, remaining_task_ids, action_state, task_svc,
             getattr(activity, "contact_outcome", None), actor_id,
+            party_id=party_id, authz=authz,
         )

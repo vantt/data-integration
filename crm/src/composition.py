@@ -72,6 +72,7 @@ from application.campaign_service import CampaignService
 from application.app_user_service import AppUserService
 from application.worklist_query_service import WorklistQueryService
 from application.customer_list_query_service import CustomerListQueryService
+from application.authorization_service import AuthorizationService
 
 # ── Inbound: HTTP API handlers ────────────────────────────────────────────────
 from adapters.inbound.http.health_handler import create_health_router
@@ -178,6 +179,7 @@ class Services(TypedDict):
     segment: SegmentService
     campaign: CampaignService
     app_user: AppUserService
+    authz: AuthorizationService
 
 
 # Paths relative to this file (crm/src/).
@@ -313,6 +315,12 @@ def _build_services(sqlite_repos: SqliteRepos) -> Services:
     """Instantiate all application services from SQLite repository objects."""
     db = sqlite_repos["db"]
     tag_svc = TagService(sqlite_repos["tag"], db)
+    note_svc = NoteService(sqlite_repos["note"], db)
+    # Single shared instance — Phase 2 (TaskService.unclaim_customer_actions) and
+    # Phase 3 (IDOR fix) both consume this SAME AuthorizationService, per its
+    # module docstring's "seed for future RBAC" design (one shared instance, not
+    # per-service duplicates).
+    authz_svc = AuthorizationService()
     return {
         "merge": MergeService(sqlite_repos["party"], sqlite_repos["dedup"]),
         "profile": ProfileService(
@@ -320,12 +328,19 @@ def _build_services(sqlite_repos: SqliteRepos) -> Services:
             sqlite_repos["cf"],
             db,
         ),
-        "note": NoteService(sqlite_repos["note"], db),
+        "note": note_svc,
         "tag": tag_svc,
         "tag_governance": TagGovernanceService(sqlite_repos["tag_governance"], tag_svc, db),
         "cf": CustomFieldService(sqlite_repos["cf"], db),
         "activity": ActivityService(sqlite_repos["activity"], sqlite_repos["last_contact"], db),
-        "task": TaskService(sqlite_repos["task"], sqlite_repos["cache"], db, sqlite_repos["party"]),
+        "task": TaskService(
+            sqlite_repos["task"],
+            sqlite_repos["cache"],
+            authz=authz_svc,
+            notes=note_svc,
+            db=db,
+            party_repo=sqlite_repos["party"],
+        ),
         "conv": ConversationService(sqlite_repos["conv"], sqlite_repos["party"], db),
         "segment": SegmentService(sqlite_repos["segment"]),
         "campaign": CampaignService(
@@ -337,6 +352,7 @@ def _build_services(sqlite_repos: SqliteRepos) -> Services:
             sqlite_repos["app_user"],
             staff_resolver=StaffIdResolver(olap_path()) if olap_path() else None,
         ),
+        "authz": authz_svc,
     }
 
 
@@ -603,6 +619,7 @@ def _register_web_routes(
         activity_log=services["activity"],
         notes=services["note"],
         party_tasks=sqlite_repos["task"],
+        authz=services["authz"],
         party_finder=sqlite_repos["party"],
         customer_code_resolver=duckdb_repos["orders"],
         customer_timeline=duckdb_repos["timeline"],

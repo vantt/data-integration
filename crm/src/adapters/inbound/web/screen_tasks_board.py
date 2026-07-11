@@ -13,6 +13,7 @@ from fastapi import APIRouter, Form, Request, Response
 from fastapi.responses import HTMLResponse
 from fastapi.templating import Jinja2Templates
 
+from adapters.inbound.web.screens.modals.screen_modal_shared import parse_priority
 from domain.entities.task import Task, VALID_TASK_STATUSES
 
 log = logging.getLogger(__name__)
@@ -136,6 +137,11 @@ def make_tasks_board_router(
         due_at: str = Form(default=""),
         party_id: str = Form(default=""),
         assignee_user_id: str = Form(default=""),
+        priority: str = Form(default="P3"),
+        task_kind: str = Form(default=""),
+        source: str = Form(default="manual"),
+        source_ref: str = Form(default=""),
+        return_to: str = Form(default="redirect"),
     ) -> Response:
         title = title.strip()
         if not title:
@@ -145,18 +151,26 @@ def make_tasks_board_router(
             "title": title,
             "description": description.strip() or None,
             "status": "open",
-            "source": "manual",
-            "priority": 0,
+            "source": source.strip() or "manual",
+            "priority": parse_priority(priority),
             "due_at": due_at.strip() or None,
             "party_id": party_id.strip() or None,
             "assignee_user_id": assignee_user_id.strip() or None,
             "created_by": current_user.user_id if current_user else None,
+            "task_kind": task_kind.strip() or None,
+            "source_ref": source_ref.strip() or None,
         }
         try:
             task_creator.create_task(task_data)
         except Exception as exc:
             log.error("create task: %s", exc)
             return HTMLResponse("failed to create task", status_code=500)
+        if return_to == "stay":
+            return HTMLResponse(
+                "",
+                status_code=200,
+                headers={"HX-Trigger": '{"worklistRefresh": true, "closeModal": true}'},
+            )
         return Response(
             status_code=200,
             headers={"HX-Trigger": '{"closeModal":true}', "HX-Redirect": "/tasks"},

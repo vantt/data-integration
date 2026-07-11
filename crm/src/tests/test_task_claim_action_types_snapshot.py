@@ -24,7 +24,18 @@ for _p in (_REPO_ROOT, _PYTHON_ROOT):
         sys.path.insert(0, _p)
 
 from application.task_service import TaskService  # noqa: E402
+from application.authorization_service import AuthorizationService  # noqa: E402
 from adapters.outbound.sqlite.task_repository import SQLiteTaskRepository  # noqa: E402
+
+
+def _make_svc(task_repo, cache_repo, db=None) -> TaskService:
+    """TaskService with a real AuthorizationService (cheap/stateless) and a
+    stub NoteService — this file's tests don't exercise the unclaim/audit path."""
+    return TaskService(
+        task_repo, cache_repo,
+        authz=AuthorizationService(), notes=MagicMock(),
+        db=db,
+    )
 
 
 def _make_action(action_id, action_type, priority, **overrides):
@@ -46,7 +57,7 @@ class TestClaimCustomerActionsSnapshot:
         task_repo.get_customer_claim.return_value = None
         task_repo.insert = MagicMock()
         cache_repo = MagicMock()
-        svc = TaskService(task_repo, cache_repo, db=None)
+        svc = _make_svc(task_repo, cache_repo)
 
         # Caller-supplied order is already priority_rank ascending (most urgent
         # first) — mirrors screen_worklist.py's filter over the warehouse query.
@@ -64,7 +75,7 @@ class TestClaimCustomerActionsSnapshot:
         task_repo = MagicMock()
         task_repo.get_customer_claim.return_value = None
         cache_repo = MagicMock()
-        svc = TaskService(task_repo, cache_repo, db=None)
+        svc = _make_svc(task_repo, cache_repo)
 
         task, _ = svc.claim_customer_actions("party-1", [], "user-1")
         assert task.claimed_action_types is None
@@ -77,7 +88,7 @@ class TestClaimCustomerActionsSnapshot:
         task_repo = MagicMock()
         task_repo.get_customer_claim.return_value = existing
         cache_repo = MagicMock()
-        svc = TaskService(task_repo, cache_repo, db=None)
+        svc = _make_svc(task_repo, cache_repo)
 
         actions = [_make_action("aq-1", "NEW_TYPE", priority=1)]
         task, is_new = svc.claim_customer_actions("party-1", actions, "user-1")
@@ -110,7 +121,7 @@ class TestClaimedActionTypesRoundTrip:
         self._insert_party(seeded_crm_db, party_id)
         self._insert_app_user(seeded_crm_db, "user-1")
         task_repo = SQLiteTaskRepository(seeded_crm_db)
-        svc = TaskService(task_repo, MagicMock(), db=seeded_crm_db)
+        svc = _make_svc(task_repo, MagicMock(), db=seeded_crm_db)
 
         actions = [
             _make_action("aq-1", "REORDER_OVERDUE", priority=1, party_id=party_id),

@@ -35,6 +35,7 @@ from fastapi.testclient import TestClient                                    # n
 from fastapi.templating import Jinja2Templates                               # noqa: E402
 
 from application.task_service import TaskService                            # noqa: E402
+from application.authorization_service import AuthorizationService          # noqa: E402
 from domain.entities.cache_insight import ActionQueueItem                   # noqa: E402
 from domain.entities.task import (                                          # noqa: E402
     Task, TASK_STATUS_OPEN, TASK_STATUS_DOING,
@@ -68,7 +69,12 @@ class TestClaimCustomerActionsDenormalization:
         task_repo = MagicMock()
         task_repo.get_customer_claim.return_value = None
         cache_repo = MagicMock()
-        return TaskService(task_repo, cache_repo, db=None), task_repo
+        svc = TaskService(
+            task_repo, cache_repo,
+            authz=AuthorizationService(), notes=MagicMock(),
+            db=None,
+        )
+        return svc, task_repo
 
     def test_value_at_stake_is_sum_across_actions(self):
         svc, repo = self._make_service()
@@ -292,12 +298,14 @@ class TestQueuePosAutoCorrection:
 def _register_activity_routes(activity_log_mock, task_svc=None, action_state=None):
     import adapters.inbound.web.screens.customer360.screen_customer_360_activity as mod
 
+    authz_mock = MagicMock(spec=AuthorizationService)
+    authz_mock.is_same_party.return_value = True
     router_mock = MagicMock()
     templates_mock = MagicMock()
     mod.register_activity_routes(
         router_mock, templates_mock,
         profile=MagicMock(), identities=MagicMock(), notes=MagicMock(),
-        activity_log=activity_log_mock, task_svc=task_svc,
+        activity_log=activity_log_mock, authz=authz_mock, task_svc=task_svc,
         app_users=None, action_state=action_state,
     )
     post_calls = router_mock.post.return_value.call_args_list

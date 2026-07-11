@@ -149,10 +149,15 @@ class TestTaskServiceCreateTaskKind:
 
     def _make_service(self):
         from application.task_service import TaskService
+        from application.authorization_service import AuthorizationService
         task_repo = MagicMock()
         task_repo.insert = MagicMock()
         cache_repo = MagicMock()
-        svc = TaskService(task_repo, cache_repo, db=None)
+        svc = TaskService(
+            task_repo, cache_repo,
+            authz=AuthorizationService(), notes=MagicMock(),
+            db=None,
+        )
         return svc, task_repo
 
     def test_action_queue_source_derives_contact(self):
@@ -224,11 +229,16 @@ class TestTaskServiceCreateTaskKind:
 class TestTaskServiceClaimKind:
     def _make_service(self):
         from application.task_service import TaskService
+        from application.authorization_service import AuthorizationService
         task_repo = MagicMock()
         task_repo.get_customer_claim = MagicMock(return_value=None)
         task_repo.insert = MagicMock()
         cache_repo = MagicMock()
-        svc = TaskService(task_repo, cache_repo, db=None)
+        svc = TaskService(
+            task_repo, cache_repo,
+            authz=AuthorizationService(), notes=MagicMock(),
+            db=None,
+        )
         return svc, task_repo
 
     def _make_action(self, action_type=ACTION_CALL_NOW):

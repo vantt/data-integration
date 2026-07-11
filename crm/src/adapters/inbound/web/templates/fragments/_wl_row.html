@@ -304,13 +304,28 @@
             hx-target="#task-{{ t.task_id }}" hx-swap="delete"
             title="Hủy task này" onclick="event.stopPropagation()">Hủy</button>
     {% endif %}
-    {# Claim tasks: "Trả việc" reloads entire worklist so actions reappear #}
+    {# Claim tasks: "Trả việc" reloads entire worklist so actions reappear.
+       Requires selecting a reason first (audit trail — see TaskService.unclaim_customer_actions);
+       button stays disabled until the <select> has a non-empty value. #}
     {% if t.source == 'action_queue_claim' and pid %}
-    <button class="btn btn--ghost" style="padding:8px 10px;color:var(--fg-tertiary)"
-            hx-patch="/worklist/customers/{{ pid }}/unclaim"
-            hx-target="#worklist-container" hx-swap="outerHTML"
-            hx-include="#wl-filter-form"
-            title="Trả việc về hàng đợi" onclick="event.stopPropagation()">Trả việc</button>
+    <span style="display:inline-flex;align-items:center;gap:4px" onclick="event.stopPropagation()">
+      <select id="unclaim-reason-{{ t.task_id }}" class="input" style="padding:4px 6px;font-size:0.75rem"
+              onchange="this.nextElementSibling.disabled = !this.value">
+        <option value="">Lý do trả việc…</option>
+        <option value="wrong_region">Sai khu vực</option>
+        <option value="wrong_specialty">Sai chuyên môn/nhu cầu</option>
+        <option value="duplicate_lead">Lead trùng lặp</option>
+        <option value="reassign_colleague">Chuyển cho đồng nghiệp</option>
+        <option value="other">Khác</option>
+      </select>
+      <button class="btn btn--ghost" style="padding:8px 10px;color:var(--fg-tertiary)"
+              disabled
+              hx-patch="/worklist/customers/{{ pid }}/unclaim"
+              hx-target="#worklist-container" hx-swap="outerHTML"
+              hx-include="#wl-filter-form"
+              hx-vals='js:{"reason": document.getElementById("unclaim-reason-{{ t.task_id }}").value}'
+              title="Trả việc về hàng đợi">Trả việc</button>
+    </span>
     {% endif %}
     {# A4: Snooze dropdown — action_queue_claim tasks only.
        hx-target/hx-swap="delete" targets the row's own stable id (already

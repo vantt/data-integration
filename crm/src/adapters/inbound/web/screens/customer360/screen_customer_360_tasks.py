@@ -12,6 +12,8 @@ from fastapi import APIRouter, Form, Request, Response
 from fastapi.responses import HTMLResponse
 from fastapi.templating import Jinja2Templates
 
+from application.authorization_service import AuthorizationService
+
 log = logging.getLogger(__name__)
 
 _ICT = timezone(timedelta(hours=7))
@@ -31,6 +33,7 @@ def register_task_routes(
     templates: Jinja2Templates,
     *,
     party_tasks,
+    authz: AuthorizationService,
     task_svc=None,
     app_users=None,
 ) -> None:
@@ -61,6 +64,16 @@ def register_task_routes(
         if task_svc is None:
             return HTMLResponse("task service not available", status_code=503)
         try:
+            task = task_svc.get_task(task_id)
+        except Exception as exc:
+            log.error("c360: task done get_task %s: %s", task_id, exc)
+            return HTMLResponse("Lỗi cập nhật task", status_code=500)
+        # Phase-03 IDOR fix: task_id is visible across the app (worklist rows,
+        # task board) — reject a cross-party task_id before mutating rather
+        # than trusting the URL's party_id at face value.
+        if not authz.is_same_party(task.party_id if task else None, party_id):
+            return HTMLResponse("Không có quyền thao tác task này", status_code=403)
+        try:
             task_svc.transition_status(task_id, "done")
         except Exception as exc:
             log.error("c360: task done %s: %s", task_id, exc)
@@ -72,6 +85,14 @@ def register_task_routes(
     async def handle_task_cancel_c360(request: Request, party_id: str, task_id: str) -> Response:
         if task_svc is None:
             return HTMLResponse("task service not available", status_code=503)
+        try:
+            task = task_svc.get_task(task_id)
+        except Exception as exc:
+            log.error("c360: task cancel get_task %s: %s", task_id, exc)
+            return HTMLResponse("Lỗi huỷ task", status_code=500)
+        # Phase-03 IDOR fix: same cross-party guard as handle_task_done_c360.
+        if not authz.is_same_party(task.party_id if task else None, party_id):
+            return HTMLResponse("Không có quyền thao tác task này", status_code=403)
         try:
             task_svc.transition_status(task_id, "cancelled")
         except Exception as exc:
@@ -98,6 +119,13 @@ def register_task_routes(
             return HTMLResponse("Ngày không hợp lệ", status_code=400)
         try:
             t = task_svc.get_task(task_id)
+        except Exception as exc:
+            log.error("c360: task postpone get_task %s: %s", task_id, exc)
+            return HTMLResponse("Lỗi hoãn task", status_code=500)
+        # Phase-03 IDOR fix: same cross-party guard as handle_task_done_c360.
+        if not authz.is_same_party(t.party_id if t else None, party_id):
+            return HTMLResponse("Không có quyền thao tác task này", status_code=403)
+        try:
             if t is not None and getattr(t, "status", "") == "doing":
                 task_svc.transition_status(task_id, "open")
             task_svc.update_task(task_id, {"due_at": new_due_at})

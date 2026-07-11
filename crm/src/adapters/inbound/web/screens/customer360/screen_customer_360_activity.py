@@ -18,6 +18,7 @@ from domain.entities.profile import Note, PartyIdentity
 
 from application.activity_service import ActivityFinalizeConflictError, ActivityNotFoundError
 from application.activity_side_effects import execute_side_effects
+from application.authorization_service import AuthorizationService
 
 from adapters.inbound.web.screens.customer360.outcome_resolve_helpers import (
     parse_id_list as _parse_id_list,
@@ -63,6 +64,7 @@ def register_activity_routes(
     identities,
     notes,
     activity_log,
+    authz: AuthorizationService,
     task_svc=None,
     app_users=None,
     action_state=None,
@@ -77,6 +79,7 @@ def register_activity_routes(
         execute_side_effects(
             activity, actor_id,
             party_id=activity.party_id,
+            authz=authz,
             profile=profile, notes=notes, task_svc=task_svc,
             party_insights=party_insights, action_state=action_state,
             **effects,
@@ -482,6 +485,8 @@ def register_activity_routes(
             task_svc=task_svc,
             actor_id=actor_id or "",
             contact_outcome=contact_outcome.strip() or None,
+            party_id=party_id,
+            authz=authz,
         )
 
         return Response(status_code=204)

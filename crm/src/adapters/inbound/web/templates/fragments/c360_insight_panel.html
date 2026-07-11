@@ -29,9 +29,22 @@
       <span class="bdg" style="font-size:0.75rem;color:var(--amber-700,#b45309);border-color:color-mix(in srgb,var(--amber-500,#f59e0b) 30%,transparent);background:color-mix(in srgb,var(--amber-100,#fef3c7) 60%,transparent)">
         👤 {{ customer_claim.assignee_name }} đang xử lý
       </span>
+      {# Requires selecting a reason first (audit trail — see
+         TaskService.unclaim_customer_actions); button disabled until chosen. #}
+      <select id="c360-unclaim-reason-{{ party_id }}" class="input" style="padding:2px 6px;font-size:0.75rem"
+              onchange="this.nextElementSibling.disabled = !this.value">
+        <option value="">Lý do trả việc…</option>
+        <option value="wrong_region">Sai khu vực</option>
+        <option value="wrong_specialty">Sai chuyên môn/nhu cầu</option>
+        <option value="duplicate_lead">Lead trùng lặp</option>
+        <option value="reassign_colleague">Chuyển cho đồng nghiệp</option>
+        <option value="other">Khác</option>
+      </select>
       <button class="btn btn--ghost" style="padding:2px 8px;font-size:0.75rem;color:var(--fg-tertiary)"
+              disabled
               hx-patch="/customers/{{ party_id }}/unclaim"
               hx-target="#tab-panel" hx-swap="innerHTML"
+              hx-vals='js:{"reason": document.getElementById("c360-unclaim-reason-{{ party_id }}").value}'
               title="Trả việc về hàng đợi">Trả việc</button>
       {% elif insight.actions %}
       <button class="btn btn--primary" style="padding:4px 12px;font-size:0.8125rem"

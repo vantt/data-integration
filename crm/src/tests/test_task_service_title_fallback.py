@@ -19,6 +19,7 @@ for _p in (_REPO_ROOT, _PYTHON_ROOT):
         sys.path.insert(0, _p)
 
 from application.task_service import TaskService  # noqa: E402
+from application.authorization_service import AuthorizationService  # noqa: E402
 from domain.entities.party import Party  # noqa: E402
 
 _HASH_KEY = "d8835eb2200423e5d3295fc7257379f3"  # 32-char MD5-style surrogate key
@@ -30,7 +31,11 @@ def _make_service(party_repo=None):
     task_repo.exists_by_source_ref = MagicMock(return_value=False)
     task_repo.insert = MagicMock()
     cache_repo = MagicMock()
-    svc = TaskService(task_repo, cache_repo, db=None, party_repo=party_repo)
+    svc = TaskService(
+        task_repo, cache_repo,
+        authz=AuthorizationService(), notes=MagicMock(),
+        db=None, party_repo=party_repo,
+    )
     return svc, task_repo, cache_repo
 
 

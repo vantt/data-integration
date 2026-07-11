@@ -23,6 +23,8 @@ from fastapi import APIRouter, Request, Response
 from fastapi.responses import HTMLResponse
 from fastapi.templating import Jinja2Templates
 
+from application.authorization_service import AuthorizationService
+
 from domain.entities.activity import Activity
 from domain.entities.cache_insight import CacheInsight
 from domain.entities.profile import CustomFieldDef, Note, Party360, PartyIdentity, PartyInsight
@@ -131,6 +133,7 @@ def make_customer_360_router(
     activity_log: ActivityLogger,
     notes: NoteReader,
     party_tasks: TaskQuerier,
+    authz: AuthorizationService,   # Phase 03 (260711-1227): shared instance for IDOR guards
     custom_field_defs: Optional[CustomFieldDefReader] = None,
     party_insights: Optional[PartyInsightReader] = None,
     action_task_resolver: Optional[ActionTaskResolver] = None,
@@ -305,6 +308,7 @@ def make_customer_360_router(
         identities=identities,
         notes=notes,
         activity_log=activity_log,
+        authz=authz,
         task_svc=task_svc,
         app_users=app_users,
         action_state=action_state,
@@ -318,6 +322,7 @@ def make_customer_360_router(
     register_task_routes(
         router, templates,
         party_tasks=party_tasks,
+        authz=authz,
         task_svc=task_svc,
         app_users=app_users,
     )
