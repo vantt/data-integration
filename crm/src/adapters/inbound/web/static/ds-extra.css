@@ -753,6 +753,11 @@
   box-shadow: 0 -6px 18px rgba(0, 0, 0, .08);
 }
 .s14-strip__sheetbody { display: flex; align-items: center; gap: var(--sp-2); flex-wrap: wrap; }
+/* Same [hidden]-vs-display:flex conflict as .s14-strip__phase--row above —
+   without this, openSheet()'s `el.hidden = (k !== key)` toggle is a no-op and
+   all 5 sheet bodies (answered/purchased/callback/refused/wrong_number) show
+   at once regardless of which outcome pill was actually clicked. */
+.s14-strip__sheetbody[hidden] { display: none !important; }
 .s14-strip__sheetlabel { font-family: var(--font-mono); font-size: 10px; letter-spacing: var(--tracking-eyebrow); text-transform: uppercase; color: var(--fg-tertiary); margin-right: 4px; }
 .s14-strip__reasons { display: flex; gap: var(--sp-2); flex-wrap: wrap; }
 .s14-strip__donotcontact { background: transparent; border: 0; cursor: pointer; margin-left: auto; color: var(--coral-500); font-size: 12.5px; white-space: nowrap; }
