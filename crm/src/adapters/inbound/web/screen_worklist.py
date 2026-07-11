@@ -24,6 +24,7 @@ from domain.entities.party import PartyIdentity
 from domain.entities.task import Task, VALID_UNCLAIM_REASONS
 from application.worklist_ranking import (
     WorklistRow,
+    build_queue_party_ids,
     rank_worklist,
     split_worklist_view,
     today_ict,
@@ -228,19 +229,7 @@ def make_worklist_router(
         # Build ordered list of action party_ids for call-mode queue (A2).
         # Computed before band slicing so all ranked action rows are included.
         # Capped at 50 to keep the query-string manageable.
-        queue_party_ids: list[str] = []
-        _seen_queue_pids: set[str] = set()
-        for _band in ranked["bands"]:
-            for _row in _band["rows"]:
-                if _row.kind == "action":
-                    _pid = getattr(_row.payload, "party_id", None)
-                    if _pid and _pid not in _seen_queue_pids:
-                        _seen_queue_pids.add(_pid)
-                        queue_party_ids.append(str(_pid))
-                        if len(queue_party_ids) >= 50:
-                            break
-            if len(queue_party_ids) >= 50:
-                break
+        queue_party_ids = build_queue_party_ids(ranked["bands"])
 
         # Presentation split: queue_action_bands (unclaimed opportunities —
         # screen's PRIMARY focus) vs claimed_bands (owned work, secondary
@@ -655,6 +644,13 @@ def make_worklist_router(
         qs_parts.append(f"offset={next_offset}")
         next_url = f"/worklist/band/{band_id}/more?" + "&".join(qs_parts)
 
+        # Same call-mode queue list the main page builds (bug: this route used
+        # to omit it, so any action row loaded via "Xem thêm" silently lost the
+        # "📞 Gọi" link into the S14 cockpit — wl_row()'s `queue_party_ids`
+        # param defaults to `[]`, so the link's `{% if pid and queue_party_ids %}`
+        # guard never rendered it, with no visible sign anything was missing.
+        queue_party_ids = build_queue_party_ids(full_ranked["bands"])
+
         return templates.TemplateResponse(
             "fragments/_wl_overflow_rows.html",
             {
@@ -665,6 +661,7 @@ def make_worklist_router(
                 "has_more": has_more,
                 "remaining": remaining,
                 "next_url": next_url,
+                "queue_party_ids": queue_party_ids,
             },
         )
 

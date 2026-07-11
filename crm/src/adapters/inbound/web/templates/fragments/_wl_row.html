@@ -287,10 +287,17 @@
       {# 5d: claimed task rows only offered contact_btn (→ M08 quick-log) or
          the title-link (→ S15), unlike an unclaimed action row's 1-click
          📞 Gọi into the cockpit — mirrors S15's own "Vào phiên gọi" link
-         (screen_call_cockpit.py's ?task_id= pinning), not a new entry mode. #}
+         (screen_call_cockpit.py's ?task_id= pinning), not a new entry mode.
+         Bare-icon-only link was a real UX bug (user report): it sat right
+         next to contact_btn's "📞 Gọi" (M08 quick-log, NOT the cockpit) with
+         no visible text of its own — indistinguishable at a glance, so the
+         labeled button got clicked expecting the cockpit and got a modal
+         instead. Now carries its own visible text, matching S15's exact
+         "Vào phiên gọi" phrasing so the 2 destinations read as different
+         actions, not near-duplicates. #}
       <a href="/customers/{{ pid }}/call?task_id={{ t.task_id }}"
          class="btn btn--ghost" style="padding:8px 10px"
-         onclick="event.stopPropagation()" title="Vào phiên gọi">📞</a>
+         onclick="event.stopPropagation()" title="Vào phiên gọi">📞 Vào phiên gọi</a>
     {% endif %}
 
     {# Band 0 (overdue) tasks get reschedule + cancel controls #}

@@ -388,3 +388,27 @@ def split_worklist_view(ranked: dict) -> dict:
         "claimed_bands": claimed_bands,
         "claimed_count": sum(b["count"] for b in claimed_bands),
     }
+
+
+def build_queue_party_ids(bands: list, limit: int = 50) -> list[str]:
+    """Ordered, deduped action-row party_ids across all bands, capped at
+    `limit` — the call-mode queue (`?queue_ids=`) `_wl_row.html`'s action-row
+    "📞 Gọi" link needs to enter S14 full-screen. Shared by the main worklist
+    page and `GET /worklist/band/{id}/more` (the "Xem thêm" overflow page) so
+    both build the list the same way — the overflow route used to omit it
+    entirely, silently dropping the cockpit entry point for any action row
+    loaded via pagination.
+    """
+    party_ids: list[str] = []
+    seen: set = set()
+    for band in bands:
+        for row in band["rows"]:
+            if row.kind != "action":
+                continue
+            party_id = getattr(row.payload, "party_id", None)
+            if party_id and party_id not in seen:
+                seen.add(party_id)
+                party_ids.append(str(party_id))
+                if len(party_ids) >= limit:
+                    return party_ids
+    return party_ids

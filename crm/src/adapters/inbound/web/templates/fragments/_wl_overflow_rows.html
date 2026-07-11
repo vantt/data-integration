@@ -3,16 +3,20 @@
    Replaces its hx-swap="outerHTML" target div each time.
 
    Context:
-     rows          list[WorklistRow]
-     party_extras  dict  — {party_id: {preferred_identity, contact_pref_notes, last_contact}}
-     script_cids   set[int] | None
-     has_more      bool
-     remaining     int   — rows after this page
-     next_url      str   — URL for the next page (offset already incremented)
+     rows            list[WorklistRow]
+     party_extras    dict  — {party_id: {preferred_identity, contact_pref_notes, last_contact}}
+     script_cids     set[int] | None
+     has_more        bool
+     remaining       int   — rows after this page
+     next_url        str   — URL for the next page (offset already incremented)
+     queue_party_ids list[str] — call-mode queue (A2); without it, wl_row()'s
+                                 action-row "📞 Gọi" link into S14 never renders
+                                 (its `{% if pid and queue_party_ids %}` guard
+                                 defaults to the macro's `[]` default otherwise)
 #}
 {% from "fragments/_wl_row.html" import wl_row %}
 {% for row in rows %}
-{{ wl_row(row, party_extras, script_cids) }}
+{{ wl_row(row, party_extras, script_cids, queue_party_ids=queue_party_ids | default([])) }}
 {% endfor %}
 {% if has_more %}
 <div class="wl-more">
