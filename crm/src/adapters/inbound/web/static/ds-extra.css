@@ -702,6 +702,11 @@
   backdrop-filter: blur(12px); border-top: 1px solid var(--border-strong);
 }
 .s14-strip__phase--row { display: flex; align-items: center; gap: var(--sp-2) var(--sp-3); flex-wrap: wrap; }
+/* [hidden] must win over the class's own `display: flex` above — author rules
+   with equal specificity beat the UA default `[hidden]{display:none}`, so
+   without this the JS's `el.hidden = true` silently does nothing on T0/T1/T3
+   (T2 has no --row class and was unaffected). */
+.s14-strip__phase[hidden] { display: none !important; }
 .s14-strip__timer { font-size: 13px; color: var(--fg-1); min-width: 42px; }
 .s14-strip__sep { color: var(--border-strong); }
 .s14-strip__chansel { font-size: 12.5px; padding: 5px 8px; border-radius: var(--radii-control); border: 1px solid var(--border-strong); background: var(--bg-surface); color: var(--fg-1); }
