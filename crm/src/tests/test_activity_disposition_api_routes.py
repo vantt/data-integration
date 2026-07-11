@@ -120,6 +120,138 @@ class TestCreateCallSession:
 
 
 # ---------------------------------------------------------------------------
+# POST /api/parties/{party_id}/call-sessions — 6a claim-at-call-start
+# (260711-0838 phase 6). Uses a REAL TaskService (backed by seeded_crm_db,
+# not a mock) so the ownership check and claim-conflict surfacing are
+# exercised end-to-end, not just asserted against a stub.
+# ---------------------------------------------------------------------------
+
+def _register_real_task_svc(db, **overrides):
+    from application.task_service import TaskService  # noqa: E402 (local import, test-only)
+    from adapters.outbound.sqlite.task_repository import SQLiteTaskRepository  # noqa: E402
+
+    task_repo = SQLiteTaskRepository(db)
+    task_svc = TaskService(task_repo, MagicMock(), db=db)
+    router_mock, activity_svc, _, task_svc_out = _register(db, task_svc=task_svc, **overrides)
+    return router_mock, activity_svc, task_svc_out, task_repo
+
+
+class TestCreateCallSessionAutoClaim:
+    def test_unclaimed_customer_claimed_immediately(self, seeded_crm_db):
+        """Acceptance #1: pressing "Gọi" on an unclaimed customer claims them
+        without waiting for finalize."""
+        router_mock, svc, task_svc, task_repo = _register_real_task_svc(seeded_crm_db)
+        handler = _post_handler(router_mock, 3)
+        party_id = "party-claim-1"
+        _insert_party(seeded_crm_db, party_id)
+        _insert_staff(seeded_crm_db, "staff-1")
+
+        r = asyncio.run(handler(
+            request=_req("staff-1"), party_id=party_id, channel_identity_id="", task_id="",
+        ))
+        assert r.status_code == 200
+        claim = task_repo.get_customer_claim(party_id)
+        assert claim is not None
+        assert claim.assignee_user_id == "staff-1"
+
+    def test_spoofed_task_id_does_not_skip_auto_claim(self, seeded_crm_db):
+        """Acceptance #2: a task_id that resolves to a DIFFERENT party/staff
+        must NOT skip auto-claim — otherwise the ownership check is decorative
+        and the spoofable-skip-gate finding stays open."""
+        router_mock, svc, task_svc, task_repo = _register_real_task_svc(seeded_crm_db)
+        handler = _post_handler(router_mock, 3)
+        party_id = "party-claim-2"
+        other_party = "party-claim-2-other"
+        _insert_party(seeded_crm_db, party_id)
+        _insert_party(seeded_crm_db, other_party)
+        _insert_staff(seeded_crm_db, "staff-1")
+        _insert_staff(seeded_crm_db, "staff-2")
+
+        # Unrelated task: different party AND different assignee than the
+        # request — a "spoofed" task_id sent by a malicious/buggy client.
+        foreign_task = task_svc.create_task({
+            "party_id": other_party, "title": "unrelated task", "assignee_user_id": "staff-2",
+        })
+
+        r = asyncio.run(handler(
+            request=_req("staff-1"), party_id=party_id,
+            channel_identity_id="", task_id=foreign_task.task_id,
+        ))
+        assert r.status_code == 200
+        claim = task_repo.get_customer_claim(party_id)
+        assert claim is not None, "a spoofed/unrelated task_id must not skip auto-claim"
+        assert claim.assignee_user_id == "staff-1"
+
+    def test_genuinely_owned_task_id_skips_auto_claim(self, seeded_crm_db):
+        """Acceptance #3 (no regression): a task_id that genuinely belongs to
+        (party_id, actor_id) — e.g. pinned via S15's "Vào phiên gọi" — DOES
+        skip auto-claim; the pre-existing claim is left untouched, no
+        duplicate claim task is created."""
+        router_mock, svc, task_svc, task_repo = _register_real_task_svc(seeded_crm_db)
+        handler = _post_handler(router_mock, 3)
+        party_id = "party-claim-3"
+        _insert_party(seeded_crm_db, party_id)
+        _insert_staff(seeded_crm_db, "staff-1")
+
+        owned_task, _ = task_svc.auto_claim_from_contact(party_id, "Test Customer", "staff-1")
+
+        r = asyncio.run(handler(
+            request=_req("staff-1"), party_id=party_id,
+            channel_identity_id="", task_id=owned_task.task_id,
+        ))
+        assert r.status_code == 200
+        import json
+        assert "claimed_by_other" not in json.loads(r.body)
+        claim = task_repo.get_customer_claim(party_id)
+        assert claim.task_id == owned_task.task_id, "skip-gate must leave the existing claim untouched"
+
+    def test_claim_race_surfaces_warning_to_loser(self, seeded_crm_db):
+        """Acceptance #4: when someone else already claimed this customer
+        (simulating the loser of a race), the response must surface
+        claimed_by_other — not silently succeed as if actor_id now owns it.
+        The call draft itself must still be created (claim conflict must not
+        block the draft)."""
+        router_mock, svc, task_svc, task_repo = _register_real_task_svc(seeded_crm_db)
+        handler = _post_handler(router_mock, 3)
+        party_id = "party-claim-4"
+        _insert_party(seeded_crm_db, party_id)
+        _insert_staff(seeded_crm_db, "staff-1")
+        _insert_staff(seeded_crm_db, "staff-2")
+
+        # staff-2 wins the race and claims first.
+        task_svc.auto_claim_from_contact(party_id, "Test Customer", "staff-2")
+
+        r = asyncio.run(handler(
+            request=_req("staff-1"), party_id=party_id, channel_identity_id="", task_id="",
+        ))
+        assert r.status_code == 200
+        import json
+        body = json.loads(r.body)
+        assert body.get("claimed_by_other"), "losing staff must be told someone else claimed first, not silently"
+        assert body.get("activity_id"), "call draft must still be created despite the claim conflict"
+        # The claim itself is untouched — staff-2 still owns it.
+        claim = task_repo.get_customer_claim(party_id)
+        assert claim.assignee_user_id == "staff-2"
+
+    def test_cockpit_open_alone_does_not_claim(self, seeded_crm_db):
+        """Acceptance #5 (regression): GET /modals/m08 (cockpit-open, no "Gọi"
+        press) must still not claim — this route never calls auto_claim."""
+        router_mock, svc, task_svc, task_repo = _register_real_task_svc(seeded_crm_db)
+        m08_handler = _get_handler(router_mock, 0)
+        party_id = "party-claim-5"
+        _insert_party(seeded_crm_db, party_id)
+        _insert_staff(seeded_crm_db, "staff-1")
+
+        request_mock = MagicMock()
+        request_mock.state.current_user = MagicMock(user_id="staff-1")
+        asyncio.run(m08_handler(
+            request=request_mock, party_id=party_id, mode="log", note_id="",
+            party_name="Test", task_id="", resolve_action_ids="", resolve_task_ids="",
+        ))
+        assert task_repo.get_customer_claim(party_id) is None, "opening the cockpit/M08 alone must not claim"
+
+
+# ---------------------------------------------------------------------------
 # PATCH /api/activities/{activity_id}
 # ---------------------------------------------------------------------------
 
@@ -498,3 +630,91 @@ class TestResolveAsyncOutcomeGate:
 
         action_state.dismiss.assert_called_once_with("a4", user_id="staff-1")
         action_state.snooze.assert_not_called()
+
+
+# ---------------------------------------------------------------------------
+# "Hoàn tất ✓" M08-repoint (6b, 260711-0838 phase 6)
+#
+# The old `POST /customers/{party_id}/actions/dismiss-session` route (bare
+# action_state.dismiss(), no activity/note written) was removed. "Hoàn tất ✓"
+# now opens M08 with resolve_action_ids built from the checked boxes, which
+# submits through the SAME POST /customers/{party_id}/log-activity path M08
+# always used — routing the batch resolve through execute_side_effects so it
+# (a) resolves only the checked ids and (b) always records an activity.
+# No prior test exercised either the old or the new behavior (phase file's
+# own note) — these close that gap.
+# ---------------------------------------------------------------------------
+
+class TestHoanTatM08Repoint:
+    def test_partial_selection_resolves_only_checked_ids(self, seeded_crm_db):
+        """Acceptance #6: resolving via the repointed M08 flow with a 2-of-5
+        subset (what aqCheckedActionIds() would send) must dismiss ONLY those
+        2 — the other 3 unresolved actions must be left untouched."""
+        action_state_mock = MagicMock()
+        router_mock, svc, _, _ = _register(seeded_crm_db, action_state=action_state_mock)
+        party_id = "party-hoantat-1"
+        _insert_party(seeded_crm_db, party_id)
+        _insert_staff(seeded_crm_db, "staff-1")
+
+        handler = _post_handler(router_mock, 0)
+        asyncio.run(handler(**_log_activity_kwargs(
+            party_id=party_id, task_id="",
+            resolve_action_ids="a1,a3", resolve_task_ids="",
+        )))
+
+        dismissed_ids = sorted(c.args[0] for c in action_state_mock.dismiss.call_args_list)
+        assert dismissed_ids == ["a1", "a3"], (
+            "must resolve only the checked ids, not the full unresolved set"
+        )
+
+    def test_resolve_records_an_activity_not_silent(self, seeded_crm_db):
+        """Acceptance #7: the batch resolve must write a real crm_activity_log
+        row — the old dismiss-session route never wrote one."""
+        action_state_mock = MagicMock()
+        router_mock, svc, _, _ = _register(seeded_crm_db, action_state=action_state_mock)
+        party_id = "party-hoantat-2"
+        _insert_party(seeded_crm_db, party_id)
+        _insert_staff(seeded_crm_db, "staff-1")
+
+        handler = _post_handler(router_mock, 0)
+        asyncio.run(handler(**_log_activity_kwargs(
+            party_id=party_id, task_id="", resolve_action_ids="a2", resolve_task_ids="",
+        )))
+
+        row = seeded_crm_db.conn.execute(
+            "SELECT COUNT(*) AS n FROM crm_activity_log WHERE party_id=?", (party_id,),
+        ).fetchone()
+        assert row["n"] == 1, "resolving via M08 must record an activity — not a silent dismiss"
+
+    def test_zero_selection_resolves_nothing(self, seeded_crm_db):
+        """Empty resolve_action_ids (nothing checked) must dismiss nothing —
+        guards against a regression that resolves "everything" as a fallback."""
+        action_state_mock = MagicMock()
+        router_mock, svc, _, _ = _register(seeded_crm_db, action_state=action_state_mock)
+        party_id = "party-hoantat-3"
+        _insert_party(seeded_crm_db, party_id)
+        _insert_staff(seeded_crm_db, "staff-1")
+
+        handler = _post_handler(router_mock, 0)
+        asyncio.run(handler(**_log_activity_kwargs(
+            party_id=party_id, task_id="", resolve_action_ids="", resolve_task_ids="",
+        )))
+
+        action_state_mock.dismiss.assert_not_called()
+
+    def test_dismiss_session_route_removed(self):
+        """6b's removal decision must have actually landed — no stale dead
+        route left silently registered alongside the new M08-repoint path."""
+        import adapters.inbound.web.screens.customer360.screen_customer_360_panels as panels_mod
+
+        assert not hasattr(panels_mod, "handle_dismiss_session")
+        # No @router.post("/customers/{party_id}/actions/dismiss-session", ...)
+        # decorator left registered — search the source for the actual
+        # decorator call, not just any mention (a code comment documenting the
+        # removal legitimately references the old path string).
+        import inspect
+        offending = [
+            line.strip() for line in inspect.getsource(panels_mod).splitlines()
+            if line.strip().startswith("@router.") and "actions/dismiss-session" in line
+        ]
+        assert not offending, f"dismiss-session route still registered: {offending}"

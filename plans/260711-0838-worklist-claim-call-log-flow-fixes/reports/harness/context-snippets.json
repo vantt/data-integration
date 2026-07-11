@@ -1,0 +1,41 @@
+{
+  "skill": "ck:cook",
+  "mode": "auto",
+  "task": "Fix Medium + claim-policy + minor findings (phases 5-7) in CRM worklist->call->log->callback loop, building on already-shipped P0 phases 1-4",
+  "acceptanceCriteria": [
+    "5a: worklist/cockpit Zalo, Facebook, phone buttons open M08 with correct channel pre-selected against canonical hinh_thuc keys",
+    "5b: typed S15 closebar note text survives into M08 body field",
+    "5c: newly claimed task visible in Da Claim without manually expanding it",
+    "5d: claimed task row -> cockpit in 1 click, same destination shape as S15's Vao phien goi link",
+    "6a: pressing Goi claims immediately; spoofed task_id does not skip auto-claim; genuinely-owned task_id does skip; claim race surfaces visible warning; cockpit-open alone still does not claim",
+    "6b: Hoan tat resolves ONLY checked actions, not all unresolved; no longer silently dismisses without a recorded activity",
+    "7 (#11-15): progress label simplified per user decision; dead claimSuccess trigger removed; claim-task snooze gives visible feedback; #14 confirmed non-issue; #15 row-click confirmed intentional per user decision"
+  ],
+  "touchpoints": [
+    "crm/src/adapters/inbound/web/screens/customer360/screen_customer_360_activity.py",
+    "crm/src/adapters/inbound/web/screens/customer360/screen_customer_360_panels.py",
+    "crm/src/application/activity_side_effects.py",
+    "crm/src/application/task_service.py",
+    "crm/src/adapters/inbound/web/templates/fragments/_wl_row.html",
+    "crm/src/adapters/inbound/web/templates/fragments/c360_call_cockpit_panel.html",
+    "crm/src/adapters/inbound/web/templates/fragments/c360_insight_panel.html",
+    "crm/src/adapters/inbound/web/templates/fragments/modal_log_activity.html",
+    "crm/src/adapters/inbound/web/templates/fragments/task_detail.html",
+    "crm/src/adapters/inbound/web/templates/fragments/worklist_fragment.html",
+    "crm/src/adapters/inbound/web/templates/worklist.html"
+  ],
+  "publicContracts": [
+    "GET /modals/m08: new optional Query param hinh_thuc (additive, server-side validated against _HT_TO_ACT_TYPE, falls back to call)",
+    "POST /api/parties/{party_id}/call-sessions (handle_create_call_session): now performs ownership-verified auto-claim as a side effect; response may include claimed_by_other field (additive)",
+    "POST /customers/{party_id}/actions/dismiss-session: REMOVED (route deleted) -- confirmed zero remaining callers repo-wide (code, templates, tests) before removal",
+    "task_service.auto_claim_from_contact: internal behavior hardened with try/except + re-read on insert race, external signature/return shape unchanged",
+    "worklist-container hx-trigger: claimSuccess clause removed (was dead, never emitted); taskSaved/activitySaved/worklistRefresh retained from prior shipped work"
+  ],
+  "blastRadius": [
+    "S01 Worklist quick-log channel buttons, claim feedback, claimed-task snooze, claimed-task cockpit entry",
+    "S03 Customer 360 P01 insight panel dismiss-session/Hoan tat flow",
+    "S14 Call Cockpit call-start claim flow, claim-conflict warning JS",
+    "S15 Task Detail closebar note prefill"
+  ],
+  "scoutSummary": "3 phases (5,6,7) implemented across 2 waves after mapping the plan's own claimed independence against actual file-touch lists: phase5 conflicts with BOTH phase6 (screen_customer_360_activity.py, c360_call_cockpit_panel.html) and phase7 (_wl_row.html, worklist_fragment.html) -- ran phase5 solo in wave1, then phase6+phase7 in parallel in wave2 (verified no conflict between them). This builds on 4 already-shipped P0 phases from a separate plan (260711-0933-fix-p0-outreach-flow-gaps, merged to main commit 33578bad) and phase6/7 themselves resolve 5 Critical/High red-team corrections (ownership check on task_id, claim-conflict surfacing, dynamic checked-id read for Hoan tat, duplicate auto-claim path documentation, unclaim ownership gap flagged-not-fixed) plus 2 user-confirmed UX decisions (#11, #15) applied directly without re-litigation."
+}

@@ -25,24 +25,28 @@
 {# ── Shared quick-contact button ──────────────────────────────────────────── #}
 {% macro contact_btn(party_id, pref_id, task_id='') %}
 {% set _task_qs = ('&task_id=' ~ task_id) if task_id else '' %}
+  {# 5a: all 4 variants normalized to hinh_thuc= (the param the GET /modals/m08
+     handler actually reads), using its canonical channel keys (call/zalo/fb) —
+     the old channel= param was never read, so every button silently opened M08
+     defaulted to "Cuộc gọi" regardless of the customer's preferred channel. #}
   {% if pref_id and pref_id.identity_type in ('phone', 'phone_secondary') %}
   <button class="btn btn--secondary" style="padding:8px 12px"
-          hx-get="/modals/m08?party_id={{ party_id }}&mode=contact_attempt&channel=phone{{ _task_qs }}&return_to=stay"
+          hx-get="/modals/m08?party_id={{ party_id }}&mode=contact_attempt&hinh_thuc=call{{ _task_qs }}&return_to=stay"
           hx-target="#modal-root" hx-swap="innerHTML"
           title="Gọi điện" onclick="event.stopPropagation()">📞 Gọi</button>
   {% elif pref_id and pref_id.identity_type == 'zalo' %}
   <button class="btn btn--secondary" style="padding:8px 12px"
-          hx-get="/modals/m08?party_id={{ party_id }}&mode=contact_attempt&channel=zalo{{ _task_qs }}&return_to=stay"
+          hx-get="/modals/m08?party_id={{ party_id }}&mode=contact_attempt&hinh_thuc=zalo{{ _task_qs }}&return_to=stay"
           hx-target="#modal-root" hx-swap="innerHTML"
           title="Zalo" onclick="event.stopPropagation()">💬 Zalo</button>
   {% elif pref_id and pref_id.identity_type == 'facebook' %}
   <button class="btn btn--secondary" style="padding:8px 12px"
-          hx-get="/modals/m08?party_id={{ party_id }}&mode=contact_attempt&channel=facebook{{ _task_qs }}&return_to=stay"
+          hx-get="/modals/m08?party_id={{ party_id }}&mode=contact_attempt&hinh_thuc=fb{{ _task_qs }}&return_to=stay"
           hx-target="#modal-root" hx-swap="innerHTML"
           title="Facebook" onclick="event.stopPropagation()">📘 Facebook</button>
   {% else %}
   <button class="btn btn--secondary" style="padding:8px 12px"
-          hx-get="/modals/m08?party_id={{ party_id }}&mode=contact_attempt{{ _task_qs }}&return_to=stay"
+          hx-get="/modals/m08?party_id={{ party_id }}&mode=contact_attempt&hinh_thuc=call{{ _task_qs }}&return_to=stay"
           hx-target="#modal-root" hx-swap="innerHTML"
           onclick="event.stopPropagation()">📞 Gọi</button>
   {% endif %}
@@ -280,6 +284,13 @@
       {% else %}
         {{ contact_btn(pid, pref_id) }}
       {% endif %}
+      {# 5d: claimed task rows only offered contact_btn (→ M08 quick-log) or
+         the title-link (→ S15), unlike an unclaimed action row's 1-click
+         📞 Gọi into the cockpit — mirrors S15's own "Vào phiên gọi" link
+         (screen_call_cockpit.py's ?task_id= pinning), not a new entry mode. #}
+      <a href="/customers/{{ pid }}/call?task_id={{ t.task_id }}"
+         class="btn btn--ghost" style="padding:8px 10px"
+         onclick="event.stopPropagation()" title="Vào phiên gọi">📞</a>
     {% endif %}
 
     {# Band 0 (overdue) tasks get reschedule + cancel controls #}
@@ -301,7 +312,14 @@
             hx-include="#wl-filter-form"
             title="Trả việc về hàng đợi" onclick="event.stopPropagation()">Trả việc</button>
     {% endif %}
-    {# A4: Snooze dropdown — action_queue_claim tasks only #}
+    {# A4: Snooze dropdown — action_queue_claim tasks only.
+       hx-target/hx-swap="delete" targets the row's own stable id (already
+       set on the row's root <div>, id=task-<task_id>) so the click gets
+       visible feedback — matches the action-row snooze's UX bar (:154).
+       handle_snooze_task returns 204 (no body) by design, so an outerHTML
+       "snoozed until X" placeholder isn't feasible without a backend
+       response-body change (out of scope here); "delete" doesn't depend on
+       response content, only that the request succeeded. #}
     {% if t.source == 'action_queue_claim' %}
     <details class="wl-snooze" onclick="event.stopPropagation()">
       <summary class="btn btn--ghost" style="padding:8px 10px;list-style:none;cursor:pointer"
@@ -310,7 +328,7 @@
         {% for snooze_days, snooze_label in [(1,'1 ngày'),(3,'3 ngày'),(7,'1 tuần')] %}
         <button class="btn btn--ghost" style="padding:6px 10px;text-align:left;width:100%"
                 hx-patch="/tasks/{{ t.task_id }}/snooze?days={{ snooze_days }}"
-                hx-swap="none">{{ snooze_label }}</button>
+                hx-target="#task-{{ t.task_id }}" hx-swap="delete">{{ snooze_label }}</button>
         {% endfor %}
       </div>
     </details>

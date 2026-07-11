@@ -237,6 +237,32 @@ class TestTaskDetailGet:
         assert "Vào phiên gọi" not in r.text
 
 
+# ── 5b: S15 closebar note → M08 prefill_body wiring (260711-0838 phase 5) ──
+
+class TestS15ClosebarNotePrefillWiring:
+    """The "Ghi chú nhanh khi đóng task…" input previously had no id/wiring —
+    text typed there was discarded when "Ghi log & hoàn thành" opened M08.
+    Fix: the input gets an id, and the button reads it live via hx-vals
+    (appended as the prefill_body GET query param) so the value survives into
+    M08's body field. Server-side rendering can only verify the wiring
+    markup — the actual value transfer requires a browser (htmx + JS)."""
+
+    def test_closebar_note_input_has_id(self):
+        task = _make_task(task_kind=TASK_KIND_CONTACT)
+        client = _build_task_detail_app(task)
+        r = client.get(f"/tasks/{_TASK_ID}")
+        assert 'id="s15-closebar-note"' in r.text
+
+    def test_ghi_log_button_reads_closebar_note_into_prefill_body(self):
+        task = _make_task(task_kind=TASK_KIND_CONTACT)
+        client = _build_task_detail_app(task)
+        r = client.get(f"/tasks/{_TASK_ID}")
+        assert (
+            'hx-vals=\'js:{"prefill_body": '
+            'document.getElementById("s15-closebar-note").value}\''
+        ) in r.text
+
+
 # ── S15 Task Detail — POST /status ───────────────────────────────────────────
 
 class TestTaskStatusTransition:

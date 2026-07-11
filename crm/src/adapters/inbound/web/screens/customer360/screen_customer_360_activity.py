@@ -9,7 +9,7 @@ import logging
 from datetime import datetime, timedelta, timezone
 from typing import Optional
 
-from fastapi import APIRouter, Form, Request, Response
+from fastapi import APIRouter, Form, Query, Request, Response
 from fastapi.responses import HTMLResponse, JSONResponse
 from fastapi.templating import Jinja2Templates
 
@@ -95,10 +95,16 @@ def register_activity_routes(
         activity_id: str = "",
         draft_activity_id: str = "",
         return_to: str = "redirect",
+        hinh_thuc: str = "call",
     ) -> dict:
         # Normalize legacy mode names → unified 'log'.
         if mode not in ("log", "edit_note", "note_only", "edit_activity"):
             mode = "log"
+        # 5a: normalize against the canonical channel keys (_HT_TO_ACT_TYPE) so the
+        # modal's initial tab selection never gets pointed at an unknown value —
+        # falls back to the pre-existing "call" default.
+        if hinh_thuc not in _HT_TO_ACT_TYPE:
+            hinh_thuc = "call"
         contact_pref_notes: list[Note] = []
         note_body = ""
         note_type_val = "general"
@@ -181,6 +187,10 @@ def register_activity_routes(
             # P0 (phase-01): threaded through to the form's hidden field so the
             # modal returns to its invoker (stay) instead of always redirecting.
             "return_to": return_to,
+            # 5a: pre-selects the HÌNH THỨC tab (call/zalo/fb/email/visit/other) so
+            # a worklist/cockpit Zalo or Facebook contact button opens the modal on
+            # the right channel instead of always defaulting to "Cuộc gọi".
+            "hinh_thuc": hinh_thuc,
         }
 
     @router.get("/modals/m08", response_class=HTMLResponse)
@@ -197,12 +207,15 @@ def register_activity_routes(
         activity_id: str = "",
         draft_activity_id: str = "",
         return_to: str = "redirect",
+        # 5a: worklist contact_btn / cockpit Zalo button pass this so the modal
+        # opens pre-set to the right channel tab instead of always "Cuộc gọi".
+        hinh_thuc: str = Query(default="call"),
     ) -> Response:
         return templates.TemplateResponse(
             "fragments/modal_log_activity.html",
             _m08_ctx(request, party_id, mode, note_id, party_name, task_id,
                      resolve_action_ids, resolve_task_ids, prefill_body, activity_id,
-                     draft_activity_id, return_to),
+                     draft_activity_id, return_to, hinh_thuc),
         )
 
     @router.get("/customers/{party_id}/modal/log-activity", response_class=HTMLResponse)
@@ -522,7 +535,13 @@ def register_activity_routes(
     ) -> Response:
         """Create (or adopt) the open call draft for (staff, party) — fired when
         staff presses "Gọi" on the identity bar. Idempotent: repeat calls for the
-        same (staff, party) return the same draft, never a second one."""
+        same (staff, party) return the same draft, never a second one.
+
+        6a (claim-at-call-start, 260711-0838 phase 6): also claims the customer
+        via `auto_claim_from_contact` unless `task_id` is present AND verified to
+        already belong to this (party, actor) — closes the race window where 2
+        staff can both open the same unclaimed customer before either finalizes.
+        """
         current_user = getattr(request.state, "current_user", None)
         actor_id: Optional[str] = current_user.user_id if current_user else None
         if not actor_id:
@@ -539,22 +558,83 @@ def register_activity_routes(
             except Exception as exc:
                 log.warning("call-sessions: resolve channel_identity_id %s: %s", cid, exc)
 
+        # 6a correction (spoofable skip-gate): task_id is a client-supplied field
+        # with no inherent guarantee it belongs to this party/actor. Presence
+        # alone must NOT skip auto-claim below — verify it resolves to a task
+        # actually assigned to this actor for this party (e.g. S15's "Vào phiên
+        # gọi" pinned it) before treating it as "already claimed". Any mismatch
+        # (unknown id, wrong party, someone else's task) falls through to
+        # auto-claim exactly as if task_id had been empty.
+        raw_task_id = task_id.strip()
+        task_already_pinned = False
+        if raw_task_id and task_svc is not None:
+            try:
+                pinned_task = task_svc.get_task(raw_task_id)
+            except Exception as exc:
+                log.warning("call-sessions: get_task %s: %s", raw_task_id, exc)
+                pinned_task = None
+            if (
+                pinned_task is not None
+                and getattr(pinned_task, "party_id", None) == party_id
+                and getattr(pinned_task, "assignee_user_id", None) == actor_id
+            ):
+                task_already_pinned = True
+
         try:
             activity = activity_log.create_draft(
                 party_id, actor_id,
                 channel_identity_id=cid or None,
                 channel_value=channel_val or None,
-                task_id=task_id.strip() or None,
+                task_id=raw_task_id or None,
             )
         except ValueError as exc:
             return JSONResponse({"error": str(exc)}, status_code=400)
 
-        return JSONResponse({
+        resp: dict = {
             "activity_id": activity.activity_id,
             "status": activity.status,
             "started_at": activity.started_at,
             "channel_value": activity.channel,
-        })
+        }
+
+        # 6a: claim the customer now (T0→T1) rather than waiting for finalize —
+        # "mở cockpit chỉ để xem KHÔNG claim" stays true, this only fires on the
+        # call-session-creation POST itself. A claim failure must not block the
+        # call draft that was already created above.
+        if not task_already_pinned and task_svc is not None:
+            try:
+                display_name = party_id
+                if profile is not None:
+                    try:
+                        p360 = profile.get_party_360(party_id)
+                        display_name = p360.display_name if p360 else party_id
+                    except Exception as exc:
+                        log.warning("call-sessions: get_party_360 %s: %s", party_id, exc)
+                claimed_task, _is_new = task_svc.auto_claim_from_contact(
+                    party_id, display_name, actor_id
+                )
+                claimed_assignee = getattr(claimed_task, "assignee_user_id", None)
+                # 6a correction (silent race loss): the unique-index-backed
+                # check-then-insert isn't transactional — a true race between 2
+                # staff can leave THIS request's actor as the loser with no
+                # error raised. Surface it explicitly instead of proceeding as
+                # if the claim succeeded for actor_id.
+                if claimed_assignee and claimed_assignee != actor_id:
+                    claimer_name = claimed_assignee
+                    if app_users is not None:
+                        try:
+                            user_map = {u.user_id: u.full_name for u in app_users.list_active()}
+                            claimer_name = user_map.get(claimed_assignee, claimed_assignee)
+                        except Exception as exc:
+                            log.warning(
+                                "call-sessions: resolve claimer name %s: %s",
+                                claimed_assignee, exc,
+                            )
+                    resp["claimed_by_other"] = claimer_name
+            except Exception as exc:
+                log.warning("call-sessions: auto-claim %s: %s", party_id, exc)
+
+        return JSONResponse(resp)
 
     @router.patch("/api/activities/{activity_id}", response_class=HTMLResponse)
     async def handle_patch_activity(

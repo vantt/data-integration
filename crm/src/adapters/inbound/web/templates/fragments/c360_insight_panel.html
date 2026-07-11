@@ -52,10 +52,13 @@
         {{ count_pill(unresolved_count ~ " việc", "session") }}
         <span class="aq-session-card__hint">Tích chọn xong rồi bấm Hoàn tất</span>
       </div>
-      <form hx-post="/customers/{{ party_id }}/actions/dismiss-session"
-            hx-select="#aq-section"
-            hx-target="#aq-section"
-            hx-swap="outerHTML">
+      {# 6b (260711-0838 phase 6): "Hoàn tất ✓" no longer POSTs to
+         dismiss-session (bare action_state.dismiss, no activity/note written —
+         bypassed the "một đường ghi duy nhất" invariant). It now opens M08
+         with resolve_action_ids pre-filled, routing the batch resolve through
+         execute_side_effects like every other resolve path. The <form> tag is
+         kept only for the checkbox group/CSS — it no longer submits. #}
+      <form onsubmit="return false;">
         <div class="aq-session-card__body">
           {% for act in sorted_actions %}{% if act.status != 'dismissed' and act.action_id not in resolved_action_ids %}
           <label class="aq-check-row">
@@ -94,7 +97,10 @@
                   onclick="aqCallNow('{{ party_id }}')">
             {% include "icons/phone.svg" %} Gọi ngay
           </button>
-          <button type="submit" class="btn btn--primary aq-done-btn">
+          <button type="button" class="btn btn--primary aq-done-btn"
+                  hx-get="/modals/m08?party_id={{ party_id }}&mode=log"
+                  hx-target="#modal-root" hx-swap="innerHTML"
+                  hx-vals='js:{"resolve_action_ids": aqCheckedActionIds()}'>
             Hoàn tất ✓
           </button>
         </div>
@@ -161,6 +167,14 @@
       cb.closest('.aq-check-row').classList.toggle('aq-check-row--done', cb.checked);
       var n = cb.closest('form').querySelectorAll('input[name=action_ids]:checked').length;
       cb.closest('form').querySelector('.aq-done-btn').textContent = n > 0 ? 'Hoàn tất (' + n + ') ✓' : 'Hoàn tất ✓';
+    }
+    // 6b (260711-0838 phase 6, "Hoàn tất ✓" correction): read the CURRENTLY
+    // checked action_ids at click time — must stay dynamic, not a static
+    // server-rendered "all ids" list, or the per-checkbox selection becomes
+    // cosmetic and every click resolves the full unresolved set.
+    function aqCheckedActionIds() {
+      return Array.from(document.querySelectorAll('#aq-section input[name=action_ids]:checked'))
+        .map(function (el) { return el.value; }).join(',');
     }
     </script>
   </div>

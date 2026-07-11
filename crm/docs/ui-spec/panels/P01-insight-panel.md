@@ -76,8 +76,8 @@ Display mode is determined by `unresolved_count` = items where `status != 'dismi
 - Card `aq-session-card` with count pill + hint.
 - Each unresolved action = checkbox row, checked by default.
 - Resolved actions shown below as muted ✓ rows.
-- CTA row: "Gọi ngay" + "Hoàn tất (N) ✓" submit.
-- Submit POSTs to `/customers/{party_id}/actions/dismiss-session`; hx-swaps `#aq-section`.
+- CTA row: "Gọi ngay" + "Hoàn tất (N) ✓" button.
+- "Hoàn tất ✓" opens M08 (log modal) via `hx-get="/modals/m08?party_id={party_id}&mode=log"`, pre-filling `resolve_action_ids` with the dynamically-read currently-checked action IDs via JS helper `aqCheckedActionIds()`. This routes batch resolve through the normal `POST /api/activities/{id}/finalize` → `execute_side_effects()` path (same as single-action resolve), ensuring all side effects (dismiss, done task, callback task, note, insight promote) run through "one write path" invariant.
 
 **Mode B — Individual Card** (`unresolved_count == 1` or 0):
 - One `aq-card` per non-dismissed action.

@@ -34,8 +34,9 @@ Tài liệu này trả lời được:
 - Cả cuộc gọi đi qua **1 disposition strip** 4 pha (T0→T3), và mọi side-effect (resolve action, done task,
   tạo task hẹn lại, ghi note, đúc kết insight, auto-claim) chạy qua **đúng 1 executor**
   (`activity_side_effects.execute_side_effects()` — "một đường ghi duy nhất").
-- 3 quyết định UX đã chốt 2026-07-11 (auto-snooze khi no_answer/busy, bắt buộc log khi "Hoàn tất ✓",
-  auto-claim khi bấm Gọi) **chưa được code hóa** — tài liệu đánh dấu rõ ở từng chỗ liên quan.
+- 3 quyết định UX chốt 2026-07-11 **đã được code hóa** (260711-0933 plan + 260711-0838 phase 5-7):
+  ① auto-snooze khi no_answer/busy, ② bắt buộc log khi "Hoàn tất ✓", ③ auto-claim khi bấm Gọi.
+  Tài liệu cập nhật trạng thái tại từng chỗ liên quan.
 - Điểm gãy lớn nhất hiện tại: `HX-Redirect` sau khi Lưu (M05/M08) luôn đá về Customer 360 toàn trang,
   bất kể caller là worklist hay cockpit đang gọi dở — trái với spec gốc (`close_overlay, target:
   return_to_invoker`).
@@ -130,7 +131,10 @@ free-text `q`, `min_value`, `hide_contacted`, `contactable_only` (mặc định 
 Mọi bảng tương tác dưới đây được đọc qua 3 lớp:
 
 - **(a) Hiện tại** — verified trực tiếp từ code (`file:line` khi hữu ích). Mặc định mọi dòng thuộc lớp này trừ khi có chú thích khác.
-- **(b) Đã chốt — chưa implement** — 3 quyết định user chốt 2026-07-11: **①** `no_answer`/`busy` → auto-snooze 1-3 ngày, KHÔNG dismiss TTL 30 ngày; **②** session-checklist "Hoàn tất ✓" bắt buộc kèm log tiếp xúc; **③** auto-claim khi bấm "Gọi" trong strip (mở cockpit chỉ xem vẫn KHÔNG claim).
+- **(b) Đã implement** — 3 quyết định user chốt 2026-07-11 và code hóa:
+  - **①** `no_answer`/`busy` → auto-snooze 1-3 ngày, không dismiss TTL 30 ngày (plan 260711-0933)
+  - **②** session-checklist "Hoàn tất ✓" bắt buộc kèm log tiếp xúc (plan 260711-0838 phase 6)
+  - **③** auto-claim khi bấm "Gọi" trong strip (mở cockpit chỉ xem vẫn không claim) (plan 260711-0838 phase 6)
 - **(c) Known UX gap** — đánh dấu ⚠ ngay tại dòng xảy ra, kèm severity (**P0**/Medium/Minor). Nguồn: `plans/reports/ux-review-260711-0818-worklist-claim-call-log-flow-report.md`.
 
 ### S01 Worklist — Action row (`wh_action_queue`, chưa claim)
@@ -167,13 +171,13 @@ Mọi bảng tương tác dưới đây được đọc qua 3 lớp:
 | `[Nhận việc]` | `PATCH /customers/{pid}/claim` | `claim_customer_actions()` | swap `#tab-panel` | Badge "👤 X đang xử lý" hiện ngay — feedback TỐT hơn S01 |
 | `[Trả việc]` | `PATCH /customers/{pid}/unclaim` | `unclaim_customer_actions()` | swap `#tab-panel` | |
 | `[Gọi ngay]` (Mode B, 0-1 action chưa resolve) | JS `aqCallNow()`: click tab "Gọi" nếu có, fallback `GET /modals/m08?...&hinh_thuc=call` | Chuyển tab S14 embedded hoặc mở M08 | swap tab hoặc modal | ⚠ Minor: fallback JS string `'\modals\m08?...'` — backslash literal, URL hỏng, nhánh fallback không bao giờ chạy đúng trên trình duyệt |
-| Session checklist `[Hoàn tất ✓]` (≥2 action chưa resolve) | `POST /customers/{pid}/actions/dismiss-session` | `action_state.dismiss()` cho từng `action_id` được tick — **KHÔNG ghi `crm_activity`** | swap `#aq-section` | ⚠ **P0** — (b) quyết định ②: resolve hàng loạt hiện KHÔNG kèm bằng chứng đã liên hệ; quyết định sẽ bắt buộc log trước khi cho submit — **chưa implement** |
+| Session checklist `[Hoàn tất ✓]` (≥2 action chưa resolve) | `hx-get="/modals/m08?party_id={pid}&mode=log"` + `hx-vals='js:{"resolve_action_ids": aqCheckedActionIds()}'` | M08 opens pre-filled với `resolve_action_ids` (checked IDs động), route `POST /api/activities/{id}/finalize` → `execute_side_effects()` — giờ ghi `crm_activity` + side effects như mọi resolve path khác | modal overlay | ✓ **P0 fixed** — (b) quyết định ②: session-checklist "Hoàn tất ✓" giờ bắt buộc log trước finalize (M08 enforce `contact_outcome` bắt buộc) — shipped phase 6 |
 
 ### S14 Call Cockpit — Disposition strip (T0 → T3)
 
 | User action | HTTP call | System behavior | UI feedback | Ngữ cảnh giữ/mất |
 |---|---|---|---|---|
-| T0 `[📞 Gọi <số> ▾][⋯ Ghi thủ công]` | `POST /api/parties/{pid}/call-sessions` (Gọi) hoặc `GET /modals/m08?mode=log` (Ghi thủ công) | `create_draft()` **idempotent** theo (staff, party) — trả draft có sẵn nếu đã mở | JS chuyển thẳng T1, timer chạy — KHÔNG mở modal | ⚠ **P0** — (b) quyết định ③: tạo draft hiện **không** claim customer; sẽ đổi thành auto-claim tại bước này — **chưa implement** |
+| T0 `[📞 Gọi <số> ▾][⋯ Ghi thủ công]` | `POST /api/parties/{pid}/call-sessions` (Gọi) hoặc `GET /modals/m08?mode=log` (Ghi thủ công) | `create_draft()` **idempotent** theo (staff, party) + **auto-claim từ 260711-0838 phase 6** → claim_customer_actions (nếu chưa claimed) | JS chuyển thẳng T1, timer chạy — KHÔNG mở modal | ✓ **P0 fixed** — (b) quyết định ③: auto-claim khi bấm Gọi — shipped phase 6 |
 | T1 note textarea | `PATCH /api/activities/{id}` (debounce 1.5s + blur) | `patch_activity(body)` | không swap DOM; `window.alert()` nếu fail | Rủi ro mất nội dung nếu staff bỏ qua alert |
 | T1 `☑ Zalo` | `PATCH /api/activities/{id}` `custom_fields_patch.zalo_connected` | Ghi ngay | — | |
 | T1 `[⋯ Chi tiết]` | `GET /modals/m08?mode=edit_activity&activity_id=...` | Mở M08 pre-filled sửa draft | modal overlay | |
@@ -181,7 +185,7 @@ Mọi bảng tương tác dưới đây được đọc qua 3 lớp:
 | T2 pill outcome (1/7, phím `1`-`7`) | `PATCH /api/activities/{id}` `contact_outcome=<key>` | Autosave ngay khi click | Highlight pill; outcome cần thêm info (`answered`/`purchased`/`callback`/`refused`/`wrong_number`) → sheet mọc lên trên | |
 | T2 sheet "Từ chối" — chọn lý do | `PATCH /api/activities/{id}` `outcome_reason=<key>` | Server validate `REASON_REQUIRED_OUTCOMES` | Nút Lưu chỉ enable sau khi có lý do | **Gate**: `outcome_reason` bắt buộc khi `refused` (`activity_service.py` — cả `finalize_activity` lẫn `patch_activity` validate) |
 | T2 sheet — `[🚫 Đừng gọi nữa]` | (dùng chung PATCH `outcome_reason='do_not_contact'`) | Escalation pill (2 lần bấm) | — | Reference-only: chưa có suppression filter runtime thật (plan khác sở hữu) |
-| T2 `[Lưu & Khách kế →]` | `POST /api/activities/{id}/finalize` | `finalize_activity()` → `execute_side_effects()`: resolve `resolve_action_ids`/`resolve_task_ids` (dismiss + done) **bất kể outcome**, tạo callback/follow-up task, save-as-note, promote insight, auto-claim | swap strip → T3 | ⚠ **P0** — (b) quyết định ①: hiện resolve chạy vô điều kiện kể cả `no_answer`/`busy` → dismiss TTL 30 ngày + done task ghim; sẽ đổi thành auto-snooze 1-3 ngày cho 2 outcome này — **chưa implement** |
+| T2 `[Lưu & Khách kế →]` | `POST /api/activities/{id}/finalize` | `finalize_activity()` → `execute_side_effects()`: resolve `resolve_action_ids`/`resolve_task_ids` với outcome-aware logic từ 260711-0933: nếu `no_answer`/`busy` → auto-snooze 1-3 ngày, khác → dismiss TTL 30 ngày; tạo callback/follow-up task, save-as-note, promote insight, auto-claim | swap strip → T3 | ✓ **P0 fixed** — (b) quyết định ①: `no_answer`/`busy` → auto-snooze (không dismiss) — shipped plan 260711-0933 |
 | T3 `[＋Nhắn Zalo]` (chỉ hiện khi outcome=`no_answer`) | `POST /customers/{pid}/reason/resolve-async` | Tạo activity **thứ hai riêng biệt** (không gộp vào activity vừa finalize) | Button đổi "✓ Đã nhắn Zalo" | |
 | T3 `[Khách kế →]` | `GET /customers/{next_pid}/call?queue_ids=...&queue_pos=+1` (client nav) | Điều hướng cockpit khách tiếp theo, giữ queue | same-tab | **KHÔNG auto-advance** — phải bấm chủ động (chốt UX rõ ràng, đúng thiết kế) |
 | Rail "Đặt lịch" (A-S14-024) | `GET /modals/m05?party_id=...&source=action_queue&source_ref=...&prefill_title=...` | Mở M05 prefilled | modal overlay | ⚠ **P0**: sau `[Lưu task]` → `HX-Redirect /customers/{pid}` → **RỜI cockpit đang gọi dở**, mất mid-call context |

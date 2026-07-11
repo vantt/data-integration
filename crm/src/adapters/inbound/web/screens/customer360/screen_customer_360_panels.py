@@ -291,45 +291,13 @@ def register_panel_routes(
             )
         return HTMLResponse("panel not found", status_code=404)
 
-    # ── Bulk-dismiss action session ───────────────────────────────────────────
-
-    @router.post("/customers/{party_id}/actions/dismiss-session", response_class=HTMLResponse)
-    async def handle_dismiss_session(request: Request, party_id: str) -> Response:
-        """Dismiss multiple action_ids in one session, return refreshed insight panel."""
-        if action_state is not None:
-            form = await request.form()
-            action_ids = form.getlist("action_ids")
-            for aid in action_ids:
-                try:
-                    action_state.dismiss(aid, user_id=None)
-                except Exception as exc:
-                    log.error("c360: dismiss action %s: %s", aid, exc)
-        _, ids = _load_base(party_id)
-        ins = _load_insight(ids)
-        resolved_ids: set[str] = set()
-        if action_task_resolver is not None:
-            try:
-                resolved_ids = action_task_resolver.resolved_action_ids(party_id)
-            except Exception as exc:
-                log.warning("c360: dismiss-session resolved_ids %s: %s", party_id, exc)
-        claimed_tasks_ds: dict = {}
-        if claimed_action_resolver is not None and ins is not None and ins.actions:
-            try:
-                claimed_tasks_ds = claimed_action_resolver.get_claimed_tasks_by_action_ids(
-                    [a.action_id for a in ins.actions]
-                )
-            except Exception as exc:
-                log.warning("c360: dismiss-session claimed_tasks %s: %s", party_id, exc)
-        rep_ins: list = []
-        if party_insights is not None:
-            try:
-                rep_ins = [i for i in party_insights.list_by_party(party_id) if not i.deleted_at]
-            except Exception as exc:
-                log.warning("c360: dismiss-session rep_ins %s: %s", party_id, exc)
-        return templates.TemplateResponse(
-            "fragments/c360_insight_panel.html",
-            {"request": request, "party_id": party_id, "insight": ins,
-             "rep_insights": rep_ins, "resolved_action_ids": resolved_ids,
-             "claimed_tasks": claimed_tasks_ds,
-             "dim_metrics": None, "snapshots": [], "timeline_available": False},
-        )
+    # NOTE (6b, 260711-0838 phase 6): the bulk-dismiss route that used to live
+    # here (`POST /customers/{party_id}/actions/dismiss-session`,
+    # `handle_dismiss_session`) was removed — it called `action_state.dismiss()`
+    # directly with no activity/note write, bypassing the "một đường ghi duy
+    # nhất" invariant every other resolve path goes through. The "Hoàn tất ✓"
+    # button (`c360_insight_panel.html`) now opens M08 with `resolve_action_ids`
+    # built from the currently-checked boxes, routing the same batch resolve
+    # through `execute_side_effects` instead. Confirmed caller-safe before
+    # removal: grep found zero test coverage and zero other callers of this
+    # route (only the one template link, which was updated in the same change).

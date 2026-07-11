@@ -25,6 +25,9 @@
 {% set activity_edit = activity_edit | default(None) %}
 {% set draft_activity_id = draft_activity_id | default('') %}
 {% set return_to = return_to | default('redirect') %}
+{# 5a: initial HÌNH THỨC tab (call/zalo/fb/email/visit/other) — GET /modals/m08's
+   hinh_thuc query param, already validated against _HT_TO_ACT_TYPE server-side. #}
+{% set hinh_thuc = hinh_thuc | default('call') %}
 
 {% if mode == 'edit_note' %}{% set modal_title = 'Sửa ghi chú' %}{% set save_url = '/customers/' ~ party_id ~ '/notes/' ~ note_id %}{% set http_verb = 'post' %}
 {% elif mode == 'note_only' %}{% set modal_title = 'Thêm ghi chú' %}{% set save_url = '/customers/' ~ party_id ~ '/notes' %}{% set http_verb = 'post' %}
@@ -966,8 +969,13 @@
 
   /* ── Init ─────────────────────────────────────────────── */
   (function() {
-    var firstOpt = document.querySelector('#m08-ht-sel .m08-ht-sel__opt');
-    if (firstOpt) m08PickHT(firstOpt);
+    // 5a: pre-select the HÌNH THỨC tab matching the server-rendered hinh_thuc
+    // (worklist/cockpit Zalo/Facebook contact buttons) — falls back to the
+    // first option (call) when absent/unmatched, same as before this fix.
+    var initHT = {{ hinh_thuc | tojson }};
+    var initOpt = document.querySelector('#m08-ht-sel .m08-ht-sel__opt[data-ht="' + initHT + '"]')
+                || document.querySelector('#m08-ht-sel .m08-ht-sel__opt');
+    if (initOpt) m08PickHT(initOpt);
   })();
 
   {% if mode == 'edit_activity' and activity_edit %}

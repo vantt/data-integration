@@ -1,0 +1,16 @@
+{
+  "decision": "PASS",
+  "disprovenClaims": [],
+  "unverifiedClaims": [
+    "'Ownership check on task_id in handle_create_call_session actually prevents the spoofing attack' — CONFIRMED, bypass NOT found (task_id lookup is server-side, actor_id is server-derived from request.state.current_user, not client-forgeable). Narrow untested edge case only: task_id containing embedded commas (from the T0 secondary-reason-checkbox multi-select UI, s14-resolve-task-ids can hold a CSV list before Gọi is pressed) — task_svc.get_task() on a CSV string returns None, which falls through to the SAFE auto-claim branch (fails safe, not a security gap), just not explicitly test-covered."
+  ],
+  "missingProof": [
+    "handle_unclaim_customer ownership gap: documented in plan.md's Red Team Review table (finding #9) and phase-06's Risk Assessment section, per the phase's 'document, don't fix' requirement — satisfied at the plan-doc level, not a code TODO.",
+    "crm/docs/ui-spec/panels/P01-insight-panel.md and crm/docs/workflows/outreach-worklist-call-log-loop.md referenced the removed dismiss-session route / pre-shipped policy decisions — docs-manager subagent dispatched same session to correct both (see finalize task)."
+  ],
+  "reachableRegressions": [],
+  "resolvedSinceInitialReview": [
+    "'Claim-conflict is surfaced to the losing staff, not silently swallowed' — initial adversarial pass found ONE unaddressed sub-case: a true simultaneous DB-level race (both requests' get_customer_claim return None before either inserts) would raise an unhandled exception inside auto_claim_from_contact, silently swallowed by handle_create_call_session's broad except, giving the loser zero feedback. Confirmed non-reachable under the current single-worker uvicorn deployment (verified: no --workers flag in entrypoint.sh, and handle_create_call_session has zero `await` between check and insert, so the event loop cannot interleave two requests at that granularity) — but fixed anyway as defense-in-depth: task_service.py's auto_claim_from_contact now wraps the insert in try/except, re-reads get_customer_claim on failure, and returns the winner's task with is_new=False — meaning handle_create_call_session's existing assignee_user_id-mismatch check now correctly detects and surfaces this case too, exactly like the sequential race. Full suite re-verified green (1097 passed/1 skipped) after this follow-up fix.",
+    "Count-pill staleness on claim-task snooze (Đã Claim section) — re-assessed: this is the SAME pre-existing pattern the 'Chưa Claim' section's action-row snooze already had (hx-swap=delete + static count-pill, no live recount) before this diff; phase 5c's unconditional 'open' attribute only makes an already-existing staleness pattern visible in a second section, it does not introduce a new failure mode. Not a regression introduced by this diff — moved out of reachableRegressions."
+  ]
+}

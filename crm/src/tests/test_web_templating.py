@@ -610,16 +610,18 @@ class TestClaimedTaskSection:
         assert ">Đã Claim<" in html
         assert "t-claim" in html
 
-    def test_da_claim_header_collapsed_by_default(self):
-        """Collapsible <details> for the section header — collapsed by default so the
-        page starts compact; NOT a full tab (see worklist_fragment.html comment for why
+    def test_da_claim_header_expanded_by_default(self):
+        """Collapsible <details> for the section header — expanded by default (5c fix,
+        260711-0838 phase 5) so a freshly-claimed task is visible without the rep
+        manually expanding it; matches "Chưa Claim"'s own `open` attribute.
+        Still a <details>, NOT a full tab (see worklist_fragment.html comment for why
         tabs would break the claim → moved-here feedback loop)."""
         html = _render_fragment(self._ctx_with_task(source="action_queue_claim"))
         import re
         m = re.search(r'<details class="wl-section"[^>]*>.*?>Đã Claim<', html, re.DOTALL)
         assert m is not None, "Đã Claim details block not found"
         opening_tag = m.group(0).split(">")[0]
-        assert "open" not in opening_tag, f"Đã Claim should be collapsed by default: {opening_tag!r}"
+        assert "open" in opening_tag, f"Đã Claim should be expanded by default: {opening_tag!r}"
 
     def test_manual_task_also_shows_da_claim_header(self):
         """A manual task assigned to me is owned work too — Đã Claim isn't limited
@@ -769,3 +771,90 @@ class TestBandCollapseAndOverflow:
         assert html.count("Xem thêm") == 1  # only the queue section's toggle
         for i in range(12):
             assert f"t-urgent-{i}" in html  # all 12 tasks rendered directly, no truncation
+
+
+# ── 5a: contact_btn hinh_thuc= normalization (260711-0838 phase 5) ─────────
+
+class TestContactBtnHinhThucNormalization:
+    """All 4 contact_btn variants (phone/zalo/facebook/no-identity-fallback)
+    must send hinh_thuc= — the param GET /modals/m08 actually reads — using its
+    canonical channel keys (call/zalo/fb). The old channel= param was never
+    read server-side, so every quick-contact button silently opened M08
+    defaulted to "Cuộc gọi" regardless of the customer's preferred channel.
+    contact_btn only renders on claimed task rows (see _wl_row.html), not
+    unclaimed action rows (those have their own queue-mode 📞 Gọi link)."""
+
+    _PARTY_ID = "party-hinh-thuc"
+
+    def _render_task_row(self, pref_id) -> str:
+        from datetime import date
+        t = _task("t-ht", party_id=self._PARTY_ID, source="manual")
+        result = rank_worklist([], [t], today=date(2026, 6, 23))
+        extras = (
+            {self._PARTY_ID: {"preferred_identity": pref_id, "contact_pref_notes": []}}
+            if pref_id else {}
+        )
+        return _render_fragment(_base_ctx(**result, party_extras=extras))
+
+    def test_phone_variant_sends_hinh_thuc_call(self):
+        pref_id = SimpleNamespace(identity_type="phone", identity_value="0901234567")
+        html = self._render_task_row(pref_id)
+        assert "hinh_thuc=call" in html
+        assert "channel=phone" not in html
+
+    def test_zalo_variant_sends_hinh_thuc_zalo(self):
+        pref_id = SimpleNamespace(identity_type="zalo", identity_value="zalo123")
+        html = self._render_task_row(pref_id)
+        assert "hinh_thuc=zalo" in html
+        assert "channel=zalo" not in html
+
+    def test_facebook_variant_sends_hinh_thuc_fb(self):
+        pref_id = SimpleNamespace(identity_type="facebook", identity_value="fb123")
+        html = self._render_task_row(pref_id)
+        assert "hinh_thuc=fb" in html
+        assert "channel=facebook" not in html
+
+    def test_no_identity_fallback_sends_hinh_thuc_call(self):
+        """The fallback variant (no matched identity) "worked" today only by
+        accident — 'call' happened to be the GET handler's unread default.
+        Verified false premise from the original plan: this variant sends
+        channel= today too, not hinh_thuc= — must be normalized like the rest."""
+        html = self._render_task_row(None)
+        assert "hinh_thuc=call" in html
+        assert "channel=" not in html
+
+
+# ── 5d: claimed task row → 1-click cockpit entry (260711-0838 phase 5) ─────
+
+class TestClaimedRowCockpitLink:
+    """Claimed task rows get a 📞 link straight into the cockpit, same
+    destination shape as S15's own "Vào phiên gọi" link
+    (screen_call_cockpit.py's ?task_id= pinning) — previously only
+    contact_btn (→ M08) and the title-link (→ S15) were offered."""
+
+    def test_claimed_task_row_has_cockpit_link(self):
+        from datetime import date
+        t = _task("t-cockpit", party_id="party-cockpit", source="action_queue_claim")
+        result = rank_worklist([], [t], today=date(2026, 6, 23))
+        html = _render_fragment(_base_ctx(**result, party_extras={}))
+        assert "/customers/party-cockpit/call?task_id=t-cockpit" in html
+
+    def test_manual_claimed_task_also_has_cockpit_link(self):
+        """Đã Claim isn't limited to source=action_queue_claim (a manually
+        assigned task is owned work too) — the cockpit link follows suit."""
+        from datetime import date
+        t = _task("t-manual-cockpit", party_id="party-manual", source="manual")
+        result = rank_worklist([], [t], today=date(2026, 6, 23))
+        html = _render_fragment(_base_ctx(**result, party_extras={}))
+        assert "/customers/party-manual/call?task_id=t-manual-cockpit" in html
+
+    def test_unassigned_task_row_has_no_cockpit_link(self):
+        """Hàng Đợi Chung rows (no owner yet) must not get a cockpit shortcut —
+        contact/cockpit controls assume an existing owner."""
+        row = WorklistRow(
+            kind="task", band=-1, urgency=0, value=0, neglect_days=0,
+            ref_id="t-unassigned",
+            payload=_task("t-unassigned", party_id="party-unassigned"),
+        )
+        html = _render_fragment(_base_ctx(unassigned_tasks=[row], current_user_id="u-1"))
+        assert "/customers/party-unassigned/call?task_id=t-unassigned" not in html

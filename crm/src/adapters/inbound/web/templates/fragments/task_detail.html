@@ -467,9 +467,15 @@
   {# ── STICKY CLOSE BAR ── #}
   {% if not _read_only %}
   <div class="s15-closebar">
-    <input class="s15-closebar__note" type="text" placeholder="Ghi chú nhanh khi đóng task…" aria-label="Ghi chú khi đóng">
+    <input class="s15-closebar__note" type="text" id="s15-closebar-note" placeholder="Ghi chú nhanh khi đóng task…" aria-label="Ghi chú khi đóng">
+    {# 5b: carry the closebar note into M08's prefill_body so typed text
+       survives the modal open instead of being silently discarded — read
+       live via hx-vals (htmx appends it as a GET query param) rather than a
+       name/value pair on the input, since the input itself isn't submitted
+       (M08 is a separate form). #}
     <button class="btn btn--primary"
             hx-get="/modals/m08?party_id={{ task.party_id or '' }}&mode=log&task_id={{ task.task_id }}"
+            hx-vals='js:{"prefill_body": document.getElementById("s15-closebar-note").value}'
             hx-target="#modal-root" hx-swap="innerHTML">
       <svg width="14" height="14" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.3" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 8l3.5 3.5L13 5"/></svg>
       Ghi log &amp; hoàn thành

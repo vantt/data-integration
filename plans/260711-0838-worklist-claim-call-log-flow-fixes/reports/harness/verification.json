@@ -1,0 +1,64 @@
+{
+  "commands": [
+    {
+      "command": "docker compose exec -T crm sh -c \"cd /app/crm/src && python -m pytest tests/test_web_templating.py tests/test_m08_quick_note_prefill.py tests/test_task_detail_and_cockpit.py tests/test_worklist_ranking.py -q\"",
+      "status": "pass",
+      "exitCode": 0,
+      "timestamp": "2026-07-11T04:05:00.000Z",
+      "summary": "Phase 5 targeted tests: 209 passed."
+    },
+    {
+      "command": "docker compose exec -T crm sh -c \"cd /app/crm/src && python -m pytest -q\"",
+      "status": "pass",
+      "exitCode": 0,
+      "timestamp": "2026-07-11T04:06:00.000Z",
+      "summary": "Phase 5 agent's own full-suite run: 1088 passed, 1 skipped (baseline 1075 + 13 new)."
+    },
+    {
+      "command": "docker compose exec -T crm sh -c \"cd /app/crm/src && python -m pytest tests/test_activity_disposition_api_routes.py -q\"",
+      "status": "pass",
+      "exitCode": 0,
+      "timestamp": "2026-07-11T04:20:00.000Z",
+      "summary": "Phase 6 targeted tests: 30/30 passed."
+    },
+    {
+      "command": "docker compose exec -T crm sh -c \"cd /app/crm/src && python -m pytest -q\"",
+      "status": "pass",
+      "exitCode": 0,
+      "timestamp": "2026-07-11T04:21:00.000Z",
+      "summary": "Phase 6 agent's own full-suite run: 1097 passed, 1 skipped (1088 + 9 new)."
+    },
+    {
+      "command": "docker compose exec -T crm sh -c \"cd /app/crm/src && python -m pytest tests/test_web_templating.py tests/test_worklist_ranking.py tests/test_claim_context_snooze_r14.py -q\"",
+      "status": "pass",
+      "exitCode": 0,
+      "timestamp": "2026-07-11T04:11:00.000Z",
+      "summary": "Phase 7 targeted tests: 179 passed."
+    },
+    {
+      "command": "docker compose exec -T crm sh -c \"cd /app/crm/src && python -m pytest -q\"",
+      "status": "pass",
+      "exitCode": 0,
+      "timestamp": "2026-07-11T04:23:00.000Z",
+      "summary": "Orchestrator independent re-run after all 3 phases combined: 1097 passed, 1 skipped."
+    },
+    {
+      "command": "code-reviewer subagent full suite re-run + AST structural check on test_activity_disposition_api_routes.py + repo-wide grep for dismiss-session callers",
+      "status": "pass",
+      "exitCode": 0,
+      "timestamp": "2026-07-11T04:32:00.000Z",
+      "summary": "Independently confirmed 1097 passed/1 skipped; confirmed test file structure clean (9 classes, 30 methods, no orphaned asserts); confirmed handle_dismiss_session removal caller-safe repo-wide."
+    },
+    {
+      "command": "docker compose exec -T crm sh -c \"cd /app/crm/src && python -m pytest -q\"",
+      "status": "pass",
+      "exitCode": 0,
+      "timestamp": "2026-07-11T04:40:00.000Z",
+      "summary": "Post defense-in-depth fix (task_service.py auto_claim_from_contact try/except) re-verification: 1097 passed, 1 skipped, unchanged."
+    }
+  ],
+  "beforeAfter": {
+    "before": "worklist/cockpit channel buttons send wrong param name/values (channel= vs hinh_thuc=); S15 closebar note discarded; Da Claim collapsed by default hiding fresh claims; claimed rows require 3 clicks to reach cockpit; auto-claim only at finalize (race window between 2 staff pressing Goi); Hoan tat silently dismissed ALL unresolved actions with no activity log; dead claimSuccess trigger; claim-task snooze gave zero visual feedback",
+    "after": "channel buttons normalized to canonical hinh_thuc keys end-to-end; closebar note flows into M08 body; Da Claim open by default; claimed rows have direct 1-click cockpit link; auto-claim happens at call-start with server-verified task_id ownership and claim-conflict surfaced to the losing staff; Hoan tat dynamically resolves only checked actions and always routes through the logged M08 flow; dead trigger removed; claim-task snooze deletes its row with visible feedback"
+  }
+}

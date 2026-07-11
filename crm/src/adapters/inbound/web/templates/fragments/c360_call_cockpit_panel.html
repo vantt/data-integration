@@ -253,7 +253,7 @@
       </button>
       {# A-S14-006 zalo variant. R1: NOT disabled when consent=denied #}
       <button class="btn btn--secondary" type="button"
-              onclick="htmx.ajax('GET','/modals/m08?party_id={{ party_id }}&mode=log&hinh_thuc=chat&return_to=stay',{target:'#modal-root',swap:'innerHTML'})"
+              onclick="htmx.ajax('GET','/modals/m08?party_id={{ party_id }}&mode=log&hinh_thuc=zalo&return_to=stay',{target:'#modal-root',swap:'innerHTML'})"
               aria-label="Liên hệ Zalo">
         <svg class="ico" width="14" height="14" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.3" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="2" y="3" width="12" height="9" rx="1.5"/><path d="M2 5l6 4 6-4"/></svg>
         Zalo
@@ -1057,10 +1057,16 @@
   // T1, no M08 modal (decision: M08 is now only the "⋯ Chi tiết"/"⋯ Ghi thủ
   // công" exception, see report mục V). ─────────────────────────────────
   window.s14StripStartCall = function () {
+    // 6a (260711-0838 phase 6): forward the pinned task_id (set server-side
+    // from rail_primary.task_id when entering via S15's "Vào phiên gọi") so
+    // the backend's ownership check can skip auto-claim — this task is
+    // already claimed/assigned to this actor, no need to re-claim.
+    var pinnedTaskId = ($('s14-resolve-task-ids') || {}).value || '';
     fetch('/api/parties/' + encodeURIComponent(PARTY_ID) + '/call-sessions', {
       method: 'POST',
       headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
       body: 'channel_identity_id=' + encodeURIComponent(S.chanId || '')
+        + '&task_id=' + encodeURIComponent(pinnedTaskId)
     }).then(function (r) {
       if (!r.ok) throw new Error('call-sessions ' + r.status);
       return r.json();
@@ -1069,6 +1075,13 @@
       S.startedAtMs = d.started_at ? Date.parse(d.started_at) : Date.now();
       startTimer();
       showPhase('t1');
+      // 6a correction (claim race must not be silent): the backend already
+      // lost the race and swallowed it (unique-index insert failure) if
+      // claimed_by_other is present — surface it instead of letting the
+      // losing staff believe they now own this customer.
+      if (d.claimed_by_other) {
+        window.alert('⚠ Khách này vừa được ' + d.claimed_by_other + ' nhận trước — bạn vẫn có thể tiếp tục cuộc gọi, nhưng việc claim đã thuộc về người khác.');
+      }
     }).catch(function () {
       // Draft creation failed (network/auth) — fall back so staff can still
       // log the call manually; it just won't carry a measured duration.

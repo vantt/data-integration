@@ -99,3 +99,31 @@ class TestIrritationReasonLabel:
         client = _build_m08_app()
         r = client.get("/modals/m08?party_id=party-1&mode=log")
         assert "v:'irritation'" in r.text
+
+
+class TestM08HinhThucPreselect:
+    """5a (260711-0838 phase 5): GET /modals/m08?hinh_thuc=... pre-selects the
+    HÌNH THỨC tab so worklist/cockpit Zalo/Facebook contact buttons open the
+    modal on the right channel instead of always defaulting to "Cuộc gọi"."""
+
+    def test_default_hinh_thuc_is_call(self):
+        client = _build_m08_app()
+        r = client.get("/modals/m08?party_id=party-1&mode=log")
+        assert 'var initHT = "call"' in r.text
+
+    def test_zalo_hinh_thuc_threaded_into_init(self):
+        client = _build_m08_app()
+        r = client.get("/modals/m08?party_id=party-1&mode=log&hinh_thuc=zalo")
+        assert 'var initHT = "zalo"' in r.text
+
+    def test_fb_hinh_thuc_threaded_into_init(self):
+        client = _build_m08_app()
+        r = client.get("/modals/m08?party_id=party-1&mode=log&hinh_thuc=fb")
+        assert 'var initHT = "fb"' in r.text
+
+    def test_unknown_hinh_thuc_falls_back_to_call(self):
+        """Server-side validated against _HT_TO_ACT_TYPE's canonical keys — an
+        unrecognized value must not reach the template unnormalized."""
+        client = _build_m08_app()
+        r = client.get("/modals/m08?party_id=party-1&mode=log&hinh_thuc=chat")
+        assert 'var initHT = "call"' in r.text

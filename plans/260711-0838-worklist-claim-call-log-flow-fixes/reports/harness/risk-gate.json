@@ -1,0 +1,15 @@
+{
+  "highRisk": false,
+  "reasons": [
+    "No auth/secrets/payments code touched",
+    "No DB schema/migration changes",
+    "One route removed (POST /customers/{party_id}/actions/dismiss-session) but confirmed zero remaining callers repo-wide (code, templates, tests) before removal, and it is an internal HTMX endpoint not an external public API",
+    "No CI/deploy/release/production config touched",
+    "No destructive filesystem operations",
+    "task_service.py defense-in-depth change is additive (try/except around existing insert call), does not alter the method's external contract",
+    "2 known pre-existing/flagged gaps (IDOR-shaped ownership check in resolve path, handle_unclaim_customer ownership check) explicitly documented as out of scope, not introduced or worsened by this diff"
+  ],
+  "autoStopRequired": false,
+  "humanApproved": false,
+  "largeDiff": true
+}

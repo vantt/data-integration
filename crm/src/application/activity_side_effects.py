@@ -160,6 +160,17 @@ def execute_side_effects(
 
     # 2. Auto-claim — only when no task_id is already driving this contact (staff
     # already in the structured task flow) and there IS a contact_outcome.
+    #
+    # 6a (260711-0838 phase 6, "duplicate auto-claim path" correction): since
+    # claim-at-call-start shipped, `POST /api/parties/{id}/call-sessions`
+    # (handle_create_call_session) now ALSO calls auto_claim_from_contact at
+    # T0→T1, before this finalize-time call ever runs. For the common path
+    # (staff pressed "Gọi" first) this step is a safety-net no-op —
+    # auto_claim_from_contact's own get_customer_claim early-return makes the
+    # second call idempotent, so calling it twice per activity is harmless, not
+    # a bug. It's kept here (not removed) for callers that reach
+    # execute_side_effects without ever going through call-session creation —
+    # e.g. a standalone M08 log with no prior "Gọi" press.
     if auto_claim and actor_id and task_svc is not None:
         try:
             task_svc.auto_claim_from_contact(party_id, _display_name(), actor_id)

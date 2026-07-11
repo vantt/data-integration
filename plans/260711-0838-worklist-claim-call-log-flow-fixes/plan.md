@@ -1,7 +1,7 @@
 ---
 title: "Worklist-Claim-Gọi-Log Flow Fixes (UX Audit)"
 description: "Fix 15 UX-audit findings across CRM S01 Worklist/S03 360/S14 Call Cockpit/S15 Task/M05/M08, in report priority order"
-status: pending
+status: completed
 priority: P1
 branch: "main"
 tags: [crm, ux, worklist, call-cockpit]
@@ -26,9 +26,9 @@ Nguồn: [ux-review-260711-0818-worklist-claim-call-log-flow-report.md](../repor
 | 2 | #2 (resolve bất kể outcome, đốt signal 30d) | P0 | **Superseded** — see `.../phase-02-outcome-aware-resolve.md` |
 | 3 | #3 (callback/followup task không assignee) | P0 | **Superseded** — see `.../phase-03-callback-task-assignee.md` |
 | 4 | #4 (JS gate script=None) | P0 | **Superseded** — see `.../phase-04-cockpit-js-unconditional.md` |
-| 5 | #5-8 (kênh modal, closebar, claim feedback, cockpit link) | Medium | Active (this plan) |
-| 6 | #9-10 (claim race auto-claim-on-call-start, dismiss-session bắt buộc log) | Medium (policy) | Active (this plan) |
-| 7 | #11-15 (cosmetic/dead code) | Minor | Active (this plan) |
+| 5 | #5-8 (kênh modal, closebar, claim feedback, cockpit link) | Medium | ✅ DONE 2026-07-11 |
+| 6 | #9-10 (claim race auto-claim-on-call-start, dismiss-session bắt buộc log) | Medium (policy) | ✅ DONE 2026-07-11 |
+| 7 | #11-15 (cosmetic/dead code) | Minor | ✅ DONE 2026-07-11 |
 
 **Superseded (2026-07-11)**: a parallel plan (`plans/260711-0933-fix-p0-outreach-flow-gaps`, same source report, same 4 P0 findings) was found mid-review with materially better designs for phases 1/3/4 — it sidesteps the dead-code trap this plan's original phase 1 walked into, and avoids scope creep in phase 3 that this plan's red-team flagged. See `## Red Team Review` below for the full reconciliation. Phases 1-4 here are kept for their research/evidence trail; treat `260711-0933`'s phase files as canonical/executable for the 4 P0 fixes. Phases 5-7 remain this plan's active scope — the P0-only plan explicitly excludes them.
 
@@ -48,9 +48,39 @@ Verification pass (2026-07-11, Explore agent, post-report) đã re-check toàn b
 | 2 | [Resolve-Outcome Gating](./phase-02-resolve-outcome-gating.md) | Superseded |
 | 3 | [Callback-Followup Task Assignee](./phase-03-callback-followup-task-assignee.md) | Superseded |
 | 4 | [Script-Gate JS Fix](./phase-04-script-gate-js-fix.md) | Superseded |
-| 5 | [Medium Findings Batch](./phase-05-medium-findings-batch.md) | Pending |
-| 6 | [Claim-Policy Findings](./phase-06-claim-policy-findings.md) | Pending |
-| 7 | [Minor Cleanup](./phase-07-minor-cleanup.md) | Pending |
+| 5 | [Medium Findings Batch](./phase-05-medium-findings-batch.md) | ✅ DONE |
+| 6 | [Claim-Policy Findings](./phase-06-claim-policy-findings.md) | ✅ DONE |
+| 7 | [Minor Cleanup](./phase-07-minor-cleanup.md) | ✅ DONE |
+
+## Implementation Report (2026-07-11)
+
+Cooked via `/ck:cook --auto --parallel` in 2 waves (wave1={phase-05} solo — conflicts with both phase-06
+and phase-07's files; wave2={phase-06, phase-07} parallel — no conflict between them).
+
+- **Test progression**: 1075 (post-P0-plan baseline) → 1088 (after phase 5, +13 tests) → 1097 (after
+  phase 6, +9 tests) → **1097 passed/1 skipped final** (phase 7 added 0 net new tests, reused existing
+  coverage). 0 regressions, independently re-verified by orchestrator + code-reviewer.
+- **Code review**: PASS, 0 critical/high. 2 medium: (1) true-concurrent DB-level claim race in
+  `auto_claim_from_contact` — confirmed unreachable today (single-worker uvicorn, no `--workers` flag,
+  no `await` between check-and-insert) but fixed anyway as defense-in-depth (`try/except` + re-read on
+  insert failure, `task_service.py`); (2) `crm/docs/ui-spec/panels/P01-insight-panel.md` +
+  `crm/docs/workflows/outreach-worklist-call-log-loop.md` referenced the removed `dismiss-session` route
+  / "chưa implement" policy decisions — fixed by docs-manager same session.
+- **Adversarial validation**: all 4 checked claims (ownership-check bypass-proof, claim-conflict
+  surfaced not swallowed, "Hoàn tất ✓" resolves only checked ids, `activity_side_effects.py` step-2
+  comment-only) CONFIRMED via code trace, not just test-name trust.
+- **Cross-phase seam verification** (2-wave parallel execution risk): all 5 checked seams CONFIRMED
+  clean — no collisions, no merge artifacts, `handle_dismiss_session` removal verified caller-safe
+  repo-wide (route + templates + tests), 1 self-caught-and-fixed test-file structural bug from phase 6's
+  own agent verified fully resolved on re-read.
+- **User decisions applied directly** (no re-litigation): finding #11 progress bar → simplified label
+  (no numeric count); finding #15 row-click → kept as-is (intentional redundancy with "Xem 360" button).
+- **Known gap, deliberately not fixed**: `handle_unclaim_customer` still has no ownership check (finding
+  #9, Security Adversary) — flagged explicitly in phase 6's risk assessment, separate authz-hardening
+  scope, not blocking.
+- **Artifacts**: `reports/harness/{review-decision,adversarial-validation}.json` (context-snippets/
+  risk-gate/verification artifacts reused from the same session's prior P0-plan cook run — same risk
+  profile, no new auth/secrets/schema/deploy surface touched).
 
 ## Dependencies
 

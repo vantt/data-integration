@@ -332,7 +332,20 @@ class TaskService:
             updated_at=now,
             task_kind="contact",  # auto-claim from contact activity → outreach
         )
-        self._task_repo.insert(task)
+        try:
+            self._task_repo.insert(task)
+        except Exception:
+            # Concurrent claim: another request's insert won the (source, source_ref)
+            # unique-index race between our check above and this insert. Re-read
+            # rather than raise — matches the idempotent early-return semantics this
+            # method already promises, just reached via the race path instead of the
+            # up-front check. Currently unreachable under the single-worker uvicorn
+            # deployment (no await between check and insert), kept as defense-in-depth
+            # for if that ever changes.
+            existing = self._task_repo.get_customer_claim(party_id)
+            if existing is not None:
+                return existing, False
+            raise
         if self._db:
             self._db.commit()
         return task, True

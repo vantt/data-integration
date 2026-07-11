@@ -18,7 +18,7 @@
 
 <div id="worklist-container"
      hx-get="/worklist/fragment"
-     hx-trigger="claimSuccess from:body, worklistRefresh from:body"
+     hx-trigger="worklistRefresh from:body"
      hx-include="#wl-filter-form"
      hx-swap="outerHTML">
 
@@ -49,17 +49,17 @@
     </div>
   </div>
 
-  {# ── Completion progress bar ───────────────────────────────────────────────
+  {# ── Scale indicator ───────────────────────────────────────────────────────
      Y = counts.total (all open rows after filtering).
-     X = 0 as server-side baseline — no session tracking needed; refreshes reset it.
-     The bar communicates scale, not precise done-count, so 0/Y is correct here.
+     No session tracking exists to know actual done-count, so this only
+     communicates scale (how much is in the queue) — no numeric "X/Y" that
+     could read as a live counter (it isn't; a hardcoded 0 baseline was).
   #}
   {% set total_count = counts.total | default(0) %}
   {% if total_count > 0 %}
   <div class="wl-progress" style="margin-bottom:var(--sp-3)">
     <div class="wl-progress__label">
-      <span class="caption" style="color:var(--fg-tertiary)">Đã xong</span>
-      <span class="caption" style="color:var(--fg-tertiary)">0/{{ total_count }}</span>
+      <span class="caption" style="color:var(--fg-tertiary)">{{ total_count }} việc</span>
     </div>
     <div class="wl-progress__track">
       <div class="wl-progress__fill" style="width:0%"></div>
@@ -89,7 +89,10 @@
   {% set claimed_bands = claimed_bands | default([]) %}
   {% set claimed_count = claimed_count | default(0) %}
   {% if claimed_count > 0 %}
-  <details class="wl-section">
+  {# 5c: unconditionally open (matches "Chưa Claim" below) so a freshly-claimed
+     task is visible without the rep having to manually expand the section —
+     it was collapsed by default, so "claim feedback" silently disappeared. #}
+  <details class="wl-section" open>
     <summary class="wl-section__header">
       <span class="wl-section__icon" aria-hidden="true">🙋</span>
       <span class="wl-section__label">Đã Claim</span>

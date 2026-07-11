@@ -1,0 +1,24 @@
+{
+  "decision": "PASS",
+  "score": 8,
+  "criticalCount": 0,
+  "acceptanceCoverage": [
+    "5a: PASS - all 4 contact_btn variants + cockpit Zalo normalized to hinh_thuc=; GET /modals/m08 validates against _HT_TO_ACT_TYPE and pre-selects tab; tests cover all 4 variants",
+    "5b: PASS - s15-closebar-note id added, hx-vals reads live value into prefill_body; markup-level test present (JS behavior itself untestable server-side, correctly scoped)",
+    "5c: PASS (minimal fix only, as explicitly permitted) - Da Claim <details> unconditionally open; optional highlight/scroll layer correctly NOT implemented (not required)",
+    "5d: PASS - claimed task rows get 1-click cockpit link reusing screen_call_cockpit.py's existing ?task_id= pinning, verified no new entry mode invented",
+    "6a: PASS - ownership check on task_id verified sound (assignee_user_id compared server-side, not spoofable); claim-conflict correctly surfaced for the sequential/common race AND (fixed post-review, follow-up commit) the true concurrent DB-level race: task_service.py's auto_claim_from_contact now wraps the insert in try/except, re-reads get_customer_claim on IntegrityError, and returns the winner's task with is_new=False, so handle_create_call_session's existing assignee-mismatch check now surfaces claimed_by_other for this case too; full suite re-verified green (1097 passed/1 skipped) after the fix",
+    "6b: PASS - Hoan tat repointed to M08 with dynamic :checked read (aqCheckedActionIds), verified NOT a static server list; handle_dismiss_session removed, 0 remaining callers repo-wide (grep-verified); test_dismiss_session_route_removed guards regression",
+    "7 #11: PASS - user-approved label simplification implemented (numeric X/Y removed, kept scale-only 'N việc')",
+    "7 #12: PASS - claimSuccess trigger removed from both worklist.html and worklist_fragment.html, 0 remaining references repo-wide",
+    "7 #13: PASS - claim-task snooze now uses hx-target=#task-{id} hx-swap=delete, matches action-row snooze UX quality, stable row id confirmed to exist",
+    "7 #14: PASS - verify-only, 0 backslash-URL matches confirmed",
+    "7 #15: PASS - user decision (leave unchanged) correctly reflected as zero diff on the row-click onclick line"
+  ],
+  "regressionProof": [
+    "full suite: 1097 passed, 1 skipped — independently re-run by reviewer, matches orchestrator's claim",
+    "test_activity_disposition_api_routes.py: AST-parsed clean, 9 classes / 30 methods, no orphaned/duplicate structure — self-caught bug fix confirmed fully resolved"
+  ],
+  "contractStatus": "CHANGED",
+  "blockingReasons": []
+}

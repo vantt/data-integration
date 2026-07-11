@@ -33,7 +33,7 @@
 
   <div id="worklist-container"
        hx-get="/worklist/fragment"
-       hx-trigger="claimSuccess from:body, worklistRefresh from:body"
+       hx-trigger="worklistRefresh from:body"
        hx-include="#wl-filter-form"
        hx-swap="outerHTML">
     {% include "fragments/worklist_fragment.html" %}
