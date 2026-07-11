@@ -198,7 +198,11 @@ calls_funnel AS (
                   OR ona.source_activity_id IS NOT NULL
               )
         )                                                                AS conversations_count,
-        COUNT(*) FILTER (WHERE al.contact_outcome = 'wrong_number')    AS wrong_number_count
+        COUNT(*) FILTER (WHERE al.contact_outcome = 'wrong_number')    AS wrong_number_count,
+        -- "Zalo connect" (Sprint Gọi Ra KPI, plan.md open Q#7) — capture-as-you-go
+        -- contact channel, checked in the disposition strip's T1 phase. Boolean
+        -- already derived in staging (stg_crm__activity_log.zalo_connected).
+        COUNT(*) FILTER (WHERE al.zalo_connected)                      AS zalo_connected_count
     FROM {{ ref('stg_crm__activity_log') }} al
     LEFT JOIN outcome_note_activities ona
            ON ona.source_activity_id = al.activity_id
@@ -263,7 +267,8 @@ SELECT
     -- Call funnel KPIs (Sprint Gọi Ra 45 ngày)
     COALESCE(cf.calls_dialed, 0)            AS calls_dialed,
     COALESCE(cf.conversations_count, 0)     AS conversations_count,
-    COALESCE(cf.wrong_number_count, 0)      AS wrong_number_count
+    COALESCE(cf.wrong_number_count, 0)      AS wrong_number_count,
+    COALESCE(cf.zalo_connected_count, 0)    AS zalo_connected_count
 
 FROM spine sp
 -- Resolve CRM UUID → dim_staff

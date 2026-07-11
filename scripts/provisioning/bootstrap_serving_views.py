@@ -66,7 +66,9 @@ def _build_rolling_view_sql(table_name: str) -> str:
     return f"""
         CREATE OR REPLACE VIEW {table_name} AS
         WITH source_files AS (
-            SELECT * FROM read_parquet('{portable_glob}', filename=true, hive_partitioning=0)
+            SELECT * FROM read_parquet(
+                '{portable_glob}', filename=true, hive_partitioning=0, union_by_name=true
+            )
         ),
         latest AS (
             SELECT max(filename) as max_fn FROM source_files

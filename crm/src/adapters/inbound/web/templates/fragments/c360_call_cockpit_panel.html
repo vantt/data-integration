@@ -1507,6 +1507,11 @@ window.s14R14AckError = function () {
   };
 
   // ── Health domain (Phase 02, 260706-0833): save selected chips via POST /tags/inline ──
+  // source_activity_id (plan 260709-1638 phase-01 "Handoff wiring", closed here):
+  // links the tag attach back to the call currently open in the strip, if any.
+  // S.draftId is null outside an active call (T0, or cockpit viewed without
+  // starting one) — sent as '' in that case, same as every pre-existing caller
+  // of this route that never passed the field at all (backward compatible).
   window.s14TagMultiSave = function (key, category) {
     var chipset = document.getElementById('s14-chipset-' + key);
     if (!chipset) return;
@@ -1517,7 +1522,7 @@ window.s14R14AckError = function () {
     if (!target) return;
     htmx.ajax('POST', '/customers/{{ party_id }}/tags/inline', {
       target: target, swap: 'outerHTML',
-      values: { tag_names: selected, category: category }
+      values: { tag_names: selected, category: category, source_activity_id: S.draftId || '' }
     });
   };
 

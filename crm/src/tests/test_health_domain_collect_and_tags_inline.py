@@ -341,6 +341,41 @@ class TestTagsInlineEndpoint:
         for call in profile.attach_tag.call_args_list:
             assert call.kwargs.get("source") == "crm_user"
 
+    def test_source_activity_id_passthrough_when_provided(self):
+        """S14 strip now sends S.draftId as source_activity_id (plan 260709-1638
+        phase-01 "Handoff wiring", closed 2026-07-11) — confirm the route
+        forwards whatever the client sends through to attach_tag()."""
+        profile = MagicMock()
+        profile.list_tags.return_value = [
+            Tag(tag_id="tag-health-0001", name="tim-mach", category="health_domain",
+                display_label="Tim mạch"),
+        ]
+        client = _build_tags_modal_app(profile=profile)
+        r = client.post(
+            f"/customers/{_PARTY_ID}/tags/inline",
+            data={"category": "health_domain", "tag_names": ["tim-mach"],
+                  "source_activity_id": "act-abc-123"},
+        )
+        assert r.status_code == 200
+        assert profile.attach_tag.call_args.kwargs.get("source_activity_id") == "act-abc-123"
+
+    def test_source_activity_id_blank_stays_none(self):
+        """Outside an active call, S.draftId is null → strip sends '' — must
+        stay backward compatible with the pre-existing NULL-column behaviour."""
+        profile = MagicMock()
+        profile.list_tags.return_value = [
+            Tag(tag_id="tag-health-0001", name="tim-mach", category="health_domain",
+                display_label="Tim mạch"),
+        ]
+        client = _build_tags_modal_app(profile=profile)
+        r = client.post(
+            f"/customers/{_PARTY_ID}/tags/inline",
+            data={"category": "health_domain", "tag_names": ["tim-mach"],
+                  "source_activity_id": ""},
+        )
+        assert r.status_code == 200
+        assert profile.attach_tag.call_args.kwargs.get("source_activity_id") is None
+
     def test_no_matching_tag_names_returns_400(self):
         profile = MagicMock()
         profile.list_tags.return_value = []

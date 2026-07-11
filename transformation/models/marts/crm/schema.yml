@@ -128,6 +128,8 @@ models:
           phase-00 để biết tỷ lệ NULL thực tế tại thời điểm ship).
       - name: wrong_number_count
         description: "Số activity contact_outcome='wrong_number' — chỉ số làm sạch danh sách gọi (SĐT chết)."
+      - name: zalo_connected_count
+        description: "Số activity có custom_fields.zalo_connected=true (checkbox 'Đã kết bạn Zalo' trong disposition strip T1) — KPI 'Zalo connect ≥50%' của Sprint Gọi Ra (plan.md open Q#7, đóng 2026-07-11)."
 
   - name: mart_crm_outreach_effort_by_action_weekly
     description: >

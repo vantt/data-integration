@@ -139,10 +139,10 @@ def make_tags_modal_router(templates: Jinja2Templates, profile: ProfileSvc) -> A
         is rejected with 400 before any lookup/attach happens.
 
         source_activity_id (migration 0044, plan 260709-1638 phase-01) is an
-        OPTIONAL form field — empty/absent today because no caller sends it yet
-        (the S14 call cockpit template that renders this form is out of scope
-        for this change; see plan phase-01 report "Handoff wiring"). When a
-        caller does pass it, the attach is linked back to that activity log row.
+        OPTIONAL form field, linking the attach back to the call activity open
+        in the strip at the time (empty when tagging outside an active call —
+        the S14 template sends S.draftId, which is null then). Empty/blank
+        stays backward compatible with any caller that omits the field.
         """
         category = category.strip()
         if category not in INLINE_ALLOWED_CATEGORIES:
