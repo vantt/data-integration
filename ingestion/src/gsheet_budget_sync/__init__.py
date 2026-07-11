@@ -10,7 +10,8 @@ and holds the top-level orchestration (fetch_transform_and_save, write_suggestio
   policy_transform.py  ALLOCATION_POLICY parse/validate/build
   merge.py             historical merge + atomic seed CSV write
   suggestions.py       suggestion targeting/compute logic (pure, no I/O)
-  duckdb_actuals.py    serving-DB reads that feed suggestion computation
+  ref_accounts.py      __REF dropdown row targeting logic (pure, no I/O) — phase-02
+  duckdb_actuals.py    serving-DB reads that feed suggestion/ref computation
   sheet_writeback.py   A1-cell helpers + credentialed Sheets API write
 
 Writes 2 dbt seeds (transformation/seeds/): seed_cashflow_budget.csv (long format, 1 row per
@@ -51,10 +52,12 @@ from .suggestions import (  # noqa: F401
 )
 from .duckdb_actuals import (  # noqa: F401
     _fetch_recurring_actuals_from_duckdb, _fetch_reserve_status_from_duckdb,
-    _fetch_account_taxonomy_from_duckdb,
+    _fetch_account_taxonomy_from_duckdb, _fetch_ref_accounts_from_duckdb,
 )
+from .ref_accounts import build_ref_rows  # noqa: F401
 from .sheet_writeback import (  # noqa: F401
     _col_num_to_a1, _to_a1_cell, _fmt_suggestion_value, _write_cells_via_sheets_api,
+    _write_ref_accounts,
 )
 
 
@@ -193,9 +196,44 @@ def write_suggestions_to_sheet(target_month: str = None, dry_run: bool = True) -
     return len(writes)
 
 
+def refresh_ref_accounts(dry_run: bool = True) -> int:
+    """Regenerate __REF cols A:B from dim_gl_account + fact_cash_movement (phase-02). Full
+    overwrite: any pre-existing content in A:B — including legacy hand-maintained
+    cashflow_line rows — is replaced by the freshly computed account-based dropdown rows.
+    Accepted migration consequence (decided 2026-07-11, see plan.md): any recurring
+    BUDGET_ITEMS row still using a plain legacy cashflow_line label (not yet switched to the
+    account dropdown) will fail __REF validation after this runs, until re-mapped.
+
+    dry_run=True (default): fetch (read-only DuckDB, no credentials needed) + compute + print
+    the row list, no Sheets API call.
+    dry_run=False: requires GOOGLE_SHEETS_SERVICE_ACCOUNT_KEY_PATH (Editor access) — see
+    sheet_writeback.py module docstring.
+
+    Idempotent: re-running recomputes the same rows from the same underlying dim_gl_account /
+    fact_cash_movement state and overwrites the same range — no drift, no duplication.
+    """
+    accounts = _fetch_ref_accounts_from_duckdb(_serving_db_path())
+    rows = build_ref_rows(accounts)
+
+    print(f"{'[DRY RUN] ' if dry_run else ''}__REF refresh: {len(rows)} row(s).")
+    for direction, label in rows:
+        print(f"  {direction}  {label}")
+
+    if dry_run:
+        return len(rows)
+
+    _write_ref_accounts(rows)
+    print(f"\nĐã ghi {len(rows)} dòng vào __REF.")
+    return len(rows)
+
+
 def run(argv=None):
     argv = argv or []
     dry_run = "--dry-run" in argv
+
+    if "--refresh-ref" in argv:
+        n = refresh_ref_accounts(dry_run=dry_run)
+        return 0 if n >= 0 else 1
 
     if "--write-suggestions" in argv:
         target_month = None

@@ -1,6 +1,10 @@
 # Phase 02 — `__REF` Machine-Published Dropdown
 
-**Status:** PARTIAL — 33 account-level rows đã append thủ công (one-off script, không phải Dagster asset) vào `__REF!A12:B44` ngày 2026-07-09, additive bên dưới 10 dòng cashflow_line cũ (không đụng, 4 dòng recurring đang live vẫn hoạt động bình thường). `ref_gl_accounts.csv` đã bổ sung `3335`, `642273`. `.gs` đã thêm `validateBudgetCrossRows` (cha/con collision, theo tháng+chiều) — **cần paste thủ công vào Apps Script editor của sheet để kích hoạt** (chưa có clasp/API push, xem §Deploy). Phần còn lại của phase này (asset Dagster tự động refresh `__REF` mỗi đêm) — CHƯA làm, one-off script hiện tại đủ dùng tạm cho tới khi cần refresh lại (vd thêm account mới).
+**Status:** DONE (code) 2026-07-11 — `gsheet_budget_sync.refresh_ref_accounts()` implemented + wired into `budget_sheet_sync_asset` (runs before the BUDGET_ITEMS read, per §3). `.gs` `validateBudgetCrossRows` còn **cần paste thủ công vào Apps Script editor để kích hoạt** (chưa có clasp/API push, xem §Deploy — không đổi từ trước, không cần sửa `.gs` đợt này vì `applyDongTienDropdown` đã đọc `__REF` sống mỗi lần edit, không có static validation rule nào để refresh).
+
+**Lưu ý cosmetic (phát hiện qua review 2026-07-11):** `applyDongTienDropdown` trong `.gs` (dòng `.map(r => String(r[1] || '').trim())`) tự `.trim()` label trước khi build `requireValueInList` — nghĩa là phần padding fixed-width (khoảng trắng đầu) đã bị cắt TRƯỚC KHI người dùng chọn, không phải do Sheets tự trim sau khi chọn. Không ảnh hưởng logic (parse `_ACCOUNT_PREFIX_RE` chấp nhận thiếu khoảng trắng đầu, seed chỉ lưu `account_code` đã parse chứ không lưu label thô) — nhưng có nghĩa mục tiêu "giữ căn lề + sort đúng thứ tự số" của padding không thực sự giữ được ở giá trị cuối cùng trong ô `BUDGET_ITEMS!A`. Cosmetic-only, không đáng sửa `.gs` chỉ vì việc này.
+
+**Quyết định migration (2026-07-11):** Full overwrite — mỗi lần chạy, `refresh_ref_accounts()` XOÁ TOÀN BỘ nội dung cột A:B hiện có (kể cả 10 dòng cashflow_line cũ hand-maintained) và ghi lại từ `dim_gl_account`/`fact_cash_movement`. Hệ quả chấp nhận: bất kỳ dòng recurring nào trong `BUDGET_ITEMS` còn dùng cashflow_line dạng cũ (chưa chuyển sang dropdown account-code) sẽ FAIL validate ở lần sync kế tiếp — phải remap sang account-code trước khi asset này chạy live lần đầu trong Dagster. Không tự động migrate các dòng đó — ngoài phạm vi phase này.
 **Depends on:** Phase 01 (`dim_gl_account.parent_account_code`/`parent_account_name`) — cho việc TỰ ĐỘNG hoá; one-off lần này build list bằng script Python độc lập, không qua dbt.
 
 ## Deploy `.gs` (thủ công — bắt buộc để check cha/con hoạt động)
@@ -50,15 +54,18 @@ Cấu hình 1 lần qua Google Sheets UI (không phải code) hoặc Apps Script
 
 ## Files
 
-- **Modify** `ingestion/src/gsheet_budget_sync/sheet_writeback.py` — thêm `_write_ref_accounts()`
-- **Modify** `ingestion/src/gsheet_budget_sync/fetch.py` — nếu cần thêm hằng số GID/range cho `__REF` (kiểm tra đã có chưa trước khi thêm mới)
-- **Modify** `orchestration/assets/sheets_assets.py` (hoặc file asset budget tương ứng — xác nhận tên file thật lúc code) — thêm bước refresh `__REF` trước bước đọc `BUDGET_ITEMS`
-- **Modify** `scripts/budget/validate-budget-sheet.gs` — set/refresh data validation rule cột A theo `__REF`
+- **Done** `ingestion/src/gsheet_budget_sync/duckdb_actuals.py` — `_fetch_ref_accounts_from_duckdb()` (offset_account × direction từ `fact_cash_movement`, join `dim_gl_account`, loại internal-transfer + fallback-name accounts)
+- **Done** `ingestion/src/gsheet_budget_sync/ref_accounts.py` (mới) — `build_ref_rows()`, pure targeting logic (child + parent rows, dedupe, fixed-width padding)
+- **Done** `ingestion/src/gsheet_budget_sync/sheet_writeback.py` — `_write_ref_accounts()` (full overwrite cột A:B, clear trước khi ghi để tránh sót dòng cũ)
+- **Done** `ingestion/src/gsheet_budget_sync/__init__.py` — `refresh_ref_accounts()` orchestration (dry_run mặc định True) + CLI flag `--refresh-ref`
+- **Done** `orchestration/assets/sheets_assets.py` — `budget_sheet_sync_asset` gọi `refresh_ref_accounts(dry_run=False)` trước `gsheet_budget_sync.run()`
+- **Không đổi** `scripts/budget/validate-budget-sheet.gs` — `applyDongTienDropdown` đã đọc `__REF` live mỗi lần edit (không cache), không có static validation rule nào cần refresh riêng
 
 ## Tests / verify
 
-- Unit: `_write_ref_accounts()` build đúng label fixed-width cho tập account_code độ dài khác nhau (3, 4, 5, 6 số) — test sort order đúng bằng cách so sánh list đã sort text vs sort numeric.
-- E2E thủ công 1 lần: chạy asset, mở sheet thật, xác nhận `__REF` cột B có dòng cha + dòng con, xác nhận chọn dropdown giữ nguyên khoảng trắng đầu khi đọc lại qua CSV export (đúng lo ngại #2 trong plan.md — test thực tế, không giả định).
+- **Done** Unit (`ingestion/tests/test_gsheet_budget_sync.py`): `build_ref_rows` — child+parent rows cùng width, dedupe parent dùng chung bởi nhiều con, account không cha, input rỗng, cùng account_code xuất hiện cả 2 chiều (không collision), account cha vừa là chính nó vừa là cha của account khác (dedupe đúng 1 dòng); `refresh_ref_accounts` dry-run không gọi Sheets API, non-dry-run gọi `_write_ref_accounts` đúng rows; `_write_ref_accounts` credential guard (thiếu env var → RuntimeError). 61/61 `pytest ingestion/tests` pass (2026-07-11, sau khi áp dụng fix từ code-reviewer độc lập — xem ghi chú dưới).
+- **Sửa theo code review độc lập 2026-07-11:** `_write_ref_accounts` đổi thứ tự write-trước/clear-sau (thay vì clear-trước/write-sau) — tránh trường hợp `update()` fail giữa chừng để lại `__REF` HOÀN TOÀN RỖNG (dropdown + `.gs` cha/con validation cùng mất hết option) cho tới lần chạy thành công kế tiếp; giờ fail giữa chừng chỉ để lại state stale (còn tốt hơn rỗng).
+- **Chưa làm (cần môi trường thật, ngoài phạm vi code review này):** E2E thủ công — chạy `refresh_ref_accounts(dry_run=False)` với `GOOGLE_SHEETS_SERVICE_ACCOUNT_KEY_PATH` + `DBT_DATA_LAKE_PATH` thật, mở sheet, xác nhận `__REF` cột B có dòng cha + dòng con, xác nhận dropdown giữ nguyên khoảng trắng đầu khi đọc lại (lo ngại #2 trong plan.md). Cũng chưa xác nhận có dòng recurring nào trong `BUDGET_ITEMS` thật còn dùng cashflow_line cũ (sẽ fail validate sau lần chạy đầu — xem §Quyết định migration).
 
 ## Risks & rollback
 

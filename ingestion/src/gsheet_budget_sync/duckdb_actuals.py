@@ -56,6 +56,44 @@ def _fetch_account_taxonomy_from_duckdb(serving_db_path: str) -> dict:
         conn.close()
 
 
+def _fetch_ref_accounts_from_duckdb(serving_db_path: str) -> list:
+    """Query (offset_account, direction) pairs actually observed in fact_cash_movement, joined
+    to dim_gl_account for name/parent — feeds the __REF dropdown refresh (phase-02). Excludes
+    internal transfers (111x/112x counterpart) and accounts with no real name (fallback
+    'TK <code>', see dim_gl_account.sql) — same "only accounts with real transactions and real
+    names" filter the phase spec calls for.
+    """
+    import duckdb
+
+    if not os.path.exists(serving_db_path):
+        raise ValidationError(
+            f"Serving DB không tìm thấy tại {serving_db_path} — cần chạy dbt build trước khi refresh __REF"
+        )
+    conn = duckdb.connect(serving_db_path, read_only=True)
+    try:
+        rows = conn.execute("""
+            SELECT DISTINCT
+                fcm.offset_account AS account_code,
+                fcm.direction,
+                dga.account_name,
+                dga.parent_account_code,
+                dga.parent_account_name
+            FROM fact_cash_movement fcm
+            JOIN dim_gl_account dga ON dga.account_code = fcm.offset_account
+            WHERE NOT fcm.is_internal_transfer
+              AND dga.account_name != 'TK ' || dga.account_code
+        """).fetchall()
+        return [
+            {
+                "account_code": r[0], "direction": r[1], "account_name": r[2],
+                "parent_account_code": r[3], "parent_account_name": r[4],
+            }
+            for r in rows
+        ]
+    finally:
+        conn.close()
+
+
 def _fetch_reserve_status_from_duckdb(serving_db_path: str) -> list:
     """Query mart_cashflow_reserve_status for has-a-deadline reserve items."""
     import duckdb

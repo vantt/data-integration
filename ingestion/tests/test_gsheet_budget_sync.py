@@ -644,6 +644,118 @@ Chi Không Tồn Tại,Chi,recurring,,,,,"1,000 ₫"
         sync.write_suggestions_to_sheet(target_month="2026-08-01", dry_run=True)
 
 
+# ---------------------------------------------------------------------------
+# __REF account dropdown refresh (plans/260709-1415-budget-account-level-remap/phase-02)
+# ---------------------------------------------------------------------------
+
+def test_build_ref_rows_emits_child_and_parent_rows_with_shared_width():
+    accounts = [
+        {"account_code": "3383", "direction": "outflow", "account_name": "Bảo hiểm xã hội",
+         "parent_account_code": "338", "parent_account_name": "Phải trả phải nộp khác"},
+        {"account_code": "111", "direction": "inflow", "account_name": "Tiền mặt",
+         "parent_account_code": None, "parent_account_name": None},
+    ]
+    rows = sync.build_ref_rows(accounts)
+    # width = len("3383") = 4, the widest code in the whole list -> "338"/"111" padded to 4
+    assert ("Chi", " 338  Phải trả phải nộp khác") in rows
+    assert ("Chi", "3383  Bảo hiểm xã hội") in rows
+    assert ("Thu", " 111  Tiền mặt") in rows
+    assert len(rows) == 3
+
+
+def test_build_ref_rows_dedupes_shared_parent_across_multiple_children():
+    accounts = [
+        {"account_code": "6421", "direction": "outflow", "account_name": "CP bán hàng A",
+         "parent_account_code": "642", "parent_account_name": "Chi phí bán hàng & QLDN"},
+        {"account_code": "6422", "direction": "outflow", "account_name": "CP bán hàng B",
+         "parent_account_code": "642", "parent_account_name": "Chi phí bán hàng & QLDN"},
+    ]
+    rows = sync.build_ref_rows(accounts)
+    parent_rows = [r for r in rows if "Chi phí bán hàng & QLDN" in r[1]]
+    assert len(parent_rows) == 1  # deduped, not one row per child
+
+
+def test_build_ref_rows_account_with_no_parent_emits_one_row():
+    accounts = [
+        {"account_code": "111", "direction": "inflow", "account_name": "Tiền mặt",
+         "parent_account_code": None, "parent_account_name": None},
+    ]
+    assert sync.build_ref_rows(accounts) == [("Thu", "111  Tiền mặt")]
+
+
+def test_build_ref_rows_empty_input_returns_empty_list():
+    assert sync.build_ref_rows([]) == []
+
+
+def test_build_ref_rows_same_account_both_directions_no_collision():
+    # e.g. a refund posted through an otherwise-outflow expense account — both directions must
+    # survive as independent selectable rows, not overwrite each other in the dedup dict.
+    accounts = [
+        {"account_code": "3383", "direction": "outflow", "account_name": "Bảo hiểm xã hội",
+         "parent_account_code": None, "parent_account_name": None},
+        {"account_code": "3383", "direction": "inflow", "account_name": "Bảo hiểm xã hội",
+         "parent_account_code": None, "parent_account_name": None},
+    ]
+    rows = sync.build_ref_rows(accounts)
+    assert ("Chi", "3383  Bảo hiểm xã hội") in rows
+    assert ("Thu", "3383  Bảo hiểm xã hội") in rows
+    assert len(rows) == 2
+
+
+def test_build_ref_rows_parent_also_directly_observed_account():
+    # "338" appears both as its own directly-observed account AND as 3383's derived parent —
+    # must dedupe to a single "338" row, not one per source.
+    accounts = [
+        {"account_code": "3383", "direction": "outflow", "account_name": "Bảo hiểm xã hội",
+         "parent_account_code": "338", "parent_account_name": "Phải trả phải nộp khác"},
+        {"account_code": "338", "direction": "outflow", "account_name": "Phải trả phải nộp khác",
+         "parent_account_code": None, "parent_account_name": None},
+    ]
+    rows = sync.build_ref_rows(accounts)
+    assert len(rows) == 2  # "338" + "3383", not 3
+    assert sum("Phải trả phải nộp khác" in label for _direction, label in rows) == 1
+
+
+def test_refresh_ref_accounts_dry_run_never_calls_sheets_api(monkeypatch):
+    monkeypatch.setattr(
+        sync, "_fetch_ref_accounts_from_duckdb",
+        lambda serving_db_path: [
+            {"account_code": "111", "direction": "inflow", "account_name": "Tiền mặt",
+             "parent_account_code": None, "parent_account_name": None},
+        ],
+    )
+    called = {"sheets_api": False}
+    monkeypatch.setattr(sync, "_write_ref_accounts", lambda rows: called.__setitem__("sheets_api", True))
+
+    n = sync.refresh_ref_accounts(dry_run=True)
+
+    assert n == 1
+    assert called["sheets_api"] is False
+
+
+def test_refresh_ref_accounts_writes_computed_rows_when_not_dry_run(monkeypatch):
+    monkeypatch.setattr(
+        sync, "_fetch_ref_accounts_from_duckdb",
+        lambda serving_db_path: [
+            {"account_code": "111", "direction": "inflow", "account_name": "Tiền mặt",
+             "parent_account_code": None, "parent_account_name": None},
+        ],
+    )
+    written = {}
+    monkeypatch.setattr(sync, "_write_ref_accounts", lambda rows: written.setdefault("rows", rows))
+
+    n = sync.refresh_ref_accounts(dry_run=False)
+
+    assert n == 1
+    assert written["rows"] == [("Thu", "111  Tiền mặt")]
+
+
+def test_write_ref_accounts_requires_env_var(monkeypatch):
+    monkeypatch.delenv(gsheet_auth.GOOGLE_SHEETS_SERVICE_ACCOUNT_KEY_PATH_ENV, raising=False)
+    with pytest.raises(RuntimeError, match=gsheet_auth.GOOGLE_SHEETS_SERVICE_ACCOUNT_KEY_PATH_ENV):
+        sync._write_ref_accounts([("Thu", "111  Tiền mặt")])
+
+
 # --- _write_cells_via_sheets_api (credential/dependency guard rails) --------
 
 def test_write_cells_via_sheets_api_requires_env_var(monkeypatch):

@@ -1,6 +1,6 @@
 # Budget Sheet — Account-Level Mapping cho Recurring Lines
 
-**Status:** Phase 1, 3, 4 DONE (2026-07-09). Phase 2 **PARTIAL** (dropdown one-off thủ công đủ dùng, Dagster auto-refresh `__REF` CHƯA làm — xem phase-02, không phải "toàn bộ plan hoàn thành" như bản cũ ghi nhầm). Xem thêm §Addendum cuối file (cột Ghi chú + đảo thứ tự tháng, thêm sau khi phase 1-3 xong) và §Cập nhật trạng thái 2026-07-10 cuối file.
+**Status:** Phase 1, 2, 3, 4 DONE (code) — Phase 2 hoàn thành 2026-07-11 (`refresh_ref_accounts()` + Dagster wiring, xem phase-02). **Chưa deploy/verify thật:** chạy E2E với sheet + DuckDB thật ngoài phạm vi code review (cần credential thật); `.gs` `validateBudgetCrossRows` vẫn cần paste thủ công vào Apps Script editor (chưa tự động hoá deploy .gs). Migration quyết định 2026-07-11: `refresh_ref_accounts()` full-overwrite `__REF` — bất kỳ recurring row nào còn dùng cashflow_line cũ sẽ fail validate sau lần chạy đầu, phải remap sang account-code trước. Xem thêm §Addendum cuối file (cột Ghi chú + đảo thứ tự tháng, thêm sau khi phase 1-3 xong) và §Cập nhật trạng thái 2026-07-10 cuối file.
 **Bối cảnh:** Thảo luận thiết kế 2026-07-09 (không có report riêng — nội dung đầy đủ nằm trong các phase file). Mở rộng `plans/archive/260702-1727-misa-cashflow-budget-planner` (đặc biệt phase-06) sau khi phát hiện `cashflow_line` (bucket ~20 giá trị tự chế trong `dim_gl_account.sql`) quá thô để finance track chi tiết — xem `docs/analytics-handbook/domains/finance.md` dòng "cashflow_line ... provisional — needs finance sign-off", tài liệu này chính là sign-off đó.
 
 ## Mục tiêu
@@ -39,7 +39,7 @@
 | # | Phase | File | Phụ thuộc |
 |---|-------|------|-----------|
 | 1 | Account taxonomy + BvA join redesign | `phase-01-account-taxonomy-and-join.md` | **DONE 2026-07-09** |
-| 2 | `__REF` machine-published dropdown | `phase-02-sheet-ref-dropdown-writeback.md` | **PARTIAL** — Phase 1 (cần `dim_gl_account` mới) |
+| 2 | `__REF` machine-published dropdown | `phase-02-sheet-ref-dropdown-writeback.md` | **DONE (code) 2026-07-11** — Phase 1 (cần `dim_gl_account` mới) |
 | 3 | Sync validation: parse + mutual-exclusivity + Lark reject | `phase-03-sync-validation-mutual-exclusivity-notify.md` | **DONE 2026-07-09** |
 | 4 | Orphan-actual report | `phase-04-orphan-actual-report.md` | **DONE 2026-07-09** |
 

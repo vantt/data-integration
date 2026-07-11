@@ -272,6 +272,11 @@ def budget_sheet_sync_asset(context):
     seed_cash_allocation_policy.csv) so the nightly `dbt build` picks them up. Scheduled at
     02:30 ICT, 30 min before the nightly dbt build (03:00 ICT).
 
+    Runs refresh_ref_accounts() FIRST — regenerates the hidden __REF tab's account-based
+    dropdown rows from dim_gl_account/fact_cash_movement (phase-02) — so the BUDGET_ITEMS
+    read below validates against the freshest account list. A refresh failure aborts the whole
+    asset before touching BUDGET_ITEMS (fail loud, not silently stale).
+
     Validation is strict and fails loud: any bad sheet structure, a recurring line not
     found in the hidden __REF tab, or an ALLOCATION_POLICY gap/overlap/missing-remainder
     aborts the whole sync — neither seed file is touched. Writes to ingestion_health via
@@ -286,6 +291,8 @@ def budget_sheet_sync_asset(context):
     try:
         try:
             os.chdir(DLT_DIR)
+            n_ref = gsheet_budget_sync.refresh_ref_accounts(dry_run=False)
+            context.log.info(f"__REF refreshed: {n_ref} row(s).")
             gsheet_budget_sync.run()
         finally:
             os.chdir(cwd)
