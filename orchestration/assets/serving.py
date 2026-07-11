@@ -116,14 +116,18 @@ def build_serving_db(context: AssetExecutionContext):
         for w in warnings:
             context.log.warning(f"⚠️ {w}")
 
-    # Schema drift — new table folder appeared. Raise to trigger Lark alert
-    # so operator knows to run bootstrap_serving_views.py manually.
+    # Schema drift — either a new table folder appeared, or an existing
+    # column's TYPE changed between rolling snapshots (refresh_rolling.py
+    # checks both). Raise to trigger Lark alert so an operator investigates —
+    # the specific case is in the marker text itself (see `drifts` below).
     drifts = [line for line in output_lines if _SCHEMA_DRIFT_RE.search(line)]
     if drifts:
         raise Exception(
-            "Schema drift detected — new table folders in rolling/. "
-            "Run `docker compose exec data_platform python "
-            "scripts/provisioning/bootstrap_serving_views.py` to create views. "
+            "Schema drift detected in rolling/ — new table folder, or a "
+            "column's type changed. If a new table: run `docker compose exec "
+            "data_platform python scripts/provisioning/bootstrap_serving_views.py` "
+            "to create its view. If a column type changed: verify the affected "
+            "Metabase view/cards before trusting them. "
             f"Markers: {drifts}"
         )
 
