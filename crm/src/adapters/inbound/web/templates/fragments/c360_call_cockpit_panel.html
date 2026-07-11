@@ -1308,6 +1308,15 @@
     if (DRAFT.contact_outcome) {
       showPhase('t2');
       restoreOutcomeSelection(DRAFT.contact_outcome);
+      // s14StripEndCall() (the manual T1→T2 path) fills the note-summary line
+      // from the live textarea; this reload-resume path skipped straight to
+      // T2 and never did the same, leaving the summary permanently blank
+      // whenever a page reload happens after an outcome was already chosen.
+      var summary = $('s14-strip-notesummary');
+      if (summary && DRAFT.body) {
+        var v = DRAFT.body;
+        summary.textContent = '"' + v.slice(0, 60) + (v.length > 60 ? '…' : '') + '"';
+      }
       var oc = $('s14-strip-order-code');
       if (oc && DRAFT.related_order_code) oc.value = DRAFT.related_order_code;
     } else {
