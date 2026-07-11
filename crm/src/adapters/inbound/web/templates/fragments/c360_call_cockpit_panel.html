@@ -798,14 +798,23 @@
   </div>{# /.s14-frame #}
   </div>{# /#s14-content #}
 
-  {# ── DISPOSITION STRIP v2 (§disposition_strip, phase-03) — replaces the old
-     static outcome_bar + s14OpenOutcome (M08-per-click) ENTIRELY, no dual code
-     path kept. Sticky bottom, single fragment, 4 sub-blocks shown/hidden by JS
-     (T0 idle → T1 in-call → T2 disposition, sheet mọc LÊN TRÊN ~180px → T3
-     saved, no auto-advance). "Phương án B" (takeover of the left talk-track
-     column while the call is still live) was considered and rejected — see
-     ux-design report mục IV.b (breaks the eye-anchor over 50 calls/week +
-     violates Invariant §9's "only swap your own sub-region"). #}
+  {# ── DISPOSITION STRIP v2 (§disposition_strip, phase-03; T1/T2 merged
+     phase-04, 2026-07-11) — replaces the old static outcome_bar +
+     s14OpenOutcome (M08-per-click) ENTIRELY, no dual code path kept. Sticky
+     bottom, single fragment, 3 sub-blocks shown/hidden by JS (T0 idle → T1
+     in-call + disposition merged, sheet mọc LÊN TRÊN ~180px → T3 saved, no
+     auto-advance). T1 previously split into a separate "in call" (note
+     editable, no pills) and "disposition" (note collapsed to a read-only
+     summary, pills visible) sub-phase toggled by "■ Kết thúc" — user testing
+     found that split actively wrong: editing the note after picking a pill
+     (or vice versa) required bouncing back and forth via "sửa nháp", losing
+     the other half of the UI each time. Merged: note stays a real editable
+     textarea and the pills stay visible for the whole call, no toggle. "Lưu
+     & Khách kế →" is now the only meaningful end-of-call action. "Phương án
+     B" (takeover of the left talk-track column while the call is still live)
+     was considered and rejected — see ux-design report mục IV.b (breaks the
+     eye-anchor over 50 calls/week + violates Invariant §9's "only swap your
+     own sub-region"). #}
   {% set call_identities = [] %}
   {% for idn in (identities or []) %}
     {% if idn.identity_type in ('phone', 'mobile') %}{% set _ = call_identities.append(idn) %}{% endif %}
@@ -859,27 +868,23 @@
       <button class="btn btn--ghost" type="button" onclick="s14StripOpenManual()">⋯ Ghi thủ công</button>
     </div>
 
-    {# ── T1 — in call: timer · draft note (autosave PATCH) · Zalo · Kết thúc #}
-    <div class="s14-strip__phase s14-strip__phase--row" id="s14-strip-t1" hidden>
-      <span class="s14-strip__timer mono" id="s14-strip-timer">00:00</span>
-      <span class="s14-strip__sep" aria-hidden="true">·</span>
-      <textarea class="s14-strip__note" id="s14-strip-note"
-                placeholder="nháp autosave…" aria-label="Ghi chú cuộc gọi" rows="1"
-                oninput="s14StripNoteInput()" onblur="s14StripFlushNote()"></textarea>
-      <label class="s14-strip__zalo">
-        <input type="checkbox" id="s14-strip-zalo" onchange="s14StripZaloToggle(this)"> Zalo
-      </label>
-      <button class="s14-strip__link" type="button" onclick="s14StripOpenDetail()">⋯ Chi tiết</button>
-      <button class="btn btn--danger btn--sm" type="button" onclick="s14StripEndCall()">■ Kết thúc</button>
-    </div>
-
-    {# ── T2 — disposition (2 rows): row1 = timer + note summary + Lưu; row2 =
-       7 outcome pills. Pills needing more info open the sheet below. ──────── #}
-    <div class="s14-strip__phase" id="s14-strip-t2" hidden>
+    {# ── T1 — merged in-call + disposition (phase-04, per user decision
+       2026-07-11): note stays a real editable textarea AND the 7 outcome
+       pills stay visible/pickable for the whole call, no toggle between
+       "editing" and "picking outcome" anymore. Row1 = timer + note + Zalo +
+       Chi tiết + Lưu; row2 = pills. "■ Kết thúc" removed — Lưu & Khách kế is
+       now the only meaningful end-of-call action (it already finalizes
+       whatever note/outcome state is current; a separate "call ended" toggle
+       had no distinct effect once note+pills no longer swap out). #}
+    <div class="s14-strip__phase" id="s14-strip-t1" hidden>
       <div class="s14-strip__row1">
-        <span class="s14-strip__timer mono" id="s14-strip-timer2">00:00</span>
-        <span class="s14-strip__notesummary" id="s14-strip-notesummary"></span>
-        <button class="s14-strip__link" type="button" onclick="s14StripEditNote()">sửa nháp</button>
+        <span class="s14-strip__timer mono" id="s14-strip-timer">00:00</span>
+        <textarea class="s14-strip__note" id="s14-strip-note"
+                  placeholder="nháp autosave…" aria-label="Ghi chú cuộc gọi" rows="1"
+                  oninput="s14StripNoteInput()" onblur="s14StripFlushNote()"></textarea>
+        <label class="s14-strip__zalo">
+          <input type="checkbox" id="s14-strip-zalo" onchange="s14StripZaloToggle(this)"> Zalo
+        </label>
         <button class="s14-strip__link" type="button" onclick="s14StripOpenDetail()">⋯ Chi tiết</button>
         <button class="btn btn--primary s14-strip__save" id="s14-strip-save-btn" type="button"
                 onclick="s14StripSave()" disabled>Lưu &amp; Khách kế →</button>
@@ -996,7 +1001,7 @@
   function $(id) { return document.getElementById(id); }
 
   function showPhase(phase) {
-    ['t0', 't1', 't2', 't3'].forEach(function (p) {
+    ['t0', 't1', 't3'].forEach(function (p) {
       var el = $('s14-strip-' + p);
       if (el) el.hidden = (p !== phase);
     });
@@ -1012,7 +1017,6 @@
     var sec = Math.max(0, Math.floor((Date.now() - S.startedAtMs) / 1000));
     S.lastDisplayedDuration = fmtMMSS(sec);
     var t1 = $('s14-strip-timer'); if (t1) t1.textContent = S.lastDisplayedDuration;
-    var t2 = $('s14-strip-timer2'); if (t2) t2.textContent = S.lastDisplayedDuration;
   }
   function startTimer() { stopTimer(); tickTimer(); S.timerHandle = setInterval(tickTimer, 1000); }
   function stopTimer() { if (S.timerHandle) { clearInterval(S.timerHandle); S.timerHandle = null; } }
@@ -1116,19 +1120,6 @@
     patchDraft({ zalo_connected: cb.checked ? '1' : '0' });
   };
 
-  // ── T1 → T2 ─────────────────────────────────────────────────────────────
-  window.s14StripEndCall = function () {
-    window.s14StripFlushNote();
-    var ta = $('s14-strip-note');
-    var summary = $('s14-strip-notesummary');
-    if (summary) {
-      var v = ta ? ta.value : '';
-      summary.textContent = v ? ('"' + v.slice(0, 60) + (v.length > 60 ? '…' : '') + '"') : '';
-    }
-    showPhase('t2');
-    if (S.chosenOutcome) restoreOutcomeSelection(S.chosenOutcome);
-  };
-
   function highlightPill(key) {
     document.querySelectorAll('#s14-strip-pills .s14-pill').forEach(function (b) {
       var on = b.getAttribute('data-outcome') === key;
@@ -1211,15 +1202,7 @@
     updateSaveEnabled();
   };
 
-  window.s14StripEditNote = function () {
-    // Reopen the note for editing from T2 — jump back to T1's textarea
-    // without touching the running draft/timer.
-    showPhase('t1');
-    var ta = $('s14-strip-note');
-    if (ta) ta.focus();
-  };
-
-  // ── T2 → T3 (finalize) — no auto-advance after save (chốt UX). ─────────
+  // ── T1 → T3 (finalize) — no auto-advance after save (chốt UX). ─────────
   window.s14StripCanSave = outcomeRequirementMet;
   window.s14StripSave = function () {
     if (!S.draftId || !outcomeRequirementMet()) return;
@@ -1277,12 +1260,13 @@
   };
 
   // ── Keyboard shortcuts: 1-7 pick outcome pill (display order), Enter =
-  // "Lưu & Khách kế →" when a valid outcome is selected. Only active in T2;
-  // never fires while typing (document.activeElement guard). This is the
-  // ONLY global keydown listener in this fragment — s14ToggleTP/s14ToggleObj
-  // bind via onclick, so there is no conflict to guard against. ──────────
+  // "Lưu & Khách kế →" when a valid outcome is selected. Only active in T1
+  // (the merged in-call+disposition view); never fires while typing
+  // (document.activeElement guard). This is the ONLY global keydown listener
+  // in this fragment — s14ToggleTP/s14ToggleObj bind via onclick, so there is
+  // no conflict to guard against. ──────────────────────────────────────────
   document.addEventListener('keydown', function (e) {
-    if (!root || root.getAttribute('data-phase') !== 't2') return;
+    if (!root || root.getAttribute('data-phase') !== 't1') return;
     var ae = document.activeElement;
     var typing = ae && (ae.tagName === 'TEXTAREA' || ae.tagName === 'INPUT' || ae.isContentEditable);
     if (typing) return;
@@ -1295,9 +1279,11 @@
   });
 
   // ── Init: mid-call reload recovery — an open draft for (staff, party)
-  // resumes T1 (no outcome yet) or T2 (outcome chosen before the reload)
+  // resumes T1 (the merged in-call+disposition view, note + pills both live)
   // instead of forcing T0's "Gọi" click again; never creates a 2nd draft
-  // (create_draft is idempotent server-side too — belt & suspenders). ────
+  // (create_draft is idempotent server-side too — belt & suspenders). Since
+  // T1 always shows both note and pills now, there's no separate "which sub-
+  // phase to resume into" branch — just restore whatever was already chosen. #}
   (function initPhase() {
     if (!DRAFT) { showPhase('t0'); return; }
     var noteTa = $('s14-strip-note');
@@ -1305,22 +1291,11 @@
     var zaloCb = $('s14-strip-zalo');
     if (zaloCb) zaloCb.checked = !!DRAFT.zalo_connected;
     startTimer();
+    showPhase('t1');
     if (DRAFT.contact_outcome) {
-      showPhase('t2');
       restoreOutcomeSelection(DRAFT.contact_outcome);
-      // s14StripEndCall() (the manual T1→T2 path) fills the note-summary line
-      // from the live textarea; this reload-resume path skipped straight to
-      // T2 and never did the same, leaving the summary permanently blank
-      // whenever a page reload happens after an outcome was already chosen.
-      var summary = $('s14-strip-notesummary');
-      if (summary && DRAFT.body) {
-        var v = DRAFT.body;
-        summary.textContent = '"' + v.slice(0, 60) + (v.length > 60 ? '…' : '') + '"';
-      }
       var oc = $('s14-strip-order-code');
       if (oc && DRAFT.related_order_code) oc.value = DRAFT.related_order_code;
-    } else {
-      showPhase('t1');
     }
   }());
 
