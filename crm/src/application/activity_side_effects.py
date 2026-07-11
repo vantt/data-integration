@@ -18,17 +18,76 @@ from __future__ import annotations
 
 import logging
 import uuid
-from datetime import datetime, timezone
+from datetime import datetime, timedelta, timezone
 from typing import Optional
 
 from domain.entities.profile import PartyInsight
 
 log = logging.getLogger(__name__)
 
+# Quyết định UX 2026-07-11 (①): outcome cho thấy cuộc gọi KHÔNG thành công (khách
+# không nhấc máy / đang bận) không nên "resolve" tín hiệu như một cuộc gọi thành
+# công — snooze ngắn hạn để action quay lại hàng đợi thay vì dismiss TTL 30 ngày
+# (mất tín hiệu thật). Shared by execute_side_effects() step 7 below AND
+# outcome_resolve_helpers.bulk_resolve() (the /reason/resolve-async "+Nhắn Zalo"
+# follow-up path) so both resolve entry points apply the same gate — see the
+# phase-02 Amendment: without this, that second path silently undid the snooze.
+_NO_CONTACT_OUTCOMES = frozenset({"no_answer", "busy"})
+_NO_CONTACT_SNOOZE_DAYS = 2
+
 
 def parse_id_list(raw: str) -> list[str]:
     """Split a comma-separated id string into non-empty stripped ids."""
     return [s.strip() for s in raw.split(",") if s.strip()]
+
+
+def resolve_actions_and_tasks(
+    action_ids: list[str],
+    task_ids: list[str],
+    action_state,
+    task_svc,
+    contact_outcome: Optional[str],
+    actor_id: Optional[str] = None,
+) -> None:
+    """Outcome-aware bulk resolve — dismiss+done normally, snooze+leave-open for
+    `_NO_CONTACT_OUTCOMES`. Shared by execute_side_effects() step 7 and
+    outcome_resolve_helpers.bulk_resolve() so the gate can't be bypassed by
+    routing through the other resolve entry point (phase-02 Amendment).
+
+    contact_outcome ∈ {"no_answer", "busy"} → snooze `action_ids` via
+    `action_state.snooze()`, `_NO_CONTACT_SNOOZE_DAYS` days out. `task_ids` are
+    left untouched (claimed ownership should survive a failed contact attempt).
+
+    Any other outcome (including None/empty) → prior behavior: dismiss
+    `action_ids` (TTL 30d) and transition `task_ids` to "done".
+
+    Never raises — each item is independently try/except-logged.
+    """
+    uid: Optional[str] = actor_id or None
+    outcome = contact_outcome or ""
+    if outcome in _NO_CONTACT_OUTCOMES:
+        until_date = (
+            datetime.now(timezone.utc) + timedelta(days=_NO_CONTACT_SNOOZE_DAYS)
+        ).strftime("%Y-%m-%d")
+        if action_state is not None:
+            for aid in action_ids:
+                try:
+                    action_state.snooze(aid, until_date, user_id=uid)
+                except Exception as exc:
+                    log.warning("resolve: snooze action %s: %s", aid, exc)
+    else:
+        if action_state is not None:
+            for aid in action_ids:
+                try:
+                    action_state.dismiss(aid, user_id=uid)
+                except Exception as exc:
+                    log.warning("resolve: dismiss action %s: %s", aid, exc)
+        if task_svc is not None:
+            for tid in task_ids:
+                try:
+                    task_svc.transition_status(tid, "done")
+                except Exception as exc:
+                    log.warning("resolve: transition task %s: %s", tid, exc)
 
 
 def execute_side_effects(
@@ -135,6 +194,8 @@ def execute_side_effects(
                     "due_at": callback_at,
                     "source": "manual",
                     "priority": 0,
+                    "assignee_user_id": actor_id,
+                    "created_by": actor_id,
                 })
             except Exception as exc:
                 log.warning("side_effects: create_callback_task %s: %s", party_id, exc)
@@ -149,6 +210,8 @@ def execute_side_effects(
                     "due_at": schedule_followup_at,
                     "source": "manual",
                     "priority": 0,
+                    "assignee_user_id": actor_id,
+                    "created_by": actor_id,
                 })
             except Exception as exc:
                 log.warning("side_effects: schedule_followup %s: %s", party_id, exc)
@@ -164,20 +227,12 @@ def execute_side_effects(
     # 7. Bulk-resolve (dismiss actions + complete tasks) from the cockpit outcome
     # bar's rail — skip any task_id already handled by step 6 above so a task
     # showing up in both complete_task_ids and resolve_task_ids is not
-    # transitioned twice.
+    # transitioned twice. Outcome-aware (①): no_answer/busy snoozes instead of
+    # dismissing and leaves remaining_task_ids open — see resolve_actions_and_tasks.
     skip_ids = set(complete_task_ids)
     remaining_task_ids = [t for t in resolve_task_ids if t not in skip_ids]
     if resolve_action_ids or remaining_task_ids:
-        uid: Optional[str] = actor_id or None
-        if action_state is not None:
-            for aid in resolve_action_ids:
-                try:
-                    action_state.dismiss(aid, user_id=uid)
-                except Exception as exc:
-                    log.warning("side_effects: dismiss action %s: %s", aid, exc)
-        if task_svc is not None:
-            for tid in remaining_task_ids:
-                try:
-                    task_svc.transition_status(tid, "done")
-                except Exception as exc:
-                    log.warning("side_effects: bulk-resolve transition task %s: %s", tid, exc)
+        resolve_actions_and_tasks(
+            resolve_action_ids, remaining_task_ids, action_state, task_svc,
+            getattr(activity, "contact_outcome", None), actor_id,
+        )

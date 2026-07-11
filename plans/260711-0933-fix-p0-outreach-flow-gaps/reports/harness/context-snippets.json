@@ -1,0 +1,42 @@
+{
+  "skill": "ck:cook",
+  "mode": "auto",
+  "task": "Fix 4 P0 UX-audit findings in CRM worklist->call->log->callback loop",
+  "acceptanceCriteria": [
+    "Toan bo pytest hien co xanh",
+    "Bam Dat lich/Tao task tu cockpit S14 giua cuoc goi -> Luu xong van o cockpit, modal dong, timer/draft khong mat",
+    "Bam quick-log tu S01 Worklist -> Luu xong van o worklist, danh sach tu refresh",
+    "Log outcome no_answer/busy trong strip -> action snooze N ngay, KHONG dismiss TTL 30 ngay; claimed task lien quan khong tu done",
+    "Sau finalize voi create_callback_task/schedule_followup_at -> task moi co assignee_user_id = nguoi vua goi, xuat hien trong Da Claim",
+    "Cockpit cho khach KHONG co approach script -> tick da noi, thu thap thong tin, tag chip deu phan hoi binh thuong"
+  ],
+  "touchpoints": [
+    "crm/src/adapters/inbound/web/screens/modals/screen_modal_task.py",
+    "crm/src/adapters/inbound/web/screens/customer360/screen_customer_360_activity.py",
+    "crm/src/adapters/inbound/web/screens/customer360/outcome_resolve_helpers.py",
+    "crm/src/application/activity_side_effects.py",
+    "crm/src/adapters/inbound/web/templates/fragments/modal_m05_create_task.html",
+    "crm/src/adapters/inbound/web/templates/fragments/modal_log_activity.html",
+    "crm/src/adapters/inbound/web/templates/worklist.html",
+    "crm/src/adapters/inbound/web/templates/fragments/worklist_fragment.html",
+    "crm/src/adapters/inbound/web/templates/fragments/_wl_row.html",
+    "crm/src/adapters/inbound/web/templates/fragments/c360_call_cockpit_panel.html"
+  ],
+  "publicContracts": [
+    "POST /customers/{party_id}/tasks: new optional Form field return_to (default redirect, additive)",
+    "PATCH /tasks/{task_id}/edit: new optional Form field return_to (additive)",
+    "POST /customers/{party_id}/log-activity: new optional Form field return_to (additive, source= already existed)",
+    "PATCH /api/activities/{activity_id}: new optional Form field return_to (additive, only affects edit_mode=1 branch)",
+    "POST /customers/{party_id}/reason/resolve-async: new optional Form field contact_outcome (additive, defaults preserve prior dismiss+done behavior)",
+    "worklist-container hx-trigger: claimSuccess (pre-existing, still unfired) + new worklistRefresh event"
+  ],
+  "blastRadius": [
+    "S01 Worklist create-task/quick-log flows",
+    "S14 Call Cockpit modal-open flows (M05/M08) and rail/collect JS for no-script customers",
+    "S03 Customer 360 M05/M08 flows (unchanged path, regression-checked)",
+    "S15 Task Detail edit-activity flow (handle_patch_activity)",
+    "P01 dismiss-session / +Nhan Zalo follow-up resolve path",
+    "execute_side_effects() bulk-resolve step 7 and callback/follow-up task creation (steps 4-5)"
+  ],
+  "scoutSummary": "4 independent phases implemented across 2 parallel waves (Wave1: phase-01 modal return-to-invoker + phase-03 callback task assignee, no file overlap; Wave2: phase-02 outcome-aware resolve + phase-04 cockpit JS unconditional, no file overlap) after verifying pairwise file-conflict graph (1-2, 1-4, 2-3 conflict; 1-3, 2-4, 3-4 safe). Plan already red-team reviewed in a prior session (15 findings adjudicated) before this cook run; 2 of those findings were ported into this plan as amendments (phase-01: handle_patch_activity return_to gap + worklist-header no-party 404 flag; phase-02: /reason/resolve-async bypass gate)."
+}

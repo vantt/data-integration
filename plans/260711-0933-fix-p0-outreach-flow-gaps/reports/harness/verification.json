@@ -1,0 +1,57 @@
+{
+  "commands": [
+    {
+      "command": "docker compose exec -T crm sh -c \"cd /app/crm/src && python -m pytest tests/test_activity_disposition_api_routes.py tests/test_task_service_title_fallback.py -q\"",
+      "status": "pass",
+      "exitCode": 0,
+      "timestamp": "2026-07-11T03:10:00.000Z",
+      "summary": "Phase 3 targeted tests: 19 passed."
+    },
+    {
+      "command": "docker compose exec -T crm sh -c \"cd /app/crm/src && python -m pytest tests/test_quick_outcome_cockpit_post.py tests/test_bulk_resolve_endpoint.py -q\"",
+      "status": "pass",
+      "exitCode": 0,
+      "timestamp": "2026-07-11T03:15:00.000Z",
+      "summary": "Phase 1 targeted tests: 14/14 + 5/5 passed."
+    },
+    {
+      "command": "docker compose exec -T crm sh -c \"cd /app/crm/src && python -m pytest tests/test_disposition_strip_v2.py tests/test_claim_context_snooze_r14.py -q\"",
+      "status": "pass",
+      "exitCode": 0,
+      "timestamp": "2026-07-11T03:21:00.000Z",
+      "summary": "Phase 4 targeted tests: 30 passed, 1 skipped."
+    },
+    {
+      "command": "docker compose exec -T crm sh -c \"cd /app/crm/src && python -m pytest tests/test_bulk_resolve_endpoint.py tests/test_claim_context_snooze_r14.py tests/test_activity_disposition_api_routes.py tests/test_disposition_strip_v2.py tests/test_outcome_bulk_resolve.py -q\"",
+      "status": "pass",
+      "exitCode": 0,
+      "timestamp": "2026-07-11T03:26:00.000Z",
+      "summary": "Phase 2 targeted tests: 83 passed, 1 skipped."
+    },
+    {
+      "command": "docker compose exec -T crm sh -c \"cd /app/crm/src && python -m pytest -q\"",
+      "status": "pass",
+      "exitCode": 0,
+      "timestamp": "2026-07-11T03:27:00.000Z",
+      "summary": "Full suite after all 4 phases (Phase 2 agent's own final run): 1075 passed, 1 skipped."
+    },
+    {
+      "command": "docker compose exec -T crm sh -c \"cd /app/crm/src && python -m pytest -q\"",
+      "status": "pass",
+      "exitCode": 0,
+      "timestamp": "2026-07-11T03:30:00.000Z",
+      "summary": "Orchestrator independent re-run after all 4 phases combined: 1075 passed, 1 skipped, 49 warnings (all pre-existing Starlette TemplateResponse deprecation warnings, unrelated to this change)."
+    },
+    {
+      "command": "code-reviewer subagent full suite re-run + grep-based seam verification",
+      "status": "pass",
+      "exitCode": 0,
+      "timestamp": "2026-07-11T03:35:00.000Z",
+      "summary": "Independently confirmed 1075 passed/1 skipped matches orchestrator's number; grep-confirmed no duplicate JS function definitions; grep-confirmed source=manual unchanged; git log --follow confirmed worklist-header no-party 404 predates this diff (commit 3b457c85)."
+    }
+  ],
+  "beforeAfter": {
+    "before": "M05/M08 unconditional HX-Redirect breaks cockpit/worklist context; bulk-resolve dismisses/completes regardless of contact_outcome (no_answer/busy burn 30d signal, including via the +Nhan Zalo bypass path); callback/follow-up tasks created without assignee_user_id (land in unowned queue); cockpit rail/collect JS undefined for script=None customers plus a standing S.draftId ReferenceError bug",
+    "after": "return_to=stay lets M05/M08 close in place without navigating away from cockpit/worklist; execute_side_effects step 7 AND /reason/resolve-async both snooze (not dismiss) on no_answer/busy via one shared gate; callback/follow-up tasks get assignee_user_id=created_by=actor_id, source unchanged; cockpit rail/collect functions unconditionally defined, S.draftId bug fixed"
+  }
+}

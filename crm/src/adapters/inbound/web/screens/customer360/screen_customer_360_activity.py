@@ -94,6 +94,7 @@ def register_activity_routes(
         prefill_body: str = "",
         activity_id: str = "",
         draft_activity_id: str = "",
+        return_to: str = "redirect",
     ) -> dict:
         # Normalize legacy mode names → unified 'log'.
         if mode not in ("log", "edit_note", "note_only", "edit_activity"):
@@ -177,6 +178,9 @@ def register_activity_routes(
             # a hidden field so log-activity finalizes the draft instead of
             # inserting a fresh row (see handle_log_activity's draft_id branch).
             "draft_activity_id": draft_activity_id,
+            # P0 (phase-01): threaded through to the form's hidden field so the
+            # modal returns to its invoker (stay) instead of always redirecting.
+            "return_to": return_to,
         }
 
     @router.get("/modals/m08", response_class=HTMLResponse)
@@ -192,12 +196,13 @@ def register_activity_routes(
         prefill_body: str = "",
         activity_id: str = "",
         draft_activity_id: str = "",
+        return_to: str = "redirect",
     ) -> Response:
         return templates.TemplateResponse(
             "fragments/modal_log_activity.html",
             _m08_ctx(request, party_id, mode, note_id, party_name, task_id,
                      resolve_action_ids, resolve_task_ids, prefill_body, activity_id,
-                     draft_activity_id),
+                     draft_activity_id, return_to),
         )
 
     @router.get("/customers/{party_id}/modal/log-activity", response_class=HTMLResponse)
@@ -211,11 +216,13 @@ def register_activity_routes(
         resolve_task_ids: str = "",
         prefill_body: str = "",
         activity_id: str = "",
+        return_to: str = "redirect",
     ) -> Response:
         return templates.TemplateResponse(
             "fragments/modal_log_activity.html",
             _m08_ctx(request, party_id, mode, "", party_name, task_id,
-                     resolve_action_ids, resolve_task_ids, prefill_body, activity_id),
+                     resolve_action_ids, resolve_task_ids, prefill_body, activity_id,
+                     return_to=return_to),
         )
 
     @router.post("/customers/{party_id}/log-activity", response_class=HTMLResponse)
@@ -260,6 +267,10 @@ def register_activity_routes(
         # (standalone M08, quick-outcome buttons, old clients) → identical to the
         # pre-P1 fresh-insert behaviour below.
         draft_activity_id: str = Form(default=""),
+        # P0 (phase-01): "stay" keeps the invoker in place (worklist row /
+        # cockpit) instead of the fixed HX-Redirect below; default preserves
+        # the pre-existing behaviour for every caller that doesn't send it.
+        return_to: str = Form(default="redirect"),
     ) -> Response:
         current_user = getattr(request.state, "current_user", None)
         actor_id: Optional[str] = current_user.user_id if current_user else None
@@ -383,6 +394,8 @@ def register_activity_routes(
                 '</div>'
             )
             return HTMLResponse(content=frag)
+        if return_to == "stay":
+            return HTMLResponse("", status_code=200, headers={"HX-Trigger": '{"worklistRefresh": true}'})
         return HTMLResponse(content="", headers={"HX-Redirect": f"/customers/{party_id}?tab=timeline"})
 
     # ── A-S14-026: Async-resolve (Zalo / email without a call) ───────────────
@@ -395,15 +408,27 @@ def register_activity_routes(
         action_id: str = Form(default=""),
         task_id: str = Form(default=""),
         note: str = Form(default=""),
+        # P0 (phase-02 Amendment): the call cockpit's "+Nhắn Zalo" follow-up
+        # button (s14StripZaloFollowup) fires this AFTER a call outcome was
+        # already logged in the strip — without threading that outcome through,
+        # this endpoint used to dismiss/complete unconditionally regardless of
+        # outcome, undoing the no_answer/busy snooze execute_side_effects step 7
+        # had just applied. Sourced client-side from S.chosenOutcome.
+        contact_outcome: str = Form(default=""),
     ) -> Response:
         """Log an async outbound contact (Zalo/email) and resolve the given rail item.
 
         Endpoint: POST /customers/{party_id}/reason/resolve-async
         Form fields:
-          channel   — "zalo" | "email" (required; determines activity_type)
-          action_id — optional; if set → dismiss via action_state
-          task_id   — optional; if set → transition_status(tid, 'done')
-          note      — optional free-text note logged in the activity body
+          channel         — "zalo" | "email" (required; determines activity_type)
+          action_id       — optional; if set → dismiss (or snooze) via action_state
+          task_id         — optional; if set → transition_status(tid, 'done')
+                             (skipped/left open when contact_outcome is a
+                             no-contact outcome — see resolve_actions_and_tasks)
+          note            — optional free-text note logged in the activity body
+          contact_outcome — optional; the outcome that triggered this follow-up
+                             (e.g. "no_answer") — gates dismiss-vs-snooze the same
+                             way execute_side_effects() step 7 does.
 
         Returns 204 (no content) — HTMX should target the specific rail item and
         swap it out; the cockpit panel is NOT re-rendered to preserve call state.
@@ -443,6 +468,7 @@ def register_activity_routes(
             action_state=action_state,
             task_svc=task_svc,
             actor_id=actor_id or "",
+            contact_outcome=contact_outcome.strip() or None,
         )
 
         return Response(status_code=204)
@@ -546,6 +572,10 @@ def register_activity_routes(
         # trail (edited_at/edited_by/previous_outcome) + redirects back to
         # timeline instead of returning 204 (matches every other M08 submit).
         edit_mode: str = Form(default=""),
+        # P0 (phase-01 amendment): edit_activity callers opened with
+        # return_to=stay (e.g. cockpit's "⋯ Chi tiết") must NOT be redirected
+        # away — default "redirect" keeps the pre-existing edit_mode behaviour.
+        return_to: str = Form(default="redirect"),
     ) -> Response:
         """Autosave a subset of fields onto a draft (or edit an existing activity
         via M08 edit_activity mode). No side effects — see finalize for those."""
@@ -584,6 +614,8 @@ def register_activity_routes(
             return HTMLResponse(str(exc), status_code=422)
 
         if edit_mode == "1":
+            if return_to == "stay":
+                return HTMLResponse("", status_code=200, headers={"HX-Trigger": '{"activitySaved": true}'})
             return HTMLResponse(content="", headers={"HX-Redirect": f"/customers/{activity.party_id}?tab=timeline"})
         return Response(status_code=204)
 

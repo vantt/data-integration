@@ -21,6 +21,7 @@ for _p in (_REPO_ROOT, _PYTHON_ROOT):
         sys.path.insert(0, _p)
 
 from application.activity_service import ActivityService  # noqa: E402
+from application.activity_side_effects import execute_side_effects  # noqa: E402
 from adapters.outbound.sqlite.activity_repository import SQLiteActivityRepository  # noqa: E402
 import adapters.inbound.web.screens.customer360.screen_customer_360_activity as mod  # noqa: E402
 
@@ -303,3 +304,197 @@ class TestLegacyLogActivityDraftAdopt:
         # Fresh-insert path never sets status/started_at — NULL reads as "final".
         assert rows[0]["status"] is None
         assert rows[0]["contact_duration_s"] is None
+
+
+# ---------------------------------------------------------------------------
+# execute_side_effects — callback/follow-up task assignee (phase-03 P0 #3)
+# ---------------------------------------------------------------------------
+
+class TestSideEffectsTaskAssignee:
+    """Callback (step 4) and follow-up (step 5) tasks must be assigned to the
+    actor who logged the call, not left unassigned in Hàng Đợi Chung."""
+
+    def test_callback_task_assigned_to_actor(self):
+        task_svc = MagicMock()
+        execute_side_effects(
+            MagicMock(activity_id="act-cb-1"), "staff-1",
+            party_id="party-cb-1", task_svc=task_svc,
+            create_callback_task=True, callback_at="2026-07-13T10:00:00Z",
+        )
+        task_data = task_svc.create_task.call_args.args[0]
+        assert task_data["assignee_user_id"] == "staff-1"
+        assert task_data["created_by"] == "staff-1"
+        assert task_data["source"] == "manual"
+
+    def test_followup_task_assigned_to_actor(self):
+        task_svc = MagicMock()
+        execute_side_effects(
+            MagicMock(activity_id="act-fu-1"), "staff-2",
+            party_id="party-fu-1", task_svc=task_svc,
+            schedule_followup_at="2026-07-14T09:00:00Z",
+        )
+        task_data = task_svc.create_task.call_args.args[0]
+        assert task_data["assignee_user_id"] == "staff-2"
+        assert task_data["created_by"] == "staff-2"
+        assert task_data["source"] == "manual"
+
+    def test_actor_id_none_leaves_assignee_none(self):
+        """Regression guard: activities without a resolvable actor (e.g. system
+        import) must still create the task, just unassigned — no exception."""
+        task_svc = MagicMock()
+        execute_side_effects(
+            MagicMock(activity_id="act-cb-2"), None,
+            party_id="party-cb-2", task_svc=task_svc,
+            create_callback_task=True, callback_at="2026-07-13T10:00:00Z",
+        )
+        task_data = task_svc.create_task.call_args.args[0]
+        assert task_data["assignee_user_id"] is None
+        assert task_data["created_by"] is None
+
+
+# ---------------------------------------------------------------------------
+# execute_side_effects — step 7 bulk-resolve outcome-aware snooze (phase-02 ①)
+# ---------------------------------------------------------------------------
+
+class TestSideEffectsBulkResolveOutcomeAware:
+    """no_answer/busy → snooze (not dismiss), claimed task stays open.
+    Every other outcome → prior dismiss+done behavior, unchanged."""
+
+    def test_no_answer_snoozes_action_and_leaves_task_open(self):
+        action_state = MagicMock()
+        task_svc = MagicMock()
+        execute_side_effects(
+            MagicMock(activity_id="act-na-1", contact_outcome="no_answer"), "staff-1",
+            party_id="party-na-1", action_state=action_state, task_svc=task_svc,
+            resolve_action_ids=["a1"], resolve_task_ids=["t1"],
+        )
+        action_state.snooze.assert_called_once()
+        aid, until_date = action_state.snooze.call_args.args
+        assert aid == "a1"
+        # until_date is "YYYY-MM-DD", ~2 days out — just check format + not today.
+        assert len(until_date) == 10 and until_date.count("-") == 2
+        action_state.dismiss.assert_not_called()
+        task_svc.transition_status.assert_not_called()
+
+    def test_busy_snoozes_action_and_leaves_task_open(self):
+        action_state = MagicMock()
+        task_svc = MagicMock()
+        execute_side_effects(
+            MagicMock(activity_id="act-busy-1", contact_outcome="busy"), "staff-1",
+            party_id="party-busy-1", action_state=action_state, task_svc=task_svc,
+            resolve_action_ids=["a2"], resolve_task_ids=["t2"],
+        )
+        action_state.snooze.assert_called_once_with(
+            "a2", action_state.snooze.call_args.args[1], user_id="staff-1",
+        )
+        action_state.dismiss.assert_not_called()
+        task_svc.transition_status.assert_not_called()
+
+    def test_answered_still_dismisses_and_completes(self):
+        """Control case: unaffected outcomes keep the prior dismiss+done behavior."""
+        action_state = MagicMock()
+        task_svc = MagicMock()
+        execute_side_effects(
+            MagicMock(activity_id="act-ans-1", contact_outcome="answered"), "staff-1",
+            party_id="party-ans-1", action_state=action_state, task_svc=task_svc,
+            resolve_action_ids=["a3"], resolve_task_ids=["t3"],
+        )
+        action_state.dismiss.assert_called_once_with("a3", user_id="staff-1")
+        task_svc.transition_status.assert_called_once_with("t3", "done")
+        action_state.snooze.assert_not_called()
+
+    def test_no_contact_outcome_on_activity_falls_back_to_dismiss(self):
+        """No contact_outcome at all (e.g. MagicMock w/o it set, or None) must not
+        be misread as a no-contact outcome — prior behavior preserved."""
+        action_state = MagicMock()
+        task_svc = MagicMock()
+        execute_side_effects(
+            MagicMock(activity_id="act-none-1", contact_outcome=None), "staff-1",
+            party_id="party-none-1", action_state=action_state, task_svc=task_svc,
+            resolve_action_ids=["a4"], resolve_task_ids=["t4"],
+        )
+        action_state.dismiss.assert_called_once_with("a4", user_id="staff-1")
+        task_svc.transition_status.assert_called_once_with("t4", "done")
+        action_state.snooze.assert_not_called()
+
+
+# ---------------------------------------------------------------------------
+# POST /customers/{party_id}/reason/resolve-async — outcome gate (phase-02
+# Amendment): the cockpit's "+Nhắn Zalo" follow-up button used to dismiss/
+# complete unconditionally, undoing the snooze execute_side_effects step 7 had
+# just applied for no_answer/busy. Route-level (real ActivityService + DB)
+# coverage that contact_outcome now threads through to the same gate.
+# ---------------------------------------------------------------------------
+
+class TestResolveAsyncOutcomeGate:
+    def test_no_answer_outcome_snoozes_not_dismisses(self, seeded_crm_db):
+        action_state = MagicMock()
+        router_mock, svc, _, task_svc_mock = _register(seeded_crm_db, action_state=action_state)
+        handler = _post_handler(router_mock, 1)
+        party_id = "party-ra-1"
+        _insert_party(seeded_crm_db, party_id)
+        _insert_staff(seeded_crm_db, "staff-1")
+
+        asyncio.run(handler(
+            request=_req("staff-1"), party_id=party_id,
+            channel="zalo", action_id="a1", task_id="", note="",
+            contact_outcome="no_answer",
+        ))
+
+        action_state.snooze.assert_called_once()
+        assert action_state.snooze.call_args.args[0] == "a1"
+        action_state.dismiss.assert_not_called()
+
+    def test_busy_outcome_snoozes_not_dismisses(self, seeded_crm_db):
+        action_state = MagicMock()
+        router_mock, svc, _, task_svc_mock = _register(seeded_crm_db, action_state=action_state)
+        handler = _post_handler(router_mock, 1)
+        party_id = "party-ra-2"
+        _insert_party(seeded_crm_db, party_id)
+        _insert_staff(seeded_crm_db, "staff-1")
+
+        asyncio.run(handler(
+            request=_req("staff-1"), party_id=party_id,
+            channel="zalo", action_id="a2", task_id="", note="",
+            contact_outcome="busy",
+        ))
+
+        action_state.snooze.assert_called_once()
+        action_state.dismiss.assert_not_called()
+
+    def test_answered_outcome_still_dismisses(self, seeded_crm_db):
+        """Control case: unaffected outcomes keep the prior dismiss behavior."""
+        action_state = MagicMock()
+        router_mock, svc, _, task_svc_mock = _register(seeded_crm_db, action_state=action_state)
+        handler = _post_handler(router_mock, 1)
+        party_id = "party-ra-3"
+        _insert_party(seeded_crm_db, party_id)
+        _insert_staff(seeded_crm_db, "staff-1")
+
+        asyncio.run(handler(
+            request=_req("staff-1"), party_id=party_id,
+            channel="zalo", action_id="a3", task_id="", note="",
+            contact_outcome="answered",
+        ))
+
+        action_state.dismiss.assert_called_once_with("a3", user_id="staff-1")
+        action_state.snooze.assert_not_called()
+
+    def test_missing_contact_outcome_defaults_to_dismiss(self, seeded_crm_db):
+        """Old client not yet sending contact_outcome must be unaffected —
+        backward compatible with the pre-amendment endpoint signature."""
+        action_state = MagicMock()
+        router_mock, svc, _, task_svc_mock = _register(seeded_crm_db, action_state=action_state)
+        handler = _post_handler(router_mock, 1)
+        party_id = "party-ra-4"
+        _insert_party(seeded_crm_db, party_id)
+        _insert_staff(seeded_crm_db, "staff-1")
+
+        asyncio.run(handler(
+            request=_req("staff-1"), party_id=party_id,
+            channel="zalo", action_id="a4", task_id="", note="",
+            contact_outcome="",
+        ))
+
+        action_state.dismiss.assert_called_once_with("a4", user_id="staff-1")
+        action_state.snooze.assert_not_called()

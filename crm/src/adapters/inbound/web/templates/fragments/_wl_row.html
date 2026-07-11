@@ -27,22 +27,22 @@
 {% set _task_qs = ('&task_id=' ~ task_id) if task_id else '' %}
   {% if pref_id and pref_id.identity_type in ('phone', 'phone_secondary') %}
   <button class="btn btn--secondary" style="padding:8px 12px"
-          hx-get="/modals/m08?party_id={{ party_id }}&mode=contact_attempt&channel=phone{{ _task_qs }}"
+          hx-get="/modals/m08?party_id={{ party_id }}&mode=contact_attempt&channel=phone{{ _task_qs }}&return_to=stay"
           hx-target="#modal-root" hx-swap="innerHTML"
           title="Gọi điện" onclick="event.stopPropagation()">📞 Gọi</button>
   {% elif pref_id and pref_id.identity_type == 'zalo' %}
   <button class="btn btn--secondary" style="padding:8px 12px"
-          hx-get="/modals/m08?party_id={{ party_id }}&mode=contact_attempt&channel=zalo{{ _task_qs }}"
+          hx-get="/modals/m08?party_id={{ party_id }}&mode=contact_attempt&channel=zalo{{ _task_qs }}&return_to=stay"
           hx-target="#modal-root" hx-swap="innerHTML"
           title="Zalo" onclick="event.stopPropagation()">💬 Zalo</button>
   {% elif pref_id and pref_id.identity_type == 'facebook' %}
   <button class="btn btn--secondary" style="padding:8px 12px"
-          hx-get="/modals/m08?party_id={{ party_id }}&mode=contact_attempt&channel=facebook{{ _task_qs }}"
+          hx-get="/modals/m08?party_id={{ party_id }}&mode=contact_attempt&channel=facebook{{ _task_qs }}&return_to=stay"
           hx-target="#modal-root" hx-swap="innerHTML"
           title="Facebook" onclick="event.stopPropagation()">📘 Facebook</button>
   {% else %}
   <button class="btn btn--secondary" style="padding:8px 12px"
-          hx-get="/modals/m08?party_id={{ party_id }}&mode=contact_attempt{{ _task_qs }}"
+          hx-get="/modals/m08?party_id={{ party_id }}&mode=contact_attempt{{ _task_qs }}&return_to=stay"
           hx-target="#modal-root" hx-swap="innerHTML"
           onclick="event.stopPropagation()">📞 Gọi</button>
   {% endif %}
@@ -285,7 +285,7 @@
     {# Band 0 (overdue) tasks get reschedule + cancel controls #}
     {% if row.band == 0 %}
     <button class="btn btn--ghost" style="padding:8px 10px"
-            hx-get="/modals/m05?task_id={{ t.task_id }}"
+            hx-get="/modals/m05?task_id={{ t.task_id }}&return_to=stay"
             hx-target="#modal-root" hx-swap="innerHTML"
             title="Dời hạn task này" onclick="event.stopPropagation()">📅 Dời hạn</button>
     <button class="btn btn--ghost" style="padding:8px 10px;color:var(--coral-500)"

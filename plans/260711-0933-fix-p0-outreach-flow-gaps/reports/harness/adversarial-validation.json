@@ -1,0 +1,43 @@
+{
+  "decision": "PASS",
+  "disprovenClaims": [],
+  "unverifiedClaims": [],
+  "missingProof": [
+    "screen_modal_task.py's post_task/patch_task_edit return_to=stay branches (M05 create/edit task) have NO dedicated pytest coverage -- only manual-verify steps in phase-01.md. Code path was read/traced directly and is trivially correct (mirrors the already-tested handle_log_activity pattern), but no automated regression guard exists if someone edits screen_modal_task.py later without re-reading the plan.",
+    "Phase-04's JS functions (s14CollectSave, s14ToggleReason, s14TagMultiSave, etc.) have zero automated JS-execution tests before OR after this change -- confirmed via `grep -rl \"s14CollectSave|s14ToggleReason\" crm/src/tests/` returning nothing. Coverage is limited to: (a) Jinja renders without error (200 status, script=None path exercised incidentally by test_disposition_strip_v2.py fixtures that don't seed an approach script), (b) manual verify checklist in phase-04.md. This is a pre-existing test-tooling gap (no JS test harness in repo), not something introduced by this diff."
+  ],
+  "reachableRegressions": [],
+  "seamVerification": {
+    "item1_return_to_and_resolve_async_coexist": "CONFIRMED -- screen_customer_360_activity.py diff shows handle_log_activity/_m08_ctx/get_modal_m08/handle_modal_log_activity return_to threading (phase-01) and handle_resolve_async contact_outcome threading (phase-02 amendment) both present, no duplicate Form param declarations, no merge artifacts. handle_patch_activity also correctly received its OWN return_to param (phase-01 amendment) independent of the other two.",
+    "item2_cockpit_js_three_way_edit": "CONFIRMED -- verified via git diff + grep of the 6 relocated function names (each appears EXACTLY ONCE: s14ToggleReason:1358, s14SetResolveId:1368, s14CollectEnable:1382, s14CollectSave:1389, s14TagChipToggle:1421, s14TagMultiSave:1435). Phase 1's &return_to=stay additions to s14StripOpenManual/s14StripOpenDetail/idbar/rail (lines ~256-666, ~1078-1091) landed cleanly. Phase 2's s14StripZaloFollowup() contact_outcome=+S.chosenOutcome edit (line ~1256-1260) landed inside the disposition-strip's OWN closure (same one that defines `S` at line 981) -- correctly does NOT need window.S14_STRIP since it's the same closure, unlike s14TagMultiSave which lives in phase 4's relocated block and correctly uses window.S14_STRIP. Phase 4's block split (unconditional block lines ~1350-1468, gated block lines ~1471-1573) is structurally sound -- {% if %}/{% endif %}/<script>/</script> counts balance, file ends cleanly at line 1573.",
+    "item3_side_effects_steps4-5_vs_resolve_actions_and_tasks": "CONFIRMED -- phase-03's assignee_user_id/created_by additions to steps 4/5 (lines 197-198, 213-214) are untouched by phase-02's refactor of step 7 into resolve_actions_and_tasks(). The new shared function correctly preserves the outcome-gating logic (verified via full function read: no_answer/busy -> snooze + leave tasks open; else -> dismiss + done, matching phase-02's original design exactly).",
+    "item4_six_function_names_appear_once": "CONFIRMED -- grep count = 1 for each of s14ToggleReason, s14SetResolveId, s14CollectEnable, s14CollectSave, s14TagChipToggle, s14TagMultiSave in the final file. No duplicate/orphaned definitions from a bad 3-way merge."
+  },
+  "disproveAttempts": [
+    {
+      "claim": "handle_resolve_async with contact_outcome=no_answer now snoozes instead of dismissing",
+      "verdict": "CONFIRMED",
+      "evidence": "Traced full call chain: handle_resolve_async (screen_customer_360_activity.py:404-470) reads contact_outcome Form param -> passes contact_outcome=contact_outcome.strip() or None to _bulk_resolve() -> outcome_resolve_helpers.bulk_resolve() delegates to application.activity_side_effects.resolve_actions_and_tasks() -- the SAME function step 7 of execute_side_effects uses. Route-level test (real handler, not mocked side-effect fn) TestResolveAsyncOutcomeGate.test_no_answer_outcome_snoozes_not_dismisses asserts action_state.snooze called, dismiss NOT called. Not just a test-name assertion -- traced the actual production code path."
+    },
+    {
+      "claim": "Phase 3's source='manual' unchanged",
+      "verdict": "CONFIRMED",
+      "evidence": "grep '\"source\": \"manual\"' crm/src/application/activity_side_effects.py -> 2 matches (lines 195, 211), both callback-task and follow-up-task dicts, unchanged from pre-diff baseline per phase-03.md's own diff listing."
+    },
+    {
+      "claim": "handle_patch_activity now respects return_to=stay",
+      "verdict": "CONFIRMED",
+      "evidence": "screen_customer_360_activity.py:560-620 -- return_to: str = Form(default='redirect') param added; when edit_mode=='1' and return_to=='stay', returns HTMLResponse('', 200, HX-Trigger: activitySaved) instead of HX-Redirect. modal_log_activity.html:116 renders the hidden return_to field for the M08 form (all modes, not just edit_activity -- gated by `{% if return_to != 'redirect' %}`). Traced end-to-end: s14StripOpenDetail() GET call site (cockpit) now appends &return_to=stay, GET handler threads it into _m08_ctx -> template renders hidden field -> PATCH form submits it -> handler honours it. 3 dedicated tests cover both branches (stay/redirect) plus the non-edit_mode 204 no-op case."
+    },
+    {
+      "claim": "worklist-header no-party 404 is pre-existing, not introduced by this work",
+      "verdict": "CONFIRMED",
+      "evidence": "git log --follow on worklist.html shows the '+ Tao task' button (hx-get=/modals/m05, no party_id) was added in commit 3b457c85 ('per-customer claim'), unrelated to and predating this diff by multiple commits. This diff only appended &return_to=stay to that existing URL -- did not touch the underlying party_id-less request shape. Confirmed the route /customers/{party_id}/tasks (str path param) will not match an empty path segment (/customers//tasks), and modal_m05_create_task.html has no customer picker when party_id is empty (grep confirms no fallback UI) -- so the 404 (if it occurs) predates and is orthogonal to this diff. Correctly NOT fixed here per plan's explicit scope note."
+    },
+    {
+      "claim": "Any reachable regression: can you construct an input/sequence that breaks something not covered by new tests?",
+      "verdict": "DISPROVEN (no regression found)",
+      "evidence": "Attempted: (1) double-submit via draft-adopt + return_to=stay -- already_final guard in handle_log_activity skips side-effects on 2nd call, return_to logic runs independently of that guard so response still correctly omits HX-Redirect; no double snooze/dismiss. (2) complete_task_ids (manual 'Danh dau task hoan thanh' checkbox) vs step-7 outcome gate -- step 6 (complete_task_ids) is a SEPARATE, unconditional path from step 7's outcome-gated resolve; this is intentional per plan (explicit staff action vs automatic rail-tick), and m08SmartCompleteTask() JS pre-unchecks that box for no_answer/busy outcomes, so no UI/backend conflict in the normal flow. (3) task_svc.create_task() with assignee_user_id=actor_id -- Task entity's assignee_user_id/created_by are both nullable FK -> crm_app_user, actor_id sourced from authenticated current_user.user_id, no FK-violation risk. Full suite green (1075/1) after independent re-run supports no regression was introduced."
+    }
+  ]
+}

@@ -166,3 +166,58 @@ class TestBulkResolve:
         _bulk_resolve(["a1"], ["t1"], action_state=as_, task_svc=ts, actor_id="u1")
         as_.dismiss.assert_called_once_with("a1", user_id="u1")
         ts.transition_status.assert_called_once_with("t1", "done")
+
+    # ── contact_outcome gating (phase-02 Amendment) ───────────────────────────
+    # /reason/resolve-async (the cockpit's "+Nhắn Zalo" follow-up button) must
+    # apply the SAME no_answer/busy → snooze gate as execute_side_effects()
+    # step 7, so that button can't silently undo a snooze that step 7 just made.
+
+    def _make_action_state_with_snooze(self):
+        m = MagicMock()
+        m.dismiss = MagicMock()
+        m.snooze = MagicMock()
+        return m
+
+    def test_no_answer_outcome_snoozes_instead_of_dismissing(self):
+        as_ = self._make_action_state_with_snooze()
+        ts = self._make_task_svc()
+        _bulk_resolve(
+            ["a1"], ["t1"], action_state=as_, task_svc=ts,
+            actor_id="u1", contact_outcome="no_answer",
+        )
+        as_.snooze.assert_called_once()
+        assert as_.snooze.call_args.args[0] == "a1"
+        as_.dismiss.assert_not_called()
+        ts.transition_status.assert_not_called()
+
+    def test_busy_outcome_snoozes_instead_of_dismissing(self):
+        as_ = self._make_action_state_with_snooze()
+        ts = self._make_task_svc()
+        _bulk_resolve(
+            ["a1"], ["t1"], action_state=as_, task_svc=ts,
+            actor_id="u1", contact_outcome="busy",
+        )
+        as_.snooze.assert_called_once()
+        as_.dismiss.assert_not_called()
+        ts.transition_status.assert_not_called()
+
+    def test_answered_outcome_keeps_dismiss_and_done(self):
+        as_ = self._make_action_state_with_snooze()
+        ts = self._make_task_svc()
+        _bulk_resolve(
+            ["a1"], ["t1"], action_state=as_, task_svc=ts,
+            actor_id="u1", contact_outcome="answered",
+        )
+        as_.dismiss.assert_called_once_with("a1", user_id="u1")
+        ts.transition_status.assert_called_once_with("t1", "done")
+        as_.snooze.assert_not_called()
+
+    def test_missing_contact_outcome_defaults_to_dismiss_and_done(self):
+        """Callers that don't pass contact_outcome (pre-amendment behavior, e.g.
+        default param) must be unaffected — backward compatible."""
+        as_ = self._make_action_state_with_snooze()
+        ts = self._make_task_svc()
+        _bulk_resolve(["a1"], ["t1"], action_state=as_, task_svc=ts, actor_id="u1")
+        as_.dismiss.assert_called_once_with("a1", user_id="u1")
+        ts.transition_status.assert_called_once_with("t1", "done")
+        as_.snooze.assert_not_called()

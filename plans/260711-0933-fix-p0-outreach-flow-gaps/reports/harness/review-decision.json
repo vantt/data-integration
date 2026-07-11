@@ -1,0 +1,42 @@
+{
+  "decision": "PASS",
+  "score": 8,
+  "criticalCount": 0,
+  "acceptanceCoverage": [
+    {
+      "criterion": "1. Toan bo pytest hien co xanh",
+      "status": "MET",
+      "proof": "Re-ran `docker compose exec -T crm sh -c \"cd /app/crm/src && python -m pytest -q\"` independently: 1075 passed, 1 skipped, 40.14s. Matches orchestrator claim."
+    },
+    {
+      "criterion": "2. Cockpit S14 Dat lich/Tao task -> Luu -> van o cockpit, modal dong, timer/draft khong mat",
+      "status": "MET",
+      "proof": "c360_call_cockpit_panel.html idbar/rail/R14-banner GET URLs all append &return_to=stay (verified in diff, lines ~256/262/312/619/666); handle_modal_m05/post_task honour return_to=stay -> HTMLResponse('', HX-Trigger only, no HX-Redirect) in screen_modal_task.py:190-191. Covered by test_return_to_stay_no_hx_redirect_has_worklist_trigger + patch-mode tests."
+    },
+    {
+      "criterion": "3. S01 Worklist quick-log -> Luu -> van o worklist, list tu refresh",
+      "status": "MET",
+      "proof": "_wl_row.html contact_btn() 4 branches all append &return_to=stay; worklist.html/worklist_fragment.html hx-trigger now includes 'worklistRefresh from:body' (grep-confirmed in diff)."
+    },
+    {
+      "criterion": "4. no_answer/busy -> snooze N ngay, KHONG dismiss TTL 30d; claimed task khong tu done",
+      "status": "MET",
+      "proof": "activity_side_effects.resolve_actions_and_tasks() gates on _NO_CONTACT_OUTCOMES={no_answer,busy} -> action_state.snooze(), task_ids left untouched. BOTH entry points (execute_side_effects step 7 AND outcome_resolve_helpers.bulk_resolve via /reason/resolve-async) delegate to this single shared function -- verified the phase-02 Amendment gap (Zalo-follow-up bypass) was actually closed, not just claimed. Tests: test_no_answer_snoozes_action_and_leaves_task_open, TestResolveAsyncOutcomeGate (route-level, real handler)."
+    },
+    {
+      "criterion": "5. create_callback_task/schedule_followup_at -> task moi co assignee_user_id=actor, xuat hien o 'cua toi' khong roi Hang Doi Chung",
+      "status": "MET",
+      "proof": "activity_side_effects.py steps 4-5 add assignee_user_id/created_by=actor_id to both create_task() dicts; task_service.create_task() reads both keys into the Task entity (task_service.py:130,132). Tests: test_callback_task_assigned_to_actor, test_followup_task_assigned_to_actor, test_actor_id_none_leaves_assignee_none."
+    },
+    {
+      "criterion": "6. Cockpit ST-CALL-NO-SCRIPT (script=None): rail tick, collect [+], tag chip khong con im lang",
+      "status": "MET",
+      "proof": "s14ToggleReason/s14SetResolveId/s14CollectEnable/s14CollectSave/s14TagChipToggle/s14TagMultiSave + stale-badge IIFE moved to an unconditional <script> block preceding the {% if script and ap %} gate; each function name greped to appear EXACTLY ONCE in the final file (no duplicate-definition merge artifact). s14TagMultiSave's bare `S` reference bug also fixed (now reads window.S14_STRIP). No direct JS-execution test exists (none did before either), but test_disposition_strip_v2.py's route-level renders (script naturally None/absent for the test party) return 200, confirming no Jinja syntax break from the restructure."
+    }
+  ],
+  "regressionProof": [
+    "full suite: 1075 passed, 1 skipped -- independently re-verified by code-reviewer via docker compose exec, 2026-07-11"
+  ],
+  "contractStatus": "OK",
+  "blockingReasons": []
+}

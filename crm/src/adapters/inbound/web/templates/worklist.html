@@ -23,7 +23,7 @@
       </button>
       {# A-S01-004: + Tạo task → M05 #}
       <button class="btn btn--primary"
-              hx-get="/modals/m05"
+              hx-get="/modals/m05?return_to=stay"
               hx-target="#modal-root"
               hx-swap="innerHTML">
         {% include "icons/plus.svg" %} Tạo task
@@ -33,7 +33,7 @@
 
   <div id="worklist-container"
        hx-get="/worklist/fragment"
-       hx-trigger="claimSuccess from:body"
+       hx-trigger="claimSuccess from:body, worklistRefresh from:body"
        hx-include="#wl-filter-form"
        hx-swap="outerHTML">
     {% include "fragments/worklist_fragment.html" %}

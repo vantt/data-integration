@@ -1,0 +1,14 @@
+{
+  "highRisk": false,
+  "reasons": [
+    "No auth/secrets/payments code touched",
+    "No DB schema/migration changes",
+    "Routes are internal HTMX endpoints consumed only by this app's own templates, not an external public API",
+    "No CI/deploy/release/production config touched",
+    "No destructive filesystem operations",
+    "Pre-existing IDOR-shaped gap in resolve_actions_and_tasks (documented, out of scope, not introduced or worsened by this diff) noted for future authz-hardening work, does not block this low-risk classification"
+  ],
+  "autoStopRequired": false,
+  "humanApproved": false,
+  "largeDiff": true
+}

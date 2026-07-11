@@ -12,6 +12,7 @@
 {% set prio_code = prio_code | default('P2') %}
 {% set due_date_val = due_date_val | default('') %}
 {% set due_time_val = due_time_val | default('10:00') %}
+{% set return_to = return_to | default('redirect') %}
 
 <div class="modal-scrim"
      onclick="if(!event.target.closest('.modal')) document.getElementById('modal-root').innerHTML=''">
@@ -37,9 +38,11 @@
     {% if edit_mode %}
     <form hx-patch="/tasks/{{ task.task_id }}/edit" hx-target="#modal-root" hx-swap="innerHTML">
       <input type="hidden" name="party_id" value="{{ party_id }}">
+      <input type="hidden" name="return_to" value="{{ return_to }}">
     {% else %}
     <form hx-post="/customers/{{ party_id }}/tasks" hx-target="#modal-root" hx-swap="innerHTML">
       <input type="hidden" name="party_id" value="{{ party_id }}">
+      <input type="hidden" name="return_to" value="{{ return_to }}">
       {% if prefill_source %}
       <input type="hidden" name="source" value="{{ prefill_source }}">
       <input type="hidden" name="source_ref" value="{{ prefill_source_ref }}">

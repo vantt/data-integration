@@ -45,6 +45,7 @@ def make_task_modal_router(
         source_ref: str = "",
         prefill_title: str = "",
         prefill_priority: str = "",
+        return_to: str = "redirect",
     ) -> Response:
         au = []
         try:
@@ -107,6 +108,7 @@ def make_task_modal_router(
                 "due_time_val": due_time_val,
                 "task_kind": modal_task_kind,
                 "task_kind_confident": task_kind_confident,
+                "return_to": return_to,
             },
         )
 
@@ -120,6 +122,7 @@ def make_task_modal_router(
         priority: str = Form(default="P3"),
         assignee_user_id: str = Form(default=""),
         party_id: str = Form(default=""),
+        return_to: str = Form(default="redirect"),
     ) -> Response:
         title = title.strip()
         if not title:
@@ -135,6 +138,8 @@ def make_task_modal_router(
         except Exception as exc:
             log.error("m05 edit task %s: %s", task_id, exc)
             return HTMLResponse("Lưu thất bại", status_code=500)
+        if return_to == "stay":
+            return Response(status_code=200, headers={"HX-Trigger": '{"worklistRefresh": true}'})
         redirect = f"/customers/{party_id}?tab=tasks" if party_id else "/tasks"
         return Response(status_code=200, headers={"HX-Redirect": redirect})
 
@@ -150,6 +155,7 @@ def make_task_modal_router(
         source: str = Form("manual"),
         source_ref: str = Form(""),
         task_kind: str = Form(""),
+        return_to: str = Form(default="redirect"),
     ) -> Response:
         title = title.strip()
         if not title:
@@ -181,6 +187,8 @@ def make_task_modal_router(
         except Exception as exc:
             log.error("post_task %s: %s", party_id, exc)
             return HTMLResponse(f"Lỗi tạo task: {exc}", status_code=500)
+        if return_to == "stay":
+            return HTMLResponse("", status_code=200, headers={"HX-Trigger": '{"worklistRefresh": true}'})
         return redirect_to_customer(party_id)
 
     return router

@@ -151,8 +151,8 @@ Khi M08 được mở từ outcome bar S14 (A-S14-009), caller truyền thêm ha
 
 | Param | Type | Description |
 |-------|------|-------------|
-| `resolve_action_ids` | `str` | Comma-separated action_id values — mỗi cái sẽ được dismiss sau khi log |
-| `resolve_task_ids` | `str` | Comma-separated task_id values — mỗi cái sẽ được chuyển status→done |
+| `resolve_action_ids` | `str` | Comma-separated action_id values — hành vi phụ thuộc outcome (xem POST behavior dưới đây) |
+| `resolve_task_ids` | `str` | Comma-separated task_id values — hành vi phụ thuộc outcome (xem POST behavior dưới đây) |
 
 GET handler forwarded → `_m08_ctx` → template context.
 
@@ -163,7 +163,9 @@ GET handler forwarded → `_m08_ctx` → template context.
 
 **POST behavior (A3):**
 - `act_data["custom_fields"]` được ghi snapshot `{resolve_task_ids: [...], resolve_action_ids: [...]}` **trước** khi gọi `activity_log.log_activity()`.
-- Sau đó `_bulk_resolve()` thực sự dismiss/close các IDs.
+- Sau đó `_bulk_resolve()` xử lý các IDs theo outcome (Phase 02 — 2026-07-11):
+  - Outcome ∈ `{no_answer, busy}` (cuộc gọi không thành công): **snooze action 2 ngày**, KHÔNG transition task.
+  - Outcome khác (answered, purchased, refused, v.v.): **dismiss action** (TTL 30 ngày), transition task → done.
 
 ## Task Context Feature (khi `task_id` có)
 

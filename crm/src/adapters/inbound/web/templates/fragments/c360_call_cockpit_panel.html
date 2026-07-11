@@ -253,13 +253,13 @@
       </button>
       {# A-S14-006 zalo variant. R1: NOT disabled when consent=denied #}
       <button class="btn btn--secondary" type="button"
-              onclick="htmx.ajax('GET','/modals/m08?party_id={{ party_id }}&mode=log&hinh_thuc=chat',{target:'#modal-root',swap:'innerHTML'})"
+              onclick="htmx.ajax('GET','/modals/m08?party_id={{ party_id }}&mode=log&hinh_thuc=chat&return_to=stay',{target:'#modal-root',swap:'innerHTML'})"
               aria-label="Liên hệ Zalo">
         <svg class="ico" width="14" height="14" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.3" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="2" y="3" width="12" height="9" rx="1.5"/><path d="M2 5l6 4 6-4"/></svg>
         Zalo
       </button>
       <button class="btn btn--ghost" type="button"
-              onclick="htmx.ajax('GET','/modals/m05?party_id={{ party_id }}',{target:'#modal-root',swap:'innerHTML'})"
+              onclick="htmx.ajax('GET','/modals/m05?party_id={{ party_id }}&return_to=stay',{target:'#modal-root',swap:'innerHTML'})"
               aria-label="Tạo task">
         <svg class="ico" width="14" height="14" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.3" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><line x1="8" y1="2" x2="8" y2="14"/><line x1="2" y1="8" x2="14" y2="8"/></svg>
         Tạo task
@@ -309,7 +309,7 @@
       <div class="s14-r14-banner__ctas">
         {# A-S14-011: create verify account task #}
         <button class="btn btn--ghost btn--sm"
-                hx-get="/modals/m05?party_id={{ party_id }}&source=verify_account&prefill_title=X%C3%A1c+minh+lo%E1%BA%A1i+t%C3%A0i+kho%E1%BA%A3n"
+                hx-get="/modals/m05?party_id={{ party_id }}&source=verify_account&prefill_title=X%C3%A1c+minh+lo%E1%BA%A1i+t%C3%A0i+kho%E1%BA%A3n&return_to=stay"
                 hx-target="#modal-root" hx-swap="innerHTML">Tạo task xác minh</button>
         <a class="btn btn--ghost btn--sm" href="/customers/{{ party_id }}">Xem hồ sơ 360</a>
         {# Hidden input avoids inline JSON escaping issues with reason_if_not_recommended text #}
@@ -616,7 +616,7 @@
                     <button class="s14-reason__act" type="button"
                             data-prefill-title="{{ item.rationale or item.label }}"
                             data-action-ref="{{ item.action_id or '' }}"
-                            onclick="(function(btn){var t=encodeURIComponent(btn.getAttribute('data-prefill-title'));var r=btn.getAttribute('data-action-ref');htmx.ajax('GET','/modals/m05?party_id={{ party_id }}&source=action_queue&source_ref='+r+'&prefill_title='+t,{target:'#modal-root',swap:'innerHTML'});})(this)">
+                            onclick="(function(btn){var t=encodeURIComponent(btn.getAttribute('data-prefill-title'));var r=btn.getAttribute('data-action-ref');htmx.ajax('GET','/modals/m05?party_id={{ party_id }}&source=action_queue&source_ref='+r+'&prefill_title='+t+'&return_to=stay',{target:'#modal-root',swap:'innerHTML'});})(this)">
                       <svg class="ico" width="11" height="11" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.3" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="8" cy="8" r="5.5"/><path d="M8 5v3.5l2 1.5"/></svg>
                       Đặt lịch
                     </button>
@@ -663,7 +663,7 @@
                     <button class="s14-reason__act" type="button"
                             data-prefill-title="{{ item.rationale or item.label }}"
                             data-action-ref="{{ item.action_id or '' }}"
-                            onclick="(function(btn){var t=encodeURIComponent(btn.getAttribute('data-prefill-title'));var r=btn.getAttribute('data-action-ref');htmx.ajax('GET','/modals/m05?party_id={{ party_id }}&source=action_queue&source_ref='+r+'&prefill_title='+t,{target:'#modal-root',swap:'innerHTML'});})(this)">
+                            onclick="(function(btn){var t=encodeURIComponent(btn.getAttribute('data-prefill-title'));var r=btn.getAttribute('data-action-ref');htmx.ajax('GET','/modals/m05?party_id={{ party_id }}&source=action_queue&source_ref='+r+'&prefill_title='+t+'&return_to=stay',{target:'#modal-root',swap:'innerHTML'});})(this)">
                       <svg class="ico" width="11" height="11" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.3" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="8" cy="8" r="5.5"/><path d="M8 5v3.5l2 1.5"/></svg>
                       Đặt lịch
                     </button>
@@ -1078,7 +1078,7 @@
   };
 
   window.s14StripOpenManual = function () {
-    htmx.ajax('GET', '/modals/m08?party_id=' + encodeURIComponent(PARTY_ID) + '&mode=log&hinh_thuc=call',
+    htmx.ajax('GET', '/modals/m08?party_id=' + encodeURIComponent(PARTY_ID) + '&mode=log&hinh_thuc=call&return_to=stay',
       { target: '#modal-root', swap: 'innerHTML' });
   };
 
@@ -1086,7 +1086,7 @@
   window.s14StripOpenDetail = function () {
     if (!S.draftId) return;
     htmx.ajax('GET', '/modals/m08?party_id=' + encodeURIComponent(PARTY_ID)
-      + '&mode=edit_activity&activity_id=' + encodeURIComponent(S.draftId),
+      + '&mode=edit_activity&activity_id=' + encodeURIComponent(S.draftId) + '&return_to=stay',
       { target: '#modal-root', swap: 'innerHTML' });
   };
 
@@ -1252,7 +1252,12 @@
     fetch('/customers/' + encodeURIComponent(PARTY_ID) + '/reason/resolve-async', {
       method: 'POST',
       headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+      // P0 (phase-02 Amendment): thread the outcome that surfaced this button
+      // (S.chosenOutcome, e.g. "no_answer") so the backend can gate
+      // snooze-vs-dismiss the same way the strip's own resolve step does —
+      // without this, resolve-async used to undo that snooze unconditionally.
       body: 'channel=zalo&action_id=' + encodeURIComponent(actionId) + '&task_id=' + encodeURIComponent(taskId)
+        + '&contact_outcome=' + encodeURIComponent(S.chosenOutcome || '')
     }).then(function (r) {
       if (btn) { btn.disabled = true; btn.textContent = r.ok ? '✓ Đã nhắn Zalo' : '⚠ Lỗi — thử lại'; }
     });
@@ -1337,6 +1342,130 @@ window.s14R14AckError = function () {
 };
 </script>
 {% endif %}
+
+{# ── Rail/collect JS: PHẢI chạy cả khi script=None (ST-CALL-NO-SCRIPT) — rail "Vì sao gọi" và
+   dòng "Thu thập còn thiếu" luôn render bất kể có approach script hay không. Trước đây các hàm này
+   nằm trong khối {% if script and ap %} bên dưới nên bấm nút không phản hồi gì với khách không có
+   kịch bản (P0 fix). ── #}
+<script>
+(function () {
+  // ── A-S14-025: reason "đã nói" tick ───────────────────────────────────
+  // Secondary rail items: ticking also folds action_id/task_id into the
+  // bulk-resolve hidden inputs, so outcome logged after the call closes
+  // exactly the items NV confirmed were actually discussed (phase-07 rail).
+  // Primary item is always included — no tick needed (rendered into the
+  // hidden inputs' default value server-side).
+  window.s14ToggleReason = function (cb) {
+    var card  = cb.closest('.s14-reason');
+    var svg   = cb.parentElement ? cb.parentElement.querySelector('svg') : null;
+    if (card) card.classList.toggle('s14-reason--said', cb.checked);
+    if (svg)  svg.style.display = cb.checked ? '' : 'none';
+    if (!card || card.classList.contains('s14-reason--primary')) return;
+    s14SetResolveId('s14-resolve-action-ids', card.getAttribute('data-action-id'), cb.checked);
+    s14SetResolveId('s14-resolve-task-ids', card.getAttribute('data-task-id'), cb.checked);
+  };
+
+  window.s14SetResolveId = function (inputId, id, add) {
+    if (!id) return;
+    var input = document.getElementById(inputId);
+    if (!input) return;
+    var ids = input.value ? input.value.split(',').filter(Boolean) : [];
+    if (add) {
+      if (ids.indexOf(id) === -1) ids.push(id);
+    } else {
+      ids = ids.filter(function (x) { return x !== id; });
+    }
+    input.value = ids.join(',');
+  };
+
+  // ── Collect: enable/disable save button ──────────────────────────────
+  window.s14CollectEnable = function (key, val) {
+    var btn = document.getElementById('s14-crow-add-' + key);
+    if (btn) btn.disabled = !(val || '').trim();
+  };
+
+  // ── A-S14-020/021: save collect row via HTMX inline POST ─────────────
+  // ST-CALL-COLLECT-DONE: row swaps to ✓ done — NEVER re-renders #s14-panel-root
+  window.s14CollectSave = function (key, kind, field) {
+    var inp = document.getElementById('s14-collect-inp-' + key);
+    if (!inp) return;
+    var val = (inp.value || '').trim();
+    if (!val) return;
+    var target = document.getElementById('s14-crow-' + key);
+    if (!target) return;
+    // Phase 02 (260706-0833): custom_text (e.g. health_context_raw) reuses the
+    // existing custom-field-inline endpoint from Phase 06 — field_key/value form shape.
+    var endpoint = kind === 'channel'
+      ? '/customers/{{ party_id }}/contact'
+      : (kind === 'custom_text'
+        ? '/customers/{{ party_id }}/custom-field-inline'
+        : '/customers/{{ party_id }}/core');
+    var formData = new FormData();
+    formData.append('inline', '1');
+    if (kind === 'channel') {
+      formData.append('action', 'add_channel');
+      formData.append('add_identity_type', field);
+      formData.append('add_identity_value', val);
+    } else if (kind === 'custom_text') {
+      formData.append('field_key', field);
+      formData.append('value', val);
+    } else {
+      formData.append(field, val);
+    }
+    htmx.ajax('POST', endpoint,
+      { target: target, swap: 'outerHTML', values: Object.fromEntries(formData) }
+    );
+  };
+
+  // ── Health domain (Phase 02, 260706-0833): tag_multiselect chip toggle ──
+  window.s14TagChipToggle = function (key, el) {
+    el.classList.toggle('chip-pill--on');
+    var chipset = document.getElementById('s14-chipset-' + key);
+    var anySelected = chipset && chipset.querySelector('.chip-pill--on');
+    var btn = document.getElementById('s14-tagsave-' + key);
+    if (btn) btn.disabled = !anySelected;
+  };
+
+  // ── Health domain (Phase 02, 260706-0833): save selected chips via POST /tags/inline ──
+  // source_activity_id (plan 260709-1638 phase-01 "Handoff wiring", closed here):
+  // links the tag attach back to the call currently open in the strip, if any.
+  // Read via window.S14_STRIP (export global from the DISPOSITION STRIP closure below) —
+  // NOT the bare `S` local, which belongs to that other closure and is undefined here
+  // (ReferenceError before this fix, independent of the script/ap gate).
+  window.s14TagMultiSave = function (key, category) {
+    var chipset = document.getElementById('s14-chipset-' + key);
+    if (!chipset) return;
+    var selected = Array.prototype.slice.call(chipset.querySelectorAll('.chip-pill--on'))
+      .map(function (el) { return el.getAttribute('data-tag-name'); });
+    if (!selected.length) return;
+    var target = document.getElementById('s14-cr-' + key);
+    if (!target) return;
+    var draftId = (window.S14_STRIP && window.S14_STRIP.draftId) || '';
+    htmx.ajax('POST', '/customers/{{ party_id }}/tags/inline', {
+      target: target, swap: 'outerHTML',
+      values: { tag_names: selected, category: category, source_activity_id: draftId }
+    });
+  };
+
+  // ── Stale badge: mark refreshed_at if > 24 h (R2) ────────────────────
+  (function () {
+    var el = document.getElementById('s14-trust-freshness');
+    if (!el) return;
+    var ts = {{ (refreshed_at | tojson) if refreshed_at else '""' }};
+    if (!ts) return;
+    try {
+      var d   = new Date(ts);
+      var age = (Date.now() - d.getTime()) / 3600000;
+      if (age > 24) {
+        el.classList.add('s14-trust__item--stale');
+        el.title = el.title + ' (quá 24h)';
+        el.insertAdjacentHTML('afterbegin',
+          '<svg class="ico" width="12" height="12" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.3" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M8 3 2 13h12L8 3z"/><line x1="8" y1="7" x2="8" y2="10"/><circle cx="8" cy="12" r="0.4" fill="currentColor" stroke="none"/></svg> ');
+      }
+    } catch (e) {}
+  }());
+}());
+</script>
 
 {# ── Inline JS: client-side interactions only (A-S14-001..005; §9 INVARIANT) ── #}
 {% if script and ap %}
@@ -1428,121 +1557,6 @@ window.s14R14AckError = function () {
     s14FilterObj('');
     if (inp) inp.focus();
   };
-
-  // ── A-S14-025: reason "đã nói" tick ───────────────────────────────────
-  // Secondary rail items: ticking also folds action_id/task_id into the
-  // bulk-resolve hidden inputs, so outcome logged after the call closes
-  // exactly the items NV confirmed were actually discussed (phase-07 rail).
-  // Primary item is always included — no tick needed (rendered into the
-  // hidden inputs' default value server-side).
-  window.s14ToggleReason = function (cb) {
-    var card  = cb.closest('.s14-reason');
-    var svg   = cb.parentElement ? cb.parentElement.querySelector('svg') : null;
-    if (card) card.classList.toggle('s14-reason--said', cb.checked);
-    if (svg)  svg.style.display = cb.checked ? '' : 'none';
-    if (!card || card.classList.contains('s14-reason--primary')) return;
-    s14SetResolveId('s14-resolve-action-ids', card.getAttribute('data-action-id'), cb.checked);
-    s14SetResolveId('s14-resolve-task-ids', card.getAttribute('data-task-id'), cb.checked);
-  };
-
-  window.s14SetResolveId = function (inputId, id, add) {
-    if (!id) return;
-    var input = document.getElementById(inputId);
-    if (!input) return;
-    var ids = input.value ? input.value.split(',').filter(Boolean) : [];
-    if (add) {
-      if (ids.indexOf(id) === -1) ids.push(id);
-    } else {
-      ids = ids.filter(function (x) { return x !== id; });
-    }
-    input.value = ids.join(',');
-  };
-
-  // ── Collect: enable/disable save button ──────────────────────────────
-  window.s14CollectEnable = function (key, val) {
-    var btn = document.getElementById('s14-crow-add-' + key);
-    if (btn) btn.disabled = !(val || '').trim();
-  };
-
-  // ── A-S14-020/021: save collect row via HTMX inline POST ─────────────
-  // ST-CALL-COLLECT-DONE: row swaps to ✓ done — NEVER re-renders #s14-panel-root
-  window.s14CollectSave = function (key, kind, field) {
-    var inp = document.getElementById('s14-collect-inp-' + key);
-    if (!inp) return;
-    var val = (inp.value || '').trim();
-    if (!val) return;
-    var target = document.getElementById('s14-crow-' + key);
-    if (!target) return;
-    // Phase 02 (260706-0833): custom_text (e.g. health_context_raw) reuses the
-    // existing custom-field-inline endpoint from Phase 06 — field_key/value form shape.
-    var endpoint = kind === 'channel'
-      ? '/customers/{{ party_id }}/contact'
-      : (kind === 'custom_text'
-        ? '/customers/{{ party_id }}/custom-field-inline'
-        : '/customers/{{ party_id }}/core');
-    var formData = new FormData();
-    formData.append('inline', '1');
-    if (kind === 'channel') {
-      formData.append('action', 'add_channel');
-      formData.append('add_identity_type', field);
-      formData.append('add_identity_value', val);
-    } else if (kind === 'custom_text') {
-      formData.append('field_key', field);
-      formData.append('value', val);
-    } else {
-      formData.append(field, val);
-    }
-    htmx.ajax('POST', endpoint,
-      { target: target, swap: 'outerHTML', values: Object.fromEntries(formData) }
-    );
-  };
-
-  // ── Health domain (Phase 02, 260706-0833): tag_multiselect chip toggle ──
-  window.s14TagChipToggle = function (key, el) {
-    el.classList.toggle('chip-pill--on');
-    var chipset = document.getElementById('s14-chipset-' + key);
-    var anySelected = chipset && chipset.querySelector('.chip-pill--on');
-    var btn = document.getElementById('s14-tagsave-' + key);
-    if (btn) btn.disabled = !anySelected;
-  };
-
-  // ── Health domain (Phase 02, 260706-0833): save selected chips via POST /tags/inline ──
-  // source_activity_id (plan 260709-1638 phase-01 "Handoff wiring", closed here):
-  // links the tag attach back to the call currently open in the strip, if any.
-  // S.draftId is null outside an active call (T0, or cockpit viewed without
-  // starting one) — sent as '' in that case, same as every pre-existing caller
-  // of this route that never passed the field at all (backward compatible).
-  window.s14TagMultiSave = function (key, category) {
-    var chipset = document.getElementById('s14-chipset-' + key);
-    if (!chipset) return;
-    var selected = Array.prototype.slice.call(chipset.querySelectorAll('.chip-pill--on'))
-      .map(function (el) { return el.getAttribute('data-tag-name'); });
-    if (!selected.length) return;
-    var target = document.getElementById('s14-cr-' + key);
-    if (!target) return;
-    htmx.ajax('POST', '/customers/{{ party_id }}/tags/inline', {
-      target: target, swap: 'outerHTML',
-      values: { tag_names: selected, category: category, source_activity_id: S.draftId || '' }
-    });
-  };
-
-  // ── Stale badge: mark refreshed_at if > 24 h (R2) ────────────────────
-  (function () {
-    var el = document.getElementById('s14-trust-freshness');
-    if (!el) return;
-    var ts = {{ (refreshed_at | tojson) if refreshed_at else '""' }};
-    if (!ts) return;
-    try {
-      var d   = new Date(ts);
-      var age = (Date.now() - d.getTime()) / 3600000;
-      if (age > 24) {
-        el.classList.add('s14-trust__item--stale');
-        el.title = el.title + ' (quá 24h)';
-        el.insertAdjacentHTML('afterbegin',
-          '<svg class="ico" width="12" height="12" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.3" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M8 3 2 13h12L8 3z"/><line x1="8" y1="7" x2="8" y2="10"/><circle cx="8" cy="12" r="0.4" fill="currentColor" stroke="none"/></svg> ');
-      }
-    } catch (e) {}
-  }());
 
   // ── Branching node swap tracking ─────────────────────────────────────
   {% if is_branching %}

@@ -24,6 +24,7 @@
 {% set activity_id = activity_id | default('') %}
 {% set activity_edit = activity_edit | default(None) %}
 {% set draft_activity_id = draft_activity_id | default('') %}
+{% set return_to = return_to | default('redirect') %}
 
 {% if mode == 'edit_note' %}{% set modal_title = 'Sửa ghi chú' %}{% set save_url = '/customers/' ~ party_id ~ '/notes/' ~ note_id %}{% set http_verb = 'post' %}
 {% elif mode == 'note_only' %}{% set modal_title = 'Thêm ghi chú' %}{% set save_url = '/customers/' ~ party_id ~ '/notes' %}{% set http_verb = 'post' %}
@@ -109,6 +110,10 @@
 
     <form {% if http_verb == 'patch' %}hx-patch{% else %}hx-post{% endif %}="{{ save_url }}" hx-target="#modal-root" hx-swap="innerHTML">
       <input type="hidden" name="party_id" value="{{ party_id }}">
+      {# P0 (phase-01): render only when non-default so note/edit_activity modes
+         keep their own redirect behaviour unless the caller explicitly asked
+         for return_to=stay (e.g. cockpit's "⋯ Chi tiết" edit_activity flow). #}
+      {% if return_to != 'redirect' %}<input type="hidden" name="return_to" value="{{ return_to }}">{% endif %}
       {% if note_id %}<input type="hidden" name="note_id" value="{{ note_id }}">{% endif %}
       {% if task_id %}<input type="hidden" name="task_id" value="{{ task_id }}">{% endif %}
       {# Bulk-resolve IDs from S14 outcome bar (phase-02) #}
