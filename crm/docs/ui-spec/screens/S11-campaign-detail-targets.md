@@ -25,37 +25,49 @@ Conversion tracker: order_code mới trong `wh_order_hdr` sau `campaign.schedule
 ## Layout
 
 ```yaml ui-layout
+row_heights: [auto, auto, "minmax(250px,auto)", auto]
 areas:
   - [topbar]
   - [summary_bar]
   - [target_list]
   - [conversion_stats]
-samples:
-  topbar: "[← Chiến dịch]  Win-back Q3  [Sửa] [Kích hoạt]"
-  summary_bar: "Targets: 87 | Sent: 43 | Converted: 13 | Rate: 14.9% | Revenue attributed: 28.500.000đ"
-  target_list: "Nguyễn V. A · converted · NV A · ORD-20060901  |  Trần T. B · queued · NV B · —  [Filter: status ▼]"
-  conversion_stats: "(conversion rate + attributed revenue tracker; updates via SSE campaign.target.converted)"
-elements:
-  "← Chiến dịch": A-S11-001
-  "Sửa": A-S11-007
-  "Filter: status ▼": A-S11-005
-  "Kích hoạt": A-S11-008
+content:
+  topbar:
+    - row:
+        - { btn: "← Chiến dịch", action: A-S11-001 }
+        - { h: "Win-back Q3" }
+        - { btn: "Sửa", action: A-S11-007 }
+        - { btn: "Kích hoạt", action: A-S11-008, primary: true }
+  summary_bar:
+    - row:
+        - { kpi: { label: "Targets", value: "87" } }
+        - { kpi: { label: "Sent", value: "43" } }
+        - { kpi: { label: "Converted", value: "13" } }
+        - { kpi: { label: "Rate", value: "14.9%" } }
+        - { kpi: { label: "Revenue attr.", value: "28.500.000đ" } }
+  target_list:
+    - row:
+        - { h: "Targets" }
+        - { select: "Trạng thái: Tất cả" }
+    - table: { cols: ["Khách hàng", "Trạng thái", "NV phụ trách", "Mã đơn"], rows: 4 }
+  conversion_stats:
+    - slot: "Conversion rate + attributed revenue tracker (SSE campaign.target.converted)"
 ```
 
 <!-- ui-layout:ascii:start -->
 ```
 ┌────────────────────────────────────────────────────────────────────────────┐
 │TOPBAR                                                                      │
-│· [← Chiến dịch]  Win-back Q3  [Sửa] [Kích hoạt]                            │
+│· [← Chiến dịch] Win-back Q3 [Sửa] [Kích hoạt]                              │
 ├────────────────────────────────────────────────────────────────────────────┤
 │SUMMARY_BAR                                                                 │
-│· Targets: 87 | Sent: 43 | Converted: 13 | Rate: 14.9% | Revenue attributed…│
+│· Targets: 87 Sent: 43 Converted: 13 Rate: 14.9% Revenue attr.: 28.500.000đ │
 ├────────────────────────────────────────────────────────────────────────────┤
 │TARGET_LIST                                                                 │
-│· Nguyễn V. A · converted · NV A · ORD-20060901  |  Trần T. B · queued · NV…│
+│· Targets [Trạng thái: Tất cả v] · tbl(Khách hàng | Trạng thái | NV phụ trá…│
 ├────────────────────────────────────────────────────────────────────────────┤
 │CONVERSION_STATS                                                            │
-│· (conversion rate + attributed revenue tracker; updates via SSE campaign.t…│
+│· <<Conversion rate + attributed revenue tracker (SSE campaign.target.conve…│
 └────────────────────────────────────────────────────────────────────────────┘
 ```
 <!-- ui-layout:ascii:end -->

@@ -30,20 +30,28 @@ areas:
   - [tab_bar]
   - [body]
   - [actions]
-samples:
-  header: "Nguyễn Văn A [✕]"
-  tab_bar: "[Liên lạc]  [Địa chỉ]  [Thông tin cơ bản]"
-  body: "Danh sách kênh: 📞 Số chính +84901234567 ● active [✎][✗] · 💬 Zalo zalo_handle_123 ● active [✎][✗] · 📘 Facebook fb_handle ○ invalid [✎][✗] · [+ Thêm kênh liên lạc]"
-  actions: "[Hủy]  [Lưu]"
-elements:
-  "✕": A-M15-001
-  "Liên lạc": A-M15-002
-  "Địa chỉ": A-M15-003
-  "Thông tin cơ bản": A-M15-004
-  "✗": A-M15-006
-  "+ Thêm kênh liên lạc": A-M15-005
-  "Lưu": A-M15-007
-  "Hủy": A-M15-008
+content:
+  header:
+    - row:
+        - { h: "Nguyễn Văn A" }
+        - { btn: "✕", action: A-M15-001 }
+  tab_bar:
+    - tabs: ["Liên lạc", "Địa chỉ", "Thông tin cơ bản"]
+      active: "Liên lạc"
+      actions:
+        "Liên lạc": A-M15-002
+        "Địa chỉ": A-M15-003
+        "Thông tin cơ bản": A-M15-004
+  body:
+    - h: "Kênh liên lạc"
+    - list: { item: "📞 Số chính +84901234567 · ● active · is_preferred · ✎", rows: 3 }
+    - row:
+        - { btn: "✗ Vô hiệu kênh", action: A-M15-006 }
+        - { btn: "＋ Thêm kênh liên lạc", action: A-M15-005 }
+  actions:
+    - row:
+        - { btn: "Hủy", action: A-M15-008 }
+        - { btn: "Lưu", action: A-M15-007, primary: true }
 ```
 
 <!-- ui-layout:ascii:start -->
@@ -53,13 +61,13 @@ elements:
 │· Nguyễn Văn A [x]                                                          │
 ├────────────────────────────────────────────────────────────────────────────┤
 │TAB_BAR                                                                     │
-│· [Liên lạc]  [Địa chỉ]  [Thông tin cơ bản]                                 │
+│· |*Liên lạc*|| Địa chỉ || Thông tin cơ bản |                               │
 ├────────────────────────────────────────────────────────────────────────────┤
 │BODY                                                                        │
-│· Danh sách kênh: > Số chính +84901234567 o active [?][x] · ~ Zalo zalo_han…│
+│· Kênh liên lạc · list ×3 {> Số chính +84901234567 · o active · is_preferre…│
 ├────────────────────────────────────────────────────────────────────────────┤
 │ACTIONS                                                                     │
-│· [Hủy]  [Lưu]                                                              │
+│· [Hủy] [Lưu]                                                               │
 └────────────────────────────────────────────────────────────────────────────┘
 ```
 <!-- ui-layout:ascii:end -->

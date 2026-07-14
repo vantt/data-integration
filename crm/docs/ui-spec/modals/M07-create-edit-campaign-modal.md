@@ -27,14 +27,35 @@ areas:
   - [header]
   - [body]
   - [actions]
-samples:
-  header: "Tạo chiến dịch mới [✕]"
-  body: "Tên chiến dịch * [React-Jul-2026] · Mục tiêu * [Reactivation ▼] · Kênh * [Messenger ▼] · Segment * [Reactivation tháng 7 ▼] → 34 khách (3 bị loại consent) · Giao cho [NV A, NV B ▼] · Ngày bắt đầu * [01/07/2026]"
-  actions: "[Hủy]  [Tạo & Kích hoạt]"
-elements:
-  "✕": A-M07-001
-  "Hủy": A-M07-002
-  "Tạo & Kích hoạt": A-M07-004
+content:
+  header:
+    - row:
+        - { h: "Tạo chiến dịch mới" }
+        - { btn: "✕", action: A-M07-001 }
+  body:
+    - row:
+        - { text: "Tên chiến dịch *" }
+        - { input: "React-Jul-2026" }
+    - row:
+        - { text: "Mục tiêu *" }
+        - { select: "Reactivation" }
+    - row:
+        - { text: "Kênh *" }
+        - { select: "Messenger" }
+    - row:
+        - { text: "Segment *" }
+        - { select: "Reactivation tháng 7" }
+    - text: "→ 34 khách (3 bị loại consent)"
+    - row:
+        - { text: "Giao cho" }
+        - { select: "NV A, NV B" }
+    - row:
+        - { text: "Ngày bắt đầu *" }
+        - { input: "01/07/2026" }
+  actions:
+    - row:
+        - { btn: "Hủy", action: A-M07-002 }
+        - { btn: "Tạo & Kích hoạt", action: A-M07-004, primary: true }
 ```
 
 <!-- ui-layout:ascii:start -->
@@ -44,10 +65,10 @@ elements:
 │· Tạo chiến dịch mới [x]                                                    │
 ├────────────────────────────────────────────────────────────────────────────┤
 │BODY                                                                        │
-│· Tên chiến dịch * [React-Jul-2026] · Mục tiêu * [Reactivation v] · Kênh * …│
+│· Tên chiến dịch * [input: React-Jul-2026] · Mục tiêu * [Reactivation v] · …│
 ├────────────────────────────────────────────────────────────────────────────┤
 │ACTIONS                                                                     │
-│· [Hủy]  [Tạo & Kích hoạt]                                                  │
+│· [Hủy] [Tạo & Kích hoạt]                                                   │
 └────────────────────────────────────────────────────────────────────────────┘
 ```
 <!-- ui-layout:ascii:end -->

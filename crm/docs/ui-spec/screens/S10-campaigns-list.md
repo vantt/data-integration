@@ -22,26 +22,30 @@ Manager tạo campaign mới từ đây, hoặc nhấn vào campaign để xem c
 
 ```yaml ui-layout
 columns: [1fr, 4fr]
+row_heights: [auto, "minmax(300px,auto)"]
 areas:
   - [sidebar, topbar]
   - [sidebar, campaign_list]
-samples:
-  sidebar: "(C01 global nav)"
-  topbar: "Chiến dịch  [+ Tạo chiến dịch]  [Filter status ▼]"
-  campaign_list: "Win-back Q3 · winback · 87 targets · 13 converted · 14.9%  |  React-Jul-2026 · react. · 34 · 0 · —"
-elements:
-  "+ Tạo chiến dịch": A-S10-001
-  "Filter status ▼": A-S10-003
+content:
+  sidebar:
+    - slot: "C01 Sidebar Nav (global)"
+  topbar:
+    - row:
+        - { h: "Chiến dịch" }
+        - { btn: "+ Tạo chiến dịch", action: A-S10-001, primary: true }
+        - { select: "Trạng thái: Tất cả" }
+  campaign_list:
+    - table: { cols: ["Tên", "Objective", "Channel", "Targets", "Converted", "Rate", "Trạng thái"], rows: 4 }
 ```
 
 <!-- ui-layout:ascii:start -->
 ```
 ┌───────────────┬────────────────────────────────────────────────────────────┐
 │SIDEBAR        │TOPBAR                                                      │
-│· (C01 global …│· Chiến dịch  [+ Tạo chiến dịch]  [Filter status v]         │
+│· <<C01 Sideba…│· Chiến dịch [+ Tạo chiến dịch] [Trạng thái: Tất cả v]      │
 │               ├────────────────────────────────────────────────────────────┤
 │               │CAMPAIGN_LIST                                               │
-│               │· Win-back Q3 · winback · 87 targets · 13 converted · 14.9%…│
+│               │· tbl(Tên | Objective | Channel | Targets | Converted | Rat…│
 └───────────────┴────────────────────────────────────────────────────────────┘
 ```
 <!-- ui-layout:ascii:end -->

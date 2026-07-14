@@ -25,34 +25,46 @@ Segment static: Manager add/remove party thủ công sau khi tạo.
 
 ```yaml ui-layout
 columns: [3fr, 2fr]
+row_heights: [auto, "minmax(250px,auto)", auto]
 areas:
   - [topbar, topbar]
   - [rule_editor, preview_panel]
   - [actions_bar, actions_bar]
-samples:
-  topbar: "[← Segments]  Tên segment: [___________]  [Lưu]  Loại: ● Dynamic  ○ Static"
-  rule_editor: "Điều kiện (AND/OR)  · value_group = GOLD ✕ · customer_status = at_risk ✕ · [+ Thêm điều kiện]"
-  preview_panel: "Kết quả dự kiến: 34 khách  (3 bị loại do consent)  [Preview danh sách]  Nguyễn Văn A · GOLD"
-  actions_bar: "[Hủy]  [Lưu & Materialize]"
-elements:
-  "← Segments": A-S09-001
-  "+ Thêm điều kiện": A-S09-002
-  "Preview danh sách": A-S09-005
-  "Hủy": A-S09-007
-  "Lưu & Materialize": A-S09-006
+content:
+  topbar:
+    - row:
+        - { btn: "← Segments", action: A-S09-001 }
+        - { text: "Tên segment:" }
+        - { input: "Tên segment…" }
+        - { chips: ["Lưu"] }
+        - { text: "Loại:" }
+        - { select: "Dynamic" }
+  rule_editor:
+    - h: "Điều kiện (AND/OR)"
+    - list: { item: "value_group = GOLD ✕", rows: 2 }
+    - { btn: "+ Thêm điều kiện", action: A-S09-002 }
+  preview_panel:
+    - kpi: { label: "Dự kiến khớp", value: "34 khách" }
+    - text: "3 bị loại do consent"
+    - { btn: "Preview danh sách", action: A-S09-005 }
+    - list: { item: "Nguyễn Văn A · GOLD", rows: 3 }
+  actions_bar:
+    - row:
+        - { btn: "Hủy", action: A-S09-007 }
+        - { btn: "Lưu & Materialize", action: A-S09-006, primary: true }
 ```
 
 <!-- ui-layout:ascii:start -->
 ```
 ┌────────────────────────────────────────────────────────────────────────────┐
 │TOPBAR                                                                      │
-│· [← Segments]  Tên segment: [___________]  [Lưu]  Loại: o Dynamic  ? Static│
+│· [← Segments] Tên segment: [input: Tên segment…] [Lưu] Loại: [Dynamic v]   │
 ├─────────────────────────────────────────────┬──────────────────────────────┤
 │RULE_EDITOR                                  │PREVIEW_PANEL                 │
-│· Điều kiện (AND/OR)  · value_group = GOLD x…│· Kết quả dự kiến: 34 khách  …│
+│· Điều kiện (AND/OR) · list ×2 {value_group …│· Dự kiến khớp: 34 khách · 3 …│
 ├─────────────────────────────────────────────┴──────────────────────────────┤
 │ACTIONS_BAR                                                                 │
-│· [Hủy]  [Lưu & Materialize]                                                │
+│· [Hủy] [Lưu & Materialize]                                                 │
 └────────────────────────────────────────────────────────────────────────────┘
 ```
 <!-- ui-layout:ascii:end -->

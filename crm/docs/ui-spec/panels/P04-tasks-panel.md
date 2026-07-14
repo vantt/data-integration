@@ -34,24 +34,30 @@ WHERE party_id = current), sort: overdue trước → open → doing → done cu
 areas:
   - [toolbar]
   - [task_list]
-samples:
-  toolbar: "Tasks  [+ Tạo task]  [Filter: open/all ▼]"
-  task_list: "● [AUTO] Follow-up sau cuộc gọi  P2  NV A · Quá hạn 2 ngày · [Ghi log] [Xong nhanh] [···]"
-elements:
-  "+ Tạo task": A-P04-001
-  "Filter: open/all ▼": A-P04-007
-  "Ghi log": A-P04-002
-  "Xong nhanh": A-P04-003
+content:
+  toolbar:
+    - row:
+        - { h: "Tasks" }
+        - { btn: "+ Tạo task", action: A-P04-001, primary: true }
+        - { select: "Filter: open/all" }
+  task_list:
+    - list: { item: "● [AUTO] Follow-up sau cuộc gọi  P2  NV A · Quá hạn 2 ngày", rows: 4 }
+    - row:
+        - { btn: "Ghi log", action: A-P04-002 }
+        - { btn: "Xong nhanh", action: A-P04-003 }
+        - { btn: "Sửa", action: A-P04-004 }
+        - { btn: "Tạm hoãn", action: A-P04-005 }
+        - { btn: "Huỷ task", action: A-P04-006 }
 ```
 
 <!-- ui-layout:ascii:start -->
 ```
 ┌────────────────────────────────────────────────────────────────────────────┐
 │TOOLBAR                                                                     │
-│· Tasks  [+ Tạo task]  [Filter: open/all v]                                 │
+│· Tasks [+ Tạo task] [Filter: open/all v]                                   │
 ├────────────────────────────────────────────────────────────────────────────┤
 │TASK_LIST                                                                   │
-│· o [AUTO] Follow-up sau cuộc gọi  P2  NV A · Quá hạn 2 ngày · [Ghi log] [X…│
+│· list ×4 {o [AUTO] Follow-up sau cuộc gọi  P2  NV A · Quá hạn 2 ngày} · [G…│
 └────────────────────────────────────────────────────────────────────────────┘
 ```
 <!-- ui-layout:ascii:end -->

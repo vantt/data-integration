@@ -28,14 +28,27 @@ areas:
   - [header]
   - [body]
   - [actions]
-samples:
-  header: "Tạo tag mới [✕]"
-  body: "Tag name (slug) * [vip-repeat] · Nhãn hiển thị * [VIP Repeat] · Phân loại * [Phân tầng VIP ▼] · Màu (optional) [● Xanh ○ Đỏ ○ Vàng ...]"
-  actions: "[Hủy]  [Tạo tag]"
-elements:
-  "✕": A-M14-001
-  "Hủy": A-M14-002
-  "Tạo tag": A-M14-003
+content:
+  header:
+    - row:
+        - { h: "Tạo tag mới" }
+        - { btn: "✕", action: A-M14-001 }
+  body:
+    - row:
+        - { text: "Tag name (slug) *" }
+        - { input: "vip-repeat" }
+    - row:
+        - { text: "Nhãn hiển thị *" }
+        - { input: "VIP Repeat" }
+    - row:
+        - { text: "Phân loại *" }
+        - { select: "Phân tầng VIP" }
+    - text: "Màu (optional)"
+    - checklist: ["[x] Xanh", "Đỏ", "Vàng"]
+  actions:
+    - row:
+        - { btn: "Hủy", action: A-M14-002 }
+        - { btn: "Tạo tag", action: A-M14-003, primary: true }
 ```
 
 <!-- ui-layout:ascii:start -->
@@ -45,10 +58,10 @@ elements:
 │· Tạo tag mới [x]                                                           │
 ├────────────────────────────────────────────────────────────────────────────┤
 │BODY                                                                        │
-│· Tag name (slug) * [vip-repeat] · Nhãn hiển thị * [VIP Repeat] · Phân loại…│
+│· Tag name (slug) * [input: vip-repeat] · Nhãn hiển thị * [input: VIP Repea…│
 ├────────────────────────────────────────────────────────────────────────────┤
 │ACTIONS                                                                     │
-│· [Hủy]  [Tạo tag]                                                          │
+│· [Hủy] [Tạo tag]                                                           │
 └────────────────────────────────────────────────────────────────────────────┘
 ```
 <!-- ui-layout:ascii:end -->

@@ -40,29 +40,74 @@ children:
       - [kpi_strip]
       - [filter_bar]
       - [task_list]
-samples:
-  sidebar: "[≡] CRM  > Worklist ●  Khách hàng  Inbox 3  Tasks  Segments  Chiến dịch  Ads  Cài đặt"
-  main: "(right content area — topbar · kpi_strip · filter_bar · task_list)"
-  topbar: "Worklist hôm nay  [Làm mới ↺]  [+ Tạo task]"
-  kpi_strip: "[ Task mở: N ] [ Hành động AQ: N ] [ Giá trị: Ntr ] [ Khẩn: N ]"
-  filter_bar: "Ưu tiên:[↕] Loại:[↕] Sản phẩm:[↕]  [📞 Có thể liên hệ (on)] [💰 Giá trị cao] [✅ Ẩn đã liên hệ] [📋 Có kịch bản]"
-  task_list: "▼ 🔴 Quá hạn (3) · [P1] Nguyễn Văn A quá hạn 2 ngày · 🛍 Fine Japan · [📅 Dời hạn][Hủy][📞 Gọi][Xem 360 >]"
-elements:
-  "Làm mới ↺": A-S01-020
-  "+ Tạo task": A-S01-004
-  "✅ Ẩn đã liên hệ": A-S01-013
-  "📋 Có kịch bản": A-S01-010
-  "☎️ Có thể liên hệ": A-S01-023
-  "📅 Dời hạn": A-S01-019
-  "Hủy": A-S01-018
-  "📞 Gọi": A-S01-007
+content:
+  sidebar:
+    - h: "≡ CRM"
+    - divider: true
+    - text: "▸ Worklist ●"
+    - text: "Khách hàng"
+    - text: "Inbox (3)"
+    - text: "Tasks"
+    - text: "Segments"
+    - text: "Chiến dịch"
+    - text: "Ads"
+    - text: "Cài đặt"
+  topbar:
+    - row:
+        - { h: "Worklist hôm nay" }
+        - { btn: "↺ Làm mới", action: A-S01-020 }
+        - { btn: "＋ Tạo task", action: A-S01-004, primary: true }
+  kpi_strip:
+    - row:
+        - { kpi: { label: "Task mở", value: "12" } }
+        - { kpi: { label: "Hành động AQ", value: "31" } }
+        - { kpi: { label: "Giá trị", value: "48tr" } }
+        - { kpi: { label: "Khẩn", value: "5" } }
+  filter_bar:
+    - row:
+        - { select: "Ưu tiên" }
+        - { select: "Loại" }
+        - { select: "Sản phẩm" }
+        - { input: "🔍 tên / SĐT" }
+        - { input: "GT tối thiểu" }
+    - row:
+        - { btn: "📞 Có thể liên hệ (on)", action: A-S01-023 }
+        - { btn: "💰 Giá trị cao", action: A-S01-015 }
+        - { btn: "✅ Ẩn đã liên hệ", action: A-S01-013 }
+        - { btn: "📋 Có kịch bản", action: A-S01-010 }
+  task_list:
+    - row:
+        - { h: "🙋 Đã Claim" }
+        - { badge: "thu gọn" }
+        - { text: "🔴 Quá hạn 3 · 🟡 Khẩn 2 · 🟢 Trong hạn 6" }
+    - row:
+        - { text: "Row quá hạn:" }
+        - { btn: "📅 Dời hạn", action: A-S01-019 }
+        - { btn: "Hủy", action: A-S01-018 }
+    - divider: true
+    - row:
+        - { h: "🎯 Chưa Claim" }
+        - { badge: "mở" }
+    - text: "📥 HÀNG ĐỢI CHUNG — task chưa ai nhận"
+    - list: { item: "[P2] Gọi xác nhận địa chỉ — Trần B · hạn mai", rows: 2 }
+    - row:
+        - { btn: "Nhận", action: A-S01-024, primary: true }
+    - text: "🎯 CƠ HỘI HỆ THỐNG — từ action queue"
+    - list: { item: "🟡 REORDER · Nguyễn Văn A · quá chu kỳ 11d · GT 1.2tr · 🛍 Fine Japan · 📞 3 ngày trước", rows: 4 }
+    - row:
+        - { btn: "📋 Gọi kịch bản", action: A-S01-011, primary: true }
+        - { btn: "📞 Gọi", action: A-S01-007 }
+        - { btn: "💬 Zalo", action: A-S01-008 }
+        - { btn: "⏰ Snooze 1/3/7d", action: A-S01-017 }
+        - { btn: "✕ Bỏ qua", action: A-S01-016 }
+        - { btn: "Xem 360 ›", action: A-S01-001 }
 ```
 
 <!-- ui-layout:ascii:start -->
 ```
 ┌───────────────┬────────────────────────────────────────────────────────────┐
 │SIDEBAR        │MAIN                                                        │
-│· [≡] CRM  > W…│· (right content area — topbar · kpi_strip · filter_bar · t…│
+│· ≡ CRM · ────…│                                                            │
 └───────────────┴────────────────────────────────────────────────────────────┘
 ```
 <!-- ui-layout:ascii:end -->
@@ -365,6 +410,14 @@ interactions:
     trigger: change
     action: mutate
     effects: [task_list.reload_with_filters]
+  - id: A-S01-024
+    element: btn_claim_task
+    region: task_list
+    trigger: click
+    action: mutate
+    effects: [task.assign_me, task_list.move_row_to_claimed]
+    # "Nhận" trên row Hàng Đợi Chung (unassigned manual task) — PATCH /tasks/{id}/assign-me;
+    # row chuyển sang section Đã Claim ngay trong cùng scroll (lý do dùng <details>, không tab).
 ```
 
 ## Notes

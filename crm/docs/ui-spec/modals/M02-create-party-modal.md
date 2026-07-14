@@ -26,14 +26,30 @@ areas:
   - [header]
   - [body]
   - [actions]
-samples:
-  header: "Tạo khách hàng mới [✕]"
-  body: "Tên hiển thị * [___] · Số điện thoại * [0901234567] → +84901234567 · Email [___] · Ghi chú nhanh [___] · ⚠ Nếu SĐT đã tồn tại, hệ thống sẽ cảnh báo"
-  actions: "[Hủy]  [Tạo khách]"
-elements:
-  "✕": A-M02-001
-  "Hủy": A-M02-002
-  "Tạo khách": A-M02-003
+content:
+  header:
+    - row:
+        - { h: "Tạo khách hàng mới" }
+        - { btn: "✕", action: A-M02-001 }
+  body:
+    - row:
+        - { text: "Tên hiển thị *" }
+        - { input: "___" }
+    - row:
+        - { text: "Số điện thoại *" }
+        - { input: "0901234567" }
+        - { text: "→ +84901234567" }
+    - row:
+        - { text: "Email" }
+        - { input: "___" }
+    - row:
+        - { text: "Ghi chú nhanh" }
+        - { input: "___" }
+    - text: "⚠ Nếu SĐT đã tồn tại, hệ thống sẽ cảnh báo"
+  actions:
+    - row:
+        - { btn: "Hủy", action: A-M02-002 }
+        - { btn: "Tạo khách", action: A-M02-003, primary: true }
 ```
 
 <!-- ui-layout:ascii:start -->
@@ -43,10 +59,10 @@ elements:
 │· Tạo khách hàng mới [x]                                                    │
 ├────────────────────────────────────────────────────────────────────────────┤
 │BODY                                                                        │
-│· Tên hiển thị * [___] · Số điện thoại * [0901234567] → +84901234567 · Emai…│
+│· Tên hiển thị * [input: ___] · Số điện thoại * [input: 0901234567] → +8490…│
 ├────────────────────────────────────────────────────────────────────────────┤
 │ACTIONS                                                                     │
-│· [Hủy]  [Tạo khách]                                                        │
+│· [Hủy] [Tạo khách]                                                         │
 └────────────────────────────────────────────────────────────────────────────┘
 ```
 <!-- ui-layout:ascii:end -->

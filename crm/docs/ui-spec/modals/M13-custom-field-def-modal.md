@@ -26,15 +26,38 @@ areas:
   - [header]
   - [body]
   - [actions]
-samples:
-  header: "Tạo custom field mới [✕]"
-  body: "Áp dụng cho * [● Khách hàng ○ Đơn hàng] · Field name (slug) * [da_nhay_cam] · Nhãn hiển thị * [Da nhạy cảm] · Section [Sức khoẻ & Da liễu] · Thứ tự hiển thị [1] · Loại dữ liệu * [Boolean (Có/Không) ▼] · Bắt buộc [○ Có ● Không] · Tùy chọn [+ Thêm tùy chọn] (chỉ khi select/multiselect)"
-  actions: "[Hủy]  [Lưu]"
-elements:
-  "✕": A-M13-001
-  "Hủy": A-M13-002
-  "Lưu": A-M13-004
-  "+ Thêm tùy chọn": A-M13-005
+content:
+  header:
+    - row:
+        - { h: "Tạo custom field mới" }
+        - { btn: "✕", action: A-M13-001 }
+  body:
+    - text: "Áp dụng cho *"
+    - checklist: ["[x] Khách hàng", "Đơn hàng"]
+    - row:
+        - { text: "Field name (slug) *" }
+        - { input: "da_nhay_cam" }
+    - row:
+        - { text: "Nhãn hiển thị *" }
+        - { input: "Da nhạy cảm" }
+    - row:
+        - { text: "Section" }
+        - { input: "Sức khoẻ & Da liễu" }
+    - row:
+        - { text: "Thứ tự hiển thị" }
+        - { input: "1" }
+    - row:
+        - { text: "Loại dữ liệu *" }
+        - { select: "Boolean (Có/Không)" }
+    - text: "Bắt buộc"
+    - checklist: ["Có", "[x] Không"]
+    - row:
+        - { text: "Tùy chọn (chỉ khi select/multiselect)" }
+        - { btn: "+ Thêm tùy chọn", action: A-M13-005 }
+  actions:
+    - row:
+        - { btn: "Hủy", action: A-M13-002 }
+        - { btn: "Lưu", action: A-M13-004, primary: true }
 ```
 
 <!-- ui-layout:ascii:start -->
@@ -44,10 +67,10 @@ elements:
 │· Tạo custom field mới [x]                                                  │
 ├────────────────────────────────────────────────────────────────────────────┤
 │BODY                                                                        │
-│· Áp dụng cho * [o Khách hàng ? Đơn hàng] · Field name (slug) * [da_nhay_ca…│
+│· Áp dụng cho * · [x] Khách hàng [ ] Đơn hàng · Field name (slug) * [input:…│
 ├────────────────────────────────────────────────────────────────────────────┤
 │ACTIONS                                                                     │
-│· [Hủy]  [Lưu]                                                              │
+│· [Hủy] [Lưu]                                                               │
 └────────────────────────────────────────────────────────────────────────────┘
 ```
 <!-- ui-layout:ascii:end -->

@@ -24,19 +24,27 @@ customer_status, top_affinity_product, action_queue count, ngày mua gần nhấ
 areas:
   - [content]
   - [actions]
-samples:
-  content: "Nguyễn Văn A [✕] · +84901234567 · GOLD · active · Mua gần nhất: 12/06/2026 · Affinity: Sữa rửa mặt gentle · Action queue: 2 items (CALL_NOW, REORDER)"
-  actions: "[Mở hồ sơ đầy đủ →]"
-elements:
-  "✕": A-O02-002
-  "Mở hồ sơ đầy đủ →": A-O02-003
+content:
+  content:
+    - row:
+        - { h: "Nguyễn Văn A" }
+        - { btn: "✕", action: A-O02-002 }
+    - row:
+        - { chips: ["+84901234567", "GOLD", "active"] }
+    - text: "Mua gần nhất: 12/06/2026 · Affinity: Sữa rửa mặt gentle"
+    - row:
+        - { badge: "Action queue: 2 items" }
+        - { chips: ["CALL_NOW", "REORDER"] }
+  actions:
+    - row:
+        - { btn: "Mở hồ sơ đầy đủ →", action: A-O02-003, primary: true }
 ```
 
 <!-- ui-layout:ascii:start -->
 ```
 ┌────────────────────────────────────────────────────────────────────────────┐
 │CONTENT                                                                     │
-│· Nguyễn Văn A [x] · +84901234567 · GOLD · active · Mua gần nhất: 12/06/202…│
+│· Nguyễn Văn A [x] · [+84901234567] [GOLD] [active] · Mua gần nhất: 12/06/2…│
 ├────────────────────────────────────────────────────────────────────────────┤
 │ACTIONS                                                                     │
 │· [Mở hồ sơ đầy đủ →]                                                       │

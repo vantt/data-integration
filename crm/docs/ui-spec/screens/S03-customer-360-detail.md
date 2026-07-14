@@ -37,6 +37,8 @@ Target: point-lookup ≤ 200ms (view `crm_party_360`). `refreshed_at` hiển th�
 
 ```yaml ui-layout
 columns: [7fr, 3fr]
+# main_col dominates — it hosts the active panel (P01…P06 / S14 embedded).
+row_heights: [auto, auto, "minmax(320px,auto)"]
 areas:
   - [topbar, sidebar]
   - [tab_bar, sidebar]
@@ -53,43 +55,80 @@ children:
       - [sidebar.contact]
       - [sidebar.dates]
       - [sidebar.tags]
-samples:
-  topbar: "[← Quay lại]  Nguyễn Văn A  [Gán NV ▼]  [+ Tag]  [Ghi log]  [Tạo task]"
-  tab_bar: "[Value & Behavior | Ghi chú | Đơn | Timeline | Tasks | Chat | Gọi]"
-  main_col: "(active panel: P01 / P05 / P02 / P03 / P04 / P06 / S14↗)"
-  sidebar.warning: "⚠ Cảnh báo: khách nghi B2B — cần xác minh (nền đỏ nhạt, manager mới xóa được)"
-  sidebar.core_info: "Nguyễn Văn A  [GOLD][active]  SĐT: 0901234567  owner: NV A  consent: ✓  [✎]"
-  sidebar.head_line: "LTV 8.2tr · 3 đơn · AOV 1.2tr · Recency 11d"
-  sidebar.contact: "📞 0901234567 (chính) · 💬 zalo_id · ✉ email · 📍 Q.1, TP.HCM  [+]"
-  sidebar.dates: "First Order: 15/01/2023 · Last Order: 24/06/2026 · Tenure: 892d (2y)"
-  sidebar.tags: "[VIP] [repeat]  [✎]"
-elements:
-  "← Quay lại": A-S03-001
-  "Gán NV ▼": A-S03-002
-  "+ Tag": A-S03-003
-  "Ghi log": A-S03-011
-  "Tạo task": A-S03-012
-  "+": A-S03-013
+content:
+  topbar:
+    - row:
+        - { btn: "← Quay lại", action: A-S03-001 }
+        - { h: "Nguyễn Văn A" }
+        - { btn: "Gán NV ▾", action: A-S03-002 }
+        - { btn: "＋ Tag", action: A-S03-003 }
+        - { btn: "Ghi log", action: A-S03-011 }
+        - { btn: "Tạo task", action: A-S03-012 }
+  tab_bar:
+    - tabs: ["Value & Behavior", "Ghi chú", "Đơn", "Timeline", "Tasks", "Chat", "Gọi"]
+      active: "Value & Behavior"
+      actions:
+        "Value & Behavior": A-S03-004
+        "Ghi chú": A-S03-008
+        "Đơn": A-S03-005
+        "Timeline": A-S03-006
+        "Tasks": A-S03-007
+        "Chat": A-S03-009
+        "Gọi": A-S03-018
+  main_col:
+    - slot: "Panel đang mở theo tab: P01 Value & Behavior (P05/P02/P03/P04/P06 · tab Gọi = S14 embedded)"
+  sidebar.warning:
+    - badge: "⚠ CẢNH BÁO"
+    - text: "Khách nghi B2B — cần xác minh · manager mới xóa được"
+  sidebar.core_info:
+    - row:
+        - { h: "Nguyễn Văn A" }
+        - { badge: GOLD }
+        - { badge: active }
+    - text: "SĐT 0901234567 · owner NV A · consent ✓"
+    - row:
+        - { btn: "✎ Sửa", action: A-S03-015 }
+        - { btn: "Custom fields", action: A-S03-010 }
+  sidebar.head_line:
+    - row:
+        - { kpi: { label: "LTV", value: "8.2tr" } }
+        - { kpi: { label: "đơn", value: "3" } }
+        - { kpi: { label: "AOV", value: "1.2tr" } }
+        - { kpi: { label: "recency", value: "11d" } }
+  sidebar.contact:
+    - text: "📞 0901234567 (chính) — copy"
+    - row:
+        - { btn: "💬 zalo_id", action: A-S03-016 }
+        - { btn: "＋", action: A-S03-013 }
+    - text: "✉ email · 📍 Q.1, TP.HCM"
+    - row:
+        - { btn: "✎ địa chỉ", action: A-S03-014 }
+  sidebar.dates:
+    - text: "First 15/01/2023 · Last 24/06/2026 · Tenure 892d (2y)"
+  sidebar.tags:
+    - row:
+        - { chips: [VIP, repeat] }
+        - { btn: "✎", action: A-S03-017 }
 ```
 
 <!-- ui-layout:ascii:start -->
 ```
 ┌────────────────────────────────────────────────────┬───────────────────────┐
 │TOPBAR                                              │SIDEBAR                │
-│· [← Quay lại]  Nguyễn Văn A  [Gán NV v]  [+ Tag]  …│                       │
+│· [← Quay lại] Nguyễn Văn A [Gán NV v] [+ Tag] [Ghi…│                       │
 ├────────────────────────────────────────────────────┤                       │
 │TAB_BAR                                             │                       │
-│· [Value & Behavior | Ghi chú | Đơn | Timeline | Ta…│                       │
+│· |*Value & Behavior*|| Ghi chú || Đơn || Timeline …│                       │
 ├────────────────────────────────────────────────────┤                       │
 │MAIN_COL                                            │                       │
-│· (active panel: P01 / P05 / P02 / P03 / P04 / P06 …│                       │
+│· <<Panel đang mở theo tab: P01 Value & Behavior (P…│                       │
 └────────────────────────────────────────────────────┴───────────────────────┘
 
 [STOP variant — when: party.warning_notes.active.length > 0]
 ┌────────────────────────────────────────────────────────────────────────────┐
 │SIDEBAR.WARNING                                                             │
 │when: party.warning_notes.active.length > 0                                 │
-│· ! Cảnh báo: khách nghi B2B — cần xác minh (nền đỏ nhạt, manager mới xóa đ…│
+│· [! CẢNH BÁO] · Khách nghi B2B — cần xác minh · manager mới xóa được       │
 └────────────────────────────────────────────────────────────────────────────┘
 ```
 <!-- ui-layout:ascii:end -->

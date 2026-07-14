@@ -31,14 +31,25 @@ areas:
   - [header]
   - [body]
   - [actions]
-samples:
-  header: "Insight: Nguyễn Văn A [✕]"
-  body: "Loại insight * [Persona ▼] · Nội dung * [Mua cho shop tại Q7, không phải cá nhân. Cần báo giá sỉ thay vì giá lẻ.] · Độ tin cậy [● Cao ○ Trung bình ○ Thấp] · Nguồn: Ghi chú #45: Gọi lần 3: nói đang mua cho..."
-  actions: "[Hủy]  [Lưu insight]"
-elements:
-  "✕": A-M16-001
-  "Hủy": A-M16-002
-  "Lưu insight": A-M16-003
+content:
+  header:
+    - row:
+        - { h: "Insight: Nguyễn Văn A" }
+        - { btn: "✕", action: A-M16-001 }
+  body:
+    - row:
+        - { text: "Loại insight *" }
+        - { select: "Persona" }
+    - text: "Nội dung *"
+    - input: "Mua cho shop tại Q7, không phải cá nhân. Cần báo giá sỉ thay vì giá lẻ."
+    - row:
+        - { text: "Độ tin cậy" }
+        - { chips: ["● Cao", "○ Trung bình", "○ Thấp"] }
+    - text: "Nguồn: Ghi chú #45: Gọi lần 3: nói đang mua cho..."
+  actions:
+    - row:
+        - { btn: "Hủy", action: A-M16-002 }
+        - { btn: "Lưu insight", action: A-M16-003, primary: true }
 ```
 
 <!-- ui-layout:ascii:start -->
@@ -48,10 +59,10 @@ elements:
 │· Insight: Nguyễn Văn A [x]                                                 │
 ├────────────────────────────────────────────────────────────────────────────┤
 │BODY                                                                        │
-│· Loại insight * [Persona v] · Nội dung * [Mua cho shop tại Q7, không phải …│
+│· Loại insight * [Persona v] · Nội dung * · [input: Mua cho shop tại Q7, kh…│
 ├────────────────────────────────────────────────────────────────────────────┤
 │ACTIONS                                                                     │
-│· [Hủy]  [Lưu insight]                                                      │
+│· [Hủy] [Lưu insight]                                                       │
 └────────────────────────────────────────────────────────────────────────────┘
 ```
 <!-- ui-layout:ascii:end -->

@@ -24,22 +24,23 @@ khi không cần confirm. `confirm_type` payload điều khiển nội dung.
 areas:
   - [content]
   - [actions]
-samples:
-  content: "⚠ Xóa ghi chú này?  Hành động không thể hoàn tác."
-  actions: "[Hủy]  [Xóa]"
-elements:
-  "Hủy": A-O01-002
-  "Xóa": A-O01-003
+content:
+  content:
+    - text: "⚠ Xóa ghi chú này? Hành động không thể hoàn tác."
+  actions:
+    - row:
+        - { btn: "Hủy", action: A-O01-002 }
+        - { btn: "Xóa", action: A-O01-003, primary: true }
 ```
 
 <!-- ui-layout:ascii:start -->
 ```
 ┌────────────────────────────────────────────────────────────────────────────┐
 │CONTENT                                                                     │
-│· ! Xóa ghi chú này?  Hành động không thể hoàn tác.                         │
+│· ! Xóa ghi chú này? Hành động không thể hoàn tác.                          │
 ├────────────────────────────────────────────────────────────────────────────┤
 │ACTIONS                                                                     │
-│· [Hủy]  [Xóa]                                                              │
+│· [Hủy] [Xóa]                                                               │
 └────────────────────────────────────────────────────────────────────────────┘
 ```
 <!-- ui-layout:ascii:end -->

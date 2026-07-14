@@ -30,36 +30,72 @@ areas:
   - [signals_block]
   - [rep_insights_block]
   - [freshness_bar]
-samples:
-  action_queue: "[2 việc] ☑ CALL_NOW 💰2.400.000đ · [📞 Gọi ngay] [Hoàn tất (2) ✓]"
-  rfm_segments_block: "R: 28 ngày | F: 8 đơn | M: 2.350.000đ · [GOLD] [active] [ON_TRACK]"
-  value_metrics_block: "LTV 18.400.000₫ (hero×2) | 8 đơn | 2.300.000₫ · GM 34.2% | Cancel 5% | 32d | POS"
-  signals_block: "active · ON_TRACK 2025-07-15 · Discount: LOW · Top affinity: Sữa rửa mặt"
-  rep_insights_block: "[Persona] Mua cho shop Q7 — cần báo giá sỉ [cao] · [+ Thêm insight]"
-  freshness_bar: "Cache insight: 07:15 ICT hôm nay · R2 · CRM không tính lại insight"
-elements:
-  "📞 Gọi ngay": A-P01-005
-  "Hoàn tất (2) ✓": A-P01-008
-  "+ Thêm insight": A-P01-002
+content:
+  action_queue:
+    - row:
+        - { badge: "2 việc" }
+        - { h: "Hàng đợi hành động — checklist phiên" }
+    - checklist: ["[x] CALL_NOW · 💰 2.400.000đ · quá chu kỳ 11d", "[x] CROSS_SELL Vitamin D · 💰 800.000đ"]
+    - row:
+        - { chips: ["mua gần nhất 24/06", "#DH2093", "−5%"] }
+    - row:
+        - { btn: "📞 Gọi ngay", action: A-P01-005, primary: true }
+        - { btn: "Hoàn tất (2) ✓", action: A-P01-008 }
+        - { btn: "⏱ Đặt lịch", action: A-P01-007 }
+  rfm_segments_block:
+    - row:
+        - { kpi: { label: "R — recency", value: "28 ngày" } }
+        - { kpi: { label: "F — frequency", value: "8 đơn" } }
+        - { kpi: { label: "M — monetary", value: "2.350.000đ" } }
+    - row:
+        - { badge: GOLD }
+        - { badge: active }
+        - { badge: ON_TRACK }
+  value_metrics_block:
+    - row:
+        - { kpi: { label: "LTV (hero)", value: "18.400.000₫" } }
+        - { kpi: { label: "đơn", value: "8" } }
+        - { kpi: { label: "AOV", value: "2.300.000₫" } }
+    - row:
+        - { kpi: { label: "GM", value: "34.2%" } }
+        - { kpi: { label: "cancel", value: "5%" } }
+        - { kpi: { label: "chu kỳ", value: "32d" } }
+        - { kpi: { label: "kênh", value: "POS" } }
+  signals_block:
+    - row:
+        - { badge: active }
+        - { badge: ON_TRACK }
+        - { text: "dự kiến mua lại 15/07 · Discount: LOW" }
+    - row:
+        - { text: "Top affinity:" }
+        - { chips: ["Sữa rửa mặt"] }
+  rep_insights_block:
+    - list: { item: "[Persona] Mua cho shop Q7 — cần báo giá sỉ · độ tin cao", rows: 2 }
+    - row:
+        - { btn: "✎ Sửa", action: A-P01-003 }
+        - { btn: "✗ Vô hiệu", action: A-P01-004 }
+        - { btn: "＋ Thêm insight", action: A-P01-002, primary: true }
+  freshness_bar:
+    - text: "Cache insight: 07:15 ICT hôm nay · R2 · CRM không tính lại insight"
 ```
 
 <!-- ui-layout:ascii:start -->
 ```
 ┌────────────────────────────────────────────────────────────────────────────┐
 │ACTION_QUEUE                                                                │
-│· [2 việc] [x] CALL_NOW ?2.400.000đ · [> Gọi ngay] [Hoàn tất (2) v]         │
+│· [2 việc] Hàng đợi hành động — checklist phiên · [x] CALL_NOW · ? 2.400.00…│
 ├────────────────────────────────────────────────────────────────────────────┤
 │RFM_SEGMENTS_BLOCK                                                          │
-│· R: 28 ngày | F: 8 đơn | M: 2.350.000đ · [GOLD] [active] [ON_TRACK]        │
+│· R — recency: 28 ngày F — frequency: 8 đơn M — monetary: 2.350.000đ · [GOL…│
 ├────────────────────────────────────────────────────────────────────────────┤
 │VALUE_METRICS_BLOCK                                                         │
-│· LTV 18.400.000₫ (hero×2) | 8 đơn | 2.300.000₫ · GM 34.2% | Cancel 5% | 32…│
+│· LTV (hero): 18.400.000₫ đơn: 8 AOV: 2.300.000₫ · GM: 34.2% cancel: 5% chu…│
 ├────────────────────────────────────────────────────────────────────────────┤
 │SIGNALS_BLOCK                                                               │
-│· active · ON_TRACK 2025-07-15 · Discount: LOW · Top affinity: Sữa rửa mặt  │
+│· [active] [ON_TRACK] dự kiến mua lại 15/07 · Discount: LOW · Top affinity:…│
 ├────────────────────────────────────────────────────────────────────────────┤
 │REP_INSIGHTS_BLOCK                                                          │
-│· [Persona] Mua cho shop Q7 — cần báo giá sỉ [cao] · [+ Thêm insight]       │
+│· list ×2 {[Persona] Mua cho shop Q7 — cần báo giá sỉ · độ tin cao} · [? Sử…│
 ├────────────────────────────────────────────────────────────────────────────┤
 │FRESHNESS_BAR                                                               │
 │· Cache insight: 07:15 ICT hôm nay · R2 · CRM không tính lại insight        │

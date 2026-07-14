@@ -25,27 +25,38 @@ danh sách lead và attribution chi tiết.
 
 ```yaml ui-layout
 columns: [1fr, 3fr, 2fr]
+row_heights: [auto, "minmax(280px,auto)"]
 areas:
   - [sidebar, topbar, topbar]
   - [sidebar, ad_campaign_list, stats_panel]
-samples:
-  sidebar: "(C01 global nav)"
-  topbar: "Ads Tracking  [Date range ▼]  [Ad platform ▼]"
-  ad_campaign_list: "Summer-2026 · Spend 5.200.000đ · Leads 42 · Converted 8 · CPC 123.800đ  |  Brand-June-2026 · Spend 7.100.000đ"
-  stats_panel: "Tổng spend: 12.300.000đ · Tổng leads: 87 · Conversion: 9.2% · Revenue attr: 48.000.000đ"
-elements:
-  "Date range ▼": A-S12-002
-  "Ad platform ▼": A-S12-003
+content:
+  sidebar:
+    - slot: "C01 Sidebar Nav (global)"
+  topbar:
+    - row:
+        - { h: "Ads Tracking" }
+        - { select: "Date range: 30 ngày" }
+        - { select: "Ad platform: Facebook" }
+  ad_campaign_list:
+    - table: { cols: ["Chiến dịch", "Spend", "Leads", "Converted", "CPC"], rows: 4 }
+  stats_panel:
+    - row:
+        - { kpi: { label: "Tổng spend", value: "12.300.000đ" } }
+        - { kpi: { label: "Tổng leads", value: "87" } }
+        - { kpi: { label: "Conversion", value: "9.2%" } }
+        - { kpi: { label: "Revenue attr.", value: "48.000.000đ" } }
+    - { btn: "Xem leads", action: A-S12-004 }
+    - list: { item: "Nguyễn Văn A · Facebook lead", rows: 3 }
 ```
 
 <!-- ui-layout:ascii:start -->
 ```
 ┌────────────┬───────────────────────────────────────────────────────────────┐
 │SIDEBAR     │TOPBAR                                                         │
-│· (C01 glob…│· Ads Tracking  [Date range v]  [Ad platform v]                │
+│· <<C01 Sid…│· Ads Tracking [Date range: 30 ngày v] [Ad platform: Facebook …│
 │            ├─────────────────────────────────────┬─────────────────────────┤
 │            │AD_CAMPAIGN_LIST                     │STATS_PANEL              │
-│            │· Summer-2026 · Spend 5.200.000đ · L…│· Tổng spend: 12.300.000…│
+│            │· tbl(Chiến dịch | Spend | Leads | C…│· Tổng spend: 12.300.000…│
 └────────────┴─────────────────────────────────────┴─────────────────────────┘
 ```
 <!-- ui-layout:ascii:end -->

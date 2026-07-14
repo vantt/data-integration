@@ -26,21 +26,24 @@ NV có thể ghi `related_order_code` khi log activity từ panel này.
 areas:
   - [toolbar]
   - [order_list]
-samples:
-  toolbar: "10 đơn gần nhất  Cache: hôm nay 08:00 ICT ✓  [Xem thêm →]"
-  order_list: "ORD-20060812  12/06/2026  1.250.000đ  completed"
-elements:
-  "Xem thêm →": A-P02-003
+content:
+  toolbar:
+    - row:
+        - { h: "10 đơn gần nhất" }
+        - { badge: "Cache: hôm nay 08:00 ICT ✓" }
+        - { btn: "Xem thêm →", action: A-P02-003 }
+  order_list:
+    - table: { cols: ["Mã đơn", "Ngày", "Giá trị", "Trạng thái"], rows: 4 }
 ```
 
 <!-- ui-layout:ascii:start -->
 ```
 ┌────────────────────────────────────────────────────────────────────────────┐
 │TOOLBAR                                                                     │
-│· 10 đơn gần nhất  Cache: hôm nay 08:00 ICT v  [Xem thêm →]                 │
+│· 10 đơn gần nhất [Cache: hôm nay 08:00 ICT v] [Xem thêm →]                 │
 ├────────────────────────────────────────────────────────────────────────────┤
 │ORDER_LIST                                                                  │
-│· ORD-20060812  12/06/2026  1.250.000đ  completed                           │
+│· tbl(Mã đơn | Ngày | Giá trị | Trạng thái) ×4                              │
 └────────────────────────────────────────────────────────────────────────────┘
 ```
 <!-- ui-layout:ascii:end -->

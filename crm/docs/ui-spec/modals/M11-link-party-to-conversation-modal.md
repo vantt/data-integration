@@ -26,15 +26,21 @@ areas:
   - [header]
   - [body]
   - [actions]
-samples:
-  header: "Tìm khách cho: PSID_abc [✕]"
-  body: "[🔍 Tìm theo SĐT, tên, email...] · Nguyễn Văn A +84901234567 GOLD active · Nguyễn Văn An +84909876543 NEW active · Hoặc: [+ Tạo khách mới]"
-  actions: "[Hủy]  [Gắn khách đã chọn]"
-elements:
-  "✕": A-M11-001
-  "+ Tạo khách mới": A-M11-006
-  "Hủy": A-M11-002
-  "Gắn khách đã chọn": A-M11-005
+content:
+  header:
+    - row:
+        - { h: "Tìm khách cho: PSID_abc" }
+        - { btn: "✕", action: A-M11-001 }
+  body:
+    - input: "🔍 Tìm theo SĐT, tên, email..."
+    - list: { item: "Nguyễn Văn A +84901234567 GOLD active", rows: 2 }
+    - row:
+        - { text: "Hoặc:" }
+        - { btn: "+ Tạo khách mới", action: A-M11-006 }
+  actions:
+    - row:
+        - { btn: "Hủy", action: A-M11-002 }
+        - { btn: "Gắn khách đã chọn", action: A-M11-005, primary: true }
 ```
 
 <!-- ui-layout:ascii:start -->
@@ -44,10 +50,10 @@ elements:
 │· Tìm khách cho: PSID_abc [x]                                               │
 ├────────────────────────────────────────────────────────────────────────────┤
 │BODY                                                                        │
-│· [(?) Tìm theo SĐT, tên, email...] · Nguyễn Văn A +84901234567 GOLD active…│
+│· [input: (?) Tìm theo SĐT, tên, email...] · list ×2 {Nguyễn Văn A +8490123…│
 ├────────────────────────────────────────────────────────────────────────────┤
 │ACTIONS                                                                     │
-│· [Hủy]  [Gắn khách đã chọn]                                                │
+│· [Hủy] [Gắn khách đã chọn]                                                 │
 └────────────────────────────────────────────────────────────────────────────┘
 ```
 <!-- ui-layout:ascii:end -->

@@ -26,18 +26,29 @@ areas:
   - [header]
   - [body]
   - [actions]
-samples:
-  header: "Tag cho: Nguyễn Văn A [✕]"
-  body: "Đang có: [VIP ✕] [repeat ✕] [da-nhạy-cảm ✕] · [🔍 Tìm hoặc tạo tag mới...] · [+] skin-care [+] wholesale [+] gift-buyer [+] price-sensitive"
-  actions: "[Đóng]  [Lưu]"
-elements:
-  "✕": A-M03-001
-  "VIP ✕": A-M03-003
-  "repeat ✕": A-M03-003
-  "da-nhạy-cảm ✕": A-M03-003
-  "+": A-M03-004
-  "Đóng": A-M03-002
-  "Lưu": A-M03-005
+content:
+  header:
+    - row:
+        - { h: "Tag cho: Nguyễn Văn A" }
+        - { btn: "✕", action: A-M03-001 }
+  body:
+    - text: "Đang có:"
+    - row:
+        - { btn: "VIP ✕", action: A-M03-003 }
+        - { btn: "repeat ✕", action: A-M03-003 }
+        - { btn: "da-nhạy-cảm ✕", action: A-M03-003 }
+    - row:
+        - { input: "🔍 Tìm hoặc tạo tag mới..." }
+        - { btn: "+ Tạo tag mới", action: A-M03-007 }
+    - row:
+        - { btn: "+ skin-care", action: A-M03-004 }
+        - { btn: "+ wholesale", action: A-M03-004 }
+        - { btn: "+ gift-buyer", action: A-M03-004 }
+        - { btn: "+ price-sensitive", action: A-M03-004 }
+  actions:
+    - row:
+        - { btn: "Đóng", action: A-M03-002 }
+        - { btn: "Lưu", action: A-M03-005, primary: true }
 ```
 
 <!-- ui-layout:ascii:start -->
@@ -47,10 +58,10 @@ elements:
 │· Tag cho: Nguyễn Văn A [x]                                                 │
 ├────────────────────────────────────────────────────────────────────────────┤
 │BODY                                                                        │
-│· Đang có: [VIP x] [repeat x] [da-nhạy-cảm x] · [(?) Tìm hoặc tạo tag mới..…│
+│· Đang có: · [VIP x] [repeat x] [da-nhạy-cảm x] · [input: (?) Tìm hoặc tạo …│
 ├────────────────────────────────────────────────────────────────────────────┤
 │ACTIONS                                                                     │
-│· [Đóng]  [Lưu]                                                             │
+│· [Đóng] [Lưu]                                                              │
 └────────────────────────────────────────────────────────────────────────────┘
 ```
 <!-- ui-layout:ascii:end -->

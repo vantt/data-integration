@@ -25,14 +25,21 @@ areas:
   - [header]
   - [body]
   - [actions]
-samples:
-  header: "Gán phụ trách: Nguyễn Văn A [✕]"
-  body: "Phụ trách hiện tại: NV A · Chọn NV mới: [NV A ▼] · ○ NV A (hiện tại) ○ NV B ○ CSKH B ○ Manager C"
-  actions: "[Hủy]  [Lưu]"
-elements:
-  "✕": A-M04-001
-  "Hủy": A-M04-002
-  "Lưu": A-M04-003
+content:
+  header:
+    - row:
+        - { h: "Gán phụ trách: Nguyễn Văn A" }
+        - { btn: "✕", action: A-M04-001 }
+  body:
+    - text: "Phụ trách hiện tại: NV A"
+    - row:
+        - { text: "Chọn NV mới:" }
+        - { select: "NV A" }
+    - checklist: ["[x] NV A (hiện tại)", "NV B", "CSKH B", "Manager C"]
+  actions:
+    - row:
+        - { btn: "Hủy", action: A-M04-002 }
+        - { btn: "Lưu", action: A-M04-003, primary: true }
 ```
 
 <!-- ui-layout:ascii:start -->
@@ -42,10 +49,10 @@ elements:
 │· Gán phụ trách: Nguyễn Văn A [x]                                           │
 ├────────────────────────────────────────────────────────────────────────────┤
 │BODY                                                                        │
-│· Phụ trách hiện tại: NV A · Chọn NV mới: [NV A v] · ? NV A (hiện tại) ? NV…│
+│· Phụ trách hiện tại: NV A · Chọn NV mới: [NV A v] · [x] NV A (hiện tại) [ …│
 ├────────────────────────────────────────────────────────────────────────────┤
 │ACTIONS                                                                     │
-│· [Hủy]  [Lưu]                                                              │
+│· [Hủy] [Lưu]                                                               │
 └────────────────────────────────────────────────────────────────────────────┘
 ```
 <!-- ui-layout:ascii:end -->

@@ -26,14 +26,21 @@ areas:
   - [header]
   - [body]
   - [actions]
-samples:
-  header: "Gán NV: PSID_abc [✕]"
-  body: "NV hiện tại: CSKH B · Gán cho [CSKH B ▼] · ○ CSKH A · ● CSKH B (hiện tại) · ○ CSKH C"
-  actions: "[Hủy]  [Gán]"
-elements:
-  "✕": A-M09-001
-  "Hủy": A-M09-002
-  "Gán": A-M09-003
+content:
+  header:
+    - row:
+        - { h: "Gán NV: PSID_abc" }
+        - { btn: "✕", action: A-M09-001 }
+  body:
+    - text: "NV hiện tại: CSKH B"
+    - row:
+        - { text: "Gán cho:" }
+        - { select: "CSKH B" }
+    - checklist: ["CSKH A", "[x] CSKH B (hiện tại)", "CSKH C"]
+  actions:
+    - row:
+        - { btn: "Hủy", action: A-M09-002 }
+        - { btn: "Gán", action: A-M09-003, primary: true }
 ```
 
 <!-- ui-layout:ascii:start -->
@@ -43,10 +50,10 @@ elements:
 │· Gán NV: PSID_abc [x]                                                      │
 ├────────────────────────────────────────────────────────────────────────────┤
 │BODY                                                                        │
-│· NV hiện tại: CSKH B · Gán cho [CSKH B v] · ? CSKH A · o CSKH B (hiện tại)…│
+│· NV hiện tại: CSKH B · Gán cho: [CSKH B v] · [ ] CSKH A [x] CSKH B (hiện t…│
 ├────────────────────────────────────────────────────────────────────────────┤
 │ACTIONS                                                                     │
-│· [Hủy]  [Gán]                                                              │
+│· [Hủy] [Gán]                                                               │
 └────────────────────────────────────────────────────────────────────────────┘
 ```
 <!-- ui-layout:ascii:end -->

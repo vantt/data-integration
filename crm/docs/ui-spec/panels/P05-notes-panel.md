@@ -31,30 +31,32 @@ areas:
   - [toolbar]
   - [pinned_section]
   - [notes_list]
-samples:
-  toolbar: "[Tất cả] [★ Ưu tiên] [⚠ Cảnh báo] [📞 Liên lạc] [Campaign]  [+ Thêm ghi chú]"
-  pinned_section: "★ [warning] NV A • 15/06/2026 · Hoàn hàng 3 lần. Xác nhận kỹ trước khi ship."
-  notes_list: "[preference] NV A • 13/06/2026 · Da nhạy cảm, thích dòng gentle. Không dùng retinol."
-elements:
-  "Tất cả": A-P05-004
-  "★ Ưu tiên": A-P05-004
-  "⚠ Cảnh báo": A-P05-004
-  "📞 Liên lạc": A-P05-004
-  "Campaign": A-P05-004
-  "+ Thêm ghi chú": A-P05-001
+content:
+  toolbar:
+    - row:
+        - { tabs: ["Tất cả", "★ Ưu tiên", "⚠ Cảnh báo", "📞 Liên lạc", "Campaign"], active: "Tất cả", action: A-P05-004 }
+        - { btn: "+ Thêm ghi chú", action: A-P05-001, primary: true }
+  pinned_section:
+    - list: { item: "★ [warning] NV A • 15/06/2026 · Hoàn hàng 3 lần. Xác nhận kỹ trước khi ship.", rows: 1 }
+  notes_list:
+    - list: { item: "[preference] NV A • 13/06/2026 · Da nhạy cảm, thích dòng gentle. Không dùng retinol.", rows: 3 }
+    - row:
+        - { btn: "✎ Sửa", action: A-P05-002 }
+        - { btn: "✗ Xóa", action: A-P05-003 }
+        - { btn: "★ Đúc kết", action: A-P05-005 }
 ```
 
 <!-- ui-layout:ascii:start -->
 ```
 ┌────────────────────────────────────────────────────────────────────────────┐
 │TOOLBAR                                                                     │
-│· [Tất cả] [* Ưu tiên] [! Cảnh báo] [> Liên lạc] [Campaign]  [+ Thêm ghi ch…│
+│· |*Tất cả*|| * Ưu tiên || ! Cảnh báo || > Liên lạc || Campaign | [+ Thêm g…│
 ├────────────────────────────────────────────────────────────────────────────┤
 │PINNED_SECTION                                                              │
-│· * [warning] NV A • 15/06/2026 · Hoàn hàng 3 lần. Xác nhận kỹ trước khi sh…│
+│· list ×1 {* [warning] NV A • 15/06/2026 · Hoàn hàng 3 lần. Xác nhận kỹ trư…│
 ├────────────────────────────────────────────────────────────────────────────┤
 │NOTES_LIST                                                                  │
-│· [preference] NV A • 13/06/2026 · Da nhạy cảm, thích dòng gentle. Không dù…│
+│· list ×3 {[preference] NV A • 13/06/2026 · Da nhạy cảm, thích dòng gentle.…│
 └────────────────────────────────────────────────────────────────────────────┘
 ```
 <!-- ui-layout:ascii:end -->

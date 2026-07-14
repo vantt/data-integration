@@ -40,6 +40,8 @@ Panel nạp (tất cả **cache SQLite, rẻ**): `party` (Party360), `identities
 
 ```yaml ui-layout
 columns: [3fr, 2fr]
+# Vertical proportion (1 track / base row): talk_track + talking_points dominate the screen.
+row_heights: [auto, auto, "minmax(150px,auto)", auto, "minmax(120px,auto)", "minmax(110px,auto)", auto, auto, auto]
 areas:
   - [identity_bar, identity_bar]
   - [alert_row, alert_row]
@@ -59,97 +61,167 @@ variants:
   full_screen:
     prepend_rows:
       - [topbar, topbar]
-samples:
-  topbar: "[← Worklist]  #9/31  [Khách kế →]"
-  identity_bar: "Hoàng Thức [GOLD][active] · Miền Trung · ☎0983***35 [📞Gọi][💬Zalo] [360]"
-  alert_row: "[sắp churn 11d] [cancel 32%] [SĐT phụ invalid] [liên hệ 3 ngày trước]"
-  talk_track: "\"Dạ em chào anh Thức…\" [📋Copy]"
-  strategy_summary: "⏱ Gọi 1-2 ngày, giờ hành chính"
-  talking_points: "2/3 · ☑ Nhắc chu kỳ ☑ Ưu đãi ☐ Combo · Gợi thêm: [Omega3] [Vitamin D]"
-  objection_handling: "▸ \"Chưa cần mua\" ▸ \"Giá sao?\" [🔍 khách vừa nói gì?]"
-  guardrails: "⛔ không giảm sâu · không hứa giao nhanh"
-  reason_to_call: "★ PRIMARY: REORDER · GT~1.2tr · quá chu kỳ 11d · #DH2093 [⏱Đặt lịch]"
-  snapshot: "LTV 8.2tr · 3 đơn · 45d · gần nhất 11d"
-  collect: "• Zalo [+] • Email [+] • Sinh nhật [+] • SĐT phụ invalid → [Sửa]"
-  trust_footer: "độ tin vừa · script 24/6 07:15 ICT · ⚠ AI gợi ý, dùng phán đoán"
-  disposition_strip: "T0 [📞Gọi ▾][⋯Ghi thủ công] · T1 ⏱[nháp autosave…]☑Zalo[■Kết thúc] · T2 [✓Nghe][🛒Mua][⏳Hẹn lại][✗Không bắt][☎Bận][🚫Từ chối][☠Sai số] · T3 ✓Đã lưu [Khách kế→]"
-  stop_banner: "⛔ KHÔNG GỌI THEO KỊCH BẢN — CẦN XÁC MINH · Lý do: ... · [Tạo task xác minh] [Xem hồ sơ 360] [Tôi đã xác minh — vẫn tiếp tục]"
-elements:
-  "📞Gọi": A-S14-006
-  "360": A-S14-007
-  "📋Copy": A-S14-001
-  "⏱Đặt lịch": A-S14-024
+content:
+  topbar:
+    - row:
+        - { btn: "← Worklist", action: A-S14-008 }
+        - { text: "#9/31" }
+        - { btn: "Khách kế →", action: A-S14-010 }
+  identity_bar:
+    - row:
+        - { h: "Hoàng Thức" }
+        - { badge: GOLD }
+        - { badge: active }
+        - { text: "Miền Trung · ☎ 0983***35" }
+        - { btn: "📞 Gọi", action: A-S14-006, primary: true }
+        - { btn: "💬 Zalo", action: A-S14-030 }
+        - { btn: "＋ Tạo task", action: A-S14-032 }
+        - { btn: "360", action: A-S14-007 }
+  alert_row:
+    - chips: ["⚠ sắp churn 11d", "cancel 32%", "SĐT phụ invalid", "liên hệ 3 ngày trước"]
+  talk_track:
+    - row:
+        - { tabs: ["Gọi", "Zalo"], action: A-S14-002 }
+        - { btn: "📋 Copy", action: A-S14-001 }
+    - text: '"Dạ em chào anh Thức, em bên FWG. Anh dùng Omega-3 đợt trước chắc cũng sắp hết rồi ạ…"'
+    - text: '"Đợt này bên em có ưu đãi combo cho khách thân thiết, em xin 2 phút chia sẻ nhanh…"'
+  strategy_summary:
+    - text: "⏱ Gọi trong 1-2 ngày tới, giờ hành chính"
+  talking_points:
+    - checklist: ["[x] Nhắc chu kỳ mua Omega-3", "[x] Ưu đãi combo khách thân thiết", "Giới thiệu combo mới"]
+    - row:
+        - { text: "Gợi thêm:" }
+        - { chips: [Omega3, "Vitamin D"] }
+  objection_handling:
+    - input: "🔍 khách vừa nói gì?"
+    - list: { item: '▸ "Chưa cần mua" → còn ~5 ngày là hết, đặt trước khỏi gián đoạn', rows: 3 }
+  guardrails:
+    - text: "⛔ Không giảm sâu · Không hứa giao nhanh"
+  reason_to_call:
+    - h: "★ PRIMARY: REORDER"
+    - text: "GT ~1.2tr · quá chu kỳ 11d · đơn gần nhất #DH2093"
+    - row:
+        - { btn: "⏱ Đặt lịch", action: A-S14-024 }
+        - { btn: "Zalo/Email", action: A-S14-026 }
+    - divider: true
+    - checklist: ["SECONDARY: cross-sell Vitamin D — đã nói?", "SECONDARY: xin email — đã nói?"]
+  snapshot:
+    - row:
+        - { kpi: { label: "LTV", value: "8.2tr" } }
+        - { kpi: { label: "đơn", value: "3" } }
+        - { kpi: { label: "chu kỳ", value: "45d" } }
+        - { kpi: { label: "gần nhất", value: "11d" } }
+  collect:
+    - row: [{ text: "Zalo" }, { btn: "+", action: A-S14-020 }]
+    - row: [{ text: "Email" }, { btn: "+", action: A-S14-020 }]
+    - row: [{ text: "Sinh nhật" }, { btn: "+", action: A-S14-021 }]
+    - row: [{ text: "SĐT phụ invalid →" }, { btn: "Sửa", action: A-S14-023 }]
+  trust_footer:
+    - text: "độ tin vừa · script 24/6 07:15 ICT · ⚠ AI gợi ý, dùng phán đoán"
+  disposition_strip:
+    - row:
+        - { badge: T0 }
+        - { btn: "📞 Gọi 0983***35 ▾", action: A-S14-006, primary: true }
+        - { btn: "⋯ Ghi thủ công", action: A-S14-029 }
+    - divider: true
+    - row:
+        - { badge: T1 }
+        - { text: "⏱ 02:31" }
+        - { input: "nháp ghi chú — autosave…" }
+        - { btn: "☑ Zalo", action: A-S14-031 }
+    - row:
+        - { btn: "1 Nghe", action: A-S14-009 }
+        - { btn: "2 Mua", action: A-S14-009 }
+        - { btn: "3 Hẹn lại", action: A-S14-009 }
+        - { btn: "4 Không bắt", action: A-S14-009 }
+        - { btn: "5 Bận", action: A-S14-009 }
+        - { btn: "6 Từ chối", action: A-S14-009 }
+        - { btn: "7 Sai số", action: A-S14-009 }
+        - { btn: "Lưu & Khách kế →", action: A-S14-009b, primary: true }
+    - divider: true
+    - row:
+        - { badge: T3 }
+        - { text: "✓ Đã lưu: Nghe (02:31)" }
+        - { btn: "＋ Nhắn Zalo", action: A-S14-028 }
+        - { btn: "Khách kế →", action: A-S14-010 }
+  stop_banner:
+    - h: "⛔ KHÔNG GỌI THEO KỊCH BẢN — CẦN XÁC MINH"
+    - text: "Lý do: nghi B2B gán nhầm / margin mâu thuẫn"
+    - row:
+        - { btn: "Tạo task xác minh", action: A-S14-011 }
+        - { btn: "Xem hồ sơ 360", action: A-S14-007 }
+        - { btn: "Tôi đã xác minh — vẫn tiếp tục", action: A-S14-027, primary: true }
 ```
 
 <!-- ui-layout:ascii:start -->
 ```
 ┌────────────────────────────────────────────────────────────────────────────┐
 │IDENTITY_BAR                                                                │
-│· Hoàng Thức [GOLD][active] · Miền Trung · T:0983***35 [>Gọi][~Zalo] [360]  │
+│· Hoàng Thức [GOLD] [active] Miền Trung · T: 0983***35 [> Gọi] [~ Zalo] [+ …│
 ├────────────────────────────────────────────────────────────────────────────┤
 │ALERT_ROW                                                                   │
-│· [sắp churn 11d] [cancel 32%] [SĐT phụ invalid] [liên hệ 3 ngày trước]     │
+│· [! sắp churn 11d] [cancel 32%] [SĐT phụ invalid] [liên hệ 3 ngày trước]   │
 ├─────────────────────────────────────────────┬──────────────────────────────┤
 │TALK_TRACK                                   │REASON_TO_CALL                │
-│· "Dạ em chào anh Thức…" [#Copy]             │· * PRIMARY: REORDER · GT~1.2…│
+│· | Gọi || Zalo | [# Copy] · "Dạ em chào anh…│· * PRIMARY: REORDER · GT ~1.…│
 ├─────────────────────────────────────────────┤                              │
 │STRATEGY_SUMMARY                             │                              │
-│· (t) Gọi 1-2 ngày, giờ hành chính           │                              │
+│· (t) Gọi trong 1-2 ngày tới, giờ hành chính │                              │
 ├─────────────────────────────────────────────┼──────────────────────────────┤
 │TALKING_POINTS                               │SNAPSHOT                      │
-│· 2/3 · [x] Nhắc chu kỳ [x] Ưu đãi [ ] Combo…│· LTV 8.2tr · 3 đơn · 45d · g…│
+│· [x] Nhắc chu kỳ mua Omega-3 [x] Ưu đãi com…│· LTV: 8.2tr đơn: 3 chu kỳ: 4…│
 ├─────────────────────────────────────────────┼──────────────────────────────┤
 │OBJECTION_HANDLING                           │COLLECT                       │
-│· > "Chưa cần mua" > "Giá sao?" [(?) khách v…│· • Zalo [+] • Email [+] • Si…│
+│· [input: (?) khách vừa nói gì?] · list ×3 {…│· Zalo [+] · Email [+] · Sinh…│
 ├─────────────────────────────────────────────┤                              │
 │GUARDRAILS                                   │                              │
-│· !! không giảm sâu · không hứa giao nhanh   │                              │
+│· !! Không giảm sâu · Không hứa giao nhanh   │                              │
 ├─────────────────────────────────────────────┴──────────────────────────────┤
 │TRUST_FOOTER                                                                │
 │· độ tin vừa · script 24/6 07:15 ICT · ! AI gợi ý, dùng phán đoán           │
 ├────────────────────────────────────────────────────────────────────────────┤
 │DISPOSITION_STRIP                                                           │
-│· T0 [>Gọi v][⋯Ghi thủ công] · T1 (t)[nháp autosave…][x]Zalo[#Kết thúc] · T…│
+│· [T0] [> Gọi 0983***35 v] [⋯ Ghi thủ công] · ──── · [T1] (t) 02:31 [input:…│
 └────────────────────────────────────────────────────────────────────────────┘
 
 [variant: full_screen]
 ┌────────────────────────────────────────────────────────────────────────────┐
 │TOPBAR                                                                      │
-│· [← Worklist]  #9/31  [Khách kế →]                                         │
+│· [← Worklist] #9/31 [Khách kế →]                                           │
 ├────────────────────────────────────────────────────────────────────────────┤
 │IDENTITY_BAR                                                                │
-│· Hoàng Thức [GOLD][active] · Miền Trung · T:0983***35 [>Gọi][~Zalo] [360]  │
+│· Hoàng Thức [GOLD] [active] Miền Trung · T: 0983***35 [> Gọi] [~ Zalo] [+ …│
 ├────────────────────────────────────────────────────────────────────────────┤
 │ALERT_ROW                                                                   │
-│· [sắp churn 11d] [cancel 32%] [SĐT phụ invalid] [liên hệ 3 ngày trước]     │
+│· [! sắp churn 11d] [cancel 32%] [SĐT phụ invalid] [liên hệ 3 ngày trước]   │
 ├─────────────────────────────────────────────┬──────────────────────────────┤
 │TALK_TRACK                                   │REASON_TO_CALL                │
-│· "Dạ em chào anh Thức…" [#Copy]             │· * PRIMARY: REORDER · GT~1.2…│
+│· | Gọi || Zalo | [# Copy] · "Dạ em chào anh…│· * PRIMARY: REORDER · GT ~1.…│
 ├─────────────────────────────────────────────┤                              │
 │STRATEGY_SUMMARY                             │                              │
-│· (t) Gọi 1-2 ngày, giờ hành chính           │                              │
+│· (t) Gọi trong 1-2 ngày tới, giờ hành chính │                              │
 ├─────────────────────────────────────────────┼──────────────────────────────┤
 │TALKING_POINTS                               │SNAPSHOT                      │
-│· 2/3 · [x] Nhắc chu kỳ [x] Ưu đãi [ ] Combo…│· LTV 8.2tr · 3 đơn · 45d · g…│
+│· [x] Nhắc chu kỳ mua Omega-3 [x] Ưu đãi com…│· LTV: 8.2tr đơn: 3 chu kỳ: 4…│
 ├─────────────────────────────────────────────┼──────────────────────────────┤
 │OBJECTION_HANDLING                           │COLLECT                       │
-│· > "Chưa cần mua" > "Giá sao?" [(?) khách v…│· • Zalo [+] • Email [+] • Si…│
+│· [input: (?) khách vừa nói gì?] · list ×3 {…│· Zalo [+] · Email [+] · Sinh…│
 ├─────────────────────────────────────────────┤                              │
 │GUARDRAILS                                   │                              │
-│· !! không giảm sâu · không hứa giao nhanh   │                              │
+│· !! Không giảm sâu · Không hứa giao nhanh   │                              │
 ├─────────────────────────────────────────────┴──────────────────────────────┤
 │TRUST_FOOTER                                                                │
 │· độ tin vừa · script 24/6 07:15 ICT · ! AI gợi ý, dùng phán đoán           │
 ├────────────────────────────────────────────────────────────────────────────┤
 │DISPOSITION_STRIP                                                           │
-│· T0 [>Gọi v][⋯Ghi thủ công] · T1 (t)[nháp autosave…][x]Zalo[#Kết thúc] · T…│
+│· [T0] [> Gọi 0983***35 v] [⋯ Ghi thủ công] · ──── · [T1] (t) 02:31 [input:…│
 └────────────────────────────────────────────────────────────────────────────┘
 
 [STOP variant — when: recommended == false]
 ┌────────────────────────────────────────────────────────────────────────────┐
 │STOP_BANNER                                                                 │
 │when: recommended == false                                                  │
-│· !! KHÔNG GỌI THEO KỊCH BẢN — CẦN XÁC MINH · Lý do: ... · [Tạo task xác mi…│
+│· !! KHÔNG GỌI THEO KỊCH BẢN — CẦN XÁC MINH · Lý do: nghi B2B gán nhầm / ma…│
 └────────────────────────────────────────────────────────────────────────────┘
 ```
 <!-- ui-layout:ascii:end -->
@@ -368,6 +440,40 @@ interactions:
     # phase-03, quyết định #3: chỉ hiện ở T3 sau khi outcome='no_answer' — tạo activity
     # THỨ HAI riêng biệt (không gộp field vào activity call vừa chốt). Tái dùng nguyên
     # A-S14-026 (POST /customers/{id}/reason/resolve-async), KHÔNG viết endpoint mới.
+  - id: A-S14-029
+    element: btn_manual_log
+    region: disposition_strip
+    trigger: click
+    action: open_overlay
+    target: M08
+    payload: { party_id: "$party.id", mode: "log", hinh_thuc: "call", return_to: "stay" }
+    # T0 "⋯ Ghi thủ công" (s14StripOpenManual) — log không qua phiên gọi; 1 trong 2 exception
+    # còn dùng M08 (xem Implementation Notes Phase 03).
+  - id: A-S14-030
+    element: btn_zalo_contact
+    region: identity_bar
+    trigger: click
+    action: open_overlay
+    target: M08
+    payload: { party_id: "$party.id", mode: "log", hinh_thuc: "zalo", return_to: "stay" }
+    # Identity bar "💬 Zalo" — biến thể zalo của luồng liên hệ: mở M08 log hình thức zalo.
+    # R1: KHÔNG disable khi consent=denied (chỉ cảnh báo ở alert_row).
+  - id: A-S14-031
+    element: toggle_zalo_connected
+    region: disposition_strip
+    trigger: change
+    action: mutate
+    effects: [activity_log.patch_zalo_connected]
+    # T1 "☑ Zalo" (s14StripZaloToggle) — PATCH draft custom_fields.zalo_connected ngay khi tick.
+  - id: A-S14-032
+    element: btn_create_task
+    region: identity_bar
+    trigger: click
+    action: open_overlay
+    target: M05
+    payload: { party_id: "$party.id", return_to: "stay" }
+    # Identity bar "Tạo task" — mở M05 tạo task cho khách ngay trong phiên gọi
+    # (c360_call_cockpit_panel.html ~dòng 261: htmx GET /modals/m05?return_to=stay).
   - id: A-S14-LSN01
     listens_to: cache.refreshed
     action: mutate

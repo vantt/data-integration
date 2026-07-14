@@ -30,14 +30,36 @@ areas:
   - [header]
   - [body]
   - [actions]
-samples:
-  header: "Chỉnh sửa thông tin bổ sung [✕]"
-  body: "── Sức khoẻ & Da liễu ── · Da nhạy cảm [✓ Có / ✗ Không] · Loại da [Da dầu ▼] · ── Nguồn & Marketing ── · Nguồn KH [Facebook ▼] · Ngày sinh [dd/mm/yyyy] · ── Nội bộ ── · Ghi chú nội bộ [________________]"
-  actions: "[Hủy]  [Lưu]"
-elements:
-  "✕": A-M06-001
-  "Hủy": A-M06-002
-  "Lưu": A-M06-003
+content:
+  header:
+    - row:
+        - { h: "Chỉnh sửa thông tin bổ sung" }
+        - { btn: "✕", action: A-M06-001 }
+  body:
+    - h: "Sức khoẻ & Da liễu"
+    - row:
+        - { text: "Da nhạy cảm" }
+        - { chips: ["✓ Có", "✗ Không"] }
+    - row:
+        - { text: "Loại da" }
+        - { select: "Da dầu" }
+    - divider: true
+    - h: "Nguồn & Marketing"
+    - row:
+        - { text: "Nguồn KH" }
+        - { select: "Facebook" }
+    - row:
+        - { text: "Ngày sinh" }
+        - { input: "dd/mm/yyyy" }
+    - divider: true
+    - h: "Nội bộ"
+    - row:
+        - { text: "Ghi chú nội bộ" }
+        - { input: "________________" }
+  actions:
+    - row:
+        - { btn: "Hủy", action: A-M06-002 }
+        - { btn: "Lưu", action: A-M06-003, primary: true }
 ```
 
 <!-- ui-layout:ascii:start -->
@@ -47,10 +69,10 @@ elements:
 │· Chỉnh sửa thông tin bổ sung [x]                                           │
 ├────────────────────────────────────────────────────────────────────────────┤
 │BODY                                                                        │
-│· ── Sức khoẻ & Da liễu ── · Da nhạy cảm [v Có / x Không] · Loại da [Da dầu…│
+│· Sức khoẻ & Da liễu · Da nhạy cảm [v Có] [x Không] · Loại da [Da dầu v] · …│
 ├────────────────────────────────────────────────────────────────────────────┤
 │ACTIONS                                                                     │
-│· [Hủy]  [Lưu]                                                              │
+│· [Hủy] [Lưu]                                                               │
 └────────────────────────────────────────────────────────────────────────────┘
 ```
 <!-- ui-layout:ascii:end -->

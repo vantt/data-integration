@@ -25,14 +25,19 @@ areas:
   - [header]
   - [body]
   - [actions]
-samples:
-  header: "Đóng hội thoại với Nguyễn Văn A [✕]"
-  body: "Kết quả xử lý: [Đã giải quyết thắc mắc về đơn hàng] · [✓] Ghi vào activity timeline của khách"
-  actions: "[Hủy]  [Đóng hội thoại]"
-elements:
-  "✕": A-M10-001
-  "Hủy": A-M10-002
-  "Đóng hội thoại": A-M10-003
+content:
+  header:
+    - row:
+        - { h: "Đóng hội thoại với Nguyễn Văn A" }
+        - { btn: "✕", action: A-M10-001 }
+  body:
+    - text: "Kết quả xử lý"
+    - input: "Đã giải quyết thắc mắc về đơn hàng"
+    - checklist: ["[x] Ghi vào activity timeline của khách"]
+  actions:
+    - row:
+        - { btn: "Hủy", action: A-M10-002 }
+        - { btn: "Đóng hội thoại", action: A-M10-003, primary: true }
 ```
 
 <!-- ui-layout:ascii:start -->
@@ -42,10 +47,10 @@ elements:
 │· Đóng hội thoại với Nguyễn Văn A [x]                                       │
 ├────────────────────────────────────────────────────────────────────────────┤
 │BODY                                                                        │
-│· Kết quả xử lý: [Đã giải quyết thắc mắc về đơn hàng] · [v] Ghi vào activit…│
+│· Kết quả xử lý · [input: Đã giải quyết thắc mắc về đơn hàng] · [x] Ghi vào…│
 ├────────────────────────────────────────────────────────────────────────────┤
 │ACTIONS                                                                     │
-│· [Hủy]  [Đóng hội thoại]                                                   │
+│· [Hủy] [Đóng hội thoại]                                                    │
 └────────────────────────────────────────────────────────────────────────────┘
 ```
 <!-- ui-layout:ascii:end -->

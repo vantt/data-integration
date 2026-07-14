@@ -23,22 +23,26 @@ Pre-populate date + time từ `task.due_at` hiện tại (ICT display). Mở qua
 areas:
   - [body]
   - [actions]
-samples:
-  body: "Hoãn đến:  [27/06/2026]  [14:30]"
-  actions: "[Huỷ]  [Xác nhận]"
-elements:
-  "Huỷ": A-O03-001
-  "Xác nhận": A-O03-003
+content:
+  body:
+    - row:
+        - { text: "Hoãn đến:" }
+        - { input: "27/06/2026" }
+        - { input: "14:30" }
+  actions:
+    - row:
+        - { btn: "Huỷ", action: A-O03-001 }
+        - { btn: "Xác nhận", action: A-O03-003, primary: true }
 ```
 
 <!-- ui-layout:ascii:start -->
 ```
 ┌────────────────────────────────────────────────────────────────────────────┐
 │BODY                                                                        │
-│· Hoãn đến:  [27/06/2026]  [14:30]                                          │
+│· Hoãn đến: [input: 27/06/2026] [input: 14:30]                              │
 ├────────────────────────────────────────────────────────────────────────────┤
 │ACTIONS                                                                     │
-│· [Huỷ]  [Xác nhận]                                                         │
+│· [Huỷ] [Xác nhận]                                                          │
 └────────────────────────────────────────────────────────────────────────────┘
 ```
 <!-- ui-layout:ascii:end -->

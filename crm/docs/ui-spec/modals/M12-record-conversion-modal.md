@@ -26,14 +26,25 @@ areas:
   - [header]
   - [body]
   - [actions]
-samples:
-  header: "Ghi chuyển đổi: Nguyễn Văn A [✕]"
-  body: "Chiến dịch: Win-back Q3 · Mã đơn hàng * [ORD-____________] → Doanh thu: (tự tính từ wh_order_hdr) · Hoặc: [✓] Đơn chưa có — ghi nhận thủ công · Doanh thu ước tính [__________] đ"
-  actions: "[Hủy]  [Ghi nhận]"
-elements:
-  "✕": A-M12-001
-  "Hủy": A-M12-002
-  "Ghi nhận": A-M12-004
+content:
+  header:
+    - row:
+        - { h: "Ghi chuyển đổi: Nguyễn Văn A" }
+        - { btn: "✕", action: A-M12-001 }
+  body:
+    - text: "Chiến dịch: Win-back Q3"
+    - row:
+        - { text: "Mã đơn hàng *" }
+        - { input: "ORD-____________" }
+    - text: "→ Doanh thu: (tự tính từ wh_order_hdr)"
+    - checklist: ["[x] Đơn chưa có — ghi nhận thủ công"]
+    - row:
+        - { text: "Doanh thu ước tính" }
+        - { input: "__________ đ" }
+  actions:
+    - row:
+        - { btn: "Hủy", action: A-M12-002 }
+        - { btn: "Ghi nhận", action: A-M12-004, primary: true }
 ```
 
 <!-- ui-layout:ascii:start -->
@@ -43,10 +54,10 @@ elements:
 │· Ghi chuyển đổi: Nguyễn Văn A [x]                                          │
 ├────────────────────────────────────────────────────────────────────────────┤
 │BODY                                                                        │
-│· Chiến dịch: Win-back Q3 · Mã đơn hàng * [ORD-____________] → Doanh thu: (…│
+│· Chiến dịch: Win-back Q3 · Mã đơn hàng * [input: ORD-____________] · → Doa…│
 ├────────────────────────────────────────────────────────────────────────────┤
 │ACTIONS                                                                     │
-│· [Hủy]  [Ghi nhận]                                                         │
+│· [Hủy] [Ghi nhận]                                                          │
 └────────────────────────────────────────────────────────────────────────────┘
 ```
 <!-- ui-layout:ascii:end -->

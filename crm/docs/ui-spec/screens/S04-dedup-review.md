@@ -28,26 +28,38 @@ columns: [1fr, 2fr, 4fr]
 areas:
   - [sidebar, topbar, topbar]
   - [sidebar, candidate_list, detail_pane]
-samples:
-  sidebar: "(C01 global nav)"
-  topbar: "Dedup Review  Pending: 12  [Filter: match_rule ▼]"
-  candidate_list: "● Nguyễn V. A vs NVA · exact_phone  |  ● Trần T. B vs Tran B · fuzzy_name"
-  detail_pane: "Party A: Sapo 1234 / SĐT +849.. / Đơn 15  ‖  Party B: Sapo 5678 / Email a@x / Đơn 3  |  Match rule: exact_phone  [Merge A←B] [Reject] [Bỏ qua]"
-elements:
-  "Filter: match_rule ▼": A-S04-007
-  "Merge A←B": A-S04-002
-  "Reject": A-S04-003
-  "Bỏ qua": A-S04-004
+content:
+  sidebar:
+    - slot: "C01 Sidebar Nav (global)"
+  topbar:
+    - row:
+        - { h: "Dedup Review" }
+        - { text: "Pending: 12" }
+        - { select: "Filter: match_rule" }
+  candidate_list:
+    - list: { item: "● Nguyễn V. A vs NVA · exact_phone", rows: 4 }
+  detail_pane:
+    - text: "Party A: Sapo 1234 · SĐT +849** · Đơn 15"
+    - row:
+        - { btn: "Xem 360 A ›", action: A-S04-005 }
+    - text: "Party B: Sapo 5678 · Email a@x · Đơn 3"
+    - row:
+        - { btn: "Xem 360 B ›", action: A-S04-006 }
+    - text: "Match rule: exact_phone"
+    - row:
+        - { btn: "Merge A←B", action: A-S04-002, primary: true }
+        - { btn: "Reject", action: A-S04-003 }
+        - { btn: "Bỏ qua", action: A-S04-004 }
 ```
 
 <!-- ui-layout:ascii:start -->
 ```
 ┌──────────┬─────────────────────────────────────────────────────────────────┐
 │SIDEBAR   │TOPBAR                                                           │
-│· (C01 gl…│· Dedup Review  Pending: 12  [Filter: match_rule v]              │
+│· <<C01 S…│· Dedup Review Pending: 12 [Filter: match_rule v]                │
 │          ├─────────────────────┬───────────────────────────────────────────┤
 │          │CANDIDATE_LIST       │DETAIL_PANE                                │
-│          │· o Nguyễn V. A vs N…│· Party A: Sapo 1234 / SĐT +849.. / Đơn 15…│
+│          │· list ×4 {o Nguyễn …│· Party A: Sapo 1234 · SĐT +849** · Đơn 15…│
 └──────────┴─────────────────────┴───────────────────────────────────────────┘
 ```
 <!-- ui-layout:ascii:end -->

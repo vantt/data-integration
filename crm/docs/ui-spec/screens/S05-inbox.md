@@ -28,25 +28,29 @@ columns: [1fr, 2fr, 3fr]
 areas:
   - [sidebar, topbar, topbar]
   - [sidebar, conv_list, preview_pane]
-samples:
-  sidebar: "(C01 global nav)"
-  topbar: "Inbox  [All ▼] [Open | Pending | Closed]  [Gán cho tôi]"
-  conv_list: "● PSID_abc 🟡 Chưa link khách · \"Hỏi đơn hàng\" · 2 phút trước  |  Nguyễn Văn A ✓ Đã link"
-  preview_pane: "Chọn một hội thoại để xem nội dung"
-elements:
-  "All ▼": A-S05-003
-  "Open | Pending | Closed": A-S05-002
-  "Gán cho tôi": A-S05-004
+content:
+  sidebar:
+    - slot: "C01 Sidebar Nav (global)"
+  topbar:
+    - row:
+        - { h: "Inbox" }
+        - { select: "All" }
+        - { tabs: ["Open", "Pending", "Closed"], action: A-S05-002 }
+        - { btn: "Gán cho tôi", action: A-S05-004 }
+  conv_list:
+    - list: { item: '● PSID_abc 🟡 Chưa link khách · "Hỏi đơn hàng" · 2 phút trước', rows: 5 }
+  preview_pane:
+    - text: "Chọn một hội thoại để xem nội dung"
 ```
 
 <!-- ui-layout:ascii:start -->
 ```
 ┌────────────┬───────────────────────────────────────────────────────────────┐
 │SIDEBAR     │TOPBAR                                                         │
-│· (C01 glob…│· Inbox  [All v] [Open | Pending | Closed]  [Gán cho tôi]      │
+│· <<C01 Sid…│· Inbox [All v] | Open || Pending || Closed | [Gán cho tôi]    │
 │            ├────────────────────────┬──────────────────────────────────────┤
 │            │CONV_LIST               │PREVIEW_PANE                          │
-│            │· o PSID_abc ? Chưa lin…│· Chọn một hội thoại để xem nội dung  │
+│            │· list ×5 {o PSID_abc ?…│· Chọn một hội thoại để xem nội dung  │
 └────────────┴────────────────────────┴──────────────────────────────────────┘
 ```
 <!-- ui-layout:ascii:end -->

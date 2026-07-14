@@ -25,26 +25,30 @@ trong campaign nào).
 
 ```yaml ui-layout
 columns: [1fr, 4fr]
+row_heights: [auto, "minmax(300px,auto)"]
 areas:
   - [sidebar, topbar]
   - [sidebar, segment_list]
-samples:
-  sidebar: "(C01 global nav)"
-  topbar: "Segments  [+ Tạo segment]  [Search tên...]"
-  segment_list: "Win-back GOLD Q3 · dynamic · 87 thành viên · hôm nay  |  VIP tay - tháng 6 · static · 12 · 12/06"
-elements:
-  "+ Tạo segment": A-S08-001
-  "Search tên...": A-S08-004
+content:
+  sidebar:
+    - slot: "C01 Sidebar Nav (global)"
+  topbar:
+    - row:
+        - { h: "Segments" }
+        - { btn: "+ Tạo segment", action: A-S08-001, primary: true }
+        - { input: "Search tên segment…" }
+  segment_list:
+    - table: { cols: ["Tên", "Loại", "Thành viên", "Cập nhật cuối", "Trạng thái"], rows: 4 }
 ```
 
 <!-- ui-layout:ascii:start -->
 ```
 ┌───────────────┬────────────────────────────────────────────────────────────┐
 │SIDEBAR        │TOPBAR                                                      │
-│· (C01 global …│· Segments  [+ Tạo segment]  [Search tên...]                │
+│· <<C01 Sideba…│· Segments [+ Tạo segment] [input: Search tên segment…]     │
 │               ├────────────────────────────────────────────────────────────┤
 │               │SEGMENT_LIST                                                │
-│               │· Win-back GOLD Q3 · dynamic · 87 thành viên · hôm nay  |  …│
+│               │· tbl(Tên | Loại | Thành viên | Cập nhật cuối | Trạng thái)…│
 └───────────────┴────────────────────────────────────────────────────────────┘
 ```
 <!-- ui-layout:ascii:end -->

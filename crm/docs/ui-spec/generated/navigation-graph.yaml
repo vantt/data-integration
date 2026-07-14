@@ -302,6 +302,15 @@ edges:
     effects:
       - task_list.reload_with_filters
     region: filter_bar
+  - id: A-S01-024
+    from: S01
+    element: btn_claim_task
+    trigger: click
+    action: mutate
+    effects:
+      - task.assign_me
+      - task_list.move_row_to_claimed
+    region: task_list
   - id: A-S02-001
     from: S02
     element: customer_row
@@ -1440,6 +1449,48 @@ edges:
     effects:
       - activity_log.append_async_attempt
     region: disposition_strip
+  - id: A-S14-029
+    from: S14
+    element: btn_manual_log
+    trigger: click
+    action: open_overlay
+    target: M08
+    payload:
+      party_id: $party.id
+      mode: log
+      hinh_thuc: call
+      return_to: stay
+    region: disposition_strip
+  - id: A-S14-030
+    from: S14
+    element: btn_zalo_contact
+    trigger: click
+    action: open_overlay
+    target: M08
+    payload:
+      party_id: $party.id
+      mode: log
+      hinh_thuc: zalo
+      return_to: stay
+    region: identity_bar
+  - id: A-S14-031
+    from: S14
+    element: toggle_zalo_connected
+    trigger: change
+    action: mutate
+    effects:
+      - activity_log.patch_zalo_connected
+    region: disposition_strip
+  - id: A-S14-032
+    from: S14
+    element: btn_create_task
+    trigger: click
+    action: open_overlay
+    target: M05
+    payload:
+      party_id: $party.id
+      return_to: stay
+    region: identity_bar
   - id: A-S14-LSN01
     from: S14
     listens_to: cache.refreshed
@@ -1511,7 +1562,6 @@ edges:
     target: S03
     payload:
       party_id: $task.party_id
-    region: header
   - id: A-S15-008
     from: S15
     element: internal_checklist_item

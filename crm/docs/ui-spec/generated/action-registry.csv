@@ -30,6 +30,7 @@ A-S01-018,S01,btn_cancel_task,click,mutate,,,task_list
 A-S01-019,S01,btn_reschedule_task,click,open_overlay,M05,,task_list
 A-S01-020,S01,btn_refresh,click,mutate,,,topbar
 A-S01-023,S01,filter_contactable_only,change,mutate,,,filter_bar
+A-S01-024,S01,btn_claim_task,click,mutate,,,task_list
 A-S02-001,S02,customer_row,click,navigate,S03,,result_list
 A-S02-002,S02,btn_create_party,click,open_overlay,M02,,main
 A-S02-003,S02,filter_value_group,change,mutate,,,topbar
@@ -171,6 +172,10 @@ A-S14-025,S14,reason_mentioned_checkbox,click,mutate,,,reason_to_call
 A-S14-026,S14,btn_reason_resolve_async,click,mutate,,,reason_to_call
 A-S14-027,S14,btn_r14_ack,click,mutate,,,stop_banner
 A-S14-028,S14,btn_zalo_followup,click,mutate,,,disposition_strip
+A-S14-029,S14,btn_manual_log,click,open_overlay,M08,,disposition_strip
+A-S14-030,S14,btn_zalo_contact,click,open_overlay,M08,,identity_bar
+A-S14-031,S14,toggle_zalo_connected,change,mutate,,,disposition_strip
+A-S14-032,S14,btn_create_task,click,open_overlay,M05,,identity_bar
 A-S14-LSN01,S14,,cache.refreshed,mutate,,,
 A-S15-001,S15,btn_start,click,mutate,,,lifecycle
 A-S15-002,S15,btn_edit,click,open_overlay,M05,,lifecycle
@@ -178,7 +183,7 @@ A-S15-003,S15,btn_postpone,click,open_overlay,O03,,lifecycle
 A-S15-004,S15,btn_cancel,click,mutate,,task.status != 'done',lifecycle
 A-S15-005,S15,btn_log_outcome,click,open_overlay,M08,,close_bar
 A-S15-006,S15,btn_join_call_session,click,navigate,S14,,body_contact
-A-S15-007,S15,btn_view_360,click,navigate,S03,,header
+A-S15-007,S15,btn_view_360,click,navigate,S03,,
 A-S15-008,S15,internal_checklist_item,click,mutate,,,body_internal
 A-S15-009,S15,btn_tool_edit_contact,click,open_overlay,M15,,body_internal
 A-S15-010,S15,btn_tool_add_tag,click,open_overlay,M03,,body_internal

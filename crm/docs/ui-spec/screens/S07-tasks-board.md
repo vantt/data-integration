@@ -25,31 +25,43 @@ NV có thể tạo task mới, chỉnh sửa, đánh dấu done trực tiếp. T
 
 ```yaml ui-layout
 columns: [1fr, 4fr]
+row_heights: [auto, "minmax(280px,auto)"]
 areas:
   - [sidebar, topbar]
   - [sidebar, board]
-samples:
-  sidebar: "(C01 global nav)"
-  topbar: "Tasks  [+ Tạo task]  [Assignee ▼][Priority ▼]  Filter: [Party 🔍] [Campaign ▼] [Status ▼]  [List|Board]"
-  board: "OPEN: [AUTO] CALL_NOW Nguyễn V. A Due: hôm nay  |  DOING: Follow-up A Due: 15/06  |  DONE: Gọi T. B ✓ 12/06"
-elements:
-  "+ Tạo task": A-S07-001
-  "Assignee ▼": A-S07-005
-  "Campaign ▼": A-S07-006
-  "List|Board": A-S07-007
-  "Priority ▼": A-S07-008
-  "Status ▼": A-S07-009
-  "Party 🔍": A-S07-010
+content:
+  sidebar:
+    - slot: "C01 Sidebar Nav (global)"
+  topbar:
+    - row:
+        - { h: "Tasks" }
+        - { btn: "+ Tạo task", action: A-S07-001, primary: true }
+    - row:
+        - { select: "Assignee" }
+        - { select: "Priority" }
+        - { input: "🔍 Party" }
+        - { select: "Campaign" }
+        - { select: "Status" }
+        - { tabs: ["List", "Board"], action: A-S07-007 }
+  board:
+    - row:
+        - { h: "OPEN" }
+        - { h: "DOING" }
+        - { h: "DONE" }
+    - row:
+        - { list: { item: "[AUTO] CALL_NOW Nguyễn V. A · Due: hôm nay", rows: 3 } }
+        - { list: { item: "Follow-up A · Due: 15/06", rows: 2 } }
+        - { list: { item: "Gọi T. B ✓ 12/06", rows: 2 } }
 ```
 
 <!-- ui-layout:ascii:start -->
 ```
 ┌───────────────┬────────────────────────────────────────────────────────────┐
 │SIDEBAR        │TOPBAR                                                      │
-│· (C01 global …│· Tasks  [+ Tạo task]  [Assignee v][Priority v]  Filter: [P…│
+│· <<C01 Sideba…│· Tasks [+ Tạo task] · [Assignee v] [Priority v] [input: (?…│
 │               ├────────────────────────────────────────────────────────────┤
 │               │BOARD                                                       │
-│               │· OPEN: [AUTO] CALL_NOW Nguyễn V. A Due: hôm nay  |  DOING:…│
+│               │· OPEN DOING DONE · list ×3 {[AUTO] CALL_NOW Nguyễn V. A · …│
 └───────────────┴────────────────────────────────────────────────────────────┘
 ```
 <!-- ui-layout:ascii:end -->

@@ -26,14 +26,22 @@ areas:
   - [header]
   - [body]
   - [actions]
-samples:
-  header: "Merge Party B → Party A (surviving) [✕]"
-  body: "Party A (giữ lại): Nguyễn Văn A +84901234567 · Party B (gộp vào): NVA · Sẽ chuyển: 1 identity, 3 activity, 0 task · ⚠ Party B sẽ bị ẩn (is_merged=true) · ✓ Snapshot undo sẽ được lưu · [✓] Tôi xác nhận muốn gộp 2 khách này"
-  actions: "[Hủy]  [Xác nhận Merge]"
-elements:
-  "✕": A-M01-001
-  "Hủy": A-M01-002
-  "Xác nhận Merge": A-M01-003
+content:
+  header:
+    - row:
+        - { h: "Merge Party B → Party A (surviving)" }
+        - { btn: "✕", action: A-M01-001 }
+  body:
+    - text: "Party A (giữ lại): Nguyễn Văn A +84901234567"
+    - text: "Party B (gộp vào): NVA"
+    - text: "Sẽ chuyển: 1 identity, 3 activity, 0 task"
+    - badge: "⚠ Party B sẽ bị ẩn (is_merged=true)"
+    - text: "✓ Snapshot undo sẽ được lưu"
+    - checklist: ["Tôi xác nhận muốn gộp 2 khách này"]
+  actions:
+    - row:
+        - { btn: "Hủy", action: A-M01-002 }
+        - { btn: "Xác nhận Merge", action: A-M01-003, primary: true }
 ```
 
 <!-- ui-layout:ascii:start -->
@@ -46,7 +54,7 @@ elements:
 │· Party A (giữ lại): Nguyễn Văn A +84901234567 · Party B (gộp vào): NVA · S…│
 ├────────────────────────────────────────────────────────────────────────────┤
 │ACTIONS                                                                     │
-│· [Hủy]  [Xác nhận Merge]                                                   │
+│· [Hủy] [Xác nhận Merge]                                                    │
 └────────────────────────────────────────────────────────────────────────────┘
 ```
 <!-- ui-layout:ascii:end -->

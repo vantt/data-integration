@@ -26,31 +26,43 @@ areas:
   - [topbar, customer_sidebar]
   - [message_thread, customer_sidebar]
   - [input_bar, customer_sidebar]
-samples:
-  topbar: "[← Inbox]  PSID_abc  🟡 Pending  Assignee: CSKH B  [Đổi NV]  [Đóng hội thoại]  [Ghi note]"
-  message_thread: "[Khách] \"Tôi muốn hỏi...\" 10:32 ICT  |  [NV] \"Dạ, đơn số ...\" 10:35 ICT"
-  input_bar: "(disabled — read-only v1)"
-  customer_sidebar: "Nguyễn Văn A · GOLD · active · Mua gần: 3 ngày · [Mở hồ sơ đầy]  ↙  [Chưa link khách → 🔍 Tìm khách]"
-elements:
-  "← Inbox": A-S06-001
-  "Đổi NV": A-S06-004
-  "Đóng hội thoại": A-S06-002
-  "Ghi note": A-S06-003
-  "Mở hồ sơ đầy": A-S06-006
-  "Chưa link khách → 🔍 Tìm khách": A-S06-005
+content:
+  topbar:
+    - row:
+        - { btn: "← Inbox", action: A-S06-001 }
+        - { text: "PSID_abc" }
+        - { badge: Pending }
+        - { text: "Assignee: CSKH B" }
+        - { btn: "Đổi NV", action: A-S06-004 }
+        - { btn: "Đóng hội thoại", action: A-S06-002 }
+        - { btn: "Ghi note", action: A-S06-003 }
+  message_thread:
+    - list: { item: '[Khách] "Tôi muốn hỏi..." 10:32 ICT', rows: 4 }
+  input_bar:
+    - input: "(disabled — read-only v1)"
+  customer_sidebar:
+    - row:
+        - { h: "Nguyễn Văn A" }
+        - { badge: GOLD }
+        - { badge: active }
+    - text: "Mua gần: 3 ngày"
+    - row:
+        - { btn: "Mở hồ sơ đầy ›", action: A-S06-006 }
+    - row:
+        - { btn: "Chưa link khách → 🔍 Tìm khách", action: A-S06-005 }
 ```
 
 <!-- ui-layout:ascii:start -->
 ```
 ┌────────────────────────────────────────────────────────┬───────────────────┐
 │TOPBAR                                                  │CUSTOMER_SIDEBAR   │
-│· [← Inbox]  PSID_abc  ? Pending  Assignee: CSKH B  [Đổ…│· Nguyễn Văn A · G…│
+│· [← Inbox] PSID_abc [Pending] Assignee: CSKH B [Đổi NV…│· Nguyễn Văn A [GO…│
 ├────────────────────────────────────────────────────────┤                   │
 │MESSAGE_THREAD                                          │                   │
-│· [Khách] "Tôi muốn hỏi..." 10:32 ICT  |  [NV] "Dạ, đơn…│                   │
+│· list ×4 {[Khách] "Tôi muốn hỏi..." 10:32 ICT}         │                   │
 ├────────────────────────────────────────────────────────┤                   │
 │INPUT_BAR                                               │                   │
-│· (disabled — read-only v1)                             │                   │
+│· [input: (disabled — read-only v1)]                    │                   │
 └────────────────────────────────────────────────────────┴───────────────────┘
 ```
 <!-- ui-layout:ascii:end -->

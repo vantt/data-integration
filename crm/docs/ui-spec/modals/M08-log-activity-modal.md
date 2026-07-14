@@ -49,19 +49,42 @@ areas:
 floating:
   - region: contact_pref_banner
     when: "party has crm_note(note_type='contact_pref', pinned=true)"
-samples:
-  header: "Ghi nhận tiếp xúc · Nguyễn Văn A [✕]"
-  contact_pref_banner: "⚠ Lưu ý liên hệ: Chỉ nhắn Zalo sau 8pm, không nghe số lạ"
-  body: "📋 Task: Follow-up sau cuộc gọi · HÌNH THỨC * [📞 Cuộc gọi ▾] · SỐ ĐIỆN THOẠI [● 0901234567 (chính)] [Dùng số khác] · KẾT QUẢ * [Đã nghe] [Không bắt] [Hẹn lại] [Từ chối] · NỘI DUNG [textarea] · THỜI GIAN [datetime ICT]  ĐƠN LIÊN QUAN [ORD-…]"
-  actions: "[Hủy]  [Lưu hoạt động]"
-elements:
-  "✕": A-M08-001
-  "Đã nghe": A-M08-005
-  "Không bắt": A-M08-005
-  "Hẹn lại": A-M08-005
-  "Từ chối": A-M08-005
-  "Hủy": A-M08-002
-  "Lưu hoạt động": A-M08-003
+content:
+  header:
+    - row:
+        - { h: "Ghi nhận tiếp xúc · Nguyễn Văn A" }
+        - { btn: "✕", action: A-M08-001 }
+  contact_pref_banner:
+    - text: "⚠ Lưu ý liên hệ: Chỉ nhắn Zalo sau 8pm, không nghe số lạ"
+  body:
+    - badge: "📋 Task: Follow-up sau cuộc gọi"
+    - row:
+        - { text: "HÌNH THỨC *" }
+        - { select: "📞 Cuộc gọi" }
+    - row:
+        - { text: "SỐ ĐIỆN THOẠI" }
+        - { chips: ["● 0901234567 (chính)", "dùng số khác"] }
+    - row:
+        - { text: "KẾT QUẢ *" }
+        - { btn: "Đã nghe", action: A-M08-005 }
+        - { btn: "Không bắt", action: A-M08-005 }
+        - { btn: "Hẹn lại", action: A-M08-005 }
+        - { btn: "Từ chối", action: A-M08-005 }
+    - row:
+        - { text: "LÝ DO (* khi Từ chối)" }
+        - { chips: ["Giá", "Chờ KM", "Chưa dùng hết", "Tác dụng phụ", "Mua chỗ khác", "Khác"] }
+    - text: "NỘI DUNG"
+    - input: "nội dung trao đổi… (bắt buộc khi lý do = Tác dụng phụ)"
+    - checklist: ["Lên lịch theo dõi", "Lưu thành note", "Tạo task callback (khi Hẹn lại)", "[x] Đánh dấu task hoàn thành"]
+    - row:
+        - { text: "THỜI GIAN" }
+        - { input: "14/07 08:20 ICT" }
+        - { text: "ĐƠN LIÊN QUAN" }
+        - { input: "ORD-…" }
+  actions:
+    - row:
+        - { btn: "Hủy", action: A-M08-002 }
+        - { btn: "Lưu hoạt động", action: A-M08-003, primary: true }
 ```
 
 <!-- ui-layout:ascii:start -->
@@ -71,10 +94,10 @@ elements:
 │· Ghi nhận tiếp xúc · Nguyễn Văn A [x]                                      │
 ├────────────────────────────────────────────────────────────────────────────┤
 │BODY                                                                        │
-│· # Task: Follow-up sau cuộc gọi · HÌNH THỨC * [> Cuộc gọi v] · SỐ ĐIỆN THO…│
+│· [# Task: Follow-up sau cuộc gọi] · HÌNH THỨC * [> Cuộc gọi v] · SỐ ĐIỆN T…│
 ├────────────────────────────────────────────────────────────────────────────┤
 │ACTIONS                                                                     │
-│· [Hủy]  [Lưu hoạt động]                                                    │
+│· [Hủy] [Lưu hoạt động]                                                     │
 └────────────────────────────────────────────────────────────────────────────┘
 
 [STOP variant — when: party has crm_note(note_type='contact_pref', pinned=true)]

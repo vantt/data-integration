@@ -24,27 +24,33 @@ Không cần migration khi thêm field mới (schema-less JSON1).
 
 ```yaml ui-layout
 columns: [1fr, 1fr, 4fr]
+row_heights: [auto, "minmax(280px,auto)"]
 areas:
   - [sidebar, topbar, topbar]
   - [sidebar, settings_nav, settings_content]
-samples:
-  sidebar: "(C01 global nav)"
-  topbar: "Cài đặt"
-  settings_nav: "> Custom Fields  Tags  Người dùng"
-  settings_content: "Custom Fields  [+ Thêm]  · Da nhạy cảm · bool · không bắt buộc · [Edit]  · Nguồn KH · select · không · [Edit]"
-elements:
-  "+ Thêm": A-S13-004
-  "Edit": A-S13-005
+content:
+  sidebar:
+    - slot: "C01 Sidebar Nav (global)"
+  topbar:
+    - h: "Cài đặt"
+  settings_nav:
+    - tabs: ["Custom Fields", "Tags", "Người dùng"]
+      actions: { "Custom Fields": A-S13-001, "Tags": A-S13-002, "Người dùng": A-S13-003 }
+  settings_content:
+    - row:
+        - { h: "Custom Fields" }
+        - { btn: "+ Thêm", action: A-S13-004, primary: true }
+    - table: { cols: ["Nhãn", "Kiểu", "Bắt buộc", "Actions"], rows: 3 }
 ```
 
 <!-- ui-layout:ascii:start -->
 ```
 ┌────────────┬───────────────────────────────────────────────────────────────┐
 │SIDEBAR     │TOPBAR                                                         │
-│· (C01 glob…│· Cài đặt                                                      │
+│· <<C01 Sid…│· Cài đặt                                                      │
 │            ├────────────┬──────────────────────────────────────────────────┤
 │            │SETTINGS_NAV│SETTINGS_CONTENT                                  │
-│            │· > Custom …│· Custom Fields  [+ Thêm]  · Da nhạy cảm · bool ·…│
+│            │· | Custom …│· Custom Fields [+ Thêm] · tbl(Nhãn | Kiểu | Bắt …│
 └────────────┴────────────┴──────────────────────────────────────────────────┘
 ```
 <!-- ui-layout:ascii:end -->
