@@ -159,7 +159,11 @@
 .aq-check-row--done .aq-check-row__why { color: var(--fg-tertiary); text-decoration: line-through; }
 
 /* ── Worklist task rows ─────────────────────────────────── */
-.wl-list { display: flex; flex-direction: column; border: 1px solid var(--border); border-radius: var(--radii-control); overflow: hidden; background: var(--bg-surface); }
+/* overflow stays visible — row-level popovers (.task-menu__pop, .wl-snooze__menu)
+   must escape this container; corners are rounded on the edge rows instead. */
+.wl-list { display: flex; flex-direction: column; border: 1px solid var(--border); border-radius: var(--radii-control); background: var(--bg-surface); }
+.wl-list > .wl-row:first-child { border-top-left-radius: var(--radii-control); border-top-right-radius: var(--radii-control); }
+.wl-list > .wl-row:last-child { border-bottom-left-radius: var(--radii-control); border-bottom-right-radius: var(--radii-control); }
 .wl-row { display: grid; grid-template-columns: auto 1fr auto; gap: var(--sp-4); align-items: center; padding: var(--sp-4) var(--sp-5); cursor: pointer; transition: background var(--dur-fast) var(--ease-fast); }
 .wl-row + .wl-row { border-top: 1px solid var(--border); }
 .wl-row:hover { background: var(--bg-raised); }
