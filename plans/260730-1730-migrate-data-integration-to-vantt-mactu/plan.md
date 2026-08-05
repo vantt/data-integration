@@ -123,12 +123,13 @@ HOST (Windows, D:\Vantt\app\data-integration\)          CONTAINER
 2. **Data cần lock ổn định** (SQLite/DuckDB ghi liên tục: `dagster_home`, `monitoring_db`, `crm_data`, `crm_backups`) → **named volume** (Docker VM storage), tránh đúng lỗi 9p/Windows-filesystem-lock đã gây outage 9 ngày.
 3. **Data lớn, ít ghi đồng thời** (`data_lake` Parquet+DuckDB) → vẫn bind-mount (chưa migrate sang named volume — có thể là rủi ro tồn đọng, không nằm trong scope migrate lần này nhưng đáng note).
 4. **Secrets** → bind-mount `:ro` từ `app_data/secrets/`.
-5. Named volume gắn theo **compose project name prefix** (`data-integration_dagster_home`, không phải bare `dagster_home`) — do compose tự thêm prefix từ tên thư mục project. **Đây là điểm khác nu-data-pipeline's lesson #3**: miễn là target host dùng project-name khác nhau cho mỗi app (đã đúng: `data-integration_*` vs `nu_*`), không có rủi ro đụng tên volume như vụ Metabase.
+5. Named volume gắn theo **compose project name prefix** (`data-integration_dagster_home` trên Windows, không phải bare `dagster_home`) — do compose tự thêm prefix từ tên thư mục project. **Đây là điểm khác nu-data-pipeline's lesson #3**: miễn là target host dùng project-name khác nhau cho mỗi app, không có rủi ro đụng tên volume như vụ Metabase.
+   **⚠️ Trên vantt-mactu, prefix sẽ là `fg-data-warhouse_*`** (chốt path 2026-08-05, khác tên thư mục Windows) — phase 4 đã cập nhật đúng, không dùng lại `data-integration_*` ở phía đích.
 
 ### Đề xuất — vantt-mactu
 
 ```
-HOST (Linux, /home/vantt/data-integration/)             CONTAINER   (Y HỆT — không đổi path trong container)
+HOST (Linux, /home/vantt/projects/fg-data-warhouse/)     CONTAINER   (Y HỆT — không đổi path trong container)
 ──────────────────────────────────────────────────────────────────────────────
 ./transformation, ./ingestion, ./orchestration, ./scripts, ./plans   → giữ nguyên, chỉ đổi root path
 ./app_data/{data_lake,backups*,input_source,secrets,metabase_data,rill}  → giữ nguyên cấu trúc con
@@ -137,7 +138,7 @@ HOST (Linux, /home/vantt/data-integration/)             CONTAINER   (Y HỆT —
                                                                         (agent_codex_config: KHÔNG load — phải `codex login` lại, OAuth session không portable)
 ```
 
-**Không đổi path bên trong container** — chỉ đổi root path phía host (`D:\Vantt\app\data-integration` → `/home/vantt/data-integration`, đề xuất tên thư mục MỚI khác `~/projects/data-integration` cũ để tránh nhầm lẫn với checkout tháng 4 — xem Open Question 3). Toàn bộ `docker-compose.yml` KHÔNG cần sửa path vì dùng path tương đối (`./app_data/...`) — đây là điểm thuận lợi lớn, khác nu-data-pipeline không cần custom `DATA_ROOT` env var kiểu đó vì data-integration không có logic tương tự (đã grep, không thấy `DATA_ROOT` trong compose file này).
+**Không đổi path bên trong container** — chỉ đổi root path phía host (`D:\Vantt\app\data-integration` → `/home/vantt/projects/fg-data-warhouse`, chốt 2026-08-05 — path MỚI, khác `~/projects/data-integration` cũ (checkout tháng 4, không đụng)). Toàn bộ `docker-compose.yml` KHÔNG cần sửa path vì dùng path tương đối (`./app_data/...`) — đây là điểm thuận lợi lớn, khác nu-data-pipeline không cần custom `DATA_ROOT` env var kiểu đó vì data-integration không có logic tương tự (đã grep, không thấy `DATA_ROOT` trong compose file này).
 
 ---
 
@@ -159,7 +160,7 @@ HOST (Linux, /home/vantt/data-integration/)             CONTAINER   (Y HỆT —
 
 Tóm tắt nhanh mỗi phase (chi tiết lệnh thật trong từng file):
 
-1. **Chuẩn bị đích**: tạo path mới `~/data-integration` (không đụng checkout cũ `~/projects/data-integration`); tạo `caddy_net` network.
+1. **Chuẩn bị đích**: tạo path mới `~/projects/fg-data-warhouse` (không đụng checkout cũ `~/projects/data-integration`); tạo `caddy_net` network.
 2. **Transfer code**: `git clone` (đồng bộ tới `main`) + **patch/transfer riêng phần uncommitted** (docker-compose.yml, orchestration/definitions.py, .skills/ui-spec/** — qua `git diff | ssh ... apply` + tar untracked, KHÔNG dùng git clone đơn thuần vì sẽ thiếu fix dagster_home).
 3. **Transfer data (bind-mount)**: dừng `data_platform`/`metabase` (writer) → tar mirror `data_lake`, `metabase_data`, `input_source`, `secrets`, `analysis` qua ssh (loại `backups`, `dagster_home` orphaned — đã quyết định bỏ) → verify checksum sha256.
 4. **Transfer named volumes**: dừng container tương ứng → `docker run alpine cp -a` từng volume vào staging → tar qua ssh → load vào named volume mới trên vantt-mactu. `agent_codex_config`: bỏ qua, login lại thủ công (phase 4.5, làm ở đầu phase 7).
@@ -196,7 +197,7 @@ Tóm tắt nhanh mỗi phase (chi tiết lệnh thật trong từng file):
 |---|---|---|
 | 1 | `app_data/backups` (11.75G) | **Bỏ qua hoàn toàn** — không transfer |
 | 2 | `app_data/dagster_home` orphaned (12.05G) | **Bỏ hẳn** — không transfer |
-| 3 | Path đích vantt-mactu | Chưa hỏi trực tiếp — mặc định dùng path mới `~/data-integration` (giữ nguyên checkout cũ `~/projects/data-integration` không đụng, dọn sau nếu cần) |
+| 3 | Path đích vantt-mactu | **Chốt 2026-08-05**: `~/projects/fg-data-warhouse` (path MỚI, giữ nguyên checkout cũ `~/projects/data-integration` tháng 4 không đụng, dọn sau nếu cần) |
 | 4 | Caddy/DNS-01 | **Replicate `caddy-global` đầy đủ ngay từ đầu** — deploy trước phase 7, cấp cert thật cho `*.lan.fwg.vn` trên vantt-mactu |
 | 5 | `CLOUDFLARE_API_TOKEN` | **Đã rotate, token hiện tại an toàn** — copy thẳng `.env.docker` hiện tại, không cần rotate lại trước |
 | 6 | CRM production cutover timing | Chưa hỏi trực tiếp — giữ mặc định trong plan: **tách phase riêng (phase 8), gate bằng go-ahead rõ ràng của user**, không gộp chung dry-run các service còn lại |
@@ -205,7 +206,7 @@ Tóm tắt nhanh mỗi phase (chi tiết lệnh thật trong từng file):
 
 → Với quyết định #4, phase 6 (reverse proxy) đổi từ "tạm thời port trực tiếp" thành "deploy `caddy-global` thật, verify cert issuance qua DNS-01" — cần chạy TRƯỚC phase 7 (verify services qua domain, không phải qua port thô).
 
-**Chưa quyết** (giữ nguyên đề xuất mặc định trong plan cho tới khi user phản đối): path đích cụ thể (#3), timing CRM cutover (#6).
+**Chưa quyết** (giữ nguyên đề xuất mặc định trong plan cho tới khi user phản đối): timing CRM cutover (#6). Path đích (#3) đã chốt 2026-08-05: `~/projects/fg-data-warhouse`.
 
 ## Cập nhật phase 8 sau recon Cloudflare Tunnel (2026-08-04)
 

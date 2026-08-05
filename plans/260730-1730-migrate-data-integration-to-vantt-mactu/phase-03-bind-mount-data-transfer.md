@@ -20,7 +20,7 @@
      --exclude=crm_verify_tmp \
      --exclude=logs \
      --exclude=rill \
-     -cf - . | ssh vantt-mactu "tar -C ~/data-integration/app_data -xf -"
+     -cf - . | ssh vantt-mactu "tar -C ~/projects/fg-data-warhouse/app_data -xf -"
    ```
 3. Verify file-count + byte-count TUYỆT ĐỐI, KHÔNG dùng BusyBox `du -sb` (lesson #7 — lệch do disk-block-usage). Dùng `find -printf` hai bên:
    ```bash
@@ -30,18 +30,18 @@
    ```
    ```bash
    # vantt-mactu
-   ssh vantt-mactu "find ~/data-integration/app_data -type f | wc -l"
-   ssh vantt-mactu "find ~/data-integration/app_data -type f -printf '%s\n' | paste -sd+ | bc"
+   ssh vantt-mactu "find ~/projects/fg-data-warhouse/app_data -type f | wc -l"
+   ssh vantt-mactu "find ~/projects/fg-data-warhouse/app_data -type f -printf '%s\n' | paste -sd+ | bc"
    ```
    → hai cặp số phải khớp tuyệt đối.
 4. Verify integrity từng file DuckDB/H2 quan trọng:
    ```bash
-   ssh vantt-mactu "docker run --rm -v ~/data-integration/app_data/data_lake:/d python:3.11-slim bash -c 'pip install duckdb -q && python -c \"import duckdb; duckdb.connect(\\\"/d/sapo_warehouse.duckdb\\\", read_only=True).execute(\\\"PRAGMA database_list\\\").fetchall()\"'"
+   ssh vantt-mactu "docker run --rm -v ~/projects/fg-data-warhouse/app_data/data_lake:/d python:3.11-slim bash -c 'pip install duckdb -q && python -c \"import duckdb; duckdb.connect(\\\"/d/sapo_warehouse.duckdb\\\", read_only=True).execute(\\\"PRAGMA database_list\\\").fetchall()\"'"
    ```
    (hoặc đơn giản hơn: sha256sum các file `.duckdb` chính hai bên, so khớp — DuckDB/H2 không hỗ trợ `PRAGMA integrity_check` như SQLite, dùng checksum thay thế vì file không bị ghi trong lúc copy do đã dừng service ở bước 1.)
    ```bash
    sha256sum app_data/data_lake/sapo_warehouse.duckdb app_data/data_lake/serving/olap.duckdb app_data/metabase_data/metabase.db.mv.db
-   ssh vantt-mactu "sha256sum ~/data-integration/app_data/data_lake/sapo_warehouse.duckdb ~/data-integration/app_data/data_lake/serving/olap.duckdb ~/data-integration/app_data/metabase_data/metabase.db.mv.db"
+   ssh vantt-mactu "sha256sum ~/projects/fg-data-warhouse/app_data/data_lake/sapo_warehouse.duckdb ~/projects/fg-data-warhouse/app_data/data_lake/serving/olap.duckdb ~/projects/fg-data-warhouse/app_data/metabase_data/metabase.db.mv.db"
    ```
 5. Khởi động lại service trên Windows (chưa cutover, Windows vẫn là nguồn sống chính cho tới khi phase 7 verify xong):
    ```powershell
@@ -49,7 +49,7 @@
    ```
 
 ## Rollback
-Windows không đổi gì (chỉ dừng/start lại). Trên vantt-mactu, xoá `~/data-integration/app_data/*` và làm lại nếu checksum lệch.
+Windows không đổi gì (chỉ dừng/start lại). Trên vantt-mactu, xoá `~/projects/fg-data-warhouse/app_data/*` và làm lại nếu checksum lệch.
 
 ## Acceptance
 - File-count khớp tuyệt đối.

@@ -10,11 +10,11 @@
 
 1. `caddy-global/` đã transfer cùng code ở phase 2 (nằm trong repo). Verify:
    ```bash
-   ssh vantt-mactu "ls ~/data-integration/app/caddy-global/"
+   ssh vantt-mactu "ls ~/projects/fg-data-warhouse/caddy-global/"
    ```
 2. Deploy caddy-global (stack chính `data-integration` đã chạy từ phase 7, labels caddy-docker-proxy sẽ được Caddy tự pick up ngay khi container này lên):
    ```bash
-   ssh vantt-mactu "cd ~/data-integration/app/caddy-global && docker compose --env-file ../.env.docker up -d --build"
+   ssh vantt-mactu "cd ~/projects/fg-data-warhouse/caddy-global && docker compose --env-file ../.env.docker up -d --build"
    ```
 3. Verify Caddy container healthy, đọc được docker socket:
    ```bash

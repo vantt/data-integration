@@ -82,9 +82,34 @@ curl -sI https://hermes.fwg.vn
 curl -sI https://fgos.fwg.vn
 ```
 
-### 8.3 — CRM data cutover (giữ nguyên như bản gốc)
+### 8.3 — CRM data cutover (transfer delta lần cuối)
 
-(giữ nguyên nội dung bước 1-3 bản trước: transfer delta `crm_data`/`crm_backups` lần cuối, `PRAGMA integrity_check`, start `crm`/`crm_drill_runner` trên vantt-mactu — xem lịch sử file nếu cần chi tiết lệnh.)
+Từ phase 4, CRM Windows vẫn tiếp tục nhận traffic tới giờ cutover thật → transfer lại lần cuối để không mất giao dịch phát sinh giữa lúc đó và bây giờ:
+
+1. Dừng CRM Windows:
+   ```powershell
+   docker compose stop crm crm_drill_runner
+   ```
+2. Đóng gói + transfer delta (nguồn Windows vẫn là `data-integration_*`, đích vantt-mactu là `fg-data-warhouse_*` — xem lưu ý prefix ở phase 4):
+   ```bash
+   MSYS_NO_PATHCONV=1 docker run --rm -v data-integration_crm_data:/src:ro -v "$(pwd)/.migrate-staging:/dest" alpine tar -C /src -cf /dest/crm_data-final.tar .
+   MSYS_NO_PATHCONV=1 docker run --rm -v data-integration_crm_backups:/src:ro -v "$(pwd)/.migrate-staging:/dest" alpine tar -C /src -cf /dest/crm_backups-final.tar .
+   scp .migrate-staging/crm_data-final.tar .migrate-staging/crm_backups-final.tar vantt-mactu:~/migrate-staging/
+   ssh vantt-mactu bash -s <<'EOF'
+   docker run --rm -v fg-data-warhouse_crm_data:/dest alpine sh -c "rm -rf /dest/* /dest/.[!.]*"
+   docker run --rm -v fg-data-warhouse_crm_data:/dest -v ~/migrate-staging:/src:ro alpine tar -C /dest -xf /src/crm_data-final.tar
+   docker run --rm -v fg-data-warhouse_crm_backups:/dest alpine sh -c "rm -rf /dest/* /dest/.[!.]*"
+   docker run --rm -v fg-data-warhouse_crm_backups:/dest -v ~/migrate-staging:/src:ro alpine tar -C /dest -xf /src/crm_backups-final.tar
+   EOF
+   ```
+3. Verify integrity lần cuối:
+   ```bash
+   ssh vantt-mactu 'docker run --rm -v fg-data-warhouse_crm_data:/d alpine sh -c "apk add -q sqlite && sqlite3 /d/crm.db \"PRAGMA integrity_check\""'
+   ```
+4. Start CRM trên vantt-mactu:
+   ```bash
+   ssh vantt-mactu "cd ~/projects/fg-data-warhouse && docker compose --env-file .env.docker up -d crm crm_drill_runner"
+   ```
 
 ## Rủi ro còn lại (không thuộc scope sửa, chỉ ghi nhận)
 

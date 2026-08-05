@@ -8,20 +8,20 @@
 
 0. Deploy stack chính (loại trừ `crm`, `crm_drill_runner` — giữ CRM trên Windows tới phase 8):
    ```bash
-   ssh vantt-mactu "cd ~/data-integration/app && docker compose --env-file .env.docker up -d --build data_platform metabase rill evidence fileserver detail_view"
+   ssh vantt-mactu "cd ~/projects/fg-data-warhouse && docker compose --env-file .env.docker up -d --build data_platform metabase rill evidence fileserver detail_view"
    ```
 1. Container health:
    ```bash
-   ssh vantt-mactu "cd ~/data-integration/app && docker compose ps"
+   ssh vantt-mactu "cd ~/projects/fg-data-warhouse && docker compose ps"
    ```
    Kỳ vọng: 6 service trên healthy/running. `crm`, `crm_drill_runner` KHÔNG chạy.
 2. `codex login` thủ công (cần trước vì `data_platform` command chain gọi `generate_approach_scripts.py` dùng session này):
    ```bash
-   ssh vantt-mactu "cd ~/data-integration/app && docker compose exec data_platform codex login"
+   ssh vantt-mactu "cd ~/projects/fg-data-warhouse && docker compose exec data_platform codex login"
    ```
 3. Dagster: validate definitions + check TOÀN BỘ run history theo từng job (không filter mặc định 200-run-tổng):
    ```bash
-   ssh vantt-mactu "docker compose -f ~/data-integration/app/docker-compose.yml exec data_platform dagster definitions validate"
+   ssh vantt-mactu "docker compose -f ~/projects/fg-data-warhouse/docker-compose.yml exec data_platform dagster definitions validate"
    ```
    Nếu có job fail ngay sau migrate → tra lịch sử run TRƯỚC ngày migrate của CHÍNH job đó, xác nhận lỗi mới hay lỗi có sẵn.
 4. Data parity — so sánh row-count vài mart quan trọng giữa Windows (vẫn chạy song song) và vantt-mactu:

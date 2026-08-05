@@ -11,35 +11,35 @@
    git status --short   # xác nhận danh sách M/?? không đổi so với lúc lập plan
    git log -1 --format='%H %ci'
    ```
-2. Clone base trên vantt-mactu:
+2. Clone THẲNG vào thư mục đích đã tạo rỗng ở phase 1 (KHÔNG tạo subfolder `app/` — `docker-compose.yml` phải nằm ngay tại root vì dùng path tương đối `./app_data/...`):
    ```bash
-   ssh vantt-mactu "cd ~/data-integration && git clone https://github.com/vantt/data-integration app"
-   ssh vantt-mactu "cd ~/data-integration/app && git log -1 --format='%H %ci'"
+   ssh vantt-mactu "git clone https://github.com/vantt/data-integration ~/projects/fg-data-warhouse"
+   ssh vantt-mactu "cd ~/projects/fg-data-warhouse && git log -1 --format='%H %ci'"
    ```
    → xác nhận HEAD khớp Windows.
 3. Transfer working-tree diff (uncommitted + untracked) — dùng `git diff` cho tracked, `tar` riêng cho untracked (loại trừ `.git`, `node_modules`, build artifact):
    ```bash
    # Tracked, modified — áp trực tiếp qua ssh
    git diff > /tmp/wt-diff.patch
-   scp /tmp/wt-diff.patch vantt-mactu:~/data-integration/.migrate-staging/
-   ssh vantt-mactu "cd ~/data-integration/app && git apply ~/data-integration/.migrate-staging/wt-diff.patch"
+   scp /tmp/wt-diff.patch vantt-mactu:~/migrate-staging/
+   ssh vantt-mactu "cd ~/projects/fg-data-warhouse && git apply ~/migrate-staging/wt-diff.patch"
 
    # Untracked files — liệt kê rõ ràng (KHÔNG mirror toàn bộ working tree vì sẽ dính app_data/, node_modules nếu có)
    git status --porcelain | grep '^??' | cut -c4- > /tmp/untracked-list.txt
-   tar -cf - -T /tmp/untracked-list.txt | ssh vantt-mactu "tar -C ~/data-integration/app -xf -"
+   tar -cf - -T /tmp/untracked-list.txt | ssh vantt-mactu "tar -C ~/projects/fg-data-warhouse -xf -"
    ```
 4. Verify sau khi áp:
    ```bash
-   ssh vantt-mactu "cd ~/data-integration/app && git diff docker-compose.yml" # phải khớp local diff
-   ssh vantt-mactu "cd ~/data-integration/app && git status --short | wc -l"  # khớp số dòng local
+   ssh vantt-mactu "cd ~/projects/fg-data-warhouse && git diff docker-compose.yml" # phải khớp local diff
+   ssh vantt-mactu "cd ~/projects/fg-data-warhouse && git status --short | wc -l"  # khớp số dòng local
    ```
 5. Verify riêng đoạn fix quan trọng nhất — `dagster_home` named volume — đã có mặt:
    ```bash
-   ssh vantt-mactu "grep -A2 'dagster_home:' ~/data-integration/app/docker-compose.yml | head -5"
+   ssh vantt-mactu "grep -A2 'dagster_home:' ~/projects/fg-data-warhouse/docker-compose.yml | head -5"
    ```
 
 ## Rollback
-Xoá `~/data-integration/app`, clone lại — không ảnh hưởng gì khác (chưa `docker compose up`).
+Xoá `~/projects/fg-data-warhouse`, clone lại — không ảnh hưởng gì khác (chưa `docker compose up`).
 
 ## Acceptance
 - HEAD commit khớp Windows.
