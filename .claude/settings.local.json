@@ -97,7 +97,8 @@
       "Bash(curl -s \"http://127.0.0.1:3000/graphql\" -H \"Content-Type: application/json\" -d '{\"query\":\"{ repositoriesOrError { ... on RepositoryConnection { nodes { name location { name } schedules { name scheduleState { status } } } } } }\"}')",
       "Bash(curl -s \"http://127.0.0.1:3000/graphql\" -H \"Content-Type: application/json\" -d '{\"query\":\"{ runsOrError\\(filter: {pipelineName: \\\\\"pipeline_hug_realtime_job\\\\\"}, limit: 5\\) { ... on Runs { results { runId status startTime endTime } } } }\"}')",
       "Bash(wrangler deploy *)",
-      "Bash(curl *)"
+      "Bash(curl *)",
+      "Bash(xargs -I{} sh -c 'echo \"== {} ==\"; grep -n \"closeModal\\\\|addEventListener\" {}')"
     ]
   },
   "hooks": {
