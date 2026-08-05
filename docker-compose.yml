@@ -37,7 +37,10 @@ services:
       - ./app_data/data_lake:/app/var/data_lake
       # Named volume overlay: isolates monitoring DB from Windows filesystem scanning (prevents dllhost lock)
       - monitoring_db:/app/var/data_lake/monitoring
-      - ./app_data/dagster_home:/app/var/dagster_home
+      # Named volume: dagster_home's SQLite storage (run/event-log/schedule DBs) needs
+      # reliable file locking — a 9p bind-mount to Windows caused chronic lock hangs
+      # (code-server heartbeat misses, health DB stopped writing for 9 days).
+      - dagster_home:/app/var/dagster_home
       - ./app_data/backups:/app/var/backups
       - ./app_data/input_source:/app/var/input_source
       - ./app_data/secrets:/app/var/secrets:ro
@@ -280,6 +283,11 @@ services:
       - crm_verify_data:/verify_data
 
 volumes:
+  dagster_home:
+    # Dagster's SQLite storage (runs.db, schedules.db, per-run event logs) — stored in
+    # Docker VM for reliable locking, same reasoning as monitoring_db below. Previously a
+    # host bind-mount (./app_data/dagster_home) which went through 9p and caused chronic
+    # SQLite lock hangs; started fresh here (old run-history metadata was disposable).
   monitoring_db:
     # Stored in Docker VM — isolated from Windows filesystem scanning (no dllhost/Defender lock)
   crm_data:
