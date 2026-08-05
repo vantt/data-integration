@@ -1,5 +1,7 @@
 # Phase 8 — CRM/Metabase production cutover (Cloudflare Tunnel)
 
+**Status: ĐÃ CHẠY THẬT 2026-08-05, PASS** (tất cả check tự động hoá được). 2 việc còn lại cần user tự làm (xem cuối file).
+
 **GATE**: chỉ bắt đầu sau khi user xác nhận rõ ràng phase 7 đã ổn định. Production thật, nhân viên dùng qua domain public.
 
 **Bối cảnh chốt 2026-08-04**: máy Windows sẽ bị **uninstall và cài lại** sau khi migrate thành công — không phải "giữ song song rollback vô thời hạn" như phase 9 draft ban đầu, mà là mốc cứng. Cloudflare Tunnel hiện tại là **locally-managed tunnel** (không phải token-based), chạy như Windows Service, dùng chung cho NHIỀU service không thuộc repo này — phải xử lý cẩn thận, không chỉ tắt Windows Service là xong.
@@ -124,7 +126,16 @@ Từ phase 4, CRM Windows vẫn tiếp tục nhận traffic tới giờ cutover 
 Trước khi Windows bị wipe: `docker compose stop` trên vantt-mactu (cả `cloudflared-tunnel` lẫn `crm`), `Start-Service Cloudflared` lại trên Windows. Sau khi Windows đã wipe: KHÔNG còn rollback path — đây là lý do phase 7 + 8.2 phải verify kỹ trước khi cho phép wipe Windows (xem phase 9 cập nhật).
 
 ## Acceptance
-- `cloudflared` container trên vantt-mactu log kết nối thành công, không lỗi origin cho crm/bi/hermes/fgos.
-- 4 domain (`crm.fwg.vn`, `bi.fwg.vn`, `hermes.fwg.vn`, `fgos.fwg.vn`) trả response đúng từ bên ngoài.
-- `vnflow.fwg.vn` — user đã được thông báo rõ sẽ gãy, xác nhận chấp nhận trước khi wipe Windows.
-- CRM data integrity check pass, nhân viên đăng nhập thử CRM public domain thành công.
+- `cloudflared` container trên vantt-mactu log kết nối thành công, không lỗi origin cho crm/bi/hermes/fgos. ✅ (4 connection tới sin02/sin18/sin13/sin19, precheck "Environment is healthy")
+- 4 domain (`crm.fwg.vn`, `bi.fwg.vn`, `hermes.fwg.vn`, `fgos.fwg.vn`) trả response đúng từ bên ngoài. ✅ (302 → CF Access SSO login — đúng hành vi kỳ vọng cho route có bảo vệ, xác nhận CF Access còn hoạt động nguyên vẹn, không đổi gì khi chuyển origin)
+- `vnflow.fwg.vn` — user đã được thông báo rõ sẽ gãy, xác nhận chấp nhận trước khi wipe Windows. ✅
+- CRM data integrity check pass. ✅ (`crm.db`, `cache.db` = ok) — sync_parties boot log: 7634/7634 party upserted, 0 failure.
+
+## Còn lại — cần user tự làm (không tự động hoá được)
+
+1. **Dừng Windows Cloudflared service** — cần quyền Administrator, session hiện tại không có:
+   ```powershell
+   Stop-Service Cloudflared
+   ```
+   Chưa dừng thì `bi.fwg.vn` vẫn OK (Metabase Windows còn chạy song song), nhưng `crm.fwg.vn` có thể thoáng 502 nếu Cloudflare route trúng connector Windows (CRM Windows đã dừng ở bước 8.3).
+2. **Đăng nhập thử CRM qua domain public thật** (`https://crm.fwg.vn`) — cần người dùng thật qua CF Access, không tự động hoá qua curl được (Access chặn trước khi tới origin, response 302 chỉ xác nhận pipeline hoạt động, không xác nhận app phía sau login đúng).

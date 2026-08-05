@@ -1,6 +1,6 @@
 # Migrate data-integration: Windows → vantt-mactu
 
-**Status**: Phase 1-5 + 7 ĐÃ CHẠY THẬT và PASS (2026-08-05) — 6 service non-CRM sống trên vantt-mactu, data khớp tuyệt đối Windows. 3 bug thật phát hiện + vá trong lúc chạy (xem lesson #13-17). Windows vẫn chạy song song, chưa đổi CRM. Phase 6 (Caddy) deferred, phase 8 (CRM cutover) đang GATE chờ user go-ahead, phase 9 chưa chạm tới.
+**Status**: Phase 1-5, 7, 8 ĐÃ CHẠY THẬT và PASS (2026-08-05) — TOÀN BỘ 8 service (kể cả CRM) sống trên vantt-mactu, Cloudflare Tunnel đã cutover, `crm.fwg.vn`/`bi.fwg.vn`/`hermes.fwg.vn`/`fgos.fwg.vn` verify OK qua CF Access. CRM Windows đã dừng (chưa xoá). Còn 2 việc user tự làm: dừng Windows Cloudflared service (cần admin) + đăng nhập thử CRM thật. Phase 6 (Caddy) deferred. Phase 9 (wipe Windows) chưa chạm tới — chờ checklist.
 **Ngày**: 2026-07-30 (khởi tạo) / 2026-08-04 (chốt quyết định)
 **Nguồn kinh nghiệm**: `D:\Vantt\app\nu-data-pipeline\plans\reports\migration-260728-1450-windows-to-vantt-mactu-dry-run-report.md` (dry-run cùng target host, 70% giống cấu trúc, 9 bài học đã áp dụng vào plan này — xem mục "Bài học áp dụng" cuối file)
 
@@ -154,7 +154,7 @@ HOST (Linux, /home/vantt/projects/fg-data-warhouse/)     CONTAINER   (Y HỆT �
 | 4 | `phase-04-named-volume-transfer.md` | 4 | ✅ ĐÃ CHẠY, PASS — integrity_check ok cho dagster runs.db/schedules.db + crm.db/cache.db |
 | 5 | `phase-05-secrets-env-transfer.md` | 5 | ✅ ĐÃ CHẠY, PASS — đã sửa `DAGSTER_URL` sang Tailscale IP vantt-mactu |
 | 7 | `phase-07-verify-non-crm-services.md` | 6 | ✅ ĐÃ CHẠY, PASS — vá 2 bug giữa chừng (UID mismatch lesson #14, `--env-file` lesson #15), 6/6 container healthy, data parity khớp tuyệt đối |
-| 8 | `phase-08-crm-production-cutover.md` | 7 | **GATE — cần user go-ahead rõ ràng.** Cloudflare Tunnel: chuyển connector locally-managed sang vantt-mactu, Docker `network_mode: host`, standalone compose. `vnflow.fwg.vn` bỏ (user chấp nhận), `hermes.fwg.vn`/`fgos.fwg.vn` giữ nguyên |
+| 8 | `phase-08-crm-production-cutover.md` | 7 | ✅ ĐÃ CHẠY, PASS (2026-08-05) — connector chuyển sang vantt-mactu, CRM cutover xong, 4 domain verify OK qua CF Access. Còn 2 việc user tự làm (xem file) |
 | 6 | `phase-06-caddy-global-reverse-proxy.md` | 8 | **DEFERRED** — optional, làm sau phase 8 nếu vẫn muốn domain `*.lan.fwg.vn` |
 | 9 | `phase-09-decommission-windows.md` | 9 | **GATE cứng — Windows sẽ bị uninstall+cài lại, không phải "chờ N ngày".** Checklist xác nhận an toàn trước khi cho phép wipe, không có rollback sau đó |
 
