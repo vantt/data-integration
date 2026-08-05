@@ -49,7 +49,7 @@ const isFence = (line) => /^\s*```/.test(line); // markdown code-fence line
 // (these glyphs render 1 or 2 cells depending on font/OS; ASCII is always 1 cell).
 const GLYPH_MAP = {
   "▶": ">", "◀": "<", "▲": "^", "▼": "v", "■": "#", "●": "o",
-  "⚠": "!", "☁": "*", "✓": "v", "✕": "x", "✗": "x", "★": "*", "☆": "*", "ⓘ": "i",
+  "⚠": "!", "☁": "*", "✓": "v", "✕": "x", "✗": "x", "★": "*", "☆": "*", "ⓘ": "i", "＋": "+",
 };
 const GLYPH_RE = new RegExp("[" + Object.keys(GLYPH_MAP).join("") + "]", "g");
 const glyphNormalize = (text) => text.replace(GLYPH_RE, (ch) => GLYPH_MAP[ch] ?? ch);

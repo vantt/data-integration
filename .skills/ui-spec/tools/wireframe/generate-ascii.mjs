@@ -7,6 +7,7 @@ import { readFileSync, writeFileSync } from "node:fs";
 import { basename } from "node:path";
 import { displayWidth } from "./ascii-normalize.mjs";
 import { extractLayout } from "./extract-layout.mjs";
+import { flattenContentLine } from "./layout-schema.mjs";
 
 // ─── Text normalization ────────────────────────────────────────────────────────
 // Same substitution table as ascii-normalize.mjs — MUST stay in sync.
@@ -29,6 +30,8 @@ const GLYPH_MAP = {
   "🛒": "$", "📋": "#", "📊": "#", "🔗": "&",
   // Time (S14 strategy_summary, reason_to_call, outcome_bar)
   "⏱": "(t)", "⏳": "(t)",
+  // Fullwidth plus (S03/S14 "＋ Tạo task" buttons)
+  "＋": "+",
 };
 const GLYPH_RE = new RegExp("[" + Object.keys(GLYPH_MAP).join("") + "]", "gu");
 
@@ -265,7 +268,13 @@ export function generateAscii(model, opts = {}) {
   const areas    = model.areas    || [];
   const floating = model.floating || [];
   const variants = model.variants || {};
-  const samples  = model.samples  || {};
+  // Effective sample line per region: content: regions flatten deterministically
+  // (single writer: layout-schema.mjs); others use the samples: line as-is.
+  const samples  = { ...(model.samples || {}) };
+  for (const [region, elements] of Object.entries(model.content || {})) {
+    const line = flattenContentLine(elements);
+    if (line) samples[region] = line;
+  }
 
   // Derive column spec: explicit columns[] or fall back to uniform 1fr per column
   const M       = Math.max(...(areas.map((r) => (r || []).length)), 1);

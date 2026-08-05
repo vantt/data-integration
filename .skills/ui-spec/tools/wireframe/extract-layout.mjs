@@ -7,9 +7,10 @@
 //   nonRectRegions(model)  → string[]     (regions whose cells don't form a solid rectangle in areas matrix)
 
 import yaml from "js-yaml";
+import { LAYOUT_KEYS } from "./layout-schema.mjs";
 
-/** Known top-level keys — anything else is collected as a parse warning. */
-const KNOWN_KEYS = new Set(["columns", "areas", "floating", "variants", "samples", "children", "elements"]);
+/** Known top-level keys (single writer: layout-schema.mjs) — anything else is a parse warning. */
+const KNOWN_KEYS = new Set(LAYOUT_KEYS);
 
 // Fence regex: handles CRLF (\r?\n) and optional leading spaces (up to 3, per CommonMark).
 // Info string must be exactly "yaml ui-layout" (any trailing whitespace allowed).
@@ -35,6 +36,28 @@ export function extractLayout(rawMarkdown) {
   } catch {
     // YAML parse error — caller decides whether to warn.
     return null;
+  }
+}
+
+/**
+ * Distinguish "no fence" from "fence present but broken" — extractLayout() returns
+ * null for BOTH, which let malformed YAML silently skip validate/build (stale ASCII,
+ * no warning). Callers that gate on correctness must check this first.
+ * @param {string} rawMarkdown
+ * @returns {{hasFence: boolean, parseError: string|null}}
+ *   parseError also set when YAML parses but `areas` is missing/invalid (unusable model).
+ */
+export function layoutFenceInfo(rawMarkdown) {
+  const m = rawMarkdown.match(FENCE_RE);
+  if (!m) return { hasFence: false, parseError: null };
+  try {
+    const model = yaml.load(m[1]);
+    if (!model || typeof model !== "object" || !Array.isArray(model.areas)) {
+      return { hasFence: true, parseError: "fence parsed but has no valid `areas` matrix" };
+    }
+    return { hasFence: true, parseError: null };
+  } catch (e) {
+    return { hasFence: true, parseError: e.message ? e.message.split("\n")[0] : "YAML parse error" };
   }
 }
 

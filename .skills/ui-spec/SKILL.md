@@ -77,7 +77,7 @@ Launch runtime wireframe renderer — opens a single HTML file in browser.
 
 ### `interpret:wf` (wireframe v2 — region-box layout)
 Launch wireframe v2 renderer — interactions laid out inside their region boxes.
-- **Layout tab (default):** spatial CSS grid from the `ui-layout` model — cells show sample content; `[...]` tokens render as hoverable chips; fixed Contract Inspector panel shows the hovered element/region contract (click pins); floating regions toggle; variants switch
+- **Layout tab (default):** lo-fi wireframe from the `ui-layout` model, inside an honest viewport frame (desktop 1280 / mobile 390 / modal 560 px). `content:` regions render typed idioms (buttons, inputs, tabs, table/list skeletons, KPIs, slots); `samples:` regions render the 1-line text with `[...]` hoverable chips. Fixed Contract Inspector shows the hovered element/region contract (click pins); floating regions toggle; variants switch
 - **Interactions tab:** full contract region boxes — action buttons (colored) + reaction chips (dashed ⚡); regions with no interactions show "(display only)"
 - **Blueprint tab:** generated ASCII (from the ui-layout model) for 2D reference; hand-authored ASCII only for surfaces without a model
 - Sidebar groups all surfaces by type; click to navigate; overlay surfaces open in a card
@@ -154,8 +154,9 @@ Each surface may include a `yaml ui-layout` fence in the `## Layout` section. Th
 **Key insight:** LLMs cannot reliably draw aligned 2D ASCII; the YAML model is what you author, and both the interactive CSS grid and the markdown ASCII are deterministic renders of that model. VR-ASCII-DRIFT errors if the stored ASCII diverges from the model.
 
 ```yaml
-# Schema overview:
+# Schema overview (single writer: tools/wireframe/layout-schema.mjs):
 columns: ["3fr", "2fr"]          # CSS fr units — column widths
+row_heights: [auto, "minmax(150px,auto)"]  # 1 track per base row — vertical proportion (VR-LAYOUT-ROWS)
 areas:                            # grid-template-areas matrix (rows × cols)
   - [header, header]             # regions must form solid rectangles (VR-LAYOUT-RECT)
   - [main,   sidebar]
@@ -166,20 +167,25 @@ floating:                         # overlay regions rendered as toggle banners
 variants:                         # alternate layouts (prepend/append rows)
   full_screen:
     prepend_rows: [[topbar, topbar]]
-samples:                          # one realistic data line per region; [text] → hoverable chip
-  header: "Page title [Action]"
+content:                          # PREFERRED: typed wireframe elements per region —
+  header:                        # renders real idioms (btn/input/tabs/table/list/kpi/slot…)
+    - row: [{h: "Page title"}, {btn: "Action", action: A-S05-003, primary: true}]
+  main:
+    - table: {cols: [Tên, SĐT], rows: 4}   # skeleton repetition = reviewable density
+samples:                          # legacy/fallback: one data line per region; [text] → chip
+  header: "Page title [Action]"  # a region with content: overrides its samples line
 children:                         # sub-layout for a nested region (1-level only)
   sidebar:
     areas: [[sidebar.info], [sidebar.tags]]
-elements:                         # chip text → action ID for Contract Inspector
-  "Action": A-S05-003            # map ONLY unambiguous 1:1 pairs; validated by VR-ELEMENT-REF
+elements:                         # samples-path only: chip text → action ID
+  "Action": A-S05-003            # content elements carry action: directly instead
 ```
 
 **Generated ASCII** lives between `<!-- ui-layout:ascii:start -->` and `<!-- ui-layout:ascii:end -->` markers (injected by `build.mjs`). Do not hand-edit these markers or the content between them — they are overwritten on every build.
 
 **Coverage rule:** every region in frontmatter `regions[]` must appear in `areas`, `floating`, variant rows, or `children` (VR-LAYOUT-ORPHAN). Every name used in the layout must be in `regions[]` (VR-LAYOUT-UNKNOWN → error). Regions must form solid rectangles in the `areas` matrix (VR-LAYOUT-RECT → error).
 
-**Validation rules (layout-specific):** `VR-LAYOUT-PARSE` (warn) · `VR-LAYOUT-UNKNOWN` (error) · `VR-LAYOUT-RECT` (error) · `VR-LAYOUT-ORPHAN` (warn) · `VR-ELEMENT-REF` (warn) · `VR-ASCII-DRIFT` (warn) · `VR-WIREFRAME-STALE` (warn)
+**Validation rules (layout-specific):** `VR-LAYOUT-PARSE` (error) · `VR-LAYOUT-UNKNOWN` (error) · `VR-LAYOUT-RECT` (error) · `VR-LAYOUT-ORPHAN` (warn) · `VR-LAYOUT-ROWS` (warn) · `VR-ELEMENT-REF` (warn) · `VR-CONTENT-TYPE` (warn) · `VR-CONTENT-ACTION` (warn) · `VR-ASCII-DRIFT` (warn) · `VR-WIREFRAME-STALE` (warn)
 
 Full schema, worked S14 example, common mistakes, and migration recipe: `references/ui-layout-authoring.md`.
 

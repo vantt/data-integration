@@ -20,12 +20,22 @@ The solution: **separate model from rendering**.
 
 ## 2. Full schema
 
+> **Single writer:** all schema knowledge (key list, content primitives, walkers, ASCII flatten)
+> lives in `tools/wireframe/layout-schema.mjs`. Node tools import it; `html-shell.mjs` inlines it
+> (export-stripped) into the browser bundle. When extending the schema, edit that module first —
+> never re-declare keys or primitive lists in individual tools.
+
 ```yaml
 # All keys are optional except areas (required for a valid model).
 
 columns: ["3fr", "2fr"]
 # CSS fr-unit strings for column widths. Default: uniform 1fr per column inferred from areas.
 # Determines proportional grid widths. Last column absorbs rounding remainder.
+
+row_heights: [auto, "minmax(150px,auto)", auto]
+# CSS track strings, ONE per base areas row — gives the wireframe honest vertical
+# proportion (dominant regions get minmax(Npx,auto)). Variant prepend/append rows
+# get "auto". Length must equal areas row count (VR-LAYOUT-ROWS warn). ASCII ignores it.
 
 areas:
   - [region_a, region_a]    # row 0: region_a spans both columns
@@ -73,10 +83,27 @@ samples:
 # (see GLYPH_MAP in generate-ascii.mjs: 📞→>, ⚠→!, ★→*, ☑→[x], ⛔→!!, ⏱→(t), etc.)
 # Chars with no mapping are replaced with "?" to preserve monospace alignment.
 
+content:
+  region_a:
+    - row:
+        - { h: "Hoàng Thức" }
+        - { badge: GOLD }
+        - { btn: "📞 Gọi", action: A-S05-003, primary: true }
+    - checklist: ["[x] đã nói", "chưa nói"]
+    - table: { cols: [Tên, SĐT], rows: 4 }
+# PREFERRED path: typed wireframe elements per region — renders real UI idioms
+# (button shapes, input outlines, table/list skeletons, tabs, KPI big-numbers).
+# When a region has content, it OVERRIDES that region's samples line everywhere
+# (Layout tab render + ASCII flatten) — do not keep a duplicate samples line.
+# Element = object whose FIRST registry key is its type; other keys are opts.
+# Interactive elements take `action: <action-id>` directly (no elements: map needed);
+# `primary: true` marks the region's main CTA. See §2b for the primitive table.
+
 elements:
   "Action Button": A-S05-003
   "Chip": A-S05-007
-# Map from chip text (exact match inside [brackets] in samples) to action ID.
+# LEGACY path (samples-only regions): map from chip text (exact match inside
+# [brackets] in samples) to action ID.
 # Purpose: the Contract Inspector in wireframe-v2.html shows the full contract when a
 # chip is hovered or clicked (element, trigger, action, target, guard, effects).
 # RULES:
@@ -89,9 +116,50 @@ elements:
 
 ---
 
+## 2b. Content primitives (wireframe elements)
+
+Registry lives in `layout-schema.mjs` (`CONTENT_TYPES`); renderer in `client/render-content.js`; flatten rules in `flattenContentLine`. One element = `{ <type>: <value>, ...opts }`.
+
+| Type | Value | Renders as | ASCII flatten |
+|---|---|---|---|
+| `h` | string | bold heading | text |
+| `text` | string | body prose line | text |
+| `btn` | label | button shape; `primary: true` = dark fill; `action:` = hoverable contract | `[label]` |
+| `input` | placeholder | outlined empty field, italic muted | `[input: …]` |
+| `select` | value | outlined field + ▾ caret | `[… v]` |
+| `checklist` | string[] | checkbox rows; `"[x] "` prefix = checked | `[x] a [ ] b` |
+| `chips` | string[] | grey display-only pills | `[a] [b]` |
+| `badge` | string | amber status badge (display-only) | `[label]` |
+| `tabs` | string[] | tab bar; `active:` names active tab (default first); `action:` (whole bar) or `actions: {label: action-id}` (per tab — preferred when each tab has its own contract, e.g. show_panel) | `\|*a*\|\| b \|` |
+| `table` | `{cols, rows}` | header + N skeleton rows (capped 8) | `tbl(a \| b) ×N` |
+| `list` | `{item, rows}` | item template once + N-1 ghost repeats | `list ×N {item}` |
+| `kpi` | `{label, value}` | big number over small label | `label: value` |
+| `divider` | `true` | horizontal rule | `────` |
+| `slot` | string | hatched grey placeholder (hosted panel / dynamic content) | `<<name>>` |
+| `row` | element[] | horizontal flex group (no row-in-row) | children joined by space |
+
+Established idioms (decided during wave-3 pilot review — follow, don't re-judge):
+
+- **Kanban / multi-lane board** (e.g. S07 OPEN/DOING/DONE): a `row:` of `h` lane headers followed by a `row:` of one `list:` per lane. No dedicated lane primitive — this IS the accepted pattern.
+- **Hyperlink in prose**: plain `text` (no link primitive). Navigation contracts belong on `btn`.
+- **Per-item interactions on `list`/`table` rows** (row click, checkbox, drag): intentionally NOT representable in `content:` — collections are display-only skeletons; the item-level contract stays visible via region hover in the Contract Inspector and the Interactions tab. Do not work around this with fake per-row buttons.
+
+Authoring rules:
+
+- **Actionable types** (`btn`, `tabs`) should carry `action:` — chip-audit flags actionable elements without one as unmapped. Display-only types (`badge`, `chips`, `text`, …) are exempt by type.
+- Several elements may share one `action:` (e.g. 7 outcome pills → one contract) — correct, not duplication.
+- Unknown type keys render as a red ⚠ pill and warn `VR-CONTENT-TYPE`; unknown `action:` ids warn `VR-CONTENT-ACTION`; content region keys join the `VR-LAYOUT-UNKNOWN` check.
+- Repetition (`table`/`list` skeleton rows) and `row_heights` are what make the wireframe reviewable — use them for any region that is a collection or dominates the screen.
+- Migration: author `content:` for a region → delete that region's `samples:` line and its `elements:` entries in the same edit (content overrides them; keeping both invites drift).
+
+---
+
 ## 3. Worked example — S14 (canonical)
 
 S14 has 14 regions: 12 in base areas, 1 floating, 1 in variant prepend_rows.
+(The live S14 file has since migrated `samples:`/`elements:` → `content:` + `row_heights` — read
+`crm/docs/ui-spec/screens/S14-call-mode-cockpit.md` for the canonical content-model example;
+the geometry below is unchanged and still canonical for areas/floating/variants.)
 
 ```yaml
 columns: [3fr, 2fr]
@@ -151,11 +219,14 @@ The two lists must agree exactly. Keep them in sync:
 
 | Rule | Severity | Trigger | Fix |
 |---|---|---|---|
-| `VR-LAYOUT-PARSE` | warn | `yaml ui-layout` fence present but fails YAML parse | Fix YAML syntax in the fence |
+| `VR-LAYOUT-PARSE` | **error** | fence present but YAML broken or `areas` missing — a broken fence would otherwise silently skip ALL layout rules and leave stale ASCII (upgraded from warn 2026-07-14) | Fix YAML syntax; common trap: `- btn: "x", action: id` block-mapping-with-comma is invalid — use flow style `{ btn: "x", action: id }` |
 | `VR-LAYOUT-UNKNOWN` | **error** | Region name in `areas`/`floating`/`samples` not in frontmatter `regions[]` | Add missing name to `regions[]` or remove from layout |
 | `VR-LAYOUT-RECT` | **error** | Region cells in `areas` matrix don't form a solid rectangle | Fix areas matrix so all cells of a region are contiguous rectangles |
 | `VR-LAYOUT-ORPHAN` | warn | Declared region absent from all layout areas + floating + variants + children | Place the region in `areas`, `floating`, variant rows, or `children` |
 | `VR-ELEMENT-REF` | warn | `elements` map value is not a known action ID | Fix typo or remove mapping; verify the action ID exists in the surface contract |
+| `VR-LAYOUT-ROWS` | warn | `row_heights` length ≠ base `areas` row count | One track string per base row |
+| `VR-CONTENT-TYPE` | warn | content element has no known primitive type key | Use a type from the §2b table (check `layout-schema.mjs` CONTENT_TYPES) |
+| `VR-CONTENT-ACTION` | warn | content element `action:` is not a known action ID | Fix typo or add the interaction to the contract block |
 | `VR-ASCII-DRIFT` | warn | ASCII between markers differs from what the model generates | Do not hand-edit the generated block; run `build.mjs` to regenerate |
 | `VR-WIREFRAME-STALE` | warn | `generated/wireframe-v2.html` is older than spec files | Run `build.mjs` to regenerate the wireframe |
 
@@ -217,6 +288,35 @@ When migrating surfaces that have hand-drawn ASCII but no `yaml ui-layout` fence
 - Work by directory (screens/, modals/, panels/ separately).
 - Do not run `build.mjs` from parallel worker agents — ASCII injection writes the `.md` files; parallel writes to the same file cause corruption. One agent per directory or sequential runs.
 - File ownership must be clear before parallelizing (same rule as multi-agent orchestration).
+
+---
+
+## 8b. Migration recipe — `samples:`/`elements:` → `content:` (agent-runnable)
+
+For surfaces that already have a `ui-layout` fence with `samples:` and need the typed content model. Canonical examples to imitate: S14 (screen, richest), S03 (children + per-tab actions), S02 (table), M08 (form modal), P01 (panel).
+
+Per surface, in this order:
+
+1. **Read the whole surface file** — frontmatter `regions[]`, the fence, prose sections (Row Detail / Sidebar Sections / mode tables…), and the full `{project}-contract` block. The contract's `element` names + `region` fields tell you which actions belong in which region.
+2. **Draft `content:` region by region** from the samples line + prose, using §2b primitives:
+   - A collection (rows of tasks/customers/channels) → `table:` (uniform columns) or `list:` (item template, `rows: 3-5`). Repetition is the point.
+   - A form → `text` label + `input`/`select` pairs grouped in `row:`; option-pill groups → `btn` per pill (same `action:` when they share one interaction) or `chips` if display-only.
+   - Stats → `kpi` in a `row:`; statuses → `badge`; nav/section switch → `tabs` (per-label `actions:` when each tab has its own interaction).
+   - Hosted panel / dynamic area → `slot:`.
+   - Keep realistic Vietnamese sample data from the old samples line; do not invent new business facts.
+3. **Map actions**: every `btn`/`tabs` gets `action:`/`actions:` from the contract. If a real button has NO matching interaction, leave it out of actionable types (or use `chips`) and **flag it in your report** — do NOT invent action IDs or edit the contract block.
+4. **Delete** the migrated regions' `samples:` lines and ALL their `elements:` entries in the same edit (content overrides both; leftovers = drift). Remove the keys entirely when empty.
+5. **Add `row_heights:`** only when one region visibly dominates the real screen (e.g. main content `minmax(300px,auto)`); otherwise omit.
+6. **Verify** (from repo root):
+   ```bash
+   node .skills/ui-spec/tools/validate.mjs --root <spec-root>   # 0 errors required
+   node .skills/ui-spec/tools/build.mjs --root <spec-root>      # regenerates ASCII + wireframe
+   node .skills/ui-spec/tools/validate.mjs --root <spec-root>   # now 0 warnings too
+   node .skills/ui-spec/tools/wireframe/verify-runtime.mjs --root <spec-root>
+   node .skills/ui-spec/tools/wireframe/screenshot.mjs --root <spec-root> --surface <ids>
+   ```
+   Then check `generated/chip-audit.md`: your surfaces must have NO unmapped actionable entries (display-only-by-type is fine).
+7. **Report**: per surface — regions migrated, actions mapped, contract gaps flagged (step 3), screenshot paths. A human (or stronger model) does the vision pass on the PNGs against §11's checklist.
 
 ---
 
@@ -327,6 +427,8 @@ Phrase the selection by criteria when spec IDs change across projects; these thr
 
 After every `build.mjs` run, `generated/chip-audit.md` lists every `[token]` chip found in any `samples:` value, classified as **mapped** (key present in `elements:`) or **unmapped** (no key).
 
+For `content:` regions the audit works by TYPE instead of text: actionable elements (`btn`, `tabs`) with `action:` count as mapped, without as unmapped; display-only types are exempt. Regions that have `content:` are skipped on the samples path (content is their source of truth).
+
 Review the unmapped chips and decide for each one:
 
 - **(a) Should be mapped** — the chip represents a real user action. Add it to `elements:` with the correct action ID.
@@ -346,5 +448,7 @@ The audit is idempotent: running `build.mjs` twice produces the same `chip-audit
 | `floating` | `object[]` | no | Overlay regions: `region`, `when`, `replaces[]` |
 | `variants` | `object` | no | Named layout variants: `prepend_rows`, `append_rows` |
 | `children` | `object` | no | 1-level sub-layouts: `{ region: { areas, variants } }` |
-| `samples` | `object` | no | `{ region: "display text [chip] more text" }` |
-| `elements` | `object` | no | `{ "chip text": "action-id" }` for Contract Inspector |
+| `row_heights` | `string[]` | no | CSS track per base row — vertical proportion (§2) |
+| `samples` | `object` | no | `{ region: "display text [chip] more text" }` — legacy/fallback |
+| `elements` | `object` | no | `{ "chip text": "action-id" }` for samples-path chips |
+| `content` | `object` | no | `{ region: element[] }` — typed wireframe elements (§2b), preferred |

@@ -18,6 +18,16 @@ function readClient(filename) {
   return readFileSync(fileURLToPath(url), "utf8");
 }
 
+/**
+ * Read layout-schema.mjs (single-writer schema module, one dir up from client/)
+ * and strip `export ` prefixes so it runs as a plain browser script. The module
+ * is import-free and top-level-export-only by contract (see its header comment).
+ */
+function readLayoutSchemaForBrowser() {
+  const url = new URL("./layout-schema.mjs", import.meta.url);
+  return readFileSync(fileURLToPath(url), "utf8").replace(/^export (?=(const|function|let|class)\b)/gm, "");
+}
+
 /** Read a node_modules bundle (path relative to tools/node_modules). */
 function readNodeBundle(relPath) {
   return readFileSync(join(__dir, "..", "node_modules", relPath), "utf8");
@@ -29,6 +39,7 @@ function buildClientScript(surfacesJson, errCatalogJson) {
   const files = [
     "region-model.js",      // esc, escAttr, isReaction, interactionsOf, edgeById, narrate
     "render-regionbox.js",  // renderLayout, renderMini, regionBoxHtml, actionBtnHtml, listenerChipHtml
+    "render-content.js",    // contentElementHtml, renderContentElements (content: model)
     "render-grid.js",       // renderGrid, rewireActionButtons, toggleFloating, switchGridVariant (Phase 6)
     "blueprint-link.js",    // initBlueprintLinks, flashRegionBox, flashBlueprintSpan (Phase 3 plan)
     "render-storyboard.js", // renderStoryboard (Phase 2)
@@ -39,7 +50,9 @@ function buildClientScript(surfacesJson, errCatalogJson) {
     "flow-play.js",         // flow play 2.0: timer, highlight, narration
     "app.js",               // state, nav, overlay, interaction handler, init
   ];
-  const clientJs = files.map(readClient).join("\n\n");
+  // layout-schema.mjs first: single-writer schema globals (CONTENT_TYPES, walkers)
+  // must exist before render modules parse.
+  const clientJs = [readLayoutSchemaForBrowser(), ...files.map(readClient)].join("\n\n");
 
   // Cytoscape + cytoscape-dagre (bundles dagre) — UMD globals, then register the ext.
   const cytoscapeBundle = readNodeBundle("cytoscape/dist/cytoscape.min.js");
@@ -186,17 +199,9 @@ export function buildHtml(surfaces, opts = {}) {
         </div>
       </div>
 
-      <div class="legend">
-        <h4>Chú thích</h4>
-        <div class="legend-row">
-          <span class="legend-item"><span class="swatch" style="background:#dbeafe"></span> navigate</span>
-          <span class="legend-item"><span class="swatch" style="background:#ede9fe"></span> open_overlay</span>
-          <span class="legend-item"><span class="swatch" style="background:#ffedd5"></span> mutate</span>
-          <span class="legend-item"><span class="swatch" style="background:#dcfce7"></span> emit_event</span>
-          <span class="legend-item"><span class="swatch" style="background:#fee2e2"></span> close_overlay</span>
-          <span class="legend-item"><span class="swatch" style="border:1px dashed #94a3b8;background:#f3f4f6"></span> ⚡ reaction</span>
-        </div>
-      </div>
+      <!-- Filled at init by app.js from legendHtml() (single source in render-grid.js).
+           Hidden on the grid subtab — there the legend lives in the right rail. -->
+      <div class="legend" id="page-legend"></div>
     </div>
     <div id="bottombar"></div>
     <div id="gen-stamp" style="font-size:11px;color:#94a3b8;padding:2px 12px 4px;text-align:right;border-top:1px solid #e2e8f0;">${freshnessStamp}</div>

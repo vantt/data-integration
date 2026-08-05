@@ -109,8 +109,13 @@ function renderSampleWithChips(raw, elements) {
  * @returns {string} HTML (inner content only — caller wraps in .grid-cell)
  */
 function gridCellHtml(surface, region, sampleText) {
+  const labelHtml = `<div class="gc-label">${esc(region)}</div>`;
+  // content: path (typed wireframe elements) wins over samples: line when present.
+  const content = surface.layout?.content?.[region];
+  if (Array.isArray(content) && content.length) {
+    return labelHtml + renderContentElements(content);
+  }
   const elements = surface.layout?.elements || {};
-  const labelHtml  = `<div class="gc-label">${esc(region)}</div>`;
   const sampleHtml = renderSampleWithChips(sampleText, elements);
   return labelHtml + sampleHtml;
 }
@@ -214,9 +219,11 @@ function buildInspectorRegion(surface, regionRaw) {
  * @param {string} regionRaw - nearest region name (parent cell or gc-child)
  * @returns {string} HTML for .gi-content
  */
-function buildInspectorChip(surface, chipText, regionRaw) {
+function buildInspectorChip(surface, chipText, regionRaw, actionIdOverride) {
+  // content: elements carry their action id directly (data-action-id);
+  // samples: chips resolve via the layout.elements text map.
   const elements  = surface.layout?.elements || {};
-  const actionId  = elements[chipText];
+  const actionId  = actionIdOverride || elements[chipText];
   if (actionId) {
     const all = interactionsOf(surface);
     const ix  = all.find((a) => a.id === actionId);
@@ -270,6 +277,31 @@ function buildInspectorPanel(surface) {
     + `<div class="gi-content">${buildInspectorDefault(surface)}</div>`
     + `<div class="gi-footer">click để ghim</div>`
     + `</div>`;
+}
+
+// ── Legend (single source) ────────────────────────────────────────────────────
+
+/** Action-color legend items — the ONLY place legend entries are declared. */
+const LEGEND_ITEMS = [
+  { label: "navigate",      swatch: "background:#dbeafe" },
+  { label: "open_overlay",  swatch: "background:#ede9fe" },
+  { label: "mutate",        swatch: "background:#ffedd5" },
+  { label: "emit_event",    swatch: "background:#dcfce7" },
+  { label: "close_overlay", swatch: "background:#fee2e2" },
+  { label: "⚡ reaction",   swatch: "border:1px dashed #94a3b8;background:#f3f4f6" },
+];
+
+/**
+ * Render the legend. Used by BOTH the page-level legend below the card
+ * (#page-legend, filled at init in app.js) and the grid right rail.
+ * @param {boolean} withHeading - include the "Chú thích" h4
+ * @returns {string} HTML (inner content of a .legend container)
+ */
+function legendHtml(withHeading) {
+  const items = LEGEND_ITEMS.map((it) =>
+    `<span class="legend-item"><span class="swatch" style="${it.swatch}"></span> ${it.label}</span>`
+  ).join("\n");
+  return (withHeading ? `<h4>Chú thích</h4>` : "") + `<div class="legend-row">${items}</div>`;
 }
 
 // ── Inspector hover state ─────────────────────────────────────────────────────
@@ -336,7 +368,7 @@ function rewireInspectorHover(viewGridDiv, surface) {
       // Nearest ancestor with data-region-raw (gc-child or grid-cell)
       const regionEl  = chip.closest("[data-region-raw]");
       const regionRaw = regionEl ? regionEl.dataset.regionRaw : "";
-      setInspectorContent(buildInspectorChip(surface, chipText, regionRaw));
+      setInspectorContent(buildInspectorChip(surface, chipText, regionRaw, chip.dataset.actionId || null));
       return;
     }
     const cell = e.target.closest(".grid-cell[data-region-raw]");
@@ -412,6 +444,24 @@ function rewireInspectorHover(viewGridDiv, surface) {
  * @param {string|null} [activeVariant] - variant key to apply (null = base layout)
  * @returns {string} HTML
  */
+/**
+ * Resolve the honest viewport width (px) for a surface, from its type and
+ * frontmatter platforms. Modals/overlays are dialog-sized, not full-viewport.
+ * @param {object} surface
+ * @returns {{width: number, label: string}}
+ */
+function viewportSpec(surface) {
+  const type = surface.meta?.type || surface.type || "";
+  const platforms = Array.isArray(surface.meta?.platforms) ? surface.meta.platforms : [];
+  if (type === "modal")   return { width: 560, label: "modal · 560px" };
+  if (type === "overlay") return { width: 420, label: "overlay · 420px" };
+  const mobileOnly = platforms.length > 0 &&
+    platforms.every((p) => /mobile|ios|android/i.test(String(p)));
+  const width = mobileOnly ? 390 : 1280;
+  const label = (platforms.join(" / ") || "desktop") + " · " + width + "px";
+  return { width, label };
+}
+
 function renderGrid(surface, activeVariant) {
   const layout = surface.layout;
   if (!layout) return renderLayout(surface); // stacked fallback for surfaces without layout
@@ -438,6 +488,15 @@ function renderGrid(surface, activeVariant) {
   const areasVal = effectiveAreas
     .map((row) => "'" + row.map(cssIdent).join(" ") + "'")
     .join(" ");
+
+  // Vertical proportion: row_heights applies to BASE rows only; variant
+  // prepend/append rows get "auto". Omitted → browser default (auto rows).
+  let rowsStyle = "";
+  if (Array.isArray(layout.row_heights) && layout.row_heights.length === (layout.areas || []).length) {
+    const pre = variantDef ? (variantDef.prepend_rows || []).map(() => "auto") : [];
+    const post = variantDef ? (variantDef.append_rows || []).map(() => "auto") : [];
+    rowsStyle = ";grid-template-rows:" + [...pre, ...layout.row_heights.map(String), ...post].join(" ");
+  }
 
   // Unique region names in order of first appearance (preserves visual order).
   const seen    = new Set();
@@ -487,15 +546,25 @@ function renderGrid(surface, activeVariant) {
       </div>`
     : "";
 
+  // Viewport frame: honest device width — grid renders inside a fixed-width
+  // frame (shrinks via max-width when the pane is narrower).
+  const vp = viewportSpec(surface);
+
   return `<div class="grid-with-inspector">
 <div class="grid-main">
 ${variantSwitcher}
-<div class="grid-container" style="display:grid;grid-template-columns:${columnsVal};grid-template-areas:${areasVal};gap:12px;grid-auto-rows:minmax(56px,auto)">
+<div class="viewport-frame" style="max-width:${vp.width}px">
+<div class="vp-label">${esc(vp.label)}</div>
+<div class="grid-container" style="display:grid;grid-template-columns:${columnsVal};grid-template-areas:${areasVal}${rowsStyle};gap:12px;grid-auto-rows:minmax(56px,auto)">
 ${cells}
 </div>
 ${floatingHtml}
 </div>
+</div>
+<div class="grid-rail">
 ${buildInspectorPanel(surface)}
+<div class="legend legend-rail">${legendHtml(true)}</div>
+</div>
 </div>`;
 }
 

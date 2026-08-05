@@ -128,6 +128,10 @@ function switchView(view) {
   const surfaceWrap = document.getElementById("surface-wrap");
   if (surfaceWrap) surfaceWrap.style.display = view === "graph" ? "none" : "";
 
+  // Grid view carries its own legend in the right rail — hide the page-level one there.
+  const pageLegend = document.getElementById("page-legend");
+  if (pageLegend) pageLegend.style.display = view === "grid" ? "none" : "";
+
   // "Surface" top tab stays active for all surface sub-views (layout / blueprint / states / grid).
   const isSurfaceView = ["layout", "blueprint", "states", "grid"].includes(view);
   for (const tab of document.querySelectorAll(".tab:not([disabled])"))

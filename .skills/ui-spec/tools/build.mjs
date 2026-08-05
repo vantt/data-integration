@@ -9,7 +9,7 @@ import yaml from "js-yaml";
 import { extractAll, listSpecFiles, SPEC_ROOT } from "./extract.mjs";
 import { generateWireframe } from "./interpret-wireframe.mjs";
 import { generateAscii, injectAscii } from "./wireframe/generate-ascii.mjs";
-import { extractLayout } from "./wireframe/extract-layout.mjs";
+import { extractLayout, layoutFenceInfo } from "./wireframe/extract-layout.mjs";
 import { auditChips, renderChipAuditMd } from "./wireframe/chip-audit.mjs";
 
 const OUT = join(SPEC_ROOT, "generated");
@@ -147,7 +147,16 @@ console.log(`  surfaces=${Object.keys(registry.surfaces).length} actions=${clean
     let raw;
     try { raw = readFileSync(absPath, "utf8"); } catch { asciiSkipped++; continue; }
     const layout = extractLayout(raw);
-    if (!layout) { asciiSkipped++; continue; }
+    if (!layout) {
+      // Loud skip when a fence EXISTS but is unusable — a silent skip here left
+      // stale ASCII with no signal (validate errors too, but build must not lie).
+      const info = layoutFenceInfo(raw);
+      if (info.hasFence && info.parseError) {
+        console.warn(`  ⚠ ascii SKIPPED (broken ui-layout fence): ${basename(absPath)} — ${info.parseError}`);
+      }
+      asciiSkipped++;
+      continue;
+    }
 
     // Collect for chip-audit: prefer ID from extract map, fall back to filename stem.
     const surfaceId = fileIdMap.get(absPath) ?? basename(absPath, ".md");

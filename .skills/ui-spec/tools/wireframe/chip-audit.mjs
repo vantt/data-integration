@@ -12,6 +12,7 @@
 
 import { readFileSync, writeFileSync, mkdirSync } from "node:fs";
 import { join, basename } from "node:path";
+import { CONTENT_TYPES, walkContent, contentElementLabel, contentElementHasAction } from "./layout-schema.mjs";
 
 /** Match [token] where token contains no nested brackets and is at least 1 char. */
 const CHIP_RE = /\[([^\[\]]+)\]/g;
@@ -51,13 +52,33 @@ export function auditChips(surfaces) {
   for (const { surfaceId, layout } of surfaces) {
     if (!layout) continue;
     const samples = layout.samples;
-    if (!samples || typeof samples !== "object") continue;
+    const content = layout.content;
+    const hasSamples = samples && typeof samples === "object";
+    const hasContent = content && typeof content === "object";
+    if (!hasSamples && !hasContent) continue;
     audited++;
 
-    const elements = layout.elements ?? {};
-    for (const { region, token } of chipsFromSamples(samples)) {
-      const status = Object.prototype.hasOwnProperty.call(elements, token) ? "mapped" : "unmapped";
-      entries.push({ surfaceId, region, token, status });
+    // content: path — only ACTIONABLE primitives (btn, tabs) are audited; an
+    // actionable element without action: is an unmapped finding. Display-only
+    // types (badge, chips, text, …) are exempt by type — no text guessing.
+    const contentRegions = new Set(hasContent ? Object.keys(content) : []);
+    if (hasContent) {
+      walkContent(content, ({ region, el, type }) => {
+        if (!type || !CONTENT_TYPES[type]?.actionable) return;
+        const status = contentElementHasAction(el) ? "mapped" : "unmapped";
+        entries.push({ surfaceId, region, token: contentElementLabel(el, type), status });
+      });
+    }
+
+    // samples: path — regions covered by content are skipped (content is the
+    // source of truth there; their samples line is legacy remainder).
+    if (hasSamples) {
+      const elements = layout.elements ?? {};
+      for (const { region, token } of chipsFromSamples(samples)) {
+        if (contentRegions.has(region)) continue;
+        const status = Object.prototype.hasOwnProperty.call(elements, token) ? "mapped" : "unmapped";
+        entries.push({ surfaceId, region, token, status });
+      }
     }
   }
 

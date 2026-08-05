@@ -7,7 +7,8 @@ import { join } from "node:path";
 import Ajv from "ajv";
 import { extractAll, SPEC_ROOT } from "./extract.mjs";
 import { schemaPath, config, surfaceDirs } from "./config.mjs";
-import { extractLayout, layoutAreaNames, nonRectRegions } from "./wireframe/extract-layout.mjs";
+import { extractLayout, layoutAreaNames, nonRectRegions, layoutFenceInfo } from "./wireframe/extract-layout.mjs";
+import { walkContent, contentActionRefs } from "./wireframe/layout-schema.mjs";
 import { generateAscii, injectAscii } from "./wireframe/generate-ascii.mjs";
 
 // Surface ID pattern: one or two uppercase letters + digits (e.g. S01, M2, P10, OV3)
@@ -239,13 +240,16 @@ for (const f of files) {
   let raw;
   try { raw = readFileSync(join(SPEC_ROOT, f.file), "utf8"); } catch { continue; }
 
-  let layout;
-  try {
-    layout = extractLayout(raw);
-  } catch {
-    warn(f.file, "ui-layout fence present but failed to parse (VR-LAYOUT-PARSE)");
+  // VR-LAYOUT-PARSE (error): fence present but YAML broken / no valid areas.
+  // extractLayout() returns null for BOTH "no fence" and "broken fence" — checking
+  // layoutFenceInfo first prevents malformed content: YAML from silently skipping
+  // every layout rule and leaving stale ASCII in place (batch-2 agent found this).
+  const fenceInfo = layoutFenceInfo(raw);
+  if (fenceInfo.hasFence && fenceInfo.parseError) {
+    err(f.file, `ui-layout fence present but unusable: ${fenceInfo.parseError} (VR-LAYOUT-PARSE)`);
     continue;
   }
+  const layout = extractLayout(raw);
   if (!layout) continue; // no fence on this surface — skip all layout rules
 
   const sid = f.meta.id;
@@ -256,10 +260,16 @@ for (const f of files) {
   // Checks: areas matrix (via areaNames), floating regions (included in areaNames), samples keys.
   const allLayoutNames = new Set(areaNames);
   for (const sampleKey of Object.keys(layout.samples || {})) allLayoutNames.add(sampleKey);
+  for (const contentKey of Object.keys(layout.content || {})) allLayoutNames.add(contentKey);
   for (const name of allLayoutNames) {
     if (!declaredRegions.includes(name)) {
       err(f.file, `ui-layout region \`${name}\` not in frontmatter regions[] (VR-LAYOUT-UNKNOWN)`);
     }
+  }
+
+  // VR-LAYOUT-ROWS: row_heights must have one track per base areas row.
+  if (Array.isArray(layout.row_heights) && layout.row_heights.length !== (layout.areas || []).length) {
+    warn(f.file, `ui-layout row_heights has ${layout.row_heights.length} track(s) but areas has ${(layout.areas || []).length} row(s) (VR-LAYOUT-ROWS)`);
   }
 
   // VR-LAYOUT-RECT: each region in the areas matrix must form a solid rectangle.
@@ -498,10 +508,25 @@ for (const f of files) {
   try { raw = readFileSync(join(SPEC_ROOT, f.file), "utf8"); } catch { continue; }
   let layout;
   try { layout = extractLayout(raw); } catch { continue; }
-  if (!layout || !layout.elements || typeof layout.elements !== "object") continue;
-  for (const [chipText, actionId] of Object.entries(layout.elements)) {
+  if (!layout) continue;
+  for (const [chipText, actionId] of Object.entries(layout.elements || {})) {
     if (!actionIndex.has(String(actionId))) {
       warn(f.file, `layout.elements["${chipText}"] references unknown action id \`${actionId}\` (VR-ELEMENT-REF)`);
+    }
+  }
+
+  // VR-CONTENT-TYPE: every content element must use a known primitive type.
+  // VR-CONTENT-ACTION: every content element action: must be an existing action id.
+  if (layout.content && typeof layout.content === "object") {
+    walkContent(layout.content, ({ region, el, type }) => {
+      if (type === null) {
+        warn(f.file, `layout.content.${region} has an element with no known primitive type (keys: ${el && typeof el === "object" ? Object.keys(el).join(",") : typeof el}) (VR-CONTENT-TYPE)`);
+      }
+    });
+    for (const ref of contentActionRefs(layout.content)) {
+      if (!actionIndex.has(ref.actionId)) {
+        warn(f.file, `layout.content.${ref.region} ${ref.type} "${ref.label}" references unknown action id \`${ref.actionId}\` (VR-CONTENT-ACTION)`);
+      }
     }
   }
 }

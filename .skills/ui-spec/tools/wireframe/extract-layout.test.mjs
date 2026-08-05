@@ -235,3 +235,35 @@ console.log(`\nextract-layout.test: ${passed} passed, ${failed} failed`);
 if (failed > 0) {
   process.exit(1);
 }
+
+// ─── layoutFenceInfo — broken-fence detection (batch-2 silent-failure fix) ────
+import { layoutFenceInfo } from "./extract-layout.mjs";
+
+test("layoutFenceInfo: no fence → hasFence=false", () => {
+  const r = layoutFenceInfo("# Just prose\nno fence here");
+  assert.deepEqual(r, { hasFence: false, parseError: null });
+});
+
+test("layoutFenceInfo: valid fence → no parseError", () => {
+  const r = layoutFenceInfo("```yaml ui-layout\nareas:\n  - [a]\n```");
+  assert.equal(r.hasFence, true);
+  assert.equal(r.parseError, null);
+});
+
+test("layoutFenceInfo: broken YAML (block-mapping-with-comma) → parseError set", () => {
+  const md = "```yaml ui-layout\nareas:\n  - [a]\ncontent:\n  a:\n    - btn: \"x\", action: A-1\n```";
+  const r = layoutFenceInfo(md);
+  assert.equal(r.hasFence, true);
+  assert.ok(r.parseError, "expected a parse error message");
+  // And extractLayout must return null for the same input (legacy behavior unchanged)
+  assert.equal(extractLayout(md), null);
+});
+
+test("layoutFenceInfo: parses but no areas → parseError set", () => {
+  const r = layoutFenceInfo("```yaml ui-layout\nsamples:\n  a: \"x\"\n```");
+  assert.equal(r.hasFence, true);
+  assert.ok(/areas/.test(r.parseError));
+});
+
+console.log(`\nextract-layout(+fenceInfo): ${passed} passed, ${failed} failed`);
+if (failed > 0) process.exit(1);

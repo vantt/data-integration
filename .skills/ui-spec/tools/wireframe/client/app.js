@@ -233,6 +233,9 @@ document.getElementById("btn-flow-stop")?.addEventListener("click", flowStop);
 initFlowBar();
 initGraphControls();
 buildSidebar();
+// Page-level legend (below the card) — single source legendHtml() in render-grid.js.
+const pageLegend = document.getElementById("page-legend");
+if (pageLegend) pageLegend.innerHTML = legendHtml(true);
 const firstScreen = SURFACES.find(s => s.meta?.type === "screen") || SURFACES[0];
 if (firstScreen) {
   currentSurface = firstScreen;

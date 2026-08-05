@@ -7,6 +7,10 @@ export const CSS6 = `
 /* ── Phase 6: Grid view container ──────────────────────────────────────────── */
 #view-grid { padding: 16px 0; }
 
+/* Surfaces with a ui-layout grid need real width for the honest viewport frame
+   (1280px desktop) + 300px inspector — relax the default 900px card cap. */
+.surface-card:has(.grid-with-inspector) { max-width: 1560px; }
+
 /* ── Grid + inspector flex wrapper ─────────────────────────────────────────── */
 /* grid-with-inspector: flex row — grid-main grows, inspector fixed 300px. */
 .grid-with-inspector {
@@ -26,6 +30,22 @@ export const CSS6 = `
   padding: 16px;
   background: #f1f5f9;
   border-radius: 8px;
+}
+
+/* ── Viewport frame — honest device width around the grid ──────────────────── */
+/* max-width comes inline from viewportSpec (1280 desktop / 390 mobile / 560 modal). */
+.viewport-frame {
+  border: 1px dashed #cbd5e1;
+  border-radius: 10px;
+  padding: 6px;
+}
+
+.vp-label {
+  font-size: 10px;
+  color: #94a3b8;
+  text-align: right;
+  padding: 0 4px 4px;
+  letter-spacing: .04em;
 }
 
 /* ── Grid cell card ─────────────────────────────────────────────────────────── */
@@ -173,18 +193,33 @@ export const CSS6 = `
 
 /* ── Inspector panel ─────────────────────────────────────────────────────── */
 /* Fixed 300px right column, sticky below topbar. */
-.grid-inspector {
+/* Right rail: inspector + legend stacked; the rail (not the inspector) is sticky. */
+.grid-rail {
   width: 300px;
   flex-shrink: 0;
   position: sticky;
   top: 72px;
+  align-self: flex-start;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.grid-inspector {
+  width: 100%;
   background: #fff;
   border: 1px solid #e2e8f0;
   border-radius: 8px;
   overflow: hidden;
   font-size: 12px;
-  align-self: flex-start;
 }
+
+/* Legend inside the rail: compact card, items wrap in the narrow column. */
+.legend-rail {
+  max-width: none;
+  margin: 0;
+}
+.legend-rail .legend-row { gap: 8px 12px; }
 
 .gi-header {
   font-size: 9px;
