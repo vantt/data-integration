@@ -644,6 +644,7 @@ def _register_web_routes(
         party_insights=sqlite_repos["party"],
         tags=services["tag"],
         settings_svc=suggestion_settings_svc,
+        dnc_reader=sqlite_repos["activity"],
     ))
     app.include_router(make_tasks_board_router(
         templates=templates,

@@ -152,6 +152,7 @@ def make_customer_360_router(
     action_state: Optional[ActionStateWriter] = None,
     tags=None,           # Phase 02 (260706-0833): health_domain gap detection
     settings_svc=None,   # P07: SuggestionSettingsService
+    dnc_reader=None,     # P07: SQLiteActivityRepository — do_not_contact status read
 ) -> APIRouter:
     """Return APIRouter wired with all Customer 360 routes."""
     router = APIRouter()
@@ -288,6 +289,8 @@ def make_customer_360_router(
     render_suggestion_settings_panel = register_suggestion_settings_routes(
         router, templates,
         settings_svc=settings_svc,
+        dnc_reader=dnc_reader,
+        activity_log=activity_log,
     )
     register_panel_routes(
         router, templates,
