@@ -17,6 +17,11 @@ COPY evidence/evidence.config.yaml ./
 # Placeholders replaced by volume mounts at runtime; chown so non-root can write at startup
 RUN mkdir -p pages sources scripts && chown -R 1001:node /app
 
+# `useradd -r` (no -m) never creates /home/app, and native Linux hosts don't let UID 1001
+# create it at runtime (unlike Docker Desktop, which silently tolerated this) — DuckDB's
+# extension autoloader needs a writable $HOME/.duckdb, so point HOME at the already-owned /app.
+ENV HOME=/app
+
 USER 1001
 
 EXPOSE 3000
