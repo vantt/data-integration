@@ -2,6 +2,47 @@
 
 > Record of significant changes, features, and fixes
 
+## [2026-08-05] CRM — Suggestion Settings panel (P07)
+
+**Summary:** NV thường nhầm "Bỏ qua 1 thẻ" với "tắt hẳn loại gợi ý cho khách này" — không có nơi
+tường minh để tắt/mở từng loại cơ hội (`action_type`) riêng cho 1 khách, có ngày hết hạn tự chọn.
+Thêm tab "Cài đặt gợi ý" (P07) trên Customer 360, đọc/viết `crm_action_dismissal` trực tiếp — không
+cần action đang active (pre-emptive suppression).
+
+**⚠️ Behaviour change (D4):** `crm_action_dismissal` giờ khoá theo `(party_id, action_type,
+source_mart)` thay vì `(party_id, action_type)` — dismiss nhanh 1 thẻ SKU-level `REORDER_NUDGE`
+**không còn** tự động ẩn luôn `REORDER_NUDGE` customer-level của khách đó (và ngược lại). Trước đây 2
+tầng này bị gộp chung do thiếu discriminator; giờ tách độc lập — đúng ý nhưng là thay đổi hành vi
+thật, cần báo CS/Sales trước khi deploy.
+
+**3 cơ chế suppression hiện có, không cái nào bị đổi ý nghĩa:**
+- "Bỏ qua" trên thẻ (`crm_action_state`, episode-scoped) — vẫn dùng chung bảng `crm_action_dismissal`
+  làm cross-episode memory, giờ chỉ đổi ở việc ghi thêm `source_mart`.
+- "🚫 Đừng gọi nữa" (`crm_activity_log.outcome_reason='do_not_contact'`) — hoàn toàn không đụng tới.
+- Cờ tắt toàn hệ thống (`seed_action_scenario_registry.enabled`) — không đụng tới, panel chỉ đọc.
+
+**Files (7 phase, xem `plans/260805-1216-crm-worklist-suppression-settings-panel/`):**
+- `transformation/models/marts/customer/dim_action_scenario_registry.sql` — passthrough mart mới,
+  cho phép reverse-ETL đọc dbt seed (seed không tự sinh rolling folder).
+- `crm/sync/{cache_schema,duckdb_reader,sqlite_upsert,reverse_etl_warehouse_to_crm}.py` —
+  sync `wh_action_scenario_registry` (13 dòng, 7 customer/6 sku).
+- `crm/migrations/0046_action_dismissal_source_mart.{up,down}.sql` — thêm `source_mart`, PK 3 cột,
+  backfill row-expansion (1 dòng cũ → 2 dòng, 1/mart — giữ nguyên ngữ nghĩa "tắt everywhere" cũ).
+- `crm/src/adapters/outbound/sqlite/action_state_repository.py` — `suppress()`/`unsuppress()`/
+  `list_dismissals_for_party()` mới; `_resolve_party_and_action_type()` trả 3-tuple.
+- `crm/src/application/suggestion_settings_service.py` — mới, validate catalog + convert ICT date → UTC.
+- `crm/src/adapters/inbound/web/screens/customer360/screen_customer_360_suggestion_settings.py` +
+  `fragments/c360_suggestion_settings_panel.html` — panel P07 mới.
+- `crm/docs/ui-spec/panels/P07-suggestion-settings-panel.md` — spec, `ui-spec validate` xanh.
+
+**Tests:** 1196/1197 CRM suite pass (1 skip, pre-existing) — bao gồm E1/E2 (per-mart suppression
+độc lập, assertion quan trọng nhất của cả feature), R1-R9 (route level), U1-U12 (repository/service).
+
+**Deploy order:** dbt (Phase 01) → reverse-ETL (Phase 02) → CRM app (03+04+05+06 cùng lúc — 05 một
+mình trên schema cũ sẽ làm worklist trống âm thầm, không phải crash).
+
+---
+
 ## [2026-05-27] Discount Nature Classification
 
 **Summary:** Chuẩn hóa dữ liệu discount để report retail metrics không bị contaminate bởi hidden wholesale orders. Thêm `discount_nature` và `discount_rate` vào pipeline thay vì reclassify customer.

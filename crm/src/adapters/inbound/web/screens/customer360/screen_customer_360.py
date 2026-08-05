@@ -35,6 +35,9 @@ from adapters.inbound.web.screens.customer360.screen_customer_360_activity impor
 from adapters.inbound.web.screens.customer360.screen_customer_360_notes import register_note_routes
 from adapters.inbound.web.screens.customer360.screen_customer_360_tasks import register_task_routes
 from adapters.inbound.web.screens.customer360.screen_call_cockpit import register_call_cockpit_route
+from adapters.inbound.web.screens.customer360.screen_customer_360_suggestion_settings import (
+    register_suggestion_settings_routes,
+)
 
 log = logging.getLogger(__name__)
 
@@ -148,6 +151,7 @@ def make_customer_360_router(
     approach_repo=None,
     action_state: Optional[ActionStateWriter] = None,
     tags=None,           # Phase 02 (260706-0833): health_domain gap detection
+    settings_svc=None,   # P07: SuggestionSettingsService
 ) -> APIRouter:
     """Return APIRouter wired with all Customer 360 routes."""
     router = APIRouter()
@@ -281,6 +285,10 @@ def make_customer_360_router(
 
     # ── Sub-module routes ─────────────────────────────────────────────────────
 
+    render_suggestion_settings_panel = register_suggestion_settings_routes(
+        router, templates,
+        settings_svc=settings_svc,
+    )
     register_panel_routes(
         router, templates,
         activities=activities,
@@ -298,6 +306,7 @@ def make_customer_360_router(
         approach_repo=approach_repo,
         tags=tags,
         activity_log=activity_log,
+        render_suggestion_settings_panel=render_suggestion_settings_panel,
         _load_base=_load_base,
         _load_insight=_load_insight,
         _sapo_customer_id=_sapo_customer_id,

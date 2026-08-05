@@ -219,6 +219,9 @@ A-P05-004,P05,tab_filter,click,mutate,,,toolbar
 A-P05-005,P05,btn_promote_insight,click,open_overlay,M16,,notes_list
 A-P06-001,P06,conv_view_btn,click,navigate,S06,,conv_list
 A-P06-002,P06,filter_status,change,mutate,,,toolbar
+A-P07-001,P07,btn_suppress_chip,click,emit_event,,,group_list
+A-P07-002,P07,btn_suppress,submit,mutate,,,group_list
+A-P07-003,P07,btn_unsuppress,click,mutate,,,group_list
 A-M01-001,M01,btn_close,click,close_overlay,return_to_invoker,,header
 A-M01-002,M01,btn_cancel,click,close_overlay,return_to_invoker,,actions
 A-M01-003,M01,btn_confirm_merge,click,mutate,,confirm_checkbox.checked,actions

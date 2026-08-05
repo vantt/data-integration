@@ -2,6 +2,6 @@
 
 # Chip Coverage Audit (generated)
 
-Surfaces: 40 · Tokens: 190 · Mapped: 190 · Unmapped: 0
+Surfaces: 41 · Tokens: 190 · Mapped: 190 · Unmapped: 0
 
 All chips mapped — no gaps found.

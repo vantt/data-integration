@@ -277,6 +277,30 @@ def _make_warehouse(path: str) -> duckdb.DuckDBPyConnection:
            '2026-06-19T10:00:00+07:00')
     """)
 
+    # dim_action_scenario_registry — passthrough of seed_action_scenario_registry (Phase 01).
+    conn.execute("""
+        CREATE TABLE main_marts.dim_action_scenario_registry (
+            action_type TEXT, mart TEXT, enabled BOOLEAN,
+            scenario_group TEXT, description_vi TEXT
+        )
+    """)
+    conn.execute("""
+        INSERT INTO main_marts.dim_action_scenario_registry VALUES
+          ('REORDER_OVERDUE', 'mart_customer_sku_action_queue', true, 'reorder_cadence', 'Het lieu trinh qua han'),
+          ('REORDER_NUDGE', 'mart_customer_sku_action_queue', true, 'reorder_cadence', 'Het lieu trinh hom nay'),
+          ('REORDER_PREEMPT', 'mart_customer_sku_action_queue', true, 'reorder_cadence', 'Sap het lieu trinh'),
+          ('PROGRESS_CHECK', 'mart_customer_sku_action_queue', true, 'journey', 'Hoi cam nhan D12-16'),
+          ('USAGE_FOLLOWUP', 'mart_customer_sku_action_queue', true, 'journey', 'Xac nhan bat dau dung D5-9'),
+          ('GIFT_TO_PURCHASE', 'mart_customer_sku_action_queue', false, 'gift_conversion', 'Tung tang chua tung mua'),
+          ('CALL_NOW', 'mart_customer_action_queue', true, 'at_risk', 'VIP dang nguoi goi ngay'),
+          ('MANUAL_RISK_REVIEW', 'mart_customer_action_queue', true, 'risk', 'NV gan tag rui ro'),
+          ('REORDER_NUDGE', 'mart_customer_action_queue', true, 'reorder_cadence', 'Qua han nhip mua'),
+          ('REORDER_PREEMPT', 'mart_customer_action_queue', true, 'reorder_cadence', 'Sap toi han nhip mua'),
+          ('WIN_BACK', 'mart_customer_action_queue', true, 'winback', 'Da churn can offer'),
+          ('SECOND_ORDER', 'mart_customer_action_queue', true, 'activation', 'Mua 1 lan day don 2'),
+          ('HIGH_CANCEL_RISK', 'mart_customer_action_queue', true, 'risk', 'Ty le huy cao')
+    """)
+
     conn.close()
     # Re-open read-only as production code does.
     return duckdb.connect(path, read_only=True)
@@ -316,6 +340,7 @@ def test_t1_all_tables_populated(warehouse_and_cache):
             "wh_order_hdr": 3,
             "wh_party_seed": 2,
             "wh_deadstock_target": 1,
+            "wh_action_scenario_registry": 13,
         }
         for table, expected in checks.items():
             count = db.execute(f"SELECT COUNT(*) FROM {table}").fetchone()[0]
@@ -332,7 +357,7 @@ def test_t2_idempotent(warehouse_and_cache):
     _wh_tables = [
         "wh_customer_insight", "wh_product_insight", "wh_action_queue",
         "wh_customer_tier", "wh_customer_base", "wh_product", "wh_order_hdr", "wh_party_seed",
-        "wh_deadstock_target",
+        "wh_deadstock_target", "wh_action_scenario_registry",
     ]
 
     run(olap_conn=olap_conn, cache_db=cache_path)
@@ -396,7 +421,7 @@ def test_t4_sync_run_logged_ok(warehouse_and_cache):
         expected_tables = [
             "wh_customer_insight", "wh_product_insight", "wh_action_queue",
             "wh_customer_tier", "wh_customer_base", "wh_product", "wh_order_hdr", "wh_party_seed",
-            "wh_deadstock_target",
+            "wh_deadstock_target", "wh_action_scenario_registry",
         ]
         for t in expected_tables:
             assert t in statuses, f"wh_sync_run missing entry for {t}"
@@ -561,3 +586,61 @@ def _create_minimal_dim_tables(conn: duckdb.DuckDBPyConnection) -> None:
             queue_generated_at TIMESTAMPTZ
         )
     """)
+
+
+# ─── T7: wh_action_scenario_registry — empty-fetch guard preserves catalog ───
+
+def test_t7_action_scenario_registry_empty_guard(tmp_dirs):
+    """A zero-row fetch (Phase 01 not deployed, or a transient upstream failure)
+    must never wipe an already-synced catalog — matches upsert_deadstock_target's
+    empty-rows guard (sqlite_upsert.py)."""
+    _, cache_path = tmp_dirs
+    cache_conn = su.open_cache_db(cache_path)
+    su.apply_schema(cache_conn)
+
+    rows_13 = [
+        {"action_type": "CALL_NOW", "mart": "mart_customer_action_queue",
+         "enabled": True, "scenario_group": "at_risk", "description_vi": "VIP"},
+        {"action_type": "REORDER_NUDGE", "mart": "mart_customer_sku_action_queue",
+         "enabled": True, "scenario_group": "reorder_cadence", "description_vi": "Het lieu trinh"},
+    ]
+    count = su.upsert_action_scenario_registry(cache_conn, rows_13)
+    assert count == 2
+    assert cache_conn.execute(
+        "SELECT COUNT(*) FROM wh_action_scenario_registry"
+    ).fetchone()[0] == 2
+
+    # Empty fetch on a later run — existing rows must survive untouched.
+    count_empty = su.upsert_action_scenario_registry(cache_conn, [])
+    assert count_empty == 0
+    assert cache_conn.execute(
+        "SELECT COUNT(*) FROM wh_action_scenario_registry"
+    ).fetchone()[0] == 2
+
+    cache_conn.close()
+
+
+# ─── T8: wh_action_scenario_registry — missing-column fixture → MissingColumnError ─
+
+def test_t8_action_scenario_registry_missing_column_raises(tmp_dirs):
+    olap_path, _ = tmp_dirs
+
+    conn = duckdb.connect(olap_path)
+    conn.execute("CREATE SCHEMA IF NOT EXISTS main_marts")
+    # Missing 'scenario_group' and 'description_vi' → must trigger MissingColumnError.
+    conn.execute("""
+        CREATE TABLE main_marts.dim_action_scenario_registry (
+            action_type TEXT, mart TEXT, enabled BOOLEAN
+        )
+    """)
+    conn.execute(
+        "INSERT INTO main_marts.dim_action_scenario_registry VALUES ('CALL_NOW', 'mart_customer_action_queue', true)"
+    )
+    conn.close()
+
+    ro = duckdb.connect(olap_path, read_only=True)
+    try:
+        with pytest.raises(MissingColumnError):
+            dr.fetch_action_scenario_registry(ro)
+    finally:
+        ro.close()

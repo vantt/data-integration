@@ -1,0 +1,159 @@
+{# @surface P07 · Suggestion Settings Panel | @source crm/docs/ui-spec/panels/P07-suggestion-settings-panel.md | @kind PANEL #}
+{# HTMX fragment for /customers/{party_id}/panels/suggestion_settings
+   Data: party_id (str), groups (list[SuggestionSettingGroup])
+   A-P07-001: btn_suppress_chip → sets the date input, no request
+   A-P07-002: btn_suppress      → hx-post .../suggestion-settings/suppress   → #p07-suggestion-settings outerHTML
+   A-P07-003: btn_unsuppress    → hx-post .../suggestion-settings/unsuppress → #p07-suggestion-settings outerHTML
+#}
+{% set group_labels = {
+  "at_risk": "Đang nguội",
+  "winback": "Win-back",
+  "activation": "Kích hoạt",
+  "risk": "Rủi ro",
+  "reorder_cadence": "Nhịp tái mua",
+  "journey": "Hành trình sử dụng",
+  "gift_conversion": "Chuyển đổi từ quà tặng",
+} %}
+
+<section class="stack stack-4" data-surface="P07" id="p07-suggestion-settings">
+
+  <div class="toolbar">
+    <span class="panel-title">Cài đặt gợi ý</span>
+  </div>
+
+  <p class="muted" style="font-size:12px;line-height:1.5">
+    Tắt ở đây = <b>không đề xuất loại này cho khách này nữa</b> tới ngày đã chọn — khác với nút
+    "Bỏ qua" trên từng thẻ (chỉ ẩn 1 lần, tự hiện lại) và khác với "🚫 Đừng gọi nữa" trong Call Cockpit
+    (ẩn <b>mọi</b> loại, vô thời hạn, dùng khi khách yêu cầu không liên hệ nữa). Tắt ở đây chỉ ảnh hưởng
+    danh sách việc cần làm (worklist) — không ẩn khỏi panel insight của khách.
+  </p>
+
+  {% if not groups %}
+  <div class="state">
+    <div class="state__inner">
+      <div class="state__title">Danh mục gợi ý chưa được đồng bộ từ kho dữ liệu.</div>
+      <p class="state__sub">Thử tải lại sau khi lần đồng bộ tiếp theo hoàn tất.</p>
+    </div>
+  </div>
+  {% else %}
+
+  {% for group in groups %}
+  <div class="stack stack-2">
+    <div class="caption" style="text-transform:none">{{ group_labels.get(group.scenario_group, group.scenario_group) }}</div>
+    <div class="wl-list">
+      {% for row in group.rows %}
+      {% set grain_label = "Theo khách" if row.source_mart == "mart_customer_action_queue" else "Theo sản phẩm" %}
+      {% set row_key = row.action_type ~ "|" ~ row.source_mart %}
+      <div class="wl-row" style="grid-template-columns:1fr auto">
+        <div class="wl-row__main">
+          <div class="wl-row__top">
+            <span{% if row.is_globally_disabled %} class="muted"{% endif %}>{{ row.description_vi }}</span>
+            <span class="muted" style="font-size:11px">{{ grain_label }}</span>
+          </div>
+          <div class="wl-row__meta">
+            {% if row.is_globally_disabled %}
+            <span class="muted" data-tooltip="Loại gợi ý này đang tắt toàn hệ thống">Đang tắt toàn hệ thống</span>
+            {% elif row.is_suppressed %}
+            <span>Đã tắt tới {{ row.until_date_ict[8:10] }}/{{ row.until_date_ict[5:7] }}/{{ row.until_date_ict[0:4] }}
+              — bởi {{ row.set_by_display }}</span>
+            {% elif row.is_expired %}
+            <span class="muted">Đã hết hạn ngày {{ row.until_date_ict[8:10] }}/{{ row.until_date_ict[5:7] }}/{{ row.until_date_ict[0:4] }}
+              — đang bật lại</span>
+            {% else %}
+            <span>Đang bật</span>
+            {% endif %}
+          </div>
+        </div>
+
+        <div>
+          {% if row.is_globally_disabled %}
+          {# no control — greyed, non-interactive #}
+          {% elif row.is_suppressed %}
+          {# A-P07-003: Bật lại #}
+          <form hx-post="/customers/{{ party_id }}/suggestion-settings/unsuppress"
+                hx-target="#p07-suggestion-settings" hx-swap="outerHTML">
+            <input type="hidden" name="action_type" value="{{ row.action_type }}">
+            <input type="hidden" name="source_mart" value="{{ row.source_mart }}">
+            <button type="submit" class="btn btn--secondary btn--xs">Bật lại</button>
+          </form>
+          {% else %}
+          {# A-P07-002: Tắt — inline date picker via <details> #}
+          <details class="task-menu" style="position:relative">
+            <summary class="btn btn--secondary btn--xs" style="cursor:pointer">Tắt</summary>
+            <div class="task-menu__pop" style="min-width:220px">
+              <form hx-post="/customers/{{ party_id }}/suggestion-settings/suppress"
+                    hx-target="#p07-suggestion-settings" hx-swap="outerHTML">
+                <input type="hidden" name="action_type" value="{{ row.action_type }}">
+                <input type="hidden" name="source_mart" value="{{ row.source_mart }}">
+                <div class="field-row p07-chips" style="gap:var(--sp-1);margin-bottom:var(--sp-2)">
+                  <button type="button" class="btn btn--ghost btn--xs"
+                          onclick="p07SetDate(this, 'p07-date-{{ row_key }}', 7)">1 tuần</button>
+                  <button type="button" class="btn btn--ghost btn--xs"
+                          onclick="p07SetDate(this, 'p07-date-{{ row_key }}', 30)">1 tháng</button>
+                  <button type="button" class="btn btn--ghost btn--xs"
+                          onclick="p07SetDate(this, 'p07-date-{{ row_key }}', 90)">3 tháng</button>
+                </div>
+                <label class="field">
+                  <span class="field__label">TẮT TỚI NGÀY</span>
+                  <input type="date" name="until_date" class="inp inp--mono" required
+                         id="p07-date-{{ row_key }}"
+                         oninput="p07OnDateInput(this)">
+                </label>
+                <div class="modal__actions" style="padding:var(--sp-2) 0 0">
+                  <button type="button" class="btn btn--ghost btn--xs"
+                          onclick="this.closest('details').removeAttribute('open')">Huỷ</button>
+                  <button type="submit" class="btn btn--primary btn--xs" disabled>Xác nhận</button>
+                </div>
+              </form>
+            </div>
+          </details>
+          {% endif %}
+        </div>
+      </div>
+      {% endfor %}
+    </div>
+  </div>
+  {% endfor %}
+
+  {% endif %}
+
+</section>
+
+<script>
+/* A-P07-001: preset chip -> set the date input AND enable the submit button —
+   valueAsDate does not fire an 'input' event, so the oninput handler on the date
+   field alone never runs from a chip click. */
+function p07SetDate(chipBtn, inputId, days) {
+  var input = document.getElementById(inputId);
+  input.valueAsDate = new Date(Date.now() + days * 86400000);
+  var submitBtn = chipBtn.closest('form').querySelector('[type=submit]');
+  if (submitBtn) submitBtn.disabled = false;
+  // Mark this chip selected, clear any sibling chip's selected state.
+  chipBtn.parentElement.querySelectorAll('.btn').forEach(function (b) {
+    b.classList.remove('btn--secondary');
+    b.classList.add('btn--ghost');
+  });
+  chipBtn.classList.remove('btn--ghost');
+  chipBtn.classList.add('btn--secondary');
+}
+
+/* Manual edit of the date field no longer matches any chip's preset — deselect them. */
+function p07OnDateInput(input) {
+  input.closest('form').querySelector('[type=submit]').disabled = !input.value;
+  var chips = input.closest('form').querySelector('.p07-chips');
+  if (chips) chips.querySelectorAll('.btn').forEach(function (b) {
+    b.classList.remove('btn--secondary');
+    b.classList.add('btn--ghost');
+  });
+}
+
+/* Close any open .task-menu <details> (the "Tắt…" popover) when clicking outside —
+   mirrors c360_tasks_panel.html's own scoped copy of this listener. */
+(function () {
+  document.addEventListener('click', function (e) {
+    document.querySelectorAll('#p07-suggestion-settings .task-menu[open]').forEach(function (d) {
+      if (!d.contains(e.target)) d.removeAttribute('open');
+    });
+  });
+})();
+</script>

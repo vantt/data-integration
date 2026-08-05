@@ -21,6 +21,7 @@ surfaces:
   - P04
   - P05
   - P06
+  - P07
   - M01
   - M02
   - M03
@@ -1884,6 +1885,41 @@ edges:
     effects:
       - conv_list.reload_filtered
     region: toolbar
+  - id: A-P07-001
+    from: P07
+    element: btn_suppress_chip
+    trigger: click
+    action: emit_event
+    effects:
+      - date_input.set_value
+    region: group_list
+  - id: A-P07-002
+    from: P07
+    element: btn_suppress
+    trigger: submit
+    action: mutate
+    payload:
+      party_id: $party.id
+      action_type: $row.action_type
+      source_mart: $row.source_mart
+      until_date: $form.until_date
+    effects:
+      - dismissal.upsert
+      - group_list.reload
+    region: group_list
+  - id: A-P07-003
+    from: P07
+    element: btn_unsuppress
+    trigger: click
+    action: mutate
+    payload:
+      party_id: $party.id
+      action_type: $row.action_type
+      source_mart: $row.source_mart
+    effects:
+      - dismissal.delete
+      - group_list.reload
+    region: group_list
   - id: A-M01-001
     from: M01
     element: btn_close

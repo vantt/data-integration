@@ -54,40 +54,41 @@ class SQLiteActionStateRepository:
     # ── B5: (party_id, action_type) TTL dismissal ─────────────────────────────
 
     def _dismiss_by_party_and_type(self, action_id: str, user_id: Optional[str]) -> None:
-        """Best-effort: resolve action_id → (party_id, action_type) and upsert the
-        cross-episode dismissal row. Silently skipped (not raised) when the action
-        can no longer be resolved (stale/removed from cache, or party not yet
+        """Best-effort: resolve action_id → (party_id, action_type, source_mart) and
+        upsert the cross-episode dismissal row. Silently skipped (not raised) when the
+        action can no longer be resolved (stale/removed from cache, or party not yet
         linked) — the per-episode crm_action_state write above already succeeded
         and remains the source of truth for that case.
         """
         resolved = self._resolve_party_and_action_type(action_id)
         if resolved is None:
             return
-        party_id, action_type = resolved
+        party_id, action_type, source_mart = resolved
         sql = (
             "INSERT INTO crm_action_dismissal "
-            "  (party_id, action_type, dismissed_by_user_id, dismissed_at, dismissed_until) "
-            "VALUES (?, ?, ?, "
+            "  (party_id, action_type, source_mart, dismissed_by_user_id, dismissed_at, dismissed_until) "
+            "VALUES (?, ?, ?, ?, "
             "        strftime('%Y-%m-%dT%H:%M:%fZ','now'), "
             f"        strftime('%Y-%m-%dT%H:%M:%fZ','now','+{_DISMISSAL_TTL_DAYS} days')) "
-            "ON CONFLICT(party_id, action_type) DO UPDATE SET "
+            "ON CONFLICT(party_id, action_type, source_mart) DO UPDATE SET "
             "  dismissed_by_user_id = excluded.dismissed_by_user_id, "
             "  dismissed_at = excluded.dismissed_at, "
             "  dismissed_until = excluded.dismissed_until"
         )
         with self._conn:
-            self._conn.execute(sql, (party_id, action_type, user_id))
+            self._conn.execute(sql, (party_id, action_type, source_mart, user_id))
 
-    def _resolve_party_and_action_type(self, action_id: str) -> Optional[tuple[str, str]]:
-        """Look up (party_id, action_type) for action_id via the same cache-join
-        pattern as SQLiteCacheRepository.list_all_action_queue(). Checks the
-        customer-level branch first, then the SKU-level branch. Returns None when
-        the action_id is not found in either, or its party_id has not been
+    def _resolve_party_and_action_type(self, action_id: str) -> Optional[tuple[str, str, str]]:
+        """Look up (party_id, action_type, source_mart) for action_id via the same
+        cache-join pattern as SQLiteCacheRepository.list_all_action_queue(). Checks the
+        customer-level branch first, then the SKU-level branch — whichever branch
+        matches tells us the originating mart, at zero extra query cost. Returns None
+        when the action_id is not found in either, or its party_id has not been
         resolved yet (customer not linked to a CRM party) — dismissal memory is
         scoped by party_id, so there is nothing meaningful to key it on.
         """
         branches = (
-            """
+            ("mart_customer_action_queue", """
             SELECT a.action_type AS action_type, pi.party_id AS party_id
             FROM cache.wh_action_queue a
             LEFT JOIN cache.wh_party_seed ps ON ps.customer_key = a.customer_key
@@ -95,8 +96,8 @@ class SQLiteActionStateRepository:
                    ON pi.identity_type = 'sapo_customer'
                   AND pi.identity_value = CAST(ps.customer_id AS TEXT)
             WHERE a.action_id = ?
-            """,
-            """
+            """),
+            ("mart_customer_sku_action_queue", """
             SELECT sa.action_type AS action_type, pi.party_id AS party_id
             FROM cache.wh_sku_action_queue sa
             LEFT JOIN cache.wh_party_seed ps ON ps.customer_key = sa.customer_key
@@ -104,9 +105,9 @@ class SQLiteActionStateRepository:
                    ON pi.identity_type = 'sapo_customer'
                   AND pi.identity_value = CAST(ps.customer_id AS TEXT)
             WHERE sa.action_id = ?
-            """,
+            """),
         )
-        for sql in branches:
+        for source_mart, sql in branches:
             try:
                 row = self._conn.execute(sql, (action_id,)).fetchone()
             except sqlite3.OperationalError as exc:
@@ -114,8 +115,63 @@ class SQLiteActionStateRepository:
                     continue
                 raise
             if row and row["party_id"] and row["action_type"]:
-                return (row["party_id"], row["action_type"])
+                return (row["party_id"], row["action_type"], source_mart)
         return None
+
+    # ── Suggestion Settings panel: direct, pre-emptive suppression ───────────
+
+    def suppress(self, party_id: str, action_type: str, source_mart: str,
+                 until_utc: str, user_id: Optional[str] = None) -> None:
+        """Turn an opportunity type off for a party, effective until `until_utc`
+        (a bound UTC ISO-8601 string — never f-string interpolated). Unlike
+        `_dismiss_by_party_and_type`, this does NOT require an active `action_id` —
+        the panel can suppress a type before it has ever fired for this party.
+        Upsert: re-suppressing overwrites the end date and the acting user.
+        """
+        sql = (
+            "INSERT INTO crm_action_dismissal "
+            "  (party_id, action_type, source_mart, dismissed_by_user_id, dismissed_at, dismissed_until) "
+            "VALUES (?, ?, ?, ?, strftime('%Y-%m-%dT%H:%M:%fZ','now'), ?) "
+            "ON CONFLICT(party_id, action_type, source_mart) DO UPDATE SET "
+            "  dismissed_by_user_id = excluded.dismissed_by_user_id, "
+            "  dismissed_at = excluded.dismissed_at, "
+            "  dismissed_until = excluded.dismissed_until"
+        )
+        with self._conn:
+            self._conn.execute(sql, (party_id, action_type, source_mart, user_id, until_utc))
+
+    def unsuppress(self, party_id: str, action_type: str, source_mart: str) -> None:
+        """Turn a suggestion back on — deletes the suppression row outright."""
+        with self._conn:
+            self._conn.execute(
+                "DELETE FROM crm_action_dismissal "
+                "WHERE party_id = ? AND action_type = ? AND source_mart = ?",
+                (party_id, action_type, source_mart),
+            )
+
+    def list_dismissals_for_party(self, party_id: str) -> list[ActionDismissal]:
+        """Return ALL dismissal rows for one party, including expired ones — the
+        panel needs to distinguish "đã hết hạn" from "đang bật" rather than have
+        expired rows silently vanish. Returns [] when the table is absent
+        (pre-migration) rather than raising."""
+        sql = """
+            SELECT d.party_id, d.action_type, d.source_mart, d.dismissed_by_user_id,
+                   d.dismissed_at, d.dismissed_until,
+                   p.display_name, p.primary_phone,
+                   u.full_name AS dismissed_by_name
+            FROM crm_action_dismissal d
+            LEFT JOIN crm_party p ON p.party_id = d.party_id
+            LEFT JOIN crm_app_user u ON u.user_id = d.dismissed_by_user_id
+            WHERE d.party_id = ?
+            ORDER BY d.action_type, d.source_mart
+        """
+        try:
+            rows = self._conn.execute(sql, (party_id,)).fetchall()
+        except sqlite3.OperationalError as exc:
+            if _is_missing_table_or_column(exc):
+                return []
+            raise
+        return [self._row_to_dismissal(row) for row in rows]
 
     def list_active_dismissals(self) -> list[ActionDismissal]:
         """Return non-expired (party_id, action_type) dismissals for the manager
@@ -126,7 +182,7 @@ class SQLiteActionStateRepository:
         (pre-migration) rather than raising.
         """
         sql = """
-            SELECT d.party_id, d.action_type, d.dismissed_by_user_id,
+            SELECT d.party_id, d.action_type, d.source_mart, d.dismissed_by_user_id,
                    d.dismissed_at, d.dismissed_until,
                    p.display_name, p.primary_phone,
                    u.full_name AS dismissed_by_name
@@ -142,18 +198,20 @@ class SQLiteActionStateRepository:
             if _is_missing_table_or_column(exc):
                 return []
             raise
-        return [
-            ActionDismissal(
-                party_id=row["party_id"],
-                action_type=row["action_type"],
-                dismissed_by_user_id=row["dismissed_by_user_id"],
-                dismissed_at=row["dismissed_at"] or "",
-                dismissed_until=row["dismissed_until"] or "",
-                party_display=(row["display_name"] or row["primary_phone"] or "(chưa xác định)"),
-                dismissed_by_display=row["dismissed_by_name"] or "Hệ thống",
-            )
-            for row in rows
-        ]
+        return [self._row_to_dismissal(row) for row in rows]
+
+    @staticmethod
+    def _row_to_dismissal(row: sqlite3.Row) -> ActionDismissal:
+        return ActionDismissal(
+            party_id=row["party_id"],
+            action_type=row["action_type"],
+            source_mart=row["source_mart"],
+            dismissed_by_user_id=row["dismissed_by_user_id"],
+            dismissed_at=row["dismissed_at"] or "",
+            dismissed_until=row["dismissed_until"] or "",
+            party_display=(row["display_name"] or row["primary_phone"] or "(chưa xác định)"),
+            dismissed_by_display=row["dismissed_by_name"] or "Hệ thống",
+        )
 
     def snooze(self, action_id: str, until_date: str, user_id: Optional[str] = None) -> None:
         sql = (

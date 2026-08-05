@@ -166,6 +166,16 @@ _MART_SKU_ACTION_QUEUE_COLS = [
     "supply_stream",
 ]
 
+# dim_action_scenario_registry output columns (cache-facing names) — the
+# (action_type, mart) opportunity-type catalog. See seed_action_scenario_registry.csv.
+_MART_ACTION_SCENARIO_REGISTRY_COLS = [
+    "action_type",
+    "mart",
+    "enabled",
+    "scenario_group",
+    "description_vi",
+]
+
 # dim_products output columns for product catalog (cache-facing names).
 # Live warehouse uses brand_name (→ brand) and last_sold_price (→ unit_price).
 _DIM_PRODUCTS_COLS = [
@@ -425,6 +435,15 @@ def fetch_customer_tier(conn: "duckdb.DuckDBPyConnection") -> list[dict]:
     )
     rows = _fetch(conn, sql)
     _check_columns(rows, _MART_CUSTOMER_TIER_COLS, "main_marts.mart_customer_tier")
+    return rows
+
+
+def fetch_action_scenario_registry(conn: "duckdb.DuckDBPyConnection") -> list[dict]:
+    """Read the opportunity-type catalog from main_marts.dim_action_scenario_registry."""
+    cols = ", ".join(_MART_ACTION_SCENARIO_REGISTRY_COLS)
+    rows = _fetch(conn, f"SELECT {cols} FROM main_marts.dim_action_scenario_registry")
+    _check_columns(rows, _MART_ACTION_SCENARIO_REGISTRY_COLS,
+                   "main_marts.dim_action_scenario_registry")
     return rows
 
 

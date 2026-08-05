@@ -423,6 +423,43 @@ def upsert_deadstock_target(conn: sqlite3.Connection, rows: list[dict]) -> int:
     return len(rows)
 
 
+def upsert_action_scenario_registry(conn: sqlite3.Connection, rows: list[dict]) -> int:
+    """Upsert the opportunity-type catalog into wh_action_scenario_registry.
+
+    Composite PK (action_type, mart) — 13-row reference table, full-replace semantics
+    (incremental is pointless at this size). Same empty-rows guard as
+    upsert_deadstock_target: a zero-row fetch never wipes the existing catalog, so a
+    transient upstream failure degrades to "catalog stale" rather than "catalog empty".
+    `enabled` is explicitly cast to int(bool(...)) — DuckDB returns Python bool, SQLite
+    has no BOOLEAN type. Returns number of rows processed.
+    """
+    if not rows:
+        log.warning(
+            "upsert_action_scenario_registry: mart returned 0 rows — skipping DELETE to "
+            "preserve existing catalog. Verify main_marts.dim_action_scenario_registry "
+            "is not empty upstream (Phase 01 deployed?)."
+        )
+        return 0
+
+    sql = (
+        "INSERT INTO wh_action_scenario_registry "
+        "  (action_type, mart, enabled, scenario_group, description_vi) "
+        "VALUES (?, ?, ?, ?, ?) "
+        "ON CONFLICT(action_type, mart) DO UPDATE SET "
+        "  enabled = excluded.enabled, "
+        "  scenario_group = excluded.scenario_group, "
+        "  description_vi = excluded.description_vi"
+    )
+    values = [
+        (r["action_type"], r["mart"], int(bool(r["enabled"])), r["scenario_group"], r["description_vi"])
+        for r in rows
+    ]
+    with conn:
+        conn.execute("DELETE FROM wh_action_scenario_registry")
+        conn.executemany(sql, values)
+    return len(rows)
+
+
 def insert_sync_run(conn: sqlite3.Connection, row: dict) -> None:
     """Insert a single wh_sync_run audit row."""
     sql = (

@@ -3,7 +3,7 @@ id: S03
 type: screen
 name: "Customer 360 Detail"
 platforms: [desktop]
-hosts: [P01, P02, P03, P04, P05, P06]
+hosts: [P01, P02, P03, P04, P05, P06, P07]
 status: active
 design_ref: ""
 rules: [R2, R3, R6, R7, R13]
