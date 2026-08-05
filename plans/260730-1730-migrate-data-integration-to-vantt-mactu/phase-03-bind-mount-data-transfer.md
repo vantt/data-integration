@@ -10,17 +10,26 @@
    ```powershell
    docker compose stop data_platform metabase
    ```
-2. Mirror qua ssh bằng tar (không có rsync trên Git Bash Windows — lesson #6). Mirror toàn bộ `app_data/` rồi exclude, KHÔNG liệt kê subdir thủ công (lesson #9 — tránh sót file như vụ `warehouse/` bị bỏ quên ở nu-data-pipeline):
+2. Mirror qua ssh bằng tar (không có rsync trên Git Bash Windows — lesson #6). Mirror toàn bộ `app_data/` rồi exclude, KHÔNG liệt kê subdir thủ công (lesson #9 — tránh sót file như vụ `warehouse/` bị bỏ quên ở nu-data-pipeline).
+   **⚠️ Đã chạy thật 2026-08-05, phát hiện bug**: `--exclude=rill` (không có `/`) khớp BASENAME bất kỳ đâu trong cây thư mục, không chỉ top-level — xoá nhầm mất `data_lake/export/rill/current/*.parquet` (12 file data thật của Rill export, không phải `app_data/rill/` rỗng định loại). Phải anchor bằng prefix `./` để chỉ khớp đúng top-level (lesson #13):
    ```bash
    tar -C app_data \
-     --exclude=backups \
-     --exclude=dagster_home \
-     --exclude='metabase_data.backup.*' \
-     --exclude=crm_data_safety \
-     --exclude=crm_verify_tmp \
-     --exclude=logs \
-     --exclude=rill \
+     --exclude=./backups \
+     --exclude=./dagster_home \
+     --exclude='./metabase_data.backup.*' \
+     --exclude=./crm_data_safety \
+     --exclude=./crm_verify_tmp \
+     --exclude=./logs \
+     --exclude=./rill \
      -cf - . | ssh vantt-mactu "tar -C ~/projects/fg-data-warhouse/app_data -xf -"
+   ```
+   Sau transfer, LUÔN diff danh sách file 2 bên trước khi tin byte-count tổng khớp (byte-count tổng có thể trùng hợp khớp dù thiếu/thừa file khác nhau — đã xảy ra suýt bỏ sót ở lần chạy thật):
+   ```bash
+   # Windows
+   find app_data/{data_lake,metabase_data,input_source,secrets,analysis} -type f | sort > /tmp/win-list.txt
+   # vantt-mactu
+   ssh vantt-mactu "cd ~/projects/fg-data-warhouse/app_data && find data_lake metabase_data input_source secrets analysis -type f | sort" > /tmp/vantt-list.txt
+   diff /tmp/win-list.txt /tmp/vantt-list.txt   # phải rỗng
    ```
 3. Verify file-count + byte-count TUYỆT ĐỐI, KHÔNG dùng BusyBox `du -sb` (lesson #7 — lệch do disk-block-usage). Dùng `find -printf` hai bên:
    ```bash

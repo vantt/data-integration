@@ -1,6 +1,6 @@
 # Migrate data-integration: Windows → vantt-mactu
 
-**Status**: Plan + 9 phase file hoàn chỉnh, đã re-sequence theo quyết định thật (2026-08-04). Chưa thực thi bất kỳ bước nào — sẵn sàng bắt đầu phase 1.
+**Status**: Phase 1-5 + 7 ĐÃ CHẠY THẬT và PASS (2026-08-05) — 6 service non-CRM sống trên vantt-mactu, data khớp tuyệt đối Windows. 3 bug thật phát hiện + vá trong lúc chạy (xem lesson #13-17). Windows vẫn chạy song song, chưa đổi CRM. Phase 6 (Caddy) deferred, phase 8 (CRM cutover) đang GATE chờ user go-ahead, phase 9 chưa chạm tới.
 **Ngày**: 2026-07-30 (khởi tạo) / 2026-08-04 (chốt quyết định)
 **Nguồn kinh nghiệm**: `D:\Vantt\app\nu-data-pipeline\plans\reports\migration-260728-1450-windows-to-vantt-mactu-dry-run-report.md` (dry-run cùng target host, 70% giống cấu trúc, 9 bài học đã áp dụng vào plan này — xem mục "Bài học áp dụng" cuối file)
 
@@ -148,12 +148,12 @@ HOST (Linux, /home/vantt/projects/fg-data-warhouse/)     CONTAINER   (Y HỆT �
 
 | Phase | File | Thứ tự chạy | Trạng thái |
 |---|---|---|---|
-| 1 | `phase-01-target-prep.md` | 1 | Sẵn sàng thực thi |
-| 2 | `phase-02-code-transfer.md` | 2 | Sẵn sàng thực thi |
-| 3 | `phase-03-bind-mount-data-transfer.md` | 3 | Sẵn sàng thực thi |
-| 4 | `phase-04-named-volume-transfer.md` | 4 | Sẵn sàng thực thi |
-| 5 | `phase-05-secrets-env-transfer.md` | 5 | Sẵn sàng thực thi |
-| 7 | `phase-07-verify-non-crm-services.md` | 6 | Sẵn sàng thực thi — deploy stack + verify qua port/Tailscale IP, không phụ thuộc Caddy |
+| 1 | `phase-01-target-prep.md` | 1 | ✅ ĐÃ CHẠY, PASS (2026-08-05) |
+| 2 | `phase-02-code-transfer.md` | 2 | ✅ ĐÃ CHẠY, PASS — git tree đã sạch từ trước (commit hết) nên clone thẳng đủ, không cần transfer diff |
+| 3 | `phase-03-bind-mount-data-transfer.md` | 3 | ✅ ĐÃ CHẠY, PASS — vá bug tar exclude giữa chừng (lesson #13), file-count/byte-count/sha256 khớp tuyệt đối sau vá |
+| 4 | `phase-04-named-volume-transfer.md` | 4 | ✅ ĐÃ CHẠY, PASS — integrity_check ok cho dagster runs.db/schedules.db + crm.db/cache.db |
+| 5 | `phase-05-secrets-env-transfer.md` | 5 | ✅ ĐÃ CHẠY, PASS — đã sửa `DAGSTER_URL` sang Tailscale IP vantt-mactu |
+| 7 | `phase-07-verify-non-crm-services.md` | 6 | ✅ ĐÃ CHẠY, PASS — vá 2 bug giữa chừng (UID mismatch lesson #14, `--env-file` lesson #15), 6/6 container healthy, data parity khớp tuyệt đối |
 | 8 | `phase-08-crm-production-cutover.md` | 7 | **GATE — cần user go-ahead rõ ràng.** Cloudflare Tunnel: chuyển connector locally-managed sang vantt-mactu, Docker `network_mode: host`, standalone compose. `vnflow.fwg.vn` bỏ (user chấp nhận), `hermes.fwg.vn`/`fgos.fwg.vn` giữ nguyên |
 | 6 | `phase-06-caddy-global-reverse-proxy.md` | 8 | **DEFERRED** — optional, làm sau phase 8 nếu vẫn muốn domain `*.lan.fwg.vn` |
 | 9 | `phase-09-decommission-windows.md` | 9 | **GATE cứng — Windows sẽ bị uninstall+cài lại, không phải "chờ N ngày".** Checklist xác nhận an toàn trước khi cho phép wipe, không có rollback sau đó |
@@ -188,6 +188,13 @@ Tóm tắt nhanh mỗi phase (chi tiết lệnh thật trong từng file):
 10. Nếu git working tree không sạch, `git clone` trên target sẽ thiếu fix quan trọng — PHẢI kiểm tra `git status`/`git diff` trước khi chọn transfer method, không mặc định clone là đủ.
 11. Khi thấy `docker-compose.yml` sửa gần đây, luôn `git diff` để hiểu ý đồ (ở đây: đúng là đang fix lại chính bug đã gây outage 9 ngày) — tránh vô tình transfer "backwards" (dùng bản compose cũ hơn, tái tạo lại bug).
 12. Kiểm tra dung lượng đĩa đích SỚM, trước khi lên kế hoạch transfer chi tiết — 31G trống là ràng buộc cứng, quyết định luôn cả việc backups/orphaned data có transfer hay không.
+
+**Bài học rút ra khi CHẠY THẬT phase 2-7 (2026-08-05, không có trong dry-run nu-data-pipeline vì project đó không có service non-root)**:
+13. `tar --exclude=PATTERN` không có `/` khớp BASENAME bất kỳ đâu trong cây thư mục, không chỉ top-level — suýt xoá mất `data_lake/export/rill/current/*.parquet` (data thật) khi định loại `app_data/rill/` (rỗng). Luôn anchor bằng prefix `./` (`--exclude=./rill`) khi chỉ muốn loại top-level. Sau transfer, `diff` danh sách file 2 bên — đừng chỉ tin byte-count tổng khớp (có thể trùng hợp khớp dù thiếu/thừa khác file).
+14. **UID mismatch trên Linux native khác hẳn Windows/Docker Desktop** — service chạy non-root (`rill` UID 1001, `metabase` UID 999) không ghi được vào bind-mount thuộc UID 1000 (`vantt`, user SSH/clone) → crash-loop (`mkdir: permission denied`, hoặc H2 "Connection has timed out" khó đoán nguyên nhân hơn nhiều). Windows Docker Desktop KHÔNG enforce Unix permission trên bind-mount nên bug này không lộ ra bao giờ ở đó. Trước khi deploy bất kỳ service non-root nào lên host Linux thật: kiểm tra `USER`/`useradd` trong Dockerfile, nếu có → `chmod o+w` (hoặc `chown`) bind-mount tương ứng TRƯỚC khi start. Đã kiểm tra: `crm`/`crm_drill_runner` chạy root, không dính bug này.
+15. `docker compose --env-file X` ghi đè HẲN nguồn đọc `.env` mặc định cho biến `${VAR}` cấp compose-file (KHÁC với `env_file:` bên trong từng service, không liên quan tới cờ CLI này) — nếu secrets cần cho `${VAR}:?...}` nằm ở file khác (ở đây: root `.env`, không phải `.env.docker`), dùng `--env-file` sẽ làm toàn bộ lệnh fail dù chỉ định service không liên quan (compose validate hết services trước khi chọn service để start). Không dùng `--env-file` khi không thật sự cần đổi nguồn `.env`.
+16. `Error: mkdir ... permission denied` và `SQLException: Connection has timed out` (H2) là 2 triệu chứng RẤT khác nhau của CÙNG MỘT nguyên nhân gốc (UID mismatch) — đừng debug 2 hướng riêng biệt, kiểm tra UID/ownership trước khi đào sâu vào error message cụ thể của từng service.
+17. `has-user-setup` (không phải `setup-token`) là field đáng tin để xác nhận Metabase đã load đúng H2 DB có data thật — `setup-token` luôn xuất hiện trong `/api/session/properties` kể cả khi đã setup xong, dễ gây hoảng nhầm là "fresh instance".
 
 ---
 

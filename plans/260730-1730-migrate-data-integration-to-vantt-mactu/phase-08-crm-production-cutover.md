@@ -4,6 +4,8 @@
 
 **Bối cảnh chốt 2026-08-04**: máy Windows sẽ bị **uninstall và cài lại** sau khi migrate thành công — không phải "giữ song song rollback vô thời hạn" như phase 9 draft ban đầu, mà là mốc cứng. Cloudflare Tunnel hiện tại là **locally-managed tunnel** (không phải token-based), chạy như Windows Service, dùng chung cho NHIỀU service không thuộc repo này — phải xử lý cẩn thận, không chỉ tắt Windows Service là xong.
 
+**Đã kiểm tra (2026-08-05, không phải suy đoán)**: `Dockerfile.crm` và `Dockerfile.drillrunner` KHÔNG có `USER` directive → cả 2 chạy root trong container → **không dính bug UID-mismatch** đã gặp ở `rill`/`evidence`/`metabase` (phase 7). Không cần chmod bind-mount `crm/src`, `crm/ops`, `crm/migrations` trước khi deploy.
+
 ## Recon đã xác nhận (2026-08-04)
 
 Nguồn: `C:\ProgramData\cloudflared\config.yml` (đang chạy — `cloudflared.exe --config ... tunnel run`, KHÔNG dùng `TUNNEL_TOKEN`).
@@ -108,7 +110,9 @@ Từ phase 4, CRM Windows vẫn tiếp tục nhận traffic tới giờ cutover 
    ```
 4. Start CRM trên vantt-mactu:
    ```bash
-   ssh vantt-mactu "cd ~/projects/fg-data-warhouse && docker compose --env-file .env.docker up -d crm crm_drill_runner"
+   # KHÔNG dùng --env-file .env.docker — che mất ${CRM_API_TOKEN}/${CRM_REFRESH_TOKEN}/${DRILL_TOKEN}
+   # (đọc từ root .env, không phải .env.docker). Xem chi tiết bug ở phase-07 bước 0.
+   ssh vantt-mactu "cd ~/projects/fg-data-warhouse && docker compose up -d crm crm_drill_runner"
    ```
 
 ## Rủi ro còn lại (không thuộc scope sửa, chỉ ghi nhận)

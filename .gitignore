@@ -9,6 +9,7 @@ node_modules
 poc
 data_lake
 app_data
+.migrate-staging
 
 # Manual approach-script workflow outputs — embed customer PII, never commit
 approach_prompts/
