@@ -1,6 +1,6 @@
 # Migrate data-integration: Windows → vantt-mactu
 
-**Status**: Phase 1-5, 7, 8 ĐÃ CHẠY THẬT và PASS (2026-08-05) — TOÀN BỘ 8 service (kể cả CRM) sống trên vantt-mactu, Cloudflare Tunnel đã cutover, `crm.fwg.vn`/`bi.fwg.vn`/`hermes.fwg.vn`/`fgos.fwg.vn` verify OK qua CF Access. CRM Windows đã dừng (chưa xoá). Còn 2 việc user tự làm: dừng Windows Cloudflared service (cần admin) + đăng nhập thử CRM thật. Phase 6 (Caddy) deferred. Phase 9 (wipe Windows) chưa chạm tới — chờ checklist.
+**Status**: Phase 1-5, 7, 8 ĐÃ CHẠY THẬT và PASS 100% (2026-08-05) — TOÀN BỘ 8 service (kể cả CRM) sống trên vantt-mactu, Cloudflare Tunnel đã cutover, `crm.fwg.vn`/`bi.fwg.vn`/`hermes.fwg.vn`/`fgos.fwg.vn` verify OK qua CF Access, user đã tự đăng nhập CRM thật công thành công. Windows Cloudflared service đã dừng (user tự làm, cần admin). **Toàn bộ 8 container trên Windows đã dừng** (`docker compose stop`, KHÔNG xoá — vẫn là rollback path). Phase 6 (Caddy) deferred. Phase 9 (pre-wipe checklist) chưa chạm tới — đây là bước còn lại duy nhất trước khi cho phép uninstall Windows.
 **Ngày**: 2026-07-30 (khởi tạo) / 2026-08-04 (chốt quyết định)
 **Nguồn kinh nghiệm**: `D:\Vantt\app\nu-data-pipeline\plans\reports\migration-260728-1450-windows-to-vantt-mactu-dry-run-report.md` (dry-run cùng target host, 70% giống cấu trúc, 9 bài học đã áp dụng vào plan này — xem mục "Bài học áp dụng" cuối file)
 
