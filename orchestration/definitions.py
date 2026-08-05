@@ -717,6 +717,7 @@ def health_report_digest_schedule(context):
     job=maintain_purge_runs_job,
     cron_schedule="0 1 * * *",
     execution_timezone="Asia/Ho_Chi_Minh",
+    default_status=DefaultScheduleStatus.RUNNING,  # auto-enable (schedules in defs are off by default — L49)
 )
 def maintain_purge_runs_schedule(context):
     active = _has_active_run(context, "maintain_purge_runs_job")
