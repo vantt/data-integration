@@ -133,9 +133,5 @@ Trước khi Windows bị wipe: `docker compose stop` trên vantt-mactu (cả `c
 
 ## Còn lại — cần user tự làm (không tự động hoá được)
 
-1. **Dừng Windows Cloudflared service** — cần quyền Administrator, session hiện tại không có:
-   ```powershell
-   Stop-Service Cloudflared
-   ```
-   Chưa dừng thì `bi.fwg.vn` vẫn OK (Metabase Windows còn chạy song song), nhưng `crm.fwg.vn` có thể thoáng 502 nếu Cloudflare route trúng connector Windows (CRM Windows đã dừng ở bước 8.3).
-2. **Đăng nhập thử CRM qua domain public thật** (`https://crm.fwg.vn`) — cần người dùng thật qua CF Access, không tự động hoá qua curl được (Access chặn trước khi tới origin, response 302 chỉ xác nhận pipeline hoạt động, không xác nhận app phía sau login đúng).
+1. ~~Dừng Windows Cloudflared service~~ — ✅ user đã làm (2026-08-05), verify lại: `Get-Service Cloudflared` = Stopped, cả 4 domain vẫn 302 ổn định, log `cloudflared` trên vantt-mactu không lỗi origin.
+2. **Đăng nhập thử CRM qua domain public thật** (`https://crm.fwg.vn`) — cần người dùng thật qua CF Access, không tự động hoá qua curl được (Access chặn trước khi tới origin, response 302 chỉ xác nhận pipeline hoạt động, không xác nhận app phía sau login đúng). **Còn treo.**
