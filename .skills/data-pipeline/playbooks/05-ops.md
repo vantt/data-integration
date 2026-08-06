@@ -62,7 +62,7 @@ Post-mortem 2026-04-28: disk D: 100% full → SQLite I/O error → Dagster API s
 
 | Job/Sensor | Cron / Trigger | Rationale |
 |---|---|---|
-| `maintain_purge_runs_schedule` | `0 1 * * *` ICT | Quietest window; finishes before 03:00 nightly |
+| `maintain_cleanup_schedule` | `0 1 * * *` ICT | Quietest window; finishes before 03:00 nightly |
 | `trigger_backup_after_purge` (sensor) | purge SUCCESS | Hard ordering — backup after purge, not cron-guessed |
 | `maintain_backup_fallback_schedule` | `0 6 * * *` ICT | Fallback if purge fails; `run_key=date` deduplicates with sensor |
 | `pipeline_batch_nightly_schedule` | `0 3 * * *` ICT | Default nightly batch |

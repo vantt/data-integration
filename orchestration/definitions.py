@@ -32,7 +32,7 @@ from dagster_dbt import DbtCliResource
 from orchestration.assets import sapo_v2_assets, sheets_assets, shopee_assets, misa_amis_assets, dbt, serving, rill, reconciliation, kpi_closure, crm_sync, hug_assets, crm_writeback_assets, approach_script_generation
 from orchestration.ops.system_backup import maintain_backup_platform_job
 from orchestration.ops.morning_digest import health_report_digest_job
-from orchestration.ops.purge_runs import maintain_purge_runs_job
+from orchestration.ops.purge_runs import maintain_cleanup_job
 from orchestration.sensors.failure_alerting import health_alert_failure_sensor
 from orchestration.sensors.sheets_modified_sensor import ingest_sheets_modified_sensor
 from orchestration.sensors.stuck_run_alerter import health_alert_stuckrun_sensor
@@ -384,11 +384,11 @@ def pipeline_sapo_v2_realtime_schedule(context):
     holder = _long_dbt_rw_holder(context)
     if holder:
         return SkipReason(f"realtime: yielding to {holder} (dbt_rw occupied)")
-    # Yield to purge_runs: VACUUM on index.db holds an exclusive SQLite lock, causing
+    # Yield to maintain_cleanup: VACUUM on index.db holds an exclusive SQLite lock, causing
     # log event writes to fail for concurrent jobs → stuck sensor kills them as "inactive".
-    # Skip instead; next tick in 3 min retries after purge completes (~15-20 min window).
-    if _has_active_run(context, "maintain_purge_runs_job"):
-        return SkipReason("realtime: yielding to purge_runs (SQLite index.db lock)")
+    # Skip instead; next tick in 3 min retries after cleanup completes (~15-20 min window).
+    if _has_active_run(context, "maintain_cleanup_job"):
+        return SkipReason("realtime: yielding to maintain_cleanup (SQLite index.db lock)")
     return RunRequest(run_key=None)
 
 
@@ -404,8 +404,8 @@ def pipeline_hug_realtime_schedule(context):
     holder = _long_dbt_rw_holder(context)
     if holder:
         return SkipReason(f"hug_realtime: yielding to {holder} (dbt_rw occupied)")
-    if _has_active_run(context, "maintain_purge_runs_job"):
-        return SkipReason("hug_realtime: yielding to purge_runs (SQLite index.db lock)")
+    if _has_active_run(context, "maintain_cleanup_job"):
+        return SkipReason("hug_realtime: yielding to maintain_cleanup (SQLite index.db lock)")
     return RunRequest(run_key=None)
 
 
@@ -428,8 +428,8 @@ def pipeline_sapo_v2_incremental_schedule(context):
     holder = _long_dbt_rw_holder(context)
     if holder:
         return SkipReason(f"incremental: yielding to {holder} (dbt_rw occupied)")
-    if _has_active_run(context, "maintain_purge_runs_job"):
-        return SkipReason("incremental: yielding to purge_runs (SQLite index.db lock)")
+    if _has_active_run(context, "maintain_cleanup_job"):
+        return SkipReason("incremental: yielding to maintain_cleanup (SQLite index.db lock)")
     return RunRequest(run_key=None)
 
 
@@ -448,8 +448,8 @@ def pipeline_sapo_v2_hourly_schedule(context):
     holder = _long_dbt_rw_holder(context)
     if holder:
         return SkipReason(f"hourly: yielding to {holder} (dbt_rw occupied)")
-    if _has_active_run(context, "maintain_purge_runs_job"):
-        return SkipReason("hourly: yielding to purge_runs (SQLite index.db lock)")
+    if _has_active_run(context, "maintain_cleanup_job"):
+        return SkipReason("hourly: yielding to maintain_cleanup (SQLite index.db lock)")
     return RunRequest(run_key=None)
 
 
@@ -555,7 +555,7 @@ _ICT = timezone(timedelta(hours=7))  # Asia/Ho_Chi_Minh, no pytz dependency
 # still active at 06:00, the fallback schedule is the guaranteed backup path.
 @run_status_sensor(
     run_status=DagsterRunStatus.SUCCESS,
-    monitored_jobs=[maintain_purge_runs_job],
+    monitored_jobs=[maintain_cleanup_job],
     request_job=maintain_backup_platform_job,
     minimum_interval_seconds=60,
 )
@@ -704,25 +704,26 @@ def health_report_digest_schedule(context):
     return RunRequest(run_key=None)
 
 
-# 01:00 daily — purge old Dagster runs to reclaim disk space.
+# 01:00 daily — purge old Dagster runs and stale dbt build-cache dirs to reclaim disk space.
 # Window choice: ingestion is quietest in the small hours (realtime tick
 # every 3 min still fires, but no nightly/recon/health overlap), which
 # minimises SQLite "database is locked" contention against event_logs
 # during mass deletes. Completes well before nightly batch (03:00) and
 # backup (06:00). Earlier 05:30 slot collided with the post-nightly
-# realtime drain and caused warnings during purge.
+# realtime drain and caused warnings during cleanup.
 # Keeps PURGE_KEEP_DAYS (default: 1) days of history.
-# Not in dbt_rw concurrency group: operates on Dagster's internal storage only.
+# Not in dbt_rw concurrency group: operates on Dagster's internal storage and
+# transformation/target/ only — never touches DuckDB.
 @schedule(
-    job=maintain_purge_runs_job,
+    job=maintain_cleanup_job,
     cron_schedule="0 1 * * *",
     execution_timezone="Asia/Ho_Chi_Minh",
     default_status=DefaultScheduleStatus.RUNNING,  # auto-enable (schedules in defs are off by default — L49)
 )
-def maintain_purge_runs_schedule(context):
-    active = _has_active_run(context, "maintain_purge_runs_job")
+def maintain_cleanup_schedule(context):
+    active = _has_active_run(context, "maintain_cleanup_job")
     if active:
-        return SkipReason(f"purge_runs: previous run still active ({active[:8]})")
+        return SkipReason(f"maintain_cleanup: previous run still active ({active[:8]})")
     return RunRequest(run_key=None)
 
 
@@ -784,7 +785,7 @@ defs = Definitions(
         health_report_digest_job,
         # maintain_*
         maintain_backup_platform_job,
-        maintain_purge_runs_job,
+        maintain_cleanup_job,
         crm_backup_job,
     ],
     schedules=[
@@ -807,7 +808,7 @@ defs = Definitions(
         health_checks_asset_schedule,
         health_report_digest_schedule,
         # maintain_*
-        maintain_purge_runs_schedule,
+        maintain_cleanup_schedule,
         maintain_backup_fallback_schedule,
         crm_backup_schedule,
     ],

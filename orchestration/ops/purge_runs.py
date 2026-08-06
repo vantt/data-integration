@@ -457,8 +457,10 @@ def _notify_purge_success(result: dict, run_id: str) -> None:
 
 
 @op(out=Out(dict))
-def maintain_purge_runs_op(context) -> dict:
-    """Purge Dagster runs older than keep_days and reclaim storage."""
+def maintain_cleanup_op(context) -> dict:
+    """Purge Dagster runs older than keep_days, reclaim SQLite storage, and
+    clean stale dbt build-cache dirs (transformation/target/*, see
+    _cleanup_dbt_target_dirs()) — all disk-reclaiming maintenance in one job."""
     keep_days = int(os.environ.get('PURGE_KEEP_DAYS', '1'))
     if keep_days < 1:
         keep_days = 1
@@ -568,6 +570,7 @@ def maintain_purge_runs_op(context) -> dict:
 
 
 @job
-def maintain_purge_runs_job():
-    """Job that purges old Dagster runs. Configured via PURGE_KEEP_DAYS env var (default: 1)."""
-    maintain_purge_runs_op()
+def maintain_cleanup_job():
+    """Job that purges old Dagster runs and stale dbt build-cache dirs.
+    Configured via PURGE_KEEP_DAYS env var (default: 1)."""
+    maintain_cleanup_op()

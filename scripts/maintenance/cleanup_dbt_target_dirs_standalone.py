@@ -1,7 +1,7 @@
 """Purge stale transformation/target/ subdirectories, independent of Dagster.
 
 Safety net for the accumulation that _cleanup_dbt_target_dirs() normally
-handles once a day via maintain_purge_runs_schedule (orchestration/ops/
+handles once a day via maintain_cleanup_schedule (orchestration/ops/
 purge_runs.py). That daily job runs INSIDE Dagster's code location, which
 requires transformation/target/manifest.json to load — so if disk pressure
 ever corrupts/deletes manifest.json, the code location fails to load and the
