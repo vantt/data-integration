@@ -104,6 +104,15 @@ Filter = all, chưa có task nào gắn party này.
 
 ---
 
+## P07 — Suggestion Settings Panel States
+
+### ST-EMPTY-CATALOG
+`cache.wh_action_scenario_registry` chưa được đồng bộ (Phase 01/02 chưa deploy, hoặc lần sync gần
+nhất fetch 0 dòng). Show "Danh mục gợi ý chưa được đồng bộ từ kho dữ liệu." — never a hardcoded
+fallback list.
+
+---
+
 ## S07 — Tasks Board States
 
 ### ST-TASKS-EMPTY

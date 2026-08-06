@@ -8,10 +8,12 @@ date_key is ICT YYYYMMDD — passed through as-is, never recomputed.
 
 Cross-schema JOINs: list_all_action_queue() and _fetch_actions() intentionally JOIN
 crm.* tables (crm_party_identity, crm_action_state, crm_task). list_all_action_queue()
-additionally JOINs crm_action_dismissal (B5 party+action_type TTL dismiss, migration
-0038) — _fetch_actions() (C360 reason rail) intentionally does NOT, since it reports
-per-episode crm_action_state.status only. Both DBs are ATTACHed to the same connection
-via CRMDatabase. Schema changes to crm_task or crm_party_identity must be reflected in
+additionally JOINs crm_action_dismissal, matched on (party_id, action_type, source_mart)
+(migration 0046 — mart-scoped: a customer-level and SKU-level suppression of the same
+action_type are independent) — _fetch_actions() (C360 reason rail) intentionally does
+NOT join it at all, since it reports per-episode crm_action_state.status only (verified,
+locked decision — do not change). Both DBs are ATTACHed to the same connection via
+CRMDatabase. Schema changes to crm_task or crm_party_identity must be reflected in
 the SQL in this file.
 """
 
@@ -20,6 +22,7 @@ from __future__ import annotations
 import sqlite3
 from typing import Optional
 
+from domain.entities.action_scenario import MART_CUSTOMER, MART_SKU
 from domain.entities.app_user import AppUser
 from domain.entities.cache_insight import (
     ActionQueueItem,
@@ -138,17 +141,19 @@ class SQLiteCacheRepository:
         """Return actionable rows from wh_action_queue UNION wh_sku_action_queue.
 
         Filters out: dismissed (per-episode crm_action_state OR active B5
-        (party_id, action_type) TTL dismissal in crm_action_dismissal), snoozed-
-        until-future, and actions with open crm_task. Falls back to customer-level
-        queue only if wh_sku_action_queue is absent (e.g. before the first dbt run
-        that materialises mart_customer_sku_action_queue). Returns [] when all
-        tables are absent.
+        (party_id, action_type, source_mart) TTL dismissal in crm_action_dismissal),
+        snoozed-until-future, and actions with open crm_task. Falls back to
+        customer-level queue only if wh_sku_action_queue is absent (e.g. before the
+        first dbt run that materialises mart_customer_sku_action_queue). Returns []
+        when all tables are absent.
 
-        B5 (migration 0038): crm_action_dismissal survives the warehouse
-        regenerating a new action_id for the same (party, action_type) across
-        weekly refreshes — the per-episode crm_action_state.status filter above
-        cannot, since it is keyed on the old action_id. Both filters apply
-        independently; either one hides the row.
+        B5 (migration 0038, mart-scoped since migration 0046): crm_action_dismissal
+        survives the warehouse regenerating a new action_id for the same
+        (party, action_type, mart) across weekly refreshes — the per-episode
+        crm_action_state.status filter above cannot, since it is keyed on the old
+        action_id. Both filters apply independently; either one hides the row.
+        Matching includes source_mart so a customer-level and SKU-level suppression
+        of the same action_type are independent (see suggestion_settings_service.py).
         """
         # NOTE: wh_action_queue or wh_sku_action_queue schema changes must be applied
         # in BOTH list_all_action_queue() and _fetch_actions().
@@ -179,6 +184,7 @@ class SQLiteCacheRepository:
             LEFT JOIN crm_action_dismissal ad
                    ON ad.party_id = pi.party_id
                   AND ad.action_type = a.action_type
+                  AND ad.source_mart = '""" + MART_CUSTOMER + """'
             WHERE COALESCE(s.status, 'open') != 'dismissed'
               AND (COALESCE(s.status, 'open') != 'snoozed'
                    OR s.snoozed_until < date('now', '+7 hours'))  -- snoozed_until is an ICT date; date('now','+7h') = today in ICT
@@ -227,6 +233,7 @@ class SQLiteCacheRepository:
             LEFT JOIN crm_action_dismissal ad
                    ON ad.party_id = pi.party_id
                   AND ad.action_type = sa.action_type
+                  AND ad.source_mart = '""" + MART_SKU + """'
             WHERE COALESCE(s.status, 'open') != 'dismissed'
               AND (COALESCE(s.status, 'open') != 'snoozed'
                    OR s.snoozed_until < date('now', '+7 hours'))

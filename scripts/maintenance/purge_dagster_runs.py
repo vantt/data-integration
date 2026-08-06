@@ -1,6 +1,7 @@
-"""Manual Dagster run purge tool — CLI wrapper around the same logic used by the
-automated maintain_purge_runs_op. Reuses all helper functions from the op so
-fixes in one place apply everywhere.
+"""Manual Dagster run purge tool — CLI wrapper around the same run-purge logic
+used by the automated maintain_cleanup_op (Dagster run history only — does not
+clean dbt build-cache dirs, see cleanup_dbt_target_dirs_standalone.py for that).
+Reuses all helper functions from the op so fixes in one place apply everywhere.
 
 Usage:
     docker compose exec data_platform python scripts/maintenance/purge_dagster_runs.py [--keep-days N] [--force]
@@ -34,7 +35,7 @@ log = logging.getLogger(__name__)
 
 
 def main():
-    parser = argparse.ArgumentParser(description="Purge Dagster runs manually (mirrors maintain_purge_runs_op logic).")
+    parser = argparse.ArgumentParser(description="Purge Dagster runs manually (mirrors the run-purge half of maintain_cleanup_op).")
     parser.add_argument("--keep-days", type=int, default=1, help="Days of history to keep (default: 1).")
     parser.add_argument("--force", action="store_true", help="Actually delete. Without this: dry-run only.")
     args = parser.parse_args()

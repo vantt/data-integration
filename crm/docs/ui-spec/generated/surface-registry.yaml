@@ -47,6 +47,7 @@ surfaces:
       - P04
       - P05
       - P06
+      - P07
     status: active
     file: screens/S03-customer-360-detail.md
     rules:
@@ -356,6 +357,18 @@ surfaces:
     regions:
       - toolbar
       - conv_list
+  P07:
+    type: panel
+    name: Suggestion Settings Panel
+    platforms:
+      - desktop
+    hosts: []
+    status: active
+    file: panels/P07-suggestion-settings-panel.md
+    rules: []
+    regions:
+      - explainer
+      - group_list
   M01:
     type: modal
     name: Merge Confirm Modal

@@ -15,7 +15,7 @@
 | `ingest_monthly_repull_schedule`       | `0 7 10 * *`         | Asia/Ho_Chi_Minh | ingest_monthly_job (re-pull)       |
 | `budget_sheet_sync_schedule`           | `30 2 * * *`         | Asia/Ho_Chi_Minh | budget_sheet_sync_job              |
 | `budget_suggestion_writeback_schedule` | `0 8 1 * *`          | Asia/Ho_Chi_Minh | budget_suggestion_writeback_job    |
-| `maintain_purge_runs_schedule`         | `0 1 * * *`          | Asia/Ho_Chi_Minh | maintain_purge_runs_job            |
+| `maintain_cleanup_schedule`            | `0 1 * * *`          | Asia/Ho_Chi_Minh | maintain_cleanup_job               |
 | `maintain_backup_fallback_schedule`    | `0 6 * * *`          | Asia/Ho_Chi_Minh | maintain_backup_platform_job       |
 
 ---

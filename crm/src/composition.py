@@ -38,6 +38,7 @@ from adapters.outbound.sqlite.tag_note_repository import SQLiteTagRepository, SQ
 from adapters.outbound.sqlite.tag_governance_repository import SQLiteTagGovernanceRepository
 from adapters.outbound.sqlite.cache_repository import SQLiteCacheRepository
 from adapters.outbound.sqlite.action_state_repository import SQLiteActionStateRepository
+from adapters.outbound.sqlite.action_catalog_repository import SQLiteActionCatalogRepository
 from adapters.outbound.sqlite.activity_repository import SQLiteActivityRepository
 from adapters.outbound.sqlite.last_contact_repository import SQLiteLastContactRepository
 from adapters.outbound.sqlite.task_repository import SQLiteTaskRepository
@@ -71,6 +72,7 @@ from application.segment_service import SegmentService
 from application.campaign_service import CampaignService
 from application.app_user_service import AppUserService
 from application.worklist_query_service import WorklistQueryService
+from application.suggestion_settings_service import SuggestionSettingsService
 from application.customer_list_query_service import CustomerListQueryService
 from application.authorization_service import AuthorizationService
 
@@ -140,6 +142,7 @@ class SqliteRepos(TypedDict):
     dedup: SQLiteDedupRepository
     cache: SQLiteCacheRepository
     action_state: SQLiteActionStateRepository
+    action_catalog: SQLiteActionCatalogRepository
     profile: SQLiteProfileRepository
     cf: SQLiteCustomFieldRepository
     tag: SQLiteTagRepository
@@ -243,6 +246,7 @@ def _build_sqlite_repos(db: CRMDatabase) -> SqliteRepos:
         "dedup": SQLiteDedupRepository(conn),
         "cache": SQLiteCacheRepository(conn),
         "action_state": SQLiteActionStateRepository(conn),
+        "action_catalog": SQLiteActionCatalogRepository(conn),
         "profile": SQLiteProfileRepository(db),
         "cf": SQLiteCustomFieldRepository(db),
         "tag": SQLiteTagRepository(db),
@@ -592,6 +596,13 @@ def _register_web_routes(
         last_contact=sqlite_repos["last_contact"],
         suppression=sqlite_repos["activity"],
     )
+    # P07 Suggestion Settings panel. Single instance (§No duplicate wiring) — composes
+    # the catalog repo (cache.wh_action_scenario_registry) with the same action_state
+    # repo the quick-dismiss flow already writes through.
+    suggestion_settings_svc = SuggestionSettingsService(
+        catalog=sqlite_repos["action_catalog"],
+        suppression=sqlite_repos["action_state"],
+    )
     app.include_router(make_worklist_router(
         templates=templates,
         worklist_svc=worklist_svc,
@@ -632,6 +643,8 @@ def _register_web_routes(
         action_state=sqlite_repos["action_state"],
         party_insights=sqlite_repos["party"],
         tags=services["tag"],
+        settings_svc=suggestion_settings_svc,
+        dnc_reader=sqlite_repos["activity"],
     ))
     app.include_router(make_tasks_board_router(
         templates=templates,

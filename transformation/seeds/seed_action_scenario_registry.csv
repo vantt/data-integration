@@ -1,14 +1,14 @@
 action_type,mart,enabled,scenario_group,description_vi
-REORDER_OVERDUE,mart_customer_sku_action_queue,true,reorder_cadence,Het lieu trinh qua han
-REORDER_NUDGE,mart_customer_sku_action_queue,true,reorder_cadence,Het lieu trinh hom nay
-REORDER_PREEMPT,mart_customer_sku_action_queue,true,reorder_cadence,Sap het lieu trinh
-PROGRESS_CHECK,mart_customer_sku_action_queue,true,journey,Hoi cam nhan D12-16
-USAGE_FOLLOWUP,mart_customer_sku_action_queue,true,journey,Xac nhan bat dau dung D5-9
-GIFT_TO_PURCHASE,mart_customer_sku_action_queue,false,gift_conversion,Tung duoc tang chua tung mua
-CALL_NOW,mart_customer_action_queue,true,at_risk,VIP dang nguoi goi ngay
-MANUAL_RISK_REVIEW,mart_customer_action_queue,true,risk,NV gan tag rui ro
-REORDER_NUDGE,mart_customer_action_queue,true,reorder_cadence,Qua han nhip mua
-REORDER_PREEMPT,mart_customer_action_queue,true,reorder_cadence,Sap toi han nhip mua
-WIN_BACK,mart_customer_action_queue,true,winback,Da churn can offer
-SECOND_ORDER,mart_customer_action_queue,true,activation,Mua 1 lan day don 2
-HIGH_CANCEL_RISK,mart_customer_action_queue,true,risk,Ty le huy cao
+REORDER_OVERDUE,mart_customer_sku_action_queue,true,reorder_cadence,Hết liệu trình quá hạn
+REORDER_NUDGE,mart_customer_sku_action_queue,true,reorder_cadence,Hết liệu trình hôm nay
+REORDER_PREEMPT,mart_customer_sku_action_queue,true,reorder_cadence,Sắp hết liệu trình
+PROGRESS_CHECK,mart_customer_sku_action_queue,true,journey,Hỏi cảm nhận D12-16
+USAGE_FOLLOWUP,mart_customer_sku_action_queue,true,journey,Xác nhận bắt đầu dùng D5-9
+GIFT_TO_PURCHASE,mart_customer_sku_action_queue,false,gift_conversion,Từng được tặng chưa từng mua
+CALL_NOW,mart_customer_action_queue,true,at_risk,VIP đang nguội gọi ngay
+MANUAL_RISK_REVIEW,mart_customer_action_queue,true,risk,NV gắn tag rủi ro
+REORDER_NUDGE,mart_customer_action_queue,true,reorder_cadence,Quá hạn nhịp mua
+REORDER_PREEMPT,mart_customer_action_queue,true,reorder_cadence,Sắp tới hạn nhịp mua
+WIN_BACK,mart_customer_action_queue,true,winback,Đã churn cần offer
+SECOND_ORDER,mart_customer_action_queue,true,activation,Mua 1 lần đẩy đơn 2
+HIGH_CANCEL_RISK,mart_customer_action_queue,true,risk,Tỷ lệ hủy cao

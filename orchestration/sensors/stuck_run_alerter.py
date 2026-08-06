@@ -82,7 +82,7 @@ _JOB_MAX_RUNTIME: dict[str, timedelta] = {
     "health_recon_daily_job": timedelta(minutes=30),
     "health_kpi_closure_job": timedelta(minutes=30),
     "health_report_digest_job": timedelta(minutes=30),
-    "maintain_purge_runs_job": timedelta(minutes=60),
+    "maintain_cleanup_job": timedelta(minutes=60),
     "maintain_backup_platform_job": timedelta(minutes=60),
 }
 _JOB_MAX_RUNTIME_DEFAULT = timedelta(minutes=90)

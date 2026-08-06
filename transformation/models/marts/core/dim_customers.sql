@@ -245,11 +245,14 @@ SELECT
         ELSE 'LIFECYCLE_CHURNED'
     END as lifecycle_stage,
 
-    -- channel_preference: Preferred purchase channel (Auto from order history)
-    channel_preference,
+    -- channel_preference: Preferred purchase channel (Auto from order history).
+    -- COALESCE guards customers with no int_customer_metrics row yet (e.g. sole
+    -- order not yet aggregated by the incremental watermark) — same default
+    -- int_customer_metrics itself falls back to when a sub-signal is missing.
+    COALESCE(channel_preference, 'CHANNEL_OTHER') as channel_preference,
 
-    -- product_affinity: Primary brand preference (Auto from sales history)
-    product_affinity,
+    -- product_affinity: Primary brand preference (Auto from sales history). Same guard.
+    COALESCE(product_affinity, 'PRODUCT_MULTI') as product_affinity,
 
     -- SKU-level product affinity (NULL = customer never purchased a paid line item).
     -- last_purchased_*: SKU from most-recent active order (highest-quantity line wins multi-SKU tie).

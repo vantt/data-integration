@@ -214,6 +214,18 @@ CREATE TABLE IF NOT EXISTS wh_deadstock_target (
   PRIMARY KEY (product_key, customer_key)
 );
 
+-- Opportunity-type catalog — passthrough of dbt seed_action_scenario_registry (via
+-- main_marts.dim_action_scenario_registry). Drives the C360 "Cài đặt gợi ý" suppression
+-- panel's toggle list + Vietnamese labels. 13-row reference table, full-replace on sync.
+CREATE TABLE IF NOT EXISTS wh_action_scenario_registry (
+  action_type     TEXT    NOT NULL,
+  mart            TEXT    NOT NULL,  -- 'mart_customer_action_queue' | 'mart_customer_sku_action_queue'
+  enabled         INTEGER NOT NULL DEFAULT 1,  -- 0/1; global kill-switch, independent of per-party suppression
+  scenario_group  TEXT    NOT NULL DEFAULT '',
+  description_vi  TEXT    NOT NULL DEFAULT '',
+  PRIMARY KEY (action_type, mart)
+);
+
 -- ─── SKU-level action queue (product-aware regimen reminders) ────────────────
 -- Grain: (customer_key, sku, action_type) — one row per customer per core SKU per signal type.
 -- Companion to wh_action_queue (customer-level behavioral NBA).

@@ -28,7 +28,7 @@
     <div class="state">
       <div class="state__inner">
         <div class="state__title">Không có việc nào đang bị bỏ qua</div>
-        <p class="state__sub">Mọi dismiss đã hết hạn 30 ngày hoặc chưa ai bỏ qua việc nào.</p>
+        <p class="state__sub">Mọi lượt bỏ qua đã hết hạn hoặc chưa ai bỏ qua việc nào. Ẩn đến ngày do NV chọn (xem tab "Cài đặt gợi ý" trên Customer 360).</p>
       </div>
     </div>
   {% else %}
@@ -38,6 +38,7 @@
           <tr>
             <th>Khách hàng</th>
             <th>Loại việc</th>
+            <th>Phạm vi</th>
             <th>Người bỏ qua</th>
             <th>Bỏ qua lúc</th>
             <th>Ẩn đến</th>
@@ -55,6 +56,7 @@
                 {{ d.action_type | bdg_label('action_type') }}
               </span>
             </td>
+            <td class="muted">{{ "Theo khách" if d.source_mart == "mart_customer_action_queue" else "Theo sản phẩm" }}</td>
             <td>{{ d.dismissed_by_display }}</td>
             <td class="mono muted">{{ d.dismissed_at | format_datetime_ict }}</td>
             <td class="mono muted">{{ d.dismissed_until | format_datetime_ict }}</td>

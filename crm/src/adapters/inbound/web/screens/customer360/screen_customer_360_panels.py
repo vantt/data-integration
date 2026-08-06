@@ -48,6 +48,7 @@ def register_panel_routes(
     approach_repo=None,
     tags=None,           # Phase 02 (260706-0833): health_domain gap detection
     activity_log=None,   # Phase 03 (disposition strip v2): draft recovery on reload
+    render_suggestion_settings_panel=None,  # P07: callable(request, party_id) -> Response
     _load_base,
     _load_insight,
     _sapo_customer_id,
@@ -309,6 +310,10 @@ def register_panel_routes(
                     **health_ctx,
                 },
             )
+        if panel == "suggestion_settings":
+            if render_suggestion_settings_panel is None:
+                return HTMLResponse("panel not found", status_code=404)
+            return await render_suggestion_settings_panel(request, party_id)
         return HTMLResponse("panel not found", status_code=404)
 
     # NOTE (6b, 260711-0838 phase 6): the bulk-dismiss route that used to live

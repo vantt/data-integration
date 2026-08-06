@@ -661,11 +661,11 @@ for rec in instance.get_run_records(filters=RunsFilter(statuses=[DagsterRunStatu
 ### Topology rules
 
 ```
-02:30  purge_runs_job          (clears Dagster history + dbt target dirs)
+02:30  maintain_cleanup_job    (clears Dagster history + dbt target dirs)
 03:00  transform_batch_nightly (holds dbt_rw=1)
 04:30  health_recon_daily      (read-only on serving DB)
 04:45  health_kpi_closure      (read-only)
-06:00  backup_platform_job     (yields if purge still running)
+06:00  backup_platform_job     (yields if cleanup still running)
 06:00  health_report_digest    (read-only, parallel-safe with backup)
 ```
 
@@ -688,8 +688,8 @@ for rec in instance.get_run_records(filters=RunsFilter(statuses=[DagsterRunStatu
 def maintain_backup_platform_schedule(context):
     if _has_active_run(context, "maintain_backup_platform_job"):
         return SkipReason("backup: previous run still active")
-    if _has_active_run(context, "maintain_purge_runs_job"):
-        return SkipReason("backup: yielding to active purge")
+    if _has_active_run(context, "maintain_cleanup_job"):
+        return SkipReason("backup: yielding to active cleanup")
     return RunRequest(run_key=None)
 ```
 
@@ -730,18 +730,18 @@ FREE_KB=$(df -Pk "$BACKUP_ROOT" | awk 'NR==2 {print $4}')
 prune_dagster_history "${BACKUP_DIR}/app_data/dagster_home"
 ```
 
-**4. `purge_runs_job` must clean BOTH Dagster history AND dbt target dirs:**
+**4. `maintain_cleanup_job` must clean BOTH Dagster history AND dbt target dirs:**
 
 ```python
 # orchestration/ops/purge_runs.py
-def maintain_purge_runs_op(context):
+def maintain_cleanup_op(context):
     # ... delete runs older than PURGE_KEEP_DAYS ...
     # ... cleanup orphan .db files in history/runs/ ...
     # ... VACUUM index.db to reclaim space after mass deletes ...
     _cleanup_dbt_target_dirs(keep_days=1)  # transformation/target/sapo_dbt_assets-*
 ```
 
-`sapo_dbt_assets-*` accumulates ~480 dirs/day × 10 MB = ~4.8 GB/day untouched. Purge cleanup is the only thing keeping it bounded.
+`sapo_dbt_assets-*` accumulates ~480 dirs/day × 10 MB = ~4.8 GB/day untouched. This daily job normally keeps it bounded — but it runs INSIDE Dagster's code location, which requires `transformation/target/manifest.json` to load. If disk pressure ever deletes/corrupts that file, the code location fails to load and this job can't run either (deadlock). `scripts/maintenance/cleanup_dbt_target_dirs_standalone.py` is the independent safety net: it reuses the same `_cleanup_dbt_target_dirs()` call but imports nothing from `definitions.py` or the dbt manifest, so it still runs when the Dagster-side job is blocked. Wired into `docker-compose.yml`'s command chain twice — once before `dbt parse` at container start, once as an hourly background loop (`--loop-seconds 3600`) alongside `dagster dev`, so it self-heals even if the container stays up for days without a restart.
 
 ### Operational gotcha
 
@@ -801,12 +801,13 @@ Khi add job/asset mới vào Dagster, kiểm tra:
 - [ ] **Backup job** has `"dagster/concurrency_key": "duckdb_lock"` to prevent I/O collision — xem Lesson 12
 - [ ] **Boot-time cleanup** cancels zombie NOT_STARTED runs older than 30 min — xem Lesson 13
 - [ ] **Maintenance schedule explicitly started** (not just listed in `defs.schedules`) — verify `schedules.db` `jobs` table has row with `status='RUNNING'` — xem Lesson 14 / L49
-- [ ] **Backup schedule yields to active purge** — `_has_active_run("maintain_purge_runs_job")` check before `RunRequest` — xem Lesson 14
+- [ ] **Backup schedule yields to active cleanup** — `_has_active_run("maintain_cleanup_job")` check before `RunRequest` — xem Lesson 14
 - [ ] **Maintenance cron in quiet window** — purge 02:30 ICT (before nightly), backup 06:00 ICT (after recon/KPI)
 - [ ] **stuck_run_alerter has Pass 2** for `NOT_STARTED`/`QUEUED`/`STARTING` >2h — Pass 1 alone misses queue-stuck zombies — xem Lesson 14 / L52
 - [ ] **`backup.sh` rotation in `trap … EXIT`** + pre-flight `df` check + `prune_dagster_history` — xem L50, L51
-- [ ] **`purge_runs_job` cleans dbt target dirs** (`_cleanup_dbt_target_dirs`) — without this, `transformation/target/` accumulates ~5 GB/day — xem Lesson 14
-- [ ] **Long-running silent ops trong purge job dùng heartbeat thread** — VACUUM / large SELECT DISTINCT / cross-db DELETE không emit log → stuck-run alerter kill sau 5 min; dùng `threading.Thread` + `_done.wait(timeout=30)` loop để emit progress — xem L63
+- [ ] **`maintain_cleanup_job` cleans dbt target dirs** (`_cleanup_dbt_target_dirs`) — without this, `transformation/target/` accumulates ~5 GB/day — xem Lesson 14
+- [ ] **Standalone dbt-target cleanup independent of Dagster** — `_cleanup_dbt_target_dirs` also runs via `scripts/maintenance/cleanup_dbt_target_dirs_standalone.py` (no dependency on `definitions.py`/the dbt manifest), once at container start and hourly in the background — otherwise a missing/corrupt manifest blocks the code location AND the one job that would free space, deadlocking
+- [ ] **Long-running silent ops trong maintain_cleanup_job dùng heartbeat thread** — VACUUM / large SELECT DISTINCT / cross-db DELETE không emit log → stuck-run alerter kill sau 5 min; dùng `threading.Thread` + `_done.wait(timeout=30)` loop để emit progress — xem L63
 - [ ] **Schedules ngắn yield to long-running dbt_rw jobs** — realtime/incremental phải check `_long_dbt_rw_holder()` trước khi tạo RunRequest; không thì tạo NOT_STARTED zombie chặn ticks 90 min — xem L64
 - [ ] **trigger_backup check `_has_active_ingestion`** — không backup DuckDB khi đang có ingestion job chạy (torn WAL + I/O contention) — xem L64
 - [ ] **Lightweight read-only jobs dùng `in_process_executor`** — `ChildProcessCrashException` trên lightweight jobs = OOM từ per-step subprocess overhead; dùng `in_process_executor` cho health checks, recon, KPI — xem L65

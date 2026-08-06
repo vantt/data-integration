@@ -158,6 +158,20 @@ def run(olap_conn=None, cache_db: str | None = None) -> None:
 
         # ── Read from warehouse ───────────────────────────────────────────────
         print("reading from warehouse …")
+
+        # Opportunity-type catalog — fetched first and wrapped separately (unlike the
+        # other fetches below) because Phase 01 (dim_action_scenario_registry) is new:
+        # if it hasn't been deployed to this environment yet, a missing-table error
+        # here must degrade to "catalog stale" (empty rows → upsert's own empty-guard
+        # preserves whatever cache already has), never abort the rest of the sync —
+        # every other synced table is unrelated to this catalog.
+        try:
+            registry_rows = dr.fetch_action_scenario_registry(olap_conn)
+        except Exception as exc:
+            print(f"  [wh_action_scenario_registry] fetch FAILED (Phase 01 deployed?): {exc}",
+                  file=sys.stderr)
+            registry_rows = []
+
         customer_insight_rows   = dr.fetch_customer_insight(olap_conn)
         customer_base_rows      = dr.fetch_customer_base(olap_conn)
         product_insight_rows    = dr.fetch_product_insight(olap_conn)
@@ -169,6 +183,10 @@ def run(olap_conn=None, cache_db: str | None = None) -> None:
         deadstock_target_rows   = dr.fetch_deadstock_targets(olap_conn)
 
         print("upserting into cache.db …")
+
+        # ── Group 1: opportunity-type catalog (reference data, first for visibility) ─
+        _run_step(cache_conn, "batch", "wh_action_scenario_registry",
+                  su.upsert_action_scenario_registry, registry_rows)
 
         # ── Group 2: insight ──────────────────────────────────────────────────
         _run_step(cache_conn, "batch", "wh_customer_insight",

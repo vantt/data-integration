@@ -36,6 +36,7 @@ Internal Retail CRM · ~10 users · Desktop-first · Python (FastAPI, server-ren
 | P04 | Tasks Panel | Tasks |
 | P05 | Notes Panel | Ghi chú |
 | P06 | Conversations Panel | Chat |
+| P07 | Suggestion Settings Panel | Cài đặt gợi ý |
 
 ### Modals
 
@@ -126,7 +127,8 @@ crm/docs/ui-spec/
 │   ├── P03-activity-timeline-panel.md
 │   ├── P04-tasks-panel.md
 │   ├── P05-notes-panel.md
-│   └── P06-conversations-panel.md
+│   ├── P06-conversations-panel.md
+│   └── P07-suggestion-settings-panel.md
 ├── modals/
 │   ├── M01-merge-confirm-modal.md
 │   ├── M02-create-party-modal.md

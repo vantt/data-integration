@@ -20,6 +20,7 @@ class ActionDismissal:
     """
     party_id: str
     action_type: str
+    source_mart: str            # 'mart_customer_action_queue' | 'mart_customer_sku_action_queue'
     dismissed_by_user_id: Optional[str]
     dismissed_at: str
     dismissed_until: str

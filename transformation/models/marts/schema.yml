@@ -30,6 +30,37 @@ seeds:
           combination_of_columns: [action_type, mart]
 
 models:
+  # Customer — opportunity taxonomy passthrough
+  - name: dim_action_scenario_registry
+    description: >
+      Passthrough of seed_action_scenario_registry into the serving layer — the CRM app's
+      reverse-ETL cannot see dbt seeds directly (seeds never produce a rolling/ parquet
+      folder), so this leaf model exposes the same (action_type, mart) taxonomy + Vietnamese
+      labels for the Customer 360 "Cài đặt gợi ý" suppression panel. No filtering, no
+      renaming — seed stays the single source of truth.
+    columns:
+      - name: action_type
+        data_type: varchar
+        tests: [not_null]
+      - name: mart
+        data_type: varchar
+        description: "'mart_customer_sku_action_queue' or 'mart_customer_action_queue'."
+        tests:
+          - not_null
+          - accepted_values:
+              arguments:
+                values: ['mart_customer_sku_action_queue', 'mart_customer_action_queue']
+      - name: enabled
+        data_type: boolean
+        tests: [not_null]
+      - name: scenario_group
+        data_type: varchar
+      - name: description_vi
+        data_type: varchar
+    tests:
+      - dbt_utils.unique_combination_of_columns:
+          combination_of_columns: [action_type, mart]
+
   # Hug
   - name: mart_hug_optin
     description: >
