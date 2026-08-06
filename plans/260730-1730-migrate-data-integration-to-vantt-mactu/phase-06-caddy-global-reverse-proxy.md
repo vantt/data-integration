@@ -1,6 +1,8 @@
 # Phase 6 — Caddy global reverse-proxy + DNS-01 cert
 
-**Status (cập nhật 2026-08-04): DEFERRED — chạy SAU phase 8, KHÔNG phải prerequisite.** User đã hạ ưu tiên `*.lan.fwg.vn`, chỉ cần `bi.fwg.vn`/`crm.fwg.vn` hoạt động trước (2 domain đó đi qua Cloudflare Tunnel ở phase 8, không phụ thuộc Caddy). Phase 7 (verify) giờ dùng port trực tiếp qua Tailscale IP thay vì domain Caddy — xem `phase-07-verify-non-crm-services.md`.
+**Status: ĐÃ CHẠY THẬT 2026-08-06, PASS phần deploy.** `caddy-global` build + start thành công trên vantt-mactu, cấp cert Let's Encrypt thật cho cả 6 domain (`etl`/`bi`/`rill`/`evidence`/`files`/`detailview`.lan.fwg.vn) qua DNS-01, verify HTTPS trả 200 (files.lan.fwg.vn 401 đúng kỳ vọng — basic_auth). **Còn treo: DNS.**
+
+**Phát hiện quan trọng khi chạy**: `*.lan.fwg.vn` KHÔNG resolve qua Cloudflare (wildcard A record cũ trong `caddy-global/DNS-CERTIFICATE-SETUP.md` đã bị xoá từ trước — verify qua Cloudflare API, 0 record). User xác nhận: đã chuyển sang **split-horizon DNS qua router nội bộ** (`192.168.20.1` tự trả lời `*.lan.fwg.vn`, không forward Cloudflare) — đúng theo §6 của doc đó, nhưng checklist đầu file doc chưa cập nhật nên gây nhầm lẫn lúc điều tra. **Agent KHÔNG có quyền vào router** — user phải tự đổi DNS record trên router từ `192.168.20.33` (Windows) sang `192.168.20.49` (vantt-mactu) cho cả 6 domain (hoặc wildcard nếu router hỗ trợ).
 
 **Khi nào làm phase này**: sau khi phase 8 xong và ổn định, nếu vẫn muốn có domain đẹp/basic_auth cho các service nội bộ (`etl.lan.fwg.vn`, `rill.lan.fwg.vn`, ...). Không phải điều kiện chặn migrate.
 
@@ -33,6 +35,6 @@
 `docker compose down` trên vantt-mactu, DNS record revert (nếu đã đổi).
 
 ## Acceptance
-- Caddy-global container healthy trên vantt-mactu.
-- Ít nhất 1 domain test (vd `etl.lan.fwg.vn`) cấp cert thành công, truy cập HTTPS được.
-- DNS đã xác nhận trỏ đúng (bước 4 — cần user input, không tự suy diễn).
+- Caddy-global container healthy trên vantt-mactu. ✅
+- Cả 6 domain cấp cert LE thật, HTTPS trả 200 (test qua `curl --resolve ... 192.168.20.49`, bypass DNS cũ). ✅
+- DNS router trỏ đúng `192.168.20.49` — **CHƯA**, user tự làm (agent không có quyền router).
