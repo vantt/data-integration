@@ -70,7 +70,7 @@ def main():
         print(f"Found {count} runs to {'delete' if args.force else 'delete [DRY RUN]'}:")
         for rec in records[:10]:
             run = rec.dagster_run
-            ts = datetime.fromtimestamp(rec.create_timestamp).strftime('%Y-%m-%d %H:%M')
+            ts = rec.create_timestamp.strftime('%Y-%m-%d %H:%M')
             print(f"  {ts}  {run.run_id[:12]}  [{run.status.name}]  {run.job_name}")
         if count > 10:
             print(f"  ... and {count - 10} more.")
