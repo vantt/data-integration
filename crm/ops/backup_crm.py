@@ -240,23 +240,14 @@ def main(argv: list[str] | None = None) -> int:
     try:
         m = backup_crm(args.data_dir, args.dest, args.keep)
     except Exception as exc:  # noqa: BLE001
+        # Non-zero exit + stderr is the CLI contract. Production backups run through
+        # POST /admin/backup, whose failure makes the Dagster crm_backup asset raise and
+        # health_alert_failure_sensor send the alert; crm/ never imports orchestration/.
         print(f"[backup_crm] FAILED: {exc}", file=sys.stderr)
-        # Best-effort failure alert (silent backup stoppage is the zombie-run lesson).
-        _alert(f"CRM backup FAILED: {exc}")
         return 1
     flag = " (PARTIAL — cache.db failed)" if m.get("partial") else ""
     print(f"[backup_crm] OK{flag} — {list(m['dbs'])}")
     return 0
-
-
-def _alert(message: str) -> None:
-    """Best-effort Lark alert; never raises (alerting must not break backup exit)."""
-    try:
-        from orchestration.notifications.lark_client import send_lark_alert  # type: ignore
-
-        send_lark_alert(message)
-    except Exception:  # noqa: BLE001
-        pass  # alerting is best-effort
 
 
 if __name__ == "__main__":
