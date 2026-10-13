@@ -1,0 +1,421 @@
+description: Public tables whose data must not change during refactors. Generated
+  by golden_snapshot.py init; edit volatile_columns by hand with a reason.
+tables:
+  dim_action_scenario_registry:
+    kind: rolling
+    unique_id: model.sapo_warehouse.dim_action_scenario_registry
+    key:
+    - action_type
+    - mart
+  dim_branch_location:
+    kind: rolling
+    unique_id: model.sapo_warehouse.dim_branch_location
+    key:
+    - branch_location_key
+  dim_cash_allocation_policy:
+    kind: rolling
+    unique_id: model.sapo_warehouse.dim_cash_allocation_policy
+  dim_channel_targets:
+    kind: rolling
+    unique_id: model.sapo_warehouse.dim_channel_targets
+    key:
+    - channel_target_key
+  dim_channels:
+    kind: rolling
+    unique_id: model.sapo_warehouse.dim_channels
+    key:
+    - channel_key
+  dim_customer_addresses:
+    kind: rolling
+    unique_id: model.sapo_warehouse.dim_customer_addresses
+  dim_customer_contacts:
+    kind: rolling
+    unique_id: model.sapo_warehouse.dim_customer_contacts
+  dim_customer_notes:
+    kind: rolling
+    unique_id: model.sapo_warehouse.dim_customer_notes
+  dim_customer_tags:
+    kind: rolling
+    unique_id: model.sapo_warehouse.dim_customer_tags
+  dim_customers:
+    kind: rolling
+    unique_id: model.sapo_warehouse.dim_customers
+    key:
+    - customer_key
+  dim_date:
+    kind: rolling
+    unique_id: model.sapo_warehouse.dim_date
+    key:
+    - date_key
+  dim_geography:
+    kind: rolling
+    unique_id: model.sapo_warehouse.dim_geography
+    key:
+    - geography_key
+  dim_gl_account:
+    kind: rolling
+    unique_id: model.sapo_warehouse.dim_gl_account
+  dim_order_status:
+    kind: rolling
+    unique_id: model.sapo_warehouse.dim_order_status
+    key:
+    - status_key
+  dim_payment_methods:
+    kind: rolling
+    unique_id: model.sapo_warehouse.dim_payment_methods
+    key:
+    - payment_method_key
+  dim_price_lists:
+    kind: rolling
+    unique_id: model.sapo_warehouse.dim_price_lists
+    key:
+    - price_list_id
+  dim_product_types:
+    kind: rolling
+    unique_id: model.sapo_warehouse.dim_product_types
+    key:
+    - product_type_key
+  dim_products:
+    kind: rolling
+    unique_id: model.sapo_warehouse.dim_products
+    key:
+    - product_key
+  dim_promotions:
+    kind: rolling
+    unique_id: model.sapo_warehouse.dim_promotions
+    key:
+    - promotion_key
+  dim_sku_alias:
+    kind: rolling
+    unique_id: model.sapo_warehouse.dim_sku_alias
+  dim_staff:
+    kind: rolling
+    unique_id: model.sapo_warehouse.dim_staff
+    key:
+    - staff_key
+  dim_teams:
+    kind: rolling
+    unique_id: model.sapo_warehouse.dim_teams
+    key:
+    - team_key
+  dim_time:
+    kind: rolling
+    unique_id: model.sapo_warehouse.dim_time
+    key:
+    - time_key
+  fact_account_balance_monthly:
+    kind: rolling
+    unique_id: model.sapo_warehouse.fact_account_balance_monthly
+  fact_cash_movement:
+    kind: rolling
+    unique_id: model.sapo_warehouse.fact_cash_movement
+  fact_cashflow_budget:
+    kind: rolling
+    unique_id: model.sapo_warehouse.fact_cashflow_budget
+  fact_fulfillments:
+    kind: rolling
+    unique_id: model.sapo_warehouse.fact_fulfillments
+    key:
+    - fulfillment_id
+  fact_inventory_balance:
+    kind: rolling
+    unique_id: model.sapo_warehouse.fact_inventory_balance
+    key:
+    - variant_id
+    - location_id
+    - valid_from_date
+  fact_inventory_movements:
+    kind: rolling
+    unique_id: model.sapo_warehouse.fact_inventory_movements
+    key:
+    - inventory_movement_id
+  fact_inventory_snapshot:
+    kind: rolling
+    unique_id: model.sapo_warehouse.fact_inventory_snapshot
+    key:
+    - variant_id
+    - location_id
+    - snapshot_date
+  fact_marketing_spend:
+    kind: rolling
+    unique_id: model.sapo_warehouse.fact_marketing_spend
+  fact_order_costs:
+    kind: rolling
+    unique_id: model.sapo_warehouse.fact_order_costs
+  fact_order_economics:
+    kind: rolling
+    unique_id: model.sapo_warehouse.fact_order_economics
+    key:
+    - order_id
+  fact_order_returns:
+    kind: rolling
+    unique_id: model.sapo_warehouse.fact_order_returns
+    key:
+    - return_id
+  fact_order_transitions:
+    kind: rolling
+    unique_id: model.sapo_warehouse.fact_order_transitions
+    key:
+    - order_id
+    - snapshot_seq
+  fact_orders:
+    kind: rolling
+    unique_id: model.sapo_warehouse.fact_orders
+    key:
+    - order_id
+  fact_payments:
+    kind: rolling
+    unique_id: model.sapo_warehouse.fact_payments
+    key:
+    - payment_key
+  fact_sales:
+    kind: rolling
+    unique_id: model.sapo_warehouse.fact_sales
+  fact_targets:
+    kind: rolling
+    unique_id: model.sapo_warehouse.fact_targets
+  fact_us_shipment_economics:
+    kind: rolling
+    unique_id: model.sapo_warehouse.fact_us_shipment_economics
+    key:
+    - order_id
+  fact_variant_prices_snapshot:
+    kind: rolling
+    unique_id: model.sapo_warehouse.fact_variant_prices_snapshot
+    key:
+    - variant_id
+    - price_list_id
+    - snapshot_date
+  int_misa_sales_lines:
+    kind: rolling
+    unique_id: model.sapo_warehouse.int_misa_sales_lines
+    key:
+    - voucher_no
+    - line_no
+  int_order_cogs_reconciled:
+    kind: rolling
+    unique_id: model.sapo_warehouse.int_order_cogs_reconciled
+    key:
+    - order_code
+    - sku
+  int_order_overhead_allocation:
+    kind: rolling
+    unique_id: model.sapo_warehouse.int_order_overhead_allocation
+    key:
+    - order_code
+    - pool_id
+  int_order_promo_goods_cost:
+    kind: rolling
+    unique_id: model.sapo_warehouse.int_order_promo_goods_cost
+  int_overhead_pool_monthly:
+    kind: rolling
+    unique_id: model.sapo_warehouse.int_overhead_pool_monthly
+    key:
+    - pool_id
+    - period_month
+  int_promo_642_monthly_total:
+    kind: rolling
+    unique_id: model.sapo_warehouse.int_promo_642_monthly_total
+  int_return_sku_lines:
+    kind: rolling
+    unique_id: model.sapo_warehouse.int_return_sku_lines
+    key:
+    - return_sku_key
+  int_sapo_inventories:
+    kind: rolling
+    unique_id: model.sapo_warehouse.int_sapo_inventories
+  int_shopee_order_adjustments:
+    kind: rolling
+    unique_id: model.sapo_warehouse.int_shopee_order_adjustments
+    key:
+    - shopee_order_adjustment_sk
+  int_shopee_order_fees:
+    kind: rolling
+    unique_id: model.sapo_warehouse.int_shopee_order_fees
+    key:
+    - shopee_order_sk
+  int_shopee_order_items:
+    kind: rolling
+    unique_id: model.sapo_warehouse.int_shopee_order_items
+    key:
+    - shopee_order_item_sk
+  int_us_shipment_line_prices:
+    kind: rolling
+    unique_id: model.sapo_warehouse.int_us_shipment_line_prices
+  mart_cash_surplus_allocation:
+    kind: rolling
+    unique_id: model.sapo_warehouse.mart_cash_surplus_allocation
+  mart_cashflow_budget_vs_actual:
+    kind: rolling
+    unique_id: model.sapo_warehouse.mart_cashflow_budget_vs_actual
+  mart_cashflow_forecast:
+    kind: rolling
+    unique_id: model.sapo_warehouse.mart_cashflow_forecast
+  mart_cashflow_reserve_status:
+    kind: rolling
+    unique_id: model.sapo_warehouse.mart_cashflow_reserve_status
+  mart_cashflow_unmapped_actuals:
+    kind: rolling
+    unique_id: model.sapo_warehouse.mart_cashflow_unmapped_actuals
+    key:
+    - unmapped_actual_key
+  mart_cohort_retention:
+    kind: rolling
+    unique_id: model.sapo_warehouse.mart_cohort_retention
+  mart_crm_activity_log:
+    kind: rolling
+    unique_id: model.sapo_warehouse.mart_crm_activity_log
+  mart_crm_outreach_effort_by_action_weekly:
+    kind: rolling
+    unique_id: model.sapo_warehouse.mart_crm_outreach_effort_by_action_weekly
+    key:
+    - staff_key
+    - week_start_date
+    - action_type
+  mart_customer_action_queue:
+    kind: rolling
+    unique_id: model.sapo_warehouse.mart_customer_action_queue
+  mart_customer_sku_action_queue:
+    kind: rolling
+    unique_id: model.sapo_warehouse.mart_customer_sku_action_queue
+  mart_customer_status_snapshot_monthly:
+    kind: rolling
+    unique_id: model.sapo_warehouse.mart_customer_status_snapshot_monthly
+  mart_customer_tier:
+    kind: rolling
+    unique_id: model.sapo_warehouse.mart_customer_tier
+    key:
+    - customer_key
+  mart_data_quality:
+    kind: rolling
+    unique_id: model.sapo_warehouse.mart_data_quality
+    key:
+    - dq_key
+  mart_deadstock_target_queue:
+    kind: rolling
+    unique_id: model.sapo_warehouse.mart_deadstock_target_queue
+    key:
+    - product_key
+    - customer_key
+  mart_hug_attribution:
+    kind: rolling
+    unique_id: model.sapo_warehouse.mart_hug_attribution
+  mart_inventory_health:
+    kind: rolling
+    unique_id: model.sapo_warehouse.mart_inventory_health
+  mart_order_cogs_summary:
+    kind: rolling
+    unique_id: model.sapo_warehouse.mart_order_cogs_summary
+  mart_product_action_queue:
+    kind: rolling
+    unique_id: model.sapo_warehouse.mart_product_action_queue
+    key:
+    - product_key
+  mart_product_health:
+    kind: rolling
+    unique_id: model.sapo_warehouse.mart_product_health
+    key:
+    - product_key
+  mart_retention_waterfall_monthly:
+    kind: rolling
+    unique_id: model.sapo_warehouse.mart_retention_waterfall_monthly
+  mart_sku_economics_monthly:
+    kind: rolling
+    unique_id: model.sapo_warehouse.mart_sku_economics_monthly
+    key:
+    - product_key
+    - snapshot_month
+  mart_staff_performance_weekly:
+    kind: rolling
+    unique_id: model.sapo_warehouse.mart_staff_performance_weekly
+  dim_customers_base:
+    kind: relation
+    schema: main_marts
+    materialized: incremental
+    unique_id: model.sapo_warehouse.dim_customers_base
+    key:
+    - customer_key
+  int_customer_metrics:
+    kind: relation
+    schema: main_marts
+    materialized: incremental
+    unique_id: model.sapo_warehouse.int_customer_metrics
+  int_customer_economics:
+    kind: relation
+    schema: main_marts
+    materialized: table
+    unique_id: model.sapo_warehouse.int_customer_economics
+  int_customer_entry_attributes:
+    kind: relation
+    schema: main_marts
+    materialized: incremental
+    unique_id: model.sapo_warehouse.int_customer_entry_attributes
+    key:
+    - customer_key
+  int_customer_sku_supply_tracking:
+    kind: relation
+    schema: main_marts
+    materialized: table
+    unique_id: model.sapo_warehouse.int_customer_sku_supply_tracking
+    key:
+    - customer_key
+    - sku
+    - supply_stream
+  int_customer_discount_metrics:
+    kind: relation
+    schema: main_marts
+    materialized: incremental
+    unique_id: model.sapo_warehouse.int_customer_discount_metrics
+    key:
+    - customer_key
+  int_crm_outreach_effort_events:
+    kind: relation
+    schema: main_marts
+    materialized: table
+    unique_id: model.sapo_warehouse.int_crm_outreach_effort_events
+    key:
+    - task_id
+    - action_type
+  mart_hug_optin:
+    kind: external
+    schema: main_marts
+    materialized: external
+    unique_id: model.sapo_warehouse.mart_hug_optin
+volatile_columns:
+  dim_cash_allocation_policy:
+  - loaded_at
+  dim_channel_targets:
+  - loaded_at
+  dim_customers:
+  - last_modified_at
+  fact_targets:
+  - loaded_at
+  int_customer_discount_metrics:
+  - metric_calculated_at
+  int_customer_economics:
+  - metric_calculated_at
+  int_customer_metrics:
+  - metric_calculated_at
+  mart_cash_surplus_allocation:
+  - loaded_at
+  mart_cashflow_budget_vs_actual:
+  - loaded_at
+  mart_cashflow_unmapped_actuals:
+  - loaded_at
+  mart_customer_action_queue:
+  - queue_generated_at
+  mart_customer_sku_action_queue:
+  - queue_generated_at
+  mart_customer_tier:
+  - tier_generated_at
+  mart_data_quality:
+  - as_of_ict
+  mart_deadstock_target_queue:
+  - queue_generated_at
+  mart_product_action_queue:
+  - queue_generated_at
+  mart_product_health:
+  - calculated_at
+volatile_reason: 'Each listed column is the build timestamp (current_timestamp / now()
+  at run time). Verified 2026-10-13: two builds of identical code and data (lake-A
+  vs lake-A2) differed only in these columns.'

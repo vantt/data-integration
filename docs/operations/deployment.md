@@ -10,6 +10,7 @@
 4. [Initial Data Load](#initial-data-load)
 5. [Verification](#verification)
 6. [Production Checklist](#production-checklist)
+7. [Refactor deploys (shadow-verified)](#refactor-deploys-shadow-verified)
 
 ---
 
@@ -658,6 +659,80 @@ To stop and remove volumes (WARNING: Deletes Metabase data if not using external
 ```powershell
 docker compose down -v
 ```
+
+---
+
+## Refactor deploys (shadow-verified)
+
+Use this runbook for every change that restructures code without intending to change data
+(module refactors, file moves, dbt folder changes). The system keeps running daily: code is
+bind-mounted into `data_platform` (`docker-compose.yml` volumes), so the prod checkout is
+never edited directly and a change goes live only through the steps below.
+
+Before deploying, the branch must pass the shadow gate (`scripts/shadow/gate.sh M` or `S`,
+see `scripts/shadow/README.md`). Never deploy while the nightly pipeline is red for another
+reason (freeze rule), and avoid the 02:30–04:00 nightly window.
+
+There is no quiet window: `pipeline_sapo_v2_realtime_schedule` runs every 3 minutes and
+`pipeline_sapo_v2_incremental_schedule` every 10 minutes. Merging into the live checkout while
+the container runs lets a run start on half-applied files, so the container is stopped first.
+
+### Deploy
+
+1. Snapshot schedule/sensor state from the live webserver (GraphQL, read-only):
+   ```bash
+   python3 scripts/checks/instigator_state.py capture --out /tmp/instigators-before.json
+   ```
+   Do not use `dagster schedule list -f ...` for this; it builds its own code location and
+   reports every instigator as STOPPED.
+2. Stop the platform and let in-flight runs end:
+   ```bash
+   docker compose stop data_platform
+   ```
+3. Make the prod checkout clean. Jobs rewrite seed CSVs in place (budget sync,
+   `scripts/maintenance/sync_seeds.py`); commit that live content on `main` first and rebase
+   the branch on it, never discard it:
+   ```bash
+   git -C /home/vantt/app/fg-dataware-house status --short
+   ```
+4. Record the current SHA (rollback point), then fast-forward:
+   ```bash
+   git -C /home/vantt/app/fg-dataware-house rev-parse HEAD > /tmp/deploy-rollback-sha
+   git -C /home/vantt/app/fg-dataware-house rev-parse refactor/modularize-suite > /tmp/deploy-branch-sha
+   git -C /home/vantt/app/fg-dataware-house merge --ff-only refactor/modularize-suite
+   ```
+5. Start the platform. Its start command re-runs `dbt deps` and `dbt parse` before
+   `dagster dev`, so the manifest matches the new code:
+   ```bash
+   docker compose start data_platform
+   ```
+6. Verify:
+   ```bash
+   python3 scripts/checks/instigator_state.py capture --out /tmp/instigators-after.json
+   python3 scripts/checks/instigator_state.py diff /tmp/instigators-before.json /tmp/instigators-after.json
+   ```
+   Then trigger one `pipeline_sapo_v2_realtime_job` run in the Dagster UI and confirm it is green.
+7. Watch the next nightly (`pipeline_batch_nightly_schedule`, 03:00): it must be green, no
+   new asset check may turn red, all serving views must still exist, and public-table row
+   counts must stay within the `row_trend_checks` thresholds.
+
+### Rollback
+
+If any check in step 6 or 7 fails:
+
+```bash
+docker compose stop data_platform
+cd /home/vantt/app/fg-dataware-house
+git status --short          # commit live seed CSV changes first, as in deploy step 3
+git revert --no-edit "$(cat /tmp/deploy-rollback-sha)".."$(cat /tmp/deploy-branch-sha)"
+docker compose start data_platform
+```
+
+The range covers only the deployed branch commits, so seed content committed after the
+deploy is kept. Avoid `git reset --hard`, which would discard it.
+
+Each phase file of the refactor plan lists the relations or seeds a rollback leaves behind
+(for example new `std_*` views) and how to drop them. Do not hot-fix on the prod checkout.
 
 ---
 
