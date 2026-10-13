@@ -1,8 +1,7 @@
 """Golden snapshot: prove a change leaves every public table's data identical.
 
-Evolved from the std-gate refactor harness
-(plans/archive/plans/260603-1730-sapo-std-gate-and-naming/snapshots/checksum.py), extended
-with row-level fingerprints, staleness checks and keyed diffs.
+Evolved from the order-independent mart checksum used when the std layer was introduced,
+extended with row-level fingerprints, staleness checks and keyed diffs.
 
 Run it inside a shadow container (scripts/shadow/run-shadow.sh) so it reads shadow lakes
 only. Subcommands:
@@ -46,7 +45,7 @@ FLOAT_TYPES = {"DOUBLE", "FLOAT", "REAL"}
 NUMERIC_PREFIXES = ("DOUBLE", "FLOAT", "REAL", "DECIMAL", "HUGEINT", "BIGINT", "INTEGER", "SMALLINT", "TINYINT", "UBIGINT", "UINTEGER")
 
 # Relations without a rolling location that consumers outside dbt read directly
-# (crm/, tools/). Source: plans/261013-1751-modularize-data-platform-suite/reports/scout-dbt-graph-consumers.md §2.
+# (crm/, tools/), found by searching those trees for model names.
 EXTRA_RELATIONS = [
     "dim_customers_base",
     "int_customer_metrics",

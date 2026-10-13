@@ -50,6 +50,7 @@ Checks used by the gate live in `scripts/checks/`:
 | `dbt_inventory.py` | Relation, schema, alias, full resolved config, refs, SQL checksum and attached tests of every model/seed are unchanged; file paths and `fqn` may change. `compiled-diff` compares the SQL dbt executed per model (whitespace-normalized). |
 | `dagster_inventory.py` | Asset keys/groups, asset checks, job selections resolved to dbt unique_ids, schedules (cron, timezone, default status), sensors and resolved SLA are unchanged. |
 | `instigator_state.py` | Live on/off state of schedules/sensors on the prod webserver, before vs after a deploy. |
+| `check_boundaries.py` | Module dependency matrix, cross-component imports, duplicate seeds, hard-coded URLs in connectors (see `scripts/checks/README.md`). |
 | `guard_not_prod.py` | Refuses paths inside `/home/vantt/app/fg-dataware-house`. |
 
 ## One-time setup
@@ -70,7 +71,7 @@ scripts/shadow/run-shadow.sh $PWD $R python scripts/checks/golden_snapshot.py ca
   --lake $M/lake-A --models scripts/checks/public_models.yaml --out $M/lake-A/_shadow_meta/golden.json
 scripts/shadow/run-shadow.sh $PWD $R python scripts/checks/dbt_inventory.py export \
   --manifest $M/lake-A/_shadow_meta/manifest.json --out $M/inventory/dbt-main.json
-# run while the branch's orchestration/ still equals main (it did at phase 0)
+# run while the branch's orchestration/ still equals main
 scripts/shadow/run-shadow.sh $PWD $R python scripts/checks/dagster_inventory.py export \
   --manifest $M/lake-A/_shadow_meta/manifest.json --out $M/inventory/dagster-main.json
 ```
@@ -93,6 +94,7 @@ scripts/shadow/gate.sh S     # phases that rewrite SQL (3, 4)
 | Golden lake-A vs lake-B | ✓ | ✓ |
 | dbt inventory diff | ✓ | ✓ |
 | Compiled SQL diff (what dbt executed, per model) | ✓ | ✓ |
+| Module boundaries (`check_boundaries.py`, host python) | ✓ | ✓ |
 | Dagster inventory diff (incl. job → dbt unique_ids) | ✓ | ✓ |
 | pytest `ingestion/tests orchestration scripts/tests` | ✓ | ✓ |
 | Empty-rolling lake build + golden (catches directory pre-creation bugs) | ✓ | ✓ |

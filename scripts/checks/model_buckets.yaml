@@ -1,0 +1,198 @@
+# Module (bucket) of every dbt model. Single source of truth for:
+#   - scripts/checks/check_boundaries.py (dependency matrix, see docs/architecture/modules.md §3)
+#   - the dbt folder layout (each model lives in the folder of its bucket)
+# A new model must be added here, otherwise check_boundaries.py fails (rule dbt-bucket).
+
+pack_connectors:   # connectors a pack may read directly (all other packs go through cdm/)
+  marketplace: [shopee]
+  finance: [misa]
+  facebook_ads: [facebook_ads]
+  facebook_messenger: [facebook_messenger]
+
+buckets:
+  # --- cdm (14)
+  std_accounts: cdm
+  std_customers: cdm
+  std_fulfillments: cdm
+  std_inventory_movements: cdm
+  std_misa_account_ledger: cdm
+  std_misa_sales_lines: cdm
+  std_order_discount_items: cdm
+  std_order_items: cdm
+  std_order_returns: cdm
+  std_orders: cdm
+  std_payments: cdm
+  std_products: cdm
+  std_variant_prices: cdm
+  std_variants: cdm
+  # --- connector:facebook_ads (3)
+  stg_fb_ad_sets: connector:facebook_ads
+  stg_fb_ads: connector:facebook_ads
+  stg_fb_campaigns: connector:facebook_ads
+  # --- connector:facebook_messenger (2)
+  stg_fb_conversations: connector:facebook_messenger
+  stg_fb_messages: connector:facebook_messenger
+  # --- connector:gsheet (4)
+  stg_marketing_spend: connector:gsheet
+  stg_targets: connector:gsheet
+  stg_team_members: connector:gsheet
+  stg_teams: connector:gsheet
+  # --- connector:misa (3)
+  src_misa_account_ledger: connector:misa
+  src_misa_sales_lines: connector:misa
+  stg_misa_sales_lines: connector:misa
+  # --- connector:sapo_v2 (28)
+  int_order_snapshots_ranked: connector:sapo_v2
+  src_sapo_v2_accounts: connector:sapo_v2
+  src_sapo_v2_customer_groups: connector:sapo_v2
+  src_sapo_v2_customers: connector:sapo_v2
+  src_sapo_v2_fulfillments: connector:sapo_v2
+  src_sapo_v2_inventory_transactions: connector:sapo_v2
+  src_sapo_v2_order_returns: connector:sapo_v2
+  src_sapo_v2_orders: connector:sapo_v2
+  src_sapo_v2_price_lists: connector:sapo_v2
+  src_sapo_v2_products: connector:sapo_v2
+  src_sapo_v2_purchase_orders: connector:sapo_v2
+  src_sapo_v2_stock_adjustments: connector:sapo_v2
+  stg_sapo_v2_accounts: connector:sapo_v2
+  stg_sapo_v2_customer_addresses: connector:sapo_v2
+  stg_sapo_v2_customer_contacts: connector:sapo_v2
+  stg_sapo_v2_customer_notes: connector:sapo_v2
+  stg_sapo_v2_customer_tags: connector:sapo_v2
+  stg_sapo_v2_customers: connector:sapo_v2
+  stg_sapo_v2_fulfillments: connector:sapo_v2
+  stg_sapo_v2_inventories: connector:sapo_v2
+  stg_sapo_v2_order_discount_items: connector:sapo_v2
+  stg_sapo_v2_order_items: connector:sapo_v2
+  stg_sapo_v2_order_returns: connector:sapo_v2
+  stg_sapo_v2_orders: connector:sapo_v2
+  stg_sapo_v2_payments: connector:sapo_v2
+  stg_sapo_v2_products: connector:sapo_v2
+  stg_sapo_v2_variant_prices: connector:sapo_v2
+  stg_sapo_v2_variants: connector:sapo_v2
+  # --- connector:shopee (8)
+  src_shopee_order_adjustments: connector:shopee
+  src_shopee_order_revenue: connector:shopee
+  src_shopee_order_revenue_items: connector:shopee
+  src_shopee_order_service_fees: connector:shopee
+  stg_shopee_order_adjustments: connector:shopee
+  stg_shopee_order_revenue: connector:shopee
+  stg_shopee_order_revenue_items: connector:shopee
+  stg_shopee_order_service_fees: connector:shopee
+  # --- core (61)
+  dim_branch_location: core
+  dim_channel_targets: core
+  dim_channels: core
+  dim_customer_addresses: core
+  dim_customer_contacts: core
+  dim_customer_notes: core
+  dim_customer_tags: core
+  dim_customers: core
+  dim_customers_base: core
+  dim_date: core
+  dim_geography: core
+  dim_order_status: core
+  dim_payment_methods: core
+  dim_price_lists: core
+  dim_product_types: core
+  dim_products: core
+  dim_promotions: core
+  dim_sku_alias: core
+  dim_staff: core
+  dim_teams: core
+  dim_time: core
+  fact_fulfillments: core
+  fact_inventory_balance: core
+  fact_inventory_movements: core
+  fact_inventory_snapshot: core
+  fact_marketing_spend: core
+  fact_order_costs: core
+  fact_order_economics: core
+  fact_order_returns: core
+  fact_order_transitions: core
+  fact_orders: core
+  fact_payments: core
+  fact_sales: core
+  fact_targets: core
+  fact_variant_prices_snapshot: core
+  int_customer_benchmarks: core
+  int_customer_discount_metrics: core
+  int_customer_economics: core
+  int_customer_entry_attributes: core
+  int_customer_metrics: core
+  int_customer_sku_supply_tracking: core
+  int_order_cogs_reconciled: core
+  int_order_promo_goods_cost: core
+  int_order_tags: core
+  int_product_discount_dependency: core
+  int_product_velocity_trend: core
+  int_promo_642_monthly_total: core
+  int_return_sku_lines: core
+  int_sapo_inventories: core
+  int_sku_gift_profile: core
+  mart_cohort_retention: core
+  mart_customer_status_snapshot_monthly: core
+  mart_customer_tier: core
+  mart_data_quality: core
+  mart_deadstock_target_queue: core
+  mart_inventory_health: core
+  mart_order_cogs_summary: core
+  mart_product_action_queue: core
+  mart_product_health: core
+  mart_retention_waterfall_monthly: core
+  mart_sku_economics_monthly: core
+  # --- monitoring (1)
+  monitor_uncategorized_tags: monitoring
+  # --- pack:facebook_ads (2)
+  dim_fb_ads: pack:facebook_ads
+  fact_fb_ads_insights_daily: pack:facebook_ads
+  # --- pack:facebook_messenger (2)
+  dim_fb_conversations: pack:facebook_messenger
+  fact_fb_messages: pack:facebook_messenger
+  # --- pack:finance (4)
+  dim_gl_account: pack:finance
+  fact_account_balance_monthly: pack:finance
+  fact_cash_movement: pack:finance
+  int_misa_sales_lines: pack:finance
+  # --- pack:marketplace (3)
+  int_shopee_order_adjustments: pack:marketplace
+  int_shopee_order_fees: pack:marketplace
+  int_shopee_order_items: pack:marketplace
+  # --- tenant:fine_japan (37)
+  dim_action_scenario_registry: tenant:fine_japan
+  dim_cash_allocation_policy: tenant:fine_japan
+  fact_cashflow_budget: tenant:fine_japan
+  fact_us_shipment_economics: tenant:fine_japan
+  int_crm_outreach_effort_events: tenant:fine_japan
+  int_crm_party_tag_flags: tenant:fine_japan
+  int_order_overhead_allocation: tenant:fine_japan
+  int_overhead_pool_monthly: tenant:fine_japan
+  int_us_shipment_line_prices: tenant:fine_japan
+  mart_cash_surplus_allocation: tenant:fine_japan
+  mart_cashflow_budget_vs_actual: tenant:fine_japan
+  mart_cashflow_forecast: tenant:fine_japan
+  mart_cashflow_reserve_status: tenant:fine_japan
+  mart_cashflow_unmapped_actuals: tenant:fine_japan
+  mart_crm_activity_log: tenant:fine_japan
+  mart_crm_outreach_effort_by_action_weekly: tenant:fine_japan
+  mart_customer_action_queue: tenant:fine_japan
+  mart_customer_sku_action_queue: tenant:fine_japan
+  mart_hug_attribution: tenant:fine_japan
+  mart_hug_optin: tenant:fine_japan
+  mart_staff_performance_weekly: tenant:fine_japan
+  src_hug_optin_event: tenant:fine_japan
+  src_hug_scan: tenant:fine_japan
+  stg_crm__activity_log: tenant:fine_japan
+  stg_crm__app_user: tenant:fine_japan
+  stg_crm__campaign_target: tenant:fine_japan
+  stg_crm__customer_profile_custom: tenant:fine_japan
+  stg_crm__hug_voucher: tenant:fine_japan
+  stg_crm__last_contact: tenant:fine_japan
+  stg_crm__note: tenant:fine_japan
+  stg_crm__party_insight: tenant:fine_japan
+  stg_crm__party_tag: tenant:fine_japan
+  stg_crm__task: tenant:fine_japan
+  stg_hug_optin_event: tenant:fine_japan
+  stg_hug_scan: tenant:fine_japan
+  stg_overhead_account_classification: tenant:fine_japan
+  stg_us_shipment_prices: tenant:fine_japan

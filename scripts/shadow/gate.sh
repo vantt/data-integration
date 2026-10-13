@@ -3,7 +3,8 @@
 # built from the untouched `main` worktree) on a fresh shadow lake.
 #
 # Usage: scripts/shadow/gate.sh <M|S> [--allow-new] [--allow-code-change]
-#   M  move-only phases: golden + dbt inventory + compiled SQL + dagster inventory + pytest + empty-lake build
+#   M  move-only phases: golden + dbt inventory + compiled SQL + module boundaries + dagster inventory
+#      + pytest + empty-lake build
 #   S  SQL-changing phases: M + a second golden pass after --full-refresh of every
 #      incremental model and everything downstream (the incremental branch is exercised
 #      only when rows are reprocessed)
@@ -61,6 +62,10 @@ CODE_FLAG=""; case " ${INV_FLAGS[*]:-} " in *--allow-code-change*) CODE_FLAG=--a
 "$RUN" "$BRANCH_DIR" "$SHADOW_ROOT" python scripts/checks/dbt_inventory.py compiled-diff \
   $M/lake-A/_shadow_meta/manifest.json $M/lake-B/_shadow_meta/manifest.json $CODE_FLAG | tail -5
 check "${PIPESTATUS[0]}" "compiled SQL"
+
+step "3b. module boundaries (host python: needs crm/ and detailView/)"
+python3 "$BRANCH_DIR/scripts/checks/check_boundaries.py" --manifest "$SHADOW_ROOT/lake-B/_shadow_meta/manifest.json" | tail -5
+check "${PIPESTATUS[0]}" "module boundaries"
 
 step "4. dagster inventory (assets, checks, job selections, schedules, sensors, SLA)"
 "$RUN" "$BRANCH_DIR" "$SHADOW_ROOT" sh -c "

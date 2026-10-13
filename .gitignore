@@ -40,6 +40,7 @@ _tmp_*.sh
 
 # Ad-hoc debug/check scripts at repo root
 check_*.py
+!scripts/checks/check_boundaries.py
 
 # Rill temp artifacts
 rill/tmp/
