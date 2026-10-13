@@ -96,6 +96,7 @@ scripts/shadow/gate.sh S     # phases that rewrite SQL (3, 4)
 | Compiled SQL diff (what dbt executed, per model) | ✓ | ✓ |
 | Module boundaries (`check_boundaries.py`, host python) | ✓ | ✓ |
 | Dagster inventory diff (incl. job → dbt unique_ids) | ✓ | ✓ |
+| dbt subset run through Dagster (`marts/fact_order_returns`, the `_fact_order_returns` job selection) | ✓ | ✓ |
 | pytest `ingestion/tests orchestration scripts/tests` | ✓ | ✓ |
 | Empty-rolling lake build + golden (catches directory pre-creation bugs) | ✓ | ✓ |
 | `--full-refresh` on baseline (lake-AF) and branch (lake-BF) + golden | | ✓ |
@@ -111,6 +112,7 @@ still enforced by the golden snapshot.
 - `config.location` in the manifest is the unrendered string `{{ get_rolling_location() }}`; rolling models are detected by that string plus `materialized == 'external'` (`stg_marketing_spend` is a view with a stray `location` and writes nothing).
 - External models without a location write `<external_root>/<name>.parquet`; the warehouse view embeds an absolute path, so the golden reads the parquet file relative to the lake.
 - `orchestration/ops/__tests__/test_ingestion_health_retry.py::test_concurrent_writes_no_lock_error` failed once in eight full-suite runs (SQLite timing); it passed in the other runs on both baseline and branch.
+- dagster-dbt passes a subset selection to dbt as the model `fqn` from the manifest loaded by the code server (e.g. `--select sapo_warehouse.marts.sales.fact_order_returns`), so a folder move changes the selection string; the code server must load a manifest parsed from the new layout (the container start command does).
 - Compiled SQL is deterministic: lake-A vs lake-A2 manifests give 0 differences over 162 models.
 - `dagster schedule list -f orchestration/definitions.py` reports all instigators as STOPPED while the webserver runs all 17 schedules and 9 sensors; use `instigator_state.py`.
 

@@ -1,52 +1,35 @@
+"""Container-start step: pre-create rolling export directories for dbt external models.
+
+Runs before `dbt parse` in the data_platform start command, so it uses the manifest left by
+the previous parse (or scans models/ on a fresh install). The sapo_dbt_assets op repeats the
+step after its own `dbt parse`, which covers models added since the last start.
+"""
 import os
-import glob
 import sys
+
+PROJECT_DIR = os.environ.get("DBT_PROJECT_DIR", "/app/transformation")
+sys.path.insert(0, os.path.join(PROJECT_DIR, "scripts"))
+
+from rolling_dirs import ensure_rolling_dirs, rolling_model_names  # noqa: E402
+
 
 def ensure_directories():
     print("-> [Auto-Setup] checking dbt output directories...")
-
-    # 1. Get Configuration
-    # We expect this script to run inside Docker, where these env vars are set.
-    # Fallback to relative path if running locally for debugging.
     dbt_export_path = os.environ.get("DBT_EXPORT_PATH")
-    project_dir = os.environ.get("DBT_PROJECT_DIR", "/app/transformation")
-
     if not dbt_export_path:
         print("   [WARN] DBT_EXPORT_PATH not set. Skipping directory creation.")
         return
 
-    # 2. Scan for Models that use get_rolling_location() (marts + intermediate)
-    # Both marts/ and intermediate/ may contain models with rolling external parquet output.
-    model_files = []
-    for subdir in ["marts", "intermediate"]:
-        pattern = os.path.join(project_dir, "models", subdir, "**", "*.sql")
-        found = glob.glob(pattern, recursive=True)
-        model_files.extend(found)
-        print(f"   [DEBUG] Scanning: {pattern} → {len(found)} models")
-    print(f"   [DEBUG] Total: {len(model_files)} models.")
-
-    count = 0
-    for model_file in model_files:
-        # Extract model name (filename without extension)
-        filename = os.path.basename(model_file)
-        model_name = os.path.splitext(filename)[0]
-
-        # Construct expected output directory
-        # Pattern: {DBT_EXPORT_PATH}/{model_name}
-        target_dir = os.path.join(dbt_export_path, "rolling", model_name)
-
-        if not os.path.exists(target_dir):
-            try:
-                os.makedirs(target_dir, exist_ok=True)
-                print(f"   [+] Created directory: {target_dir}")
-                count += 1
-            except OSError as e:
-                print(f"   [!] Failed to create {target_dir}: {e}")
-
-    if count > 0:
-        print(f"-> [Auto-Setup] Created {count} missing directories.")
+    names = rolling_model_names(PROJECT_DIR)
+    print(f"   [DEBUG] {len(names)} rolling models")
+    created = ensure_rolling_dirs(dbt_export_path, names)
+    for d in created:
+        print(f"   [+] Created directory: {d}")
+    if created:
+        print(f"-> [Auto-Setup] Created {len(created)} missing directories.")
     else:
         print("-> [Auto-Setup] All directories present.")
+
 
 if __name__ == "__main__":
     ensure_directories()

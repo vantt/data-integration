@@ -17,6 +17,9 @@ DBT_PROFILES_DIR = DBT_PROJECT_DIR # profiles.yml is in the same dir
 PROJECT_ROOT = os.path.dirname(os.path.dirname(os.path.dirname(__file__)))
 REFRESH_ROLLING_SCRIPT = os.path.join(PROJECT_ROOT, "scripts", "provisioning", "refresh_rolling.py")
 
+sys.path.insert(0, os.path.join(DBT_PROJECT_DIR, "scripts"))
+from rolling_dirs import ensure_rolling_dirs, rolling_model_names  # noqa: E402
+
 # Define the dbt project resource
 dbt_project = DbtProject(
     project_dir=DBT_PROJECT_DIR,
@@ -108,19 +111,6 @@ def sapo_dbt_assets(context: AssetExecutionContext, dbt: DbtCliResource):
     # Ensure stable rolling directory exists
     if not os.path.exists(export_base_dir):
         os.makedirs(export_base_dir)
-
-    # Pre-create subdirectories for all models using get_rolling_location()
-    # Scan both marts/ and intermediate/ (both contain external parquet models)
-    for subdir in ["marts", "intermediate"]:
-        scan_dir = os.path.join(DBT_PROJECT_DIR, "models", subdir)
-        if os.path.exists(scan_dir):
-            for root, dirs, files in os.walk(scan_dir):
-                for file in files:
-                    if file.endswith(".sql"):
-                        model_name = os.path.splitext(file)[0]
-                        model_export_dir = os.path.join(export_base_dir, model_name)
-                        os.makedirs(model_export_dir, exist_ok=True)
-        
     context.log.info(f"Target Export Path (Stable): {export_base_dir}")
 
     # DBT_EXPORT_PATH is already set via .env.docker (e.g. /app/var/data_lake/export/marts).
@@ -146,6 +136,13 @@ def sapo_dbt_assets(context: AssetExecutionContext, dbt: DbtCliResource):
     # concurrency_group=dbt_rw is dequeued at a time, so concurrent parse is not
     # possible in normal operation.
     dbt.cli(["parse"]).wait()
+
+    # Pre-create rolling/<model>/ for every external model using get_rolling_location()
+    # (DuckDB COPY needs the parent directory). Done after parse so models added since the
+    # container started are included; the list comes from the manifest, not folder names.
+    created = ensure_rolling_dirs(dbt_export_path, rolling_model_names(DBT_PROJECT_DIR))
+    if created:
+        context.log.info(f"Created {len(created)} rolling directories: {created}")
 
     # Run dbt with watchdog timeout to prevent infinite hang on DuckDB checkpoint stall
     invocation = dbt.cli(["build"], context=context)

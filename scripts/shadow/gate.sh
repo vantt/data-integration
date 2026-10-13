@@ -4,7 +4,7 @@
 #
 # Usage: scripts/shadow/gate.sh <M|S> [--allow-new] [--allow-code-change]
 #   M  move-only phases: golden + dbt inventory + compiled SQL + module boundaries + dagster inventory
-#      + pytest + empty-lake build
+#      + dagster-run dbt subset + pytest + empty-lake build
 #   S  SQL-changing phases: M + a second golden pass after --full-refresh of every
 #      incremental model and everything downstream (the incremental branch is exercised
 #      only when rows are reprocessed)
@@ -73,6 +73,13 @@ step "4. dagster inventory (assets, checks, job selections, schedules, sensors, 
   python scripts/checks/dagster_inventory.py diff $M/inventory/dagster-main.json $M/inventory/dagster-branch.json ${DAG_FLAGS[*]:-}"
 check $? "dagster inventory"
 
+step "4b. dbt subset through Dagster (selection is passed to dbt as fqn from the manifest)"
+rm -rf "$SHADOW_ROOT/lake-D"; cp -a --reflink=auto "$SHADOW_ROOT/lake-B" "$SHADOW_ROOT/lake-D"
+"$RUN" "$BRANCH_DIR" "$SHADOW_ROOT/lake-D" sh -c 'cd transformation && dbt parse --profiles-dir . >/dev/null && cd .. && \
+  timeout 600 dagster asset materialize -f orchestration/definitions.py --select "marts/fact_order_returns" 2>&1' \
+  | grep -E "Running dbt command: .dbt build|Done. PASS|RUN_SUCCESS|RUN_FAILURE" | sed 's/^.* - //' | tail -3 | tee /tmp/gate-dagster-subset.log
+grep -q "Finished execution of run" /tmp/gate-dagster-subset.log && grep -q "ERROR=0" /tmp/gate-dagster-subset.log; check $? "dagster dbt subset run"
+
 step "5. pytest"
 "$SCRIPT_DIR/pytest-shadow.sh" "$BRANCH_DIR" lake-B ingestion/tests orchestration scripts/tests -q 2>&1 | tail -3
 check "${PIPESTATUS[0]}" "pytest"
@@ -95,7 +102,7 @@ if [ "$LEVEL" = "S" ]; then
 fi
 
 step "cleanup branch lakes (PII copies)"
-"$SCRIPT_DIR/cleanup.sh" lake-B lake-E $( [ "$LEVEL" = "S" ] && echo lake-BF )
+"$SCRIPT_DIR/cleanup.sh" lake-B lake-D lake-E $( [ "$LEVEL" = "S" ] && echo lake-BF )
 
 echo
 if [ "$FAIL" -eq 0 ]; then echo "GATE $LEVEL: PASS"; else echo "GATE $LEVEL: FAIL"; fi
