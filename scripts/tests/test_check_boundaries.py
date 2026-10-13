@@ -41,8 +41,9 @@ def test_matrix(src, dst, ok):
     assert cb._allowed(src, dst, PACKS) is ok
 
 
-def _model(name, deps):
-    return {"resource_type": "model", "name": name, "depends_on": {"nodes": deps}}
+def _model(name, deps, path=None):
+    return {"resource_type": "model", "name": name, "depends_on": {"nodes": deps},
+            "original_file_path": path or f"models/any/{name}.sql"}
 
 
 def test_dbt_violations_ref_source_and_missing_bucket():
@@ -56,7 +57,7 @@ def test_dbt_violations_ref_source_and_missing_bucket():
     assert ("dbt-ref", "fact_x", "stg_x [core -> connector:sapo_v2]") in found
     assert ("dbt-source", "fact_x", "raw.y") in found
     assert ("dbt-bucket", "new_model", "no bucket in model_buckets.yaml") in found
-    assert not [f for f in found if f[1] == "stg_x"]  # connectors may read sources
+    assert not [f for f in found if f[1] == "stg_x" and f[0] != "dbt-path"]  # connectors may read sources
 
 
 def test_disabled_models_need_a_bucket_too():
@@ -102,3 +103,16 @@ def test_missing_tree_is_a_violation(tmp_path, monkeypatch):
     monkeypatch.setattr(cb, "ROOT", str(tmp_path))
     found = cb.python_violations()
     assert ("py-scan", "crm", "directory not found") in found
+
+
+def test_model_must_live_in_its_module_folder():
+    manifest = {"nodes": {
+        "model.p.fact_ok": _model("fact_ok", [], "models/core/marts/fact_ok.sql"),
+        "model.p.fact_bad": _model("fact_bad", [], "models/marts/sales/fact_bad.sql"),
+        "model.p.stg_y": _model("stg_y", [], "models/connectors/shopee/staging/stg_y.sql"),
+    }, "disabled": {}}
+    spec = {"buckets": {"fact_ok": "core", "fact_bad": "core", "stg_y": "connector:sapo_v2"}, "pack_connectors": {}}
+    found = {(r, s) for r, s, _ in cb.dbt_violations(manifest, spec)}
+    assert ("dbt-path", "fact_bad") in found
+    assert ("dbt-path", "stg_y") in found
+    assert ("dbt-path", "fact_ok") not in found

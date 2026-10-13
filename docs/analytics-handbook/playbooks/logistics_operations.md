@@ -10,8 +10,8 @@
 
 ## Data Lineage
 
-- **Core Model:** [`fact_orders`](../../../transformation/models/marts/sales/fact_orders.sql) — status, fulfillment_status, ordered_at, first_shipped_at, time_to_complete_hours
-- **Dimensions:** [`dim_order_status`](../../../transformation/models/marts/core/dim_order_status.sql), [`dim_staff`](../../../transformation/models/marts/core/dim_staff.sql), [`dim_channels`](../../../transformation/models/marts/core/dim_channels.sql), [`dim_date`](../../../transformation/models/marts/core/dim_date.sql), [`dim_branch_location`](../../../transformation/models/marts/core/dim_branch_location.sql)
+- **Core Model:** [`fact_orders`](../../../transformation/models/core/marts/sales/fact_orders.sql) — status, fulfillment_status, ordered_at, first_shipped_at, time_to_complete_hours
+- **Dimensions:** [`dim_order_status`](../../../transformation/models/core/marts/dim_order_status.sql), [`dim_staff`](../../../transformation/models/core/marts/dim_staff.sql), [`dim_channels`](../../../transformation/models/core/marts/dim_channels.sql), [`dim_date`](../../../transformation/models/core/marts/dim_date.sql), [`dim_branch_location`](../../../transformation/models/core/marts/dim_branch_location.sql)
 - **Planned models (not yet available):** `fact_fulfillments`, `fact_shipments`, `dim_carriers`
 
 ### Data Availability

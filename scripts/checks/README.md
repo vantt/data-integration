@@ -26,6 +26,7 @@ python3 scripts/checks/check_boundaries.py --manifest <path/to/manifest.json>
 | `py-import` | `crm/` or `detailView/` imports `orchestration`, `ingestion` or `transformation`; `ingestion/` imports `orchestration` |
 | `py-scan` | one of those trees is missing (prevents a silent pass inside a container) |
 | `dbt-bucket` | a dbt model (enabled or disabled) has no entry in `model_buckets.yaml` |
+| `dbt-path` | a model's file is not under `models/<module folder of its bucket>/` |
 | `dbt-ref` | a model depends on a model its bucket may not read (matrix below) |
 | `dbt-source` | a model outside `connector:*` / `tenant:*` reads a dbt source |
 | `seed-duplicate` | two CSVs under `transformation/seeds/` share a basename (dbt parse would fail and `data_platform` would not start) |
@@ -63,4 +64,4 @@ flowchart LR
   longer occurs, so fixed debt must be removed from the file in the same commit.
 - `--write-allowlist` regenerates the file from the current violations and keeps existing
   reasons; new entries get `TODO: reason and exit plan` and must be edited before commit.
-- Current entries (24) are summarized in `docs/architecture/modules.md` §3.
+- Current entries: 24 dependency violations (summarized in `docs/architecture/modules.md` §3) and 37 `dbt-path` entries for Fine Japan tenant models not yet moved.

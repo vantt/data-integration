@@ -25,7 +25,7 @@
 
 ## Data Lineage
 
-- **Core Models:** [`fact_orders`](../../../transformation/models/marts/sales/fact_orders.sql), [`fact_sales`](../../../transformation/models/marts/sales/fact_sales.sql)
+- **Core Models:** [`fact_orders`](../../../transformation/models/core/marts/sales/fact_orders.sql), [`fact_sales`](../../../transformation/models/core/marts/sales/fact_sales.sql)
 - **Dimensions:** `dim_channels`, `dim_products`, `dim_customers`, `dim_promotions`
 
 ## Tab Structure

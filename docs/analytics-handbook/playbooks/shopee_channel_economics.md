@@ -10,8 +10,8 @@
 
 ## Data Lineage
 
-- **Primary:** [`int_shopee_order_fees`](../../../transformation/models/intermediate/shopee/int_shopee_order_fees.sql) — per-order fee breakdown with net_settlement
-- **Product detail:** [`int_shopee_order_items`](../../../transformation/models/intermediate/shopee/int_shopee_order_items.sql) — per-order × product SKU line items
+- **Primary:** [`int_shopee_order_fees`](../../../transformation/models/packs/marketplace/intermediate/shopee/int_shopee_order_fees.sql) — per-order fee breakdown with net_settlement
+- **Product detail:** [`int_shopee_order_items`](../../../transformation/models/packs/marketplace/intermediate/shopee/int_shopee_order_items.sql) — per-order × product SKU line items
 - **COGS/Economics:** [`fact_order_economics`](../../../transformation/models/mart/fact_order_economics.sql) — MISA-matched COGS, gross_profit, channel_net_profit. JOIN via order_code.
 - **Domain:** [Finance > Shopee Platform Economics](../domains/finance.md#context-shopee-platform-economics)
 

@@ -1,52 +1,6 @@
 version: 2
 
 models:
-  - name: fact_inventory_movements
-    tags: [hourly]
-    description: >
-      Inventory movement ledger fact. Grain: 1 row per inventory_movement_id (entity_id
-      content hash). Sourced from std_inventory_movements; filters quantity_delta != 0
-      (excludes zero-qty catalog-init and pure cost-adjustment rows).
-      Both legs of a cancelled fulfillment are preserved (do NOT net/sum — analysis caveat #2).
-      movement_direction: IN (import_quantity>0) / OUT (export_quantity>0).
-      cogs_amount = export_amount (pre-txn MAC — use directly for COGS).
-      document_code links to std_orders.order_code for SON… codes (41% of rows).
-    columns:
-      - name: inventory_movement_id
-        description: "Surrogate key for this record."
-        tests: [unique, not_null]
-      - name: issued_date_key
-        description: "Date dimension foreign key (ICT timezone)."
-        tests: [not_null]
-      - name: issued_at
-        description: "Timestamp when movement was recorded (ICT)."
-        tests: [not_null]
-      - name: variant_id
-        description: "Source system identifier."
-        tests: [not_null]
-      - name: location_id
-        description: "Source system identifier."
-        tests: [not_null]
-      - name: quantity_delta
-        description: "Signed quantity: +IN (import) / −OUT (export). Zero rows excluded by WHERE clause."
-        tests: [not_null]
-      - name: movement_direction
-        description: "IN / OUT — derived from import_quantity>0, not action field."
-        tests:
-          - not_null
-          - accepted_values:
-              arguments:
-                values: ['IN', 'OUT']
-      - name: cogs_amount
-        description: "COGS at pre-txn MAC (= export_amount). Use directly; do NOT recompute from mac."
-      - name: inventory_value
-        description: "Post-txn inventory value = onhand × mac (amount column from source)."
-      - name: onhand
-        description: "Running stock balance at moment of transaction. Authoritative — never recomputed."
-      - name: moving_avg_cost
-        description: "Moving average cost per unit (post-txn MAC)."
-      - name: source_version
-        description: "Source API version ('v2')."
 
   - name: fact_inventory_balance
     tags: [hourly]
@@ -100,3 +54,50 @@ models:
           - accepted_values:
               arguments:
                 values: [true, false]
+  - name: fact_inventory_movements
+    tags: [hourly]
+    description: >
+      Inventory movement ledger fact. Grain: 1 row per inventory_movement_id (entity_id
+      content hash). Sourced from std_inventory_movements; filters quantity_delta != 0
+      (excludes zero-qty catalog-init and pure cost-adjustment rows).
+      Both legs of a cancelled fulfillment are preserved (do NOT net/sum — analysis caveat #2).
+      movement_direction: IN (import_quantity>0) / OUT (export_quantity>0).
+      cogs_amount = export_amount (pre-txn MAC — use directly for COGS).
+      document_code links to std_orders.order_code for SON… codes (41% of rows).
+    columns:
+      - name: inventory_movement_id
+        description: "Surrogate key for this record."
+        tests: [unique, not_null]
+      - name: issued_date_key
+        description: "Date dimension foreign key (ICT timezone)."
+        tests: [not_null]
+      - name: issued_at
+        description: "Timestamp when movement was recorded (ICT)."
+        tests: [not_null]
+      - name: variant_id
+        description: "Source system identifier."
+        tests: [not_null]
+      - name: location_id
+        description: "Source system identifier."
+        tests: [not_null]
+      - name: quantity_delta
+        description: "Signed quantity: +IN (import) / −OUT (export). Zero rows excluded by WHERE clause."
+        tests: [not_null]
+      - name: movement_direction
+        description: "IN / OUT — derived from import_quantity>0, not action field."
+        tests:
+          - not_null
+          - accepted_values:
+              arguments:
+                values: ['IN', 'OUT']
+      - name: cogs_amount
+        description: "COGS at pre-txn MAC (= export_amount). Use directly; do NOT recompute from mac."
+      - name: inventory_value
+        description: "Post-txn inventory value = onhand × mac (amount column from source)."
+      - name: onhand
+        description: "Running stock balance at moment of transaction. Authoritative — never recomputed."
+      - name: moving_avg_cost
+        description: "Moving average cost per unit (post-txn MAC)."
+      - name: source_version
+        description: "Source API version ('v2')."
+

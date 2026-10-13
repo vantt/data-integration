@@ -77,7 +77,7 @@ WHERE c.customer_type = 'RETAIL'
 
 #### 1. Gross Revenue (GMV)
 
-> **dbt Model:** [`fact_orders`](../../../transformation/models/marts/sales/fact_orders.sql)
+> **dbt Model:** [`fact_orders`](../../../transformation/models/core/marts/sales/fact_orders.sql)
 > **Terminology Guide:** [Revenue Terminology](../guides/revenue_terminology.md)
 
 - **Business Definition:** Tổng giá trị hàng hóa theo giá bán, trước chiết khấu. Dùng để đánh giá quy mô giao dịch. **Sapo giá bán đã gồm VAT** — gross_revenue = total_amount + discount_amount. Xem [Revenue Terminology](../guides/revenue_terminology.md).
@@ -97,7 +97,7 @@ WHERE c.customer_type = 'RETAIL'
 
 #### 2. Net Revenue
 
-> **dbt Model:** [`fact_orders`](../../../transformation/models/marts/sales/fact_orders.sql)
+> **dbt Model:** [`fact_orders`](../../../transformation/models/core/marts/sales/fact_orders.sql)
 
 - **Business Definition:** Doanh thu thuần — số tiền khách trả cho hàng hóa sau chiết khấu, **đã trừ VAT** (= total_amount − vat_amount). VAT nhúng trong giá bán Sapo — net_revenue là con số P&L so sánh như-cho-như với giá vốn. Đây là con số quan trọng nhất cho phân tích kinh doanh. Xem [Revenue Terminology](../guides/revenue_terminology.md).
 - **Logic (SQL):**
@@ -116,7 +116,7 @@ WHERE c.customer_type = 'RETAIL'
 
 #### 2b. Total Collected
 
-> **dbt Model:** [`fact_orders`](../../../transformation/models/marts/sales/fact_orders.sql)
+> **dbt Model:** [`fact_orders`](../../../transformation/models/core/marts/sales/fact_orders.sql)
 
 - **Business Definition:** Tổng tiền thu từ khách (bao gồm thuế VAT). Dùng để đối soát với kế toán/ngân hàng.
 - **Logic (SQL):**
@@ -135,7 +135,7 @@ WHERE c.customer_type = 'RETAIL'
 
 #### 3. Return Rate & Count
 
-> **dbt Model:** [`fact_orders`](../../../transformation/models/marts/sales/fact_orders.sql)
+> **dbt Model:** [`fact_orders`](../../../transformation/models/core/marts/sales/fact_orders.sql)
 
 - **Business Definition:** Count of returned orders.
 - **Logic (SQL):**
@@ -152,7 +152,7 @@ WHERE c.customer_type = 'RETAIL'
 
 #### 4. Total Orders
 
-> **dbt Model:** [`fact_orders`](../../../transformation/models/marts/sales/fact_orders.sql)
+> **dbt Model:** [`fact_orders`](../../../transformation/models/core/marts/sales/fact_orders.sql)
 
 - **Business Definition:** Count of unique confirmed orders.
 - **Logic (SQL):**
@@ -168,7 +168,7 @@ WHERE c.customer_type = 'RETAIL'
 
 #### 5. AOV (Average Order Value)
 
-> **dbt Model:** [`fact_orders`](../../../transformation/models/marts/sales/fact_orders.sql)
+> **dbt Model:** [`fact_orders`](../../../transformation/models/core/marts/sales/fact_orders.sql)
 
 - **Business Definition:** Average revenue generated per order.
 - **Logic (SQL):**
@@ -279,7 +279,7 @@ WHERE c.customer_type = 'RETAIL'
 
 #### 17. Order Detail List
 
-> **dbt Model:** [`fact_orders`](../../../transformation/models/marts/sales/fact_orders.sql)
+> **dbt Model:** [`fact_orders`](../../../transformation/models/core/marts/sales/fact_orders.sql)
 
 - **Business Definition:** Detailed order-level listing with key fields for reconciliation: order ID/code, timestamps, amounts, statuses, customer info, channel, and payment method.
 - **Key Fields:**
@@ -337,7 +337,7 @@ WHERE c.customer_type = 'RETAIL'
 
 #### 6. Hourly Sales Trend
 
-> **dbt Model:** [`fact_orders`](../../../transformation/models/marts/sales/fact_orders.sql)
+> **dbt Model:** [`fact_orders`](../../../transformation/models/core/marts/sales/fact_orders.sql)
 
 - **Business Definition:** Sales performance broken down by hour of the day, compared to previous periods.
 - **Logic (SQL):**
@@ -357,7 +357,7 @@ WHERE c.customer_type = 'RETAIL'
 
 #### 7. Hourly Heatmap (Day of Week Analysis)
 
-> **dbt Model:** [`fact_orders`](../../../transformation/models/marts/sales/fact_orders.sql)
+> **dbt Model:** [`fact_orders`](../../../transformation/models/core/marts/sales/fact_orders.sql)
 
 - **Business Definition:** Sales intensity by Hour of Day and Day of Week.
 - **Logic (SQL):**
@@ -380,7 +380,7 @@ WHERE c.customer_type = 'RETAIL'
 
 #### 8. Sales by Channel
 
-> **dbt Model:** [`fact_orders`](../../../transformation/models/marts/sales/fact_orders.sql)
+> **dbt Model:** [`fact_orders`](../../../transformation/models/core/marts/sales/fact_orders.sql)
 
 - **Business Definition:** Revenue breakdown by acquisition channel (e.g., Website, Mobile App, Partner).
 - **Logic (SQL):**
@@ -427,7 +427,7 @@ WHERE c.customer_type = 'RETAIL'
 
 #### 9. Top Selling Products
 
-> **dbt Model:** [`fact_sales`](../../../transformation/models/marts/sales/fact_sales.sql)
+> **dbt Model:** [`fact_sales`](../../../transformation/models/core/marts/sales/fact_sales.sql)
 
 - **Business Definition:** Ranking of products by revenue or units sold.
 - **Logic (SQL):**
@@ -474,7 +474,7 @@ WHERE c.customer_type = 'RETAIL'
 
 #### 10. New vs Returning Customers
 
-> **dbt Model:** [`fact_orders`](../../../transformation/models/marts/sales/fact_orders.sql)
+> **dbt Model:** [`fact_orders`](../../../transformation/models/core/marts/sales/fact_orders.sql)
 
 - **Business Definition:** Categorization of orders based on whether the customer has purchased before.
 - **Logic (SQL):**
@@ -540,7 +540,7 @@ WHERE c.customer_type = 'RETAIL'
 
 #### 12. Payment Status
 
-> **dbt Model:** [`fact_orders`](../../../transformation/models/marts/sales/fact_orders.sql)
+> **dbt Model:** [`fact_orders`](../../../transformation/models/core/marts/sales/fact_orders.sql)
 
 - **Business Definition:** Tracking of payment success/failure.
 - **Logic (SQL):**
@@ -589,7 +589,7 @@ WHERE c.customer_type = 'RETAIL'
 
 #### 13. Discount Impact
 
-> **dbt Model:** [`fact_orders`](../../../transformation/models/marts/sales/fact_orders.sql)
+> **dbt Model:** [`fact_orders`](../../../transformation/models/core/marts/sales/fact_orders.sql)
 > **Required Scope:** scope_retail (`customer_type = 'RETAIL'`)
 
 - **Business Definition:** Value of discounts given and percentage of orders discounted. **Chỉ áp dụng cho retail orders.**
@@ -613,7 +613,7 @@ WHERE c.customer_type = 'RETAIL'
 
 #### 14. Promotion Performance
 
-> **dbt Model:** [`fact_orders`](../../../transformation/models/marts/sales/fact_orders.sql)
+> **dbt Model:** [`fact_orders`](../../../transformation/models/core/marts/sales/fact_orders.sql)
 > **Required Scope:** scope_retail (`customer_type = 'RETAIL'`)
 
 - **Business Definition:** Revenue and usage by specific promotion campaign. **Chỉ áp dụng cho retail orders.**
@@ -669,7 +669,7 @@ WHERE c.customer_type = 'RETAIL'
 
 #### 15. Target Achievement Rate
 
-> **dbt Model:** [`fact_targets`](../../../transformation/models/marts/core/fact_targets.sql)
+> **dbt Model:** [`fact_targets`](../../../transformation/models/core/marts/fact_targets.sql)
 
 - **Business Definition:** Percentage of target achieved (Actual Revenue / Target Revenue) within a cycle.
 - **Logic (SQL):**
@@ -685,7 +685,7 @@ WHERE c.customer_type = 'RETAIL'
 
 #### 16. Variance to Target
 
-> **dbt Model:** [`fact_targets`](../../../transformation/models/marts/core/fact_targets.sql)
+> **dbt Model:** [`fact_targets`](../../../transformation/models/core/marts/fact_targets.sql)
 
 - **Business Definition:** Absolute difference between Actual and Target within a cycle.
 - **Logic (SQL):**
@@ -729,7 +729,7 @@ WHERE c.customer_type = 'RETAIL'
 
 #### 15. Sales by Region/Location
 
-> **dbt Model:** [`fact_orders`](../../../transformation/models/marts/sales/fact_orders.sql)
+> **dbt Model:** [`fact_orders`](../../../transformation/models/core/marts/sales/fact_orders.sql)
 
 - **Business Definition:** Revenue performance by geographic unit.
 - **Logic (SQL):**

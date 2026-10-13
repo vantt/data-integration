@@ -10,8 +10,8 @@
 |---|---|
 | Bucket của mọi dbt model (172 model, kể cả 10 model đang tắt) | ✅ Khai báo trong `scripts/checks/model_buckets.yaml` |
 | Ma trận phụ thuộc, import chéo, seed trùng tên, URL cứng trong connector | ✅ Cưỡng chế bằng `scripts/checks/check_boundaries.py` (mục 3, mục 12) |
-| Vi phạm đã biết | 24, ghi trong `scripts/checks/boundary_allowlist.yaml` kèm lý do và hướng thoát |
-| Thư mục dbt theo module (`connectors/`, `cdm/`, `core/`, `packs/`, `tenants/`) | ⏳ Đích; model vẫn nằm ở `staging/`, `intermediate/`, `marts/` |
+| Vi phạm đã biết | 61 = 24 phụ thuộc (mục 3) + 37 model tenant chưa dời thư mục, ghi trong `scripts/checks/boundary_allowlist.yaml` kèm lý do và hướng thoát |
+| Thư mục dbt theo module `models/<module>/<layer>/` | ✅ 134 model (connectors, cdm, core, packs) + monitoring; ⏳ 37 model `tenant:fine_japan` còn ở `staging/`, `intermediate/`, `marts/` cũ |
 | Connector package cho orchestration, tenant overlay, taxonomy module | ⏳ Đích (mục 4, 5, 9, 10) |
 
 Các mục dưới đây mô tả trạng thái đích; chỗ nào đã khớp code được đánh dấu ✅.
@@ -152,6 +152,37 @@ flowchart LR
 | `/home/vantt/app/fg-dw-shadow/` (mode 0700) | Công cụ `scripts/shadow/*` | Chỉ tạo từ backup; chứa PII nên xoá lake nhánh sau mỗi gate, xoá toàn bộ khi đóng plan |
 | Worktree `fg-dw-modular`, `fg-dw-baseline` | Người làm refactor | Không bao giờ mount vào container prod |
 | Checkout prod `/home/vantt/app/fg-dataware-house` | Chỉ runbook deploy | Mọi script shadow từ chối đường dẫn này (`guard_not_prod.py`) |
+
+## 2b. Bố cục thư mục dbt ✅
+
+```text
+transformation/models/
+├── connectors/
+│   ├── sapo_v2/staging/        # src_sapo_v2_* (incremental), stg_sapo_v2_*, _sources.yml
+│   ├── sapo_v2/intermediate/   # int_order_snapshots_ranked (đọc thẳng raw history log)
+│   ├── shopee/staging/  misa/staging/  gsheet/staging/
+│   └── facebook_ads/staging/  facebook_messenger/staging/      # đang tắt
+├── cdm/staging/                # std_* (canonical layer)
+├── core/
+│   ├── intermediate/{cogs,sapo,tags}/
+│   └── marts/                  # dim_* ; intermediate/ (int_customer_*), sales/, customer/, inventory/
+├── packs/
+│   ├── finance/{intermediate/misa,marts}/
+│   ├── marketplace/intermediate/shopee/
+│   └── facebook_ads/marts/  facebook_messenger/marts/          # đang tắt
+├── monitoring/
+├── staging/ intermediate/ marts/   # chỉ còn model tenant:fine_japan, sẽ dời vào tenants/fine_japan/
+├── sources.yml                 # nguồn của tenant (hug_raw, crm_export)
+└── exposures_rill.yml
+```
+
+Quy tắc:
+
+- **Module** = thư mục cấp 1 (theo bucket trong `scripts/checks/model_buckets.yaml`); luật `dbt-path` kiểm tra file nằm đúng `models/<module>/`.
+- **Layer** = thư mục cấp 2 (`staging`, `intermediate`, `marts`). `dbt_project.yml` cấu hình schema/materialization/tags theo layer bằng YAML anchor (`&layer_staging`, `&layer_intermediate`, `&layer_marts`) và mỗi module tái sử dụng anchor đó, nên relation không phụ thuộc module. Thư mục con `shopee/`, `misa/`, `us_shipment/` trong `intermediate/` mang tag `int` + tên nguồn.
+- Properties YAML nằm cạnh model: `_<module>__models.yml`; nguồn dbt của connector ở `connectors/<source>/staging/_sources.yml`.
+- Thư mục `rolling/<model>/` được tạo từ manifest (`transformation/scripts/rolling_dirs.py`), không phụ thuộc thư mục model.
+- Selection mà dagster-dbt gửi cho dbt dùng `fqn` (gồm thư mục), nên code server phải nạp manifest parse từ bố cục mới; lệnh start của container đã chạy `dbt parse` trước `dagster dev`.
 
 ## 3. Ma trận phụ thuộc giữa các module dbt ✅
 

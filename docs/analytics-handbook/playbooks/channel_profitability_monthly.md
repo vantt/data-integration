@@ -10,7 +10,7 @@
 
 ## Data Lineage
 
-- **Primary:** [`int_misa_sales_lines`](../../../transformation/models/intermediate/misa/int_misa_sales_lines.sql) — per-invoice-line with COGS, margin, channel enrichment
+- **Primary:** [`int_misa_sales_lines`](../../../transformation/models/packs/finance/intermediate/misa/int_misa_sales_lines.sql) — per-invoice-line with COGS, margin, channel enrichment
 - **Domain:** [Finance > COGS & Margin](../domains/finance.md#context-cogs--margin--misa-sales-ledger), [Product > Gross Margin](../domains/product.md#4-gross-margin-by-product)
 
 ## Reading Flow

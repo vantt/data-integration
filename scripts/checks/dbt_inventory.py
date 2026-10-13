@@ -62,7 +62,9 @@ def cmd_export(args: argparse.Namespace) -> int:
             "checksum": (n.get("checksum") or {}).get("checksum"),
             "tests": sorted(tests_per_node.get(uid, [])),
         }
-        inv[uid]["description"] = n.get("description", "")
+        # dbt strips trailing whitespace of a properties file, so a block that moves to the
+        # end of a file loses the final newline of a folded description: compare stripped.
+        inv[uid]["description"] = (n.get("description") or "").strip()
         inv[uid]["columns"] = sorted((n.get("columns") or {}).keys())
     json.dump(inv, open(args.out, "w"), indent=1, sort_keys=True, default=str)
     print(f"wrote {args.out}: {len(inv)} nodes")

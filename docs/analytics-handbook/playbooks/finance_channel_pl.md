@@ -10,9 +10,9 @@
 
 ## Data Lineage
 
-- **Order Economics:** [`fact_order_economics`](../../../transformation/models/marts/sales/fact_order_economics.sql) — per-order P&L with Sapo revenue, MISA COGS, and Shopee fees pre-joined. Grain: one row per order.
-- **MISA Sales Lines:** [`int_misa_sales_lines`](../../../transformation/models/intermediate/misa/int_misa_sales_lines.sql) — invoice-line COGS and gross profit. Used for COGS ratio cross-check.
-- **Channels:** [`dim_channels`](../../../transformation/models/marts/core/dim_channels.sql) — join on `channel_key` for `channel_name` and `is_sales_channel` filter.
+- **Order Economics:** [`fact_order_economics`](../../../transformation/models/core/marts/sales/fact_order_economics.sql) — per-order P&L with Sapo revenue, MISA COGS, and Shopee fees pre-joined. Grain: one row per order.
+- **MISA Sales Lines:** [`int_misa_sales_lines`](../../../transformation/models/packs/finance/intermediate/misa/int_misa_sales_lines.sql) — invoice-line COGS and gross profit. Used for COGS ratio cross-check.
+- **Channels:** [`dim_channels`](../../../transformation/models/core/marts/dim_channels.sql) — join on `channel_key` for `channel_name` and `is_sales_channel` filter.
 
 ## Key Coverage Constraint
 

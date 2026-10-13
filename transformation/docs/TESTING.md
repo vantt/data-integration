@@ -32,7 +32,7 @@ dbt tests ensure data quality at every layer of transformation. Tests run automa
 ### Schema-Level Tests
 
 ```yaml
-# models/staging/schema.yml
+# models/connectors/<source>/staging/_<source>__models.yml
 version: 2
 
 models:

@@ -680,7 +680,7 @@ Use to assess COGS coverage quality before relying on margin metrics. Low `cogs_
 
 **Definition:** Timestamp of a customer's first **active** order — i.e. the earliest `ordered_at` where `status NOT IN ('CANCELLED', 'DRAFT')`.
 
-**Computed in:** `transformation/models/marts/core/intermediate/int_customer_metrics.sql`, `customer_orders` CTE.
+**Computed in:** `transformation/models/core/marts/intermediate/int_customer_metrics.sql`, `customer_orders` CTE.
 
 **Use in SQL:** Compare to `fact_orders.ordered_at` to classify new vs returning customers in a period.
 

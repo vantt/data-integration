@@ -4,11 +4,30 @@
 
 > **Source versioning & the std gate (Sapo v2→v3):** before adding/changing any Sapo entity, read `docs/architecture/std-layer-conventions.md` (std gate rule, faithful pass-through, `_v2`/`_v3` suffix, std contract, checksum+fresh-run verification, never move raw/dlt state). Column/model names: `docs/architecture/naming-conventions.md`.
 
+## Module layout (read first)
+
+Models live in `models/<module>/<layer>/` (design: `docs/architecture/modules.md`):
+
+| Module folder | Bucket | Reads |
+|---|---|---|
+| `connectors/<source>/` | `connector:<source>` | its own dbt sources and models |
+| `cdm/` | `cdm` (the `std_*` canonical layer) | connectors |
+| `core/` | `core` | `cdm`, `core` |
+| `packs/<pack>/` | `pack:<pack>` | `cdm`, `core`, its declared connector |
+| `tenants/<tenant>/` | `tenant:<tenant>` | anything |
+
+The layer folder (`staging`, `intermediate`, `marts`) decides schema, materialization and tags
+through the layer anchors in `dbt_project.yml`; the module folder never does, so moving a model
+between modules keeps its relation. Every model is listed in `scripts/checks/model_buckets.yaml`
+and `python3 scripts/checks/check_boundaries.py --manifest target/manifest.json` must pass.
+Models of `tenant:fine_japan` still sit in the old top-level `staging/`, `intermediate/`,
+`marts/` folders until the tenant overlay is moved.
+
 ## Core Mandates
 
 ### 1. Mart Location Configuration (CRITICAL)
 
-All models in `models/marts/` MUST explicitly define their export location to support the Serving Layer (Rolling Snapshots).
+All models in a `marts/` layer folder (`models/*/marts/`, `models/packs/*/marts/`, ...) that are served MUST explicitly define their export location to support the Serving Layer (Rolling Snapshots).
 
 - **Pattern**: `location="{{ get_rolling_location() }}"`
 - **Location**: Inside the `{{ config(...) }}` block of the `.sql` file.
@@ -38,21 +57,21 @@ SELECT ...
 When creating or Fixing a model, **ALWAYS** comparison against a working "Golden Sample" in the same directory.
 
 - **Action**: Run `diff` or visually compare with a sibling file.
-- **Example**: If creating `dim_new.sql` in `models/marts/core/`, compare it with `dim_products.sql` or `dim_staff.sql` to verify config patterns.
+- **Example**: If creating `dim_new.sql` in `models/core/marts/`, compare it with `dim_products.sql` or `dim_staff.sql` to verify config patterns.
 
 ### 3. Materialization Rules
 
-- **Sources (`models/staging/src_*`)**:
+- **Sources (`models/connectors/<source>/staging/src_*`)**:
   - Default: `incremental` (delete+insert)
   - Purpose: JSON extraction + dedup from raw parquet. Output flat columns, no payload.
-- **Staging (`models/staging/stg_*`)**:
+- **Staging (`models/connectors/<source>/staging/stg_*`)**:
   - Default: `view`
   - Purpose: Enrichment joins, unnest. Reads from src_ (flat data). Lightweight.
-- **Intermediate (`models/intermediate/`)**:
+- **Intermediate (`models/<module>/intermediate/`)**:
   - Default: `ephemeral` or `table` (if reused heavily).
   - Purpose: Business logic, heavy joins.
   - **Note**: Intermediate models are NOT exported to the data lake for Serving.
-- **Marts (`models/marts/`)**:
+- **Marts (`models/<module>/marts/`)**:
   - Default: `external` (Parquet).
   - Required Config: `location="{{ get_rolling_location() }}"`.
   - Purpose: Final BI tables.

@@ -10,12 +10,12 @@
 
 ## Data Lineage
 
-- **Returns:** [`fact_order_returns`](../../../transformation/models/marts/sales/fact_order_returns.sql) — per-return event with refund amount, reason, channel, and timestamps
-- **Returns × SKU (approximate):** [`int_return_sku_lines`](../../../transformation/models/intermediate/sapo/int_return_sku_lines.sql) — Case B approximation: all SKUs present in returned orders, refund proportional by line revenue. **Not exact per-SKU accounting.**
-- **Orders (for rate/cohort):** [`fact_orders`](../../../transformation/models/marts/sales/fact_orders.sql) — join on `order_code` to get total order volume and order date
-- **Sales lines (denominator for SKU rate):** [`fact_sales`](../../../transformation/models/marts/sales/fact_sales.sql) — units sold per SKU per period
-- **Products:** [`dim_products`](../../../transformation/models/marts/core/dim_products.sql) — SKU code, product name
-- **Channels:** [`dim_channels`](../../../transformation/models/marts/core/dim_channels.sql) — join on `channel_key` for channel name and `is_sales_channel` filter
+- **Returns:** [`fact_order_returns`](../../../transformation/models/core/marts/sales/fact_order_returns.sql) — per-return event with refund amount, reason, channel, and timestamps
+- **Returns × SKU (approximate):** [`int_return_sku_lines`](../../../transformation/models/core/intermediate/sapo/int_return_sku_lines.sql) — Case B approximation: all SKUs present in returned orders, refund proportional by line revenue. **Not exact per-SKU accounting.**
+- **Orders (for rate/cohort):** [`fact_orders`](../../../transformation/models/core/marts/sales/fact_orders.sql) — join on `order_code` to get total order volume and order date
+- **Sales lines (denominator for SKU rate):** [`fact_sales`](../../../transformation/models/core/marts/sales/fact_sales.sql) — units sold per SKU per period
+- **Products:** [`dim_products`](../../../transformation/models/core/marts/dim_products.sql) — SKU code, product name
+- **Channels:** [`dim_channels`](../../../transformation/models/core/marts/dim_channels.sql) — join on `channel_key` for channel name and `is_sales_channel` filter
 
 ## Domain Metrics
 

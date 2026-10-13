@@ -22,7 +22,7 @@ Logistics domain bao gồm 5 contexts:
 ## Context: Order Processing & Fulfillment
 
 > **Description:** Hiệu quả xử lý đơn từ lúc tạo đơn đến lần xuất kho đầu tiên. Đo tốc độ pipeline ở cấp độ đơn hàng, chưa quan tâm chi tiết từng shipment.
-> **dbt Source:** [`fact_orders`](../../../transformation/models/marts/sales/fact_orders.sql) (join `std_fulfillments` qua `first_shipped_at`)
+> **dbt Source:** [`fact_orders`](../../../transformation/models/core/marts/sales/fact_orders.sql) (join `std_fulfillments` qua `first_shipped_at`)
 > **Grain:** Per Order
 
 ### Context Overview
@@ -79,7 +79,7 @@ Logistics domain bao gồm 5 contexts:
 
 #### 1. Tỷ lệ xuất kho (Fulfillment Rate)
 
-> **dbt Source:** [`fact_orders`](../../../transformation/models/marts/sales/fact_orders.sql)
+> **dbt Source:** [`fact_orders`](../../../transformation/models/core/marts/sales/fact_orders.sql)
 
 - **Business Definition:** Phần trăm đơn eligible (đã có ít nhất 1 fulfillment với status `fulfilled`) trên tổng đơn được tạo trong kỳ. Loại DRAFT và CANCELLED khỏi mẫu số vì không thuộc pipeline fulfillment.
 - **Business Logic:** Grain per order. Numerator = COUNT đơn có `fulfillment_status = 'fulfilled'`. Denominator = COUNT đơn `status NOT IN ('DRAFT', 'CANCELLED')`. Time basis = `ordered_at` (ICT).
@@ -96,7 +96,7 @@ Logistics domain bao gồm 5 contexts:
 
 #### 2. Thời gian xuất kho (Order Cycle Time — Hours to First Ship)
 
-> **dbt Source:** [`fact_orders`](../../../transformation/models/marts/sales/fact_orders.sql) (join `std_fulfillments` qua `first_shipped_at`)
+> **dbt Source:** [`fact_orders`](../../../transformation/models/core/marts/sales/fact_orders.sql) (join `std_fulfillments` qua `first_shipped_at`)
 
 - **Business Definition:** Thời gian trung bình (giờ) từ lúc tạo đơn (`ordered_at`) đến lần fulfillment thành công đầu tiên (`first_shipped_at`). Chỉ tính đơn đã ship — đơn chưa ship loại khỏi mẫu.
 - **Business Logic:** Grain per order. AVG của `date_diff('hour', ordered_at, first_shipped_at)` với `first_shipped_at IS NOT NULL`. Loại DRAFT, CANCELLED.
@@ -113,7 +113,7 @@ Logistics domain bao gồm 5 contexts:
 
 #### 3. Tỷ lệ ship cùng ngày (Same-Day Ship Rate)
 
-> **dbt Source:** [`fact_orders`](../../../transformation/models/marts/sales/fact_orders.sql)
+> **dbt Source:** [`fact_orders`](../../../transformation/models/core/marts/sales/fact_orders.sql)
 
 - **Business Definition:** Phần trăm đơn được xuất kho cùng calendar date (ICT) với ngày tạo đơn. Đo lường khả năng same-day fulfillment — KPI quan trọng với khách online và marketplaces.
 - **Business Logic:** Grain per order. Numerator = COUNT đơn `CAST(first_shipped_at AS DATE) = CAST(ordered_at AS DATE)`. Denominator = COUNT đơn đã ship (`first_shipped_at IS NOT NULL`).
@@ -130,7 +130,7 @@ Logistics domain bao gồm 5 contexts:
 
 #### 4. Thời gian hoàn thành đơn (Time to Complete)
 
-> **dbt Source:** [`fact_orders`](../../../transformation/models/marts/sales/fact_orders.sql)
+> **dbt Source:** [`fact_orders`](../../../transformation/models/core/marts/sales/fact_orders.sql)
 
 - **Business Definition:** Thời gian trung bình (giờ) từ tạo đơn đến lúc đơn chuyển sang `status = 'COMPLETED'` — đo end-to-end vòng đời đơn hàng (bao gồm ship + giao + thanh toán).
 - **Business Logic:** Grain per order. AVG của `time_to_complete_hours` (pre-computed trong `fact_orders`). Chỉ tính đơn `status = 'COMPLETED'`.
@@ -150,7 +150,7 @@ Logistics domain bao gồm 5 contexts:
 ## Context: Shipment Operations
 
 > **Description:** Phân tích cấp độ từng shipment (1 đơn có thể có nhiều shipment khi partial fulfillment). Trả lời câu hỏi về volume shipment, multi-shipment rate, và phân bố status real-time.
-> **dbt Source:** [`std_fulfillments`](../../../transformation/models/staging/standard/std_fulfillments.sql) — `fact_shipments` (planned)
+> **dbt Source:** [`std_fulfillments`](../../../transformation/models/cdm/staging/std_fulfillments.sql) — `fact_shipments` (planned)
 > **Grain:** Per Shipment
 
 ### Context Overview
@@ -420,7 +420,7 @@ Logistics domain bao gồm 5 contexts:
 #### 13. Tỷ lệ trả hàng theo carrier (Return Rate by Carrier)
 
 > **Status:** `planned`
-> **dbt Source:** [`fact_order_returns`](../../../transformation/models/marts/sales/fact_order_returns.sql) JOIN `fact_shipments` JOIN `dim_carriers` (planned)
+> **dbt Source:** [`fact_order_returns`](../../../transformation/models/core/marts/sales/fact_order_returns.sql) JOIN `fact_shipments` JOIN `dim_carriers` (planned)
 
 - **Business Definition:** Phần trăm shipment được giao thành công nhưng sau đó bị trả lại, breakdown theo carrier. Bổ sung Failed Delivery Rate để đánh giá overall carrier quality (failed + returned = total bad outcome).
 - **Business Logic:** Grain per carrier per period. Numerator = COUNT returns join với shipments của carrier. Denominator = COUNT shipments DELIVERED của carrier (cohort matching: returns trong N ngày sau shipped_at).
@@ -446,7 +446,7 @@ Logistics domain bao gồm 5 contexts:
 ## Context: Shipment Cost & COD
 
 > **Description:** Khía cạnh tài chính của shipment — chi phí ship, COD outstanding (tiền hộ thu), tác động subsidy từ marketplace. Liên kết logistics với finance domain.
-> **dbt Source:** `std_fulfillments` (COD) + [`stg_shopee_order_revenue`](../../../transformation/models/staging/stg_shopee_order_revenue.sql) (shipping fee components) — `fact_shipments` (planned)
+> **dbt Source:** `std_fulfillments` (COD) + [`stg_shopee_order_revenue`](../../../transformation/models/connectors/shopee/staging/stg_shopee_order_revenue.sql) (shipping fee components) — `fact_shipments` (planned)
 > **Grain:** Per Shipment
 
 ### Context Overview
@@ -522,7 +522,7 @@ Logistics domain bao gồm 5 contexts:
 #### 16. Chi phí shipping (Shipping Cost as % Revenue)
 
 > **Status:** `planned`
-> **dbt Source:** [`stg_shopee_order_revenue`](../../../transformation/models/staging/stg_shopee_order_revenue.sql) (Shopee components — `active`) + Sapo carrier rate seed (planned). Aggregate mart `fact_shipments` chưa tồn tại nên metric tổng hợp đa kênh `planned`.
+> **dbt Source:** [`stg_shopee_order_revenue`](../../../transformation/models/connectors/shopee/staging/stg_shopee_order_revenue.sql) (Shopee components — `active`) + Sapo carrier rate seed (planned). Aggregate mart `fact_shipments` chưa tồn tại nên metric tổng hợp đa kênh `planned`.
 
 - **Business Definition:** Phần trăm doanh thu (gross revenue) bị tiêu cho phí shipping ròng (sau subsidy từ marketplace, sau khi trừ phần khách trả). Đo hiệu quả shipping economics — quá cao = ăn margin.
 - **Business Logic:** Numerator = SUM `total_shipping_net` (Shopee đã pre-compute từ 6 components: paid_by_buyer + actual + subsidy + return_refund + refund_by_piship + failed_delivery; dấu của từng component theo quy ước Shopee). Denominator = SUM `gross_revenue`. Time basis = `order_placed_at`. Sapo cần seed base rate per carrier × destination để cộng thêm trước khi aggregate đa kênh.
@@ -538,12 +538,12 @@ Logistics domain bao gồm 5 contexts:
   ```
 - **Unit:** %
 - **Classification:** lagging | relative
-- **Common Misunderstandings:** "Shipping fee paid by buyer" KHÔNG phải chi phí của shop — đó là revenue offset (khách trả thay). `total_shipping_net` là tổng đại số 6 components theo dấu quy ước Shopee; cần đọc semantic mỗi component trong [`stg_shopee_order_revenue`](../../../transformation/models/staging/stg_shopee_order_revenue.sql) trước khi diễn giải.
+- **Common Misunderstandings:** "Shipping fee paid by buyer" KHÔNG phải chi phí của shop — đó là revenue offset (khách trả thay). `total_shipping_net` là tổng đại số 6 components theo dấu quy ước Shopee; cần đọc semantic mỗi component trong [`stg_shopee_order_revenue`](../../../transformation/models/connectors/shopee/staging/stg_shopee_order_revenue.sql) trước khi diễn giải.
 - **Pitfalls / Edge Cases:** Sapo offline POS không có shipping cost (khách tự lấy) — phải filter ra hoặc tính 0. Subsidy có thể âm (Shopee charge phụ phí thay vì subsidy) — phải verify dấu trong từng kỳ. Cross-channel aggregate cần `fact_shipments` để align grain và normalize cost basis.
 
 #### 17. Tỷ lệ trả hàng (Return Rate)
 
-> **dbt Source:** [`fact_order_returns`](../../../transformation/models/marts/sales/fact_order_returns.sql) JOIN [`fact_orders`](../../../transformation/models/marts/sales/fact_orders.sql)
+> **dbt Source:** [`fact_order_returns`](../../../transformation/models/core/marts/sales/fact_order_returns.sql) JOIN [`fact_orders`](../../../transformation/models/core/marts/sales/fact_orders.sql)
 
 - **Business Definition:** Phần trăm đơn đã ship bị trả lại trong N ngày (mặc định 30). Đo lường mức độ unsatisfactory delivery — bao gồm cả lỗi sản phẩm, khách đổi ý, damage in transit.
 - **Business Logic:** Grain per order. Numerator = COUNT DISTINCT order_id có return record trong window. Denominator = COUNT DISTINCT order_id đã ship (`first_shipped_at IS NOT NULL`). Window thường 30 ngày sau ship.
@@ -566,7 +566,7 @@ Logistics domain bao gồm 5 contexts:
 ## Context: Staff & Operations
 
 > **Description:** Hiệu suất nhân viên xử lý đơn — ai làm nhanh nhất, ai nhiều nhất, có balanced không. Hỗ trợ workforce planning và staff incentive.
-> **dbt Source:** [`fact_orders`](../../../transformation/models/marts/sales/fact_orders.sql) JOIN [`dim_staff`](../../../transformation/models/marts/core/dim_staff.sql)
+> **dbt Source:** [`fact_orders`](../../../transformation/models/core/marts/sales/fact_orders.sql) JOIN [`dim_staff`](../../../transformation/models/core/marts/dim_staff.sql)
 > **Grain:** Per Staff per Day
 
 ### Context Overview
@@ -603,7 +603,7 @@ Logistics domain bao gồm 5 contexts:
 
 #### 18. Năng suất nhân viên (Staff Productivity)
 
-> **dbt Source:** [`fact_orders`](../../../transformation/models/marts/sales/fact_orders.sql) JOIN [`dim_staff`](../../../transformation/models/marts/core/dim_staff.sql)
+> **dbt Source:** [`fact_orders`](../../../transformation/models/core/marts/sales/fact_orders.sql) JOIN [`dim_staff`](../../../transformation/models/core/marts/dim_staff.sql)
 
 - **Business Definition:** Số đơn được xử lý bởi mỗi nhân viên trong kỳ phân tích, kèm thời gian xử lý trung bình. Đo workload + speed ở grain nhân viên.
 - **Business Logic:** Grain per staff per period. COUNT DISTINCT `order_id` GROUP BY `seller_staff_key`. AVG `time_to_complete_hours` cho speed dimension. Loại DRAFT, CANCELLED khỏi mẫu.
@@ -627,7 +627,7 @@ Logistics domain bao gồm 5 contexts:
 
 #### 19. Funnel trạng thái đơn (Order Status Funnel)
 
-> **dbt Source:** [`fact_orders`](../../../transformation/models/marts/sales/fact_orders.sql)
+> **dbt Source:** [`fact_orders`](../../../transformation/models/core/marts/sales/fact_orders.sql)
 
 - **Business Definition:** Số đơn ở từng stage của pipeline (OPEN → COMPLETED → ARCHIVED → CANCELLED). Funnel visualization để phát hiện drop-off bất thường.
 - **Business Logic:** Grain per order. COUNT GROUP BY `status`. Loại DRAFT (chưa vào pipeline). Có 2 mode: snapshot (status hiện tại) hoặc cohort (đơn tạo trong kỳ, status cuối).

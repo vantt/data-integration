@@ -1,6 +1,6 @@
 # dbt schema.yml template — Tests by Layer
 #
-# Thêm vào: transformation/models/staging/schema.yml hoặc marts/schema.yml
+# Thêm vào file properties cạnh model: transformation/models/<module>/<layer>/_<module>__models.yml
 #
 # Thay thế:
 #   {source}, {entity}, {biz_key}, {fk_entity}, {status_values}

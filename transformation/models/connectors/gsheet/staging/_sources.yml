@@ -1,0 +1,28 @@
+version: 2
+
+sources:
+
+  - name: gsheet_raw
+    schema: main
+    meta:
+      external_location: "read_parquet('{{ env_var('DBT_DATA_LAKE_PATH') }}/gsheet_raw/{name}/ingest_method=*/**/*.parquet', hive_partitioning=1, union_by_name=true)"
+    tables:
+      - name: targets_raw
+        description: "Target goals ingested from Google Sheets"
+      - name: marketing_spend_raw
+        description: "Marketing spend data ingested from Google Sheets"
+      - name: teams_raw
+        description: "Team definitions with revenue_type and revenue_filter"
+      - name: team_members_raw
+        description: "Staff membership with SCD2 (effective_from/to)"
+      - name: us_shipment_prices_raw
+        description: "SKU-level US export deal prices with effective_from date versioning. Sapo records US prices as 0; this is the source of truth."
+      - name: overhead_account_classification_raw
+        description: >
+          MISA overhead sub-account classification rules — source of truth for how each
+          6421/6422 leaf account is treated in the P&L. treatment ∈ {keep_admin,
+          keep_handling, keep_marketing, keep_selling, drop_traceable,
+          drop_promo_count_once}. keep_* accounts are pooled and allocated to channels
+          via base_metric (net_revenue | order_count | gross_profit). Loaded nightly
+          via full snapshot overwrite.
+

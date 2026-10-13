@@ -373,7 +373,7 @@ Domain (WHY)       docs/analytics-handbook/domains/
     ↓ drives
 Semantic (WHAT)    docs/analytics-handbook/semantic/    ← single source of truth
     ↓ constrains
-Transformation     transformation/models/marts/          ← implements as columns
+Transformation     transformation/models/<module>/marts/ ← implements as columns
 Rill               rill/metrics/*.yaml                   ← implements as measures
 Metabase           docs/analytics-handbook/blueprints/   ← consumes columns
 Detail View        detailView/                           ← consumes mart views

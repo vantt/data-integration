@@ -93,7 +93,7 @@ graph TD
 
 ### Layer 1: Staging (Cleaning & Extraction)
 
-_Path: `models/staging/sapo/`_
+_Path: `models/connectors/sapo_v2/staging/`_
 
 | Entity                   | Description                          | Key Transformations                                                                              |
 | :----------------------- | :----------------------------------- | :----------------------------------------------------------------------------------------------- |
@@ -109,7 +109,7 @@ _Path: `models/staging/sapo/`_
 
 ### Layer 2: Standard (Business Logic)
 
-_Path: `models/staging/standard/`_
+_Path: `models/cdm/staging/`_
 
 | Entity              | Description                       | Key Logic                                                                                                                       |
 | :------------------ | :-------------------------------- | :------------------------------------------------------------------------------------------------------------------------------ |
@@ -122,7 +122,7 @@ _Path: `models/staging/standard/`_
 
 ### Layer 3: Marts / Dimensions
 
-_Path: `models/marts/core/`_
+_Path: `models/core/marts/`_
 
 | Dimension               | Type          | Source              | Logic                                                                                                           |
 | :---------------------- | :------------ | :------------------ | :-------------------------------------------------------------------------------------------------------------- |
@@ -136,7 +136,7 @@ _Path: `models/marts/core/`_
 
 ### Layer 3: Marts / Facts
 
-_Path: `models/marts/sales/`_
+_Path: `models/core/marts/sales/`_
 
 | Fact            | Grain      | Purpose                          | Key Metrics                                                  |
 | :-------------- | :--------- | :------------------------------- | :----------------------------------------------------------- |

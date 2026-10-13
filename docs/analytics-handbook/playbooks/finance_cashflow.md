@@ -17,9 +17,9 @@
 
 ## Data Lineage
 
-- **Core Model:** [`fact_cash_movement`](../../../transformation/models/marts/finance/fact_cash_movement.sql) — 1 row per MISA cash journal line (111x/112x accounts). Built and validated (phase-03).
-- **Balance Model:** [`fact_account_balance_monthly`](../../../transformation/models/marts/finance/fact_account_balance_monthly.sql) — opening/closing balance per (account_code, period_month). **Planned phase-02** — needed for zero-movement months.
-- **Dimension:** [`dim_gl_account`](../../../transformation/models/marts/core/dim_gl_account.sql) — account_code, cashflow_line taxonomy, is_cash flag.
+- **Core Model:** [`fact_cash_movement`](../../../transformation/models/packs/finance/marts/fact_cash_movement.sql) — 1 row per MISA cash journal line (111x/112x accounts). Built and validated (phase-03).
+- **Balance Model:** [`fact_account_balance_monthly`](../../../transformation/models/packs/finance/marts/fact_account_balance_monthly.sql) — opening/closing balance per (account_code, period_month). **Planned phase-02** — needed for zero-movement months.
+- **Dimension:** [`dim_gl_account`](../../../transformation/models/packs/finance/marts/dim_gl_account.sql) — account_code, cashflow_line taxonomy, is_cash flag.
 - **Key rule:** `is_internal_transfer = TRUE` rows are HARDCODED-excluded from all thu/chi totals. These are intra-fund transfers between 111/112 accounts that net to zero and must never appear in user-visible inflow/outflow numbers.
 
 ## Key Business Questions

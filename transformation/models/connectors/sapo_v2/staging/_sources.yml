@@ -1,0 +1,78 @@
+version: 2
+
+sources:
+  - name: sapo_v2_raw
+    schema: main
+    # Cấu hình Meta chung cho Source này
+    # Tự động map tên bảng vào đường dẫn: external_location: Quy định cách DuckDB đọc file.
+    # ingest_method=*/**/*.parquet nghĩa là đọc đệ quy tất cả file parquet trong các thư mục partition hợp lệ,
+    # qua đó bỏ qua các thư mục log nội bộ như _delta_log.
+    meta:
+      external_location: "read_parquet('{{ env_var('DBT_DATA_LAKE_PATH') }}/sapo_v2_raw/{name}/ingest_method=*/**/*.parquet', hive_partitioning=1, union_by_name=true)"
+
+    tables:
+      # Bảng 1: Orders
+      - name: order
+        description: >
+          Raw orders data from Parquet files. IMPORTANT: Sapo selling prices are VAT-INCLUSIVE.
+          $.total (total_amount) is the gross amount after discount with VAT already embedded — it is NOT pre-tax.
+          $.total_tax (vat_amount) is the VAT embedded inside $.total: 8/108 for 8%-VAT items,
+          10/110 for 10%-VAT items, 0 for exports/non-VAT items. It is NOT added on top.
+          Net revenue (VAT-exclusive) = total_amount - vat_amount.
+          ~60% of orders carry tax=0 (US/export channel + retail orders with no recorded VAT); for those net_revenue = total_amount.
+        columns:
+          - name: payload
+            description: >
+              Full Sapo order JSON snapshot. Key financial fields:
+              $.total → total_amount (VAT-inclusive gross after discount; cash collected from customer — do NOT add tax on top),
+              $.total_tax → vat_amount (VAT embedded in $.total; computed by Sapo as 8/108 or 10/110 per order),
+              $.total_discount → total_discount_amount (total discount applied).
+
+      # Bảng 2: Customers
+      - name: customer
+        description: "Raw customers data from Parquet files"
+
+      # Bảng 3: Accounts (Staff)
+      - name: account
+        description: "Raw accounts/staff data from Parquet files"
+
+      # Bảng 4: Products
+      - name: product
+        description: "Raw products data from Parquet files"
+
+      # Bảng 5: Fulfillments (history_log — packing slips with nested shipment)
+      - name: fulfillment
+        description: "Raw fulfillment/shipment data from history log"
+
+      # Bảng 6: Purchase Orders (history_log — supplier orders)
+      - name: purchase_order
+        description: "Raw purchase order data from history log"
+
+      # Bảng 7: Order Returns (history_log)
+      - name: order_return
+        description: "Raw order return data from history log"
+
+      # Bảng 8: Stock Adjustments (history_log — inventory adjustments)
+      - name: stock_adjustment
+        description: "Raw stock adjustment data from history log"
+
+      # Bảng 9: Customer Groups (history_log — customer segmentation)
+      - name: customer_group
+        description: "Raw customer group data from history log"
+
+      # Bảng 10: Price Lists (history_log)
+      - name: price_list
+        description: "Raw price list data from history log"
+
+      # Bảng 11: Inventory Transactions v2 (batch_sync parquet, content-addressed entity_id)
+      - name: inventory_transaction_v2
+        description: >
+          Raw inventory in/out transactions from Sapo (batch_sync ingest). Grain: 1 row per
+          document × product line (e.g., one line per SKU on a sales order, purchase order, or
+          stock adjustment that moved inventory). entity_id is CONTENT-ADDRESSED (SHA of payload):
+          identical re-fetches collapse; any field change (incl. onhand running balance) produces
+          a distinct row. onhand = running stock balance at the moment of the transaction.
+          import_amount / export_amount are the stock-value movements; mac = moving-average cost
+          at transaction time; total_mac = cumulative MAC after the transaction.
+          Business-grain dedup (e.g., last onhand per document) is deferred to the std layer.
+

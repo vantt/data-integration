@@ -5,11 +5,12 @@
 Run it from a full checkout (host), not inside the data_platform container: crm/ and
 detailView/ are not mounted there and a missing tree is reported as a violation.
 
-Rules (design: docs/architecture/modules.md §3 and §12):
+Rules (design: docs/architecture/modules.md §2b, §3 and §12):
 
   py-import       crm/ and detailView/ must not import orchestration, ingestion or
                   transformation; ingestion/ must not import orchestration.
   dbt-bucket      every dbt model (enabled or disabled) has a bucket in model_buckets.yaml.
+  dbt-path        a model's file lives under models/<module folder of its bucket>/.
   dbt-ref         a model may only depend on models allowed by the bucket matrix below.
   dbt-source      only connector:* and tenant:* models read dbt sources.
   seed-duplicate  no two seed CSVs under transformation/seeds/ share a basename (dbt would
@@ -104,6 +105,13 @@ def _allowed(src_bucket: str, dst_bucket: str, pack_connectors: dict) -> bool:
     return False
 
 
+def _module_dir(bucket: str) -> str | None:
+    if bucket in ("core", "cdm", "monitoring"):
+        return bucket
+    kind, _, name = bucket.partition(":")
+    return {"connector": f"connectors/{name}", "pack": f"packs/{name}", "tenant": f"tenants/{name}"}.get(kind)
+
+
 def dbt_violations(manifest: dict, spec: dict) -> list[tuple[str, str, str]]:
     buckets: dict = spec["buckets"]
     pack_connectors = spec.get("pack_connectors", {})
@@ -118,6 +126,10 @@ def dbt_violations(manifest: dict, spec: dict) -> list[tuple[str, str, str]]:
             out.append(("dbt-bucket", name, "no bucket in model_buckets.yaml"))
             continue
         src_b = buckets[name]
+        expected = _module_dir(src_b)
+        path = n.get("original_file_path", "")
+        if expected and not path.startswith(f"models/{expected}/"):
+            out.append(("dbt-path", name, f"{path} not under models/{expected}/"))
         for dep in n.get("depends_on", {}).get("nodes", []):
             kind, dep_name = dep.split(".")[0], dep.split(".")[-1]
             if kind == "source":

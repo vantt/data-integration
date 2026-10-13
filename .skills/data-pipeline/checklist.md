@@ -65,9 +65,11 @@ Thay thế trước khi dùng:
       - name: {entity}
   ```
 
+> **Bố cục module** (`docs/architecture/modules.md`): model nằm ở `transformation/models/<module>/<layer>/`. Module = `connectors/<source>`, `cdm`, `core`, `packs/<pack>`, `tenants/<tenant>`; layer = `staging` | `intermediate` | `marts` (layer quyết định schema/materialization/tags). Mỗi model mới phải được thêm vào `scripts/checks/model_buckets.yaml` và pass `python3 scripts/checks/check_boundaries.py`.
+
 ### 3.2 src_ Model (Incremental + Dedup)
 
-- [ ] Tạo `transformation/models/staging/src_{source}_{entity}.sql` từ `templates/src-model-template.sql`
+- [ ] Tạo `transformation/models/connectors/{source}/staging/src_{source}_{entity}.sql` từ `templates/src-model-template.sql`
 - [ ] Extract tất cả scalar JSON fields cần thiết
 - [ ] Giữ nested arrays as `{field}_json` text nếu downstream cần unnest
 - [ ] Test:
@@ -79,23 +81,23 @@ Thay thế trước khi dùng:
 ### 3.3 stg_ Model (Enrichment, View) — Optional
 
 Tạo nếu cần enrichment joins (ref tables, cross-entity):
-- [ ] Tạo `transformation/models/staging/stg_{source}_{entity}.sql` (view)
+- [ ] Tạo `transformation/models/connectors/{source}/staging/stg_{source}_{entity}.sql` (view)
 - [ ] Chỉ đọc từ `src_{source}_{entity}` (không đọc lại source)
 - [ ] LEFT JOIN ref seeds nếu cần
 
 ### 3.4 std_ Model (Golden Layer) — Optional
 
 Tạo nếu consolidate multiple sources:
-- [ ] Tạo `transformation/models/staging/standard/std_{entity}.sql`
+- [ ] Tạo `transformation/models/cdm/staging/std_{entity}.sql` (core/packs chỉ đọc tầng này, không đọc `stg_*`)
 - [ ] Normalize field names, status values, cast types
 
 ### 3.5 Mart Models (dim_/fact_)
 
-- [ ] Tạo `transformation/models/marts/{domain}/dim_{entity}.sql` từ `templates/dim-model-template.sql`
+- [ ] Tạo `transformation/models/core/marts/{domain}/dim_{entity}.sql` (hoặc `packs/<pack>/marts/`, `tenants/<tenant>/marts/`) từ `templates/dim-model-template.sql`
 - [ ] **CRITICAL:** Phải có `location="{{ get_rolling_location() }}"` trong config
 - [ ] Thêm Unknown row UNION ALL
 - [ ] Dùng `dbt_utils.generate_surrogate_key` cho PK
-- [ ] Tạo `transformation/models/marts/{domain}/fact_{process}.sql` từ `templates/fact-model-template.sql` nếu cần
+- [ ] Tạo `transformation/models/core/marts/{domain}/fact_{process}.sql` (hoặc module tương ứng) từ `templates/fact-model-template.sql` nếu cần
 - [ ] Pre-create rolling dirs:
   ```bash
   python scripts/ensure_dbt_directories.py
@@ -103,7 +105,7 @@ Tạo nếu consolidate multiple sources:
 
 ### 3.6 Tests
 
-- [ ] Thêm tests vào `transformation/models/staging/schema.yml` và `marts/schema.yml` từ `templates/schema-yml-template.yml`:
+- [ ] Thêm tests vào file properties của thư mục chứa model (`_<module>__models.yml`) từ `templates/schema-yml-template.yml`:
   - `unique` + `not_null` trên primary key
   - `relationships` cho foreign keys trong facts
   - `accepted_values` cho status fields

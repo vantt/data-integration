@@ -97,7 +97,7 @@ Tags are ingested as part of the order payload via dlt pipelines:
 `src_sapo_orders` extracts tags as VARCHAR:
 
 ```sql
--- transformation/models/staging/src_sapo_orders.sql (line 151)
+-- transformation/models/connectors/sapo_v2/staging/src_sapo_v2_orders.sql
 json_extract_string(payload, '$.tags') as tags
 ```
 
@@ -108,7 +108,7 @@ json_extract_string(payload, '$.tags') as tags
 `int_order_tags` unnests and categorizes:
 
 ```sql
--- transformation/models/intermediate/int_order_tags.sql
+-- transformation/models/core/intermediate/tags/int_order_tags.sql
 SELECT
     order_id,
     tag_value,

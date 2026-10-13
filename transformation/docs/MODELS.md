@@ -1,5 +1,7 @@
 # Model Catalog
 
+> Models live in `models/<module>/<layer>/` (see `docs/architecture/modules.md`). Some model names below predate later renames; the authoritative list of models and their module is `scripts/checks/model_buckets.yaml`.
+
 > Complete catalog of dbt models and their dependencies
 
 ## Model Overview
@@ -45,7 +47,7 @@
 
 **Type:** Source Extraction
 **Materialization:** Incremental (delete+insert)
-**Path:** `models/staging/src_sapo_orders_v2.sql`
+**Path:** `models/connectors/sapo_v2/staging/src_sapo_orders_v2.sql`
 **Tags:** source, sapo
 **unique_key:** `order_id`
 
@@ -81,7 +83,7 @@
 
 **Type:** Staging
 **Materialization:** View
-**Path:** `models/staging/stg_sapo_orders_v2.sql`
+**Path:** `models/connectors/sapo_v2/staging/stg_sapo_orders_v2.sql`
 **Tags:** staging, orders
 
 **Purpose:** Enrichment joins only. All dedup already done in src_sapo_orders_v2.
@@ -110,7 +112,7 @@ All columns from src_sapo_orders_v2 plus:
 
 **Type:** Staging
 **Materialization:** View
-**Path:** `models/staging/stg_sapo_customers_v2.sql`
+**Path:** `models/connectors/sapo_v2/staging/stg_sapo_customers_v2.sql`
 **Tags:** staging, customers, otp
 
 **Output Columns:**
@@ -131,7 +133,7 @@ All columns from src_sapo_orders_v2 plus:
 
 **Type:** Staging
 **Materialization:** View
-**Path:** `models/staging/stg_sapo_accounts.sql`
+**Path:** `models/connectors/sapo_v2/staging/stg_sapo_accounts.sql`
 **Tags:** staging, accounts
 
 **Output Columns:**
@@ -151,7 +153,7 @@ All columns from src_sapo_orders_v2 plus:
 
 **Type:** Intermediate
 **Materialization:** Ephemeral
-**Path:** `models/intermediate/int_orders_enriched.sql`
+**Path:** `models/core/intermediate/int_orders_enriched.sql`
 
 **Purpose:** Enrich orders with customer and geography data.
 
@@ -176,7 +178,7 @@ All columns from src_sapo_orders_v2 plus:
 
 **Type:** Intermediate
 **Materialization:** Ephemeral
-**Path:** `models/intermediate/int_order_items.sql`
+**Path:** `models/core/intermediate/int_order_items.sql`
 
 **Purpose:** Flatten order line items from JSON array.
 
@@ -217,7 +219,7 @@ UNNEST(o.order_line_items) as item
 
 **Type:** Dimension
 **Materialization:** External (Parquet)
-**Path:** `models/marts/core/dim_customers.sql`
+**Path:** `models/core/marts/dim_customers.sql`
 **Tags:** mart, core, olap
 
 **Dependencies:**
@@ -241,7 +243,7 @@ UNNEST(o.order_line_items) as item
 
 **Type:** Dimension
 **Materialization:** External (Parquet)
-**Path:** `models/marts/core/dim_products.sql`
+**Path:** `models/core/marts/dim_products.sql`
 **Tags:** mart, core, olap
 
 ---
@@ -265,7 +267,7 @@ UNNEST(o.order_line_items) as item
 
 **Type:** Dimension
 **Materialization:** External (Parquet)
-**Path:** `models/marts/core/dim_staff.sql`
+**Path:** `models/core/marts/dim_staff.sql`
 
 **Dependencies:**
 - stg_sapo_accounts
@@ -276,7 +278,7 @@ UNNEST(o.order_line_items) as item
 
 **Type:** Dimension
 **Materialization:** External (Parquet)
-**Path:** `models/marts/core/dim_locations.sql`
+**Path:** `models/core/marts/dim_locations.sql`
 
 ---
 
@@ -286,7 +288,7 @@ UNNEST(o.order_line_items) as item
 
 **Type:** Fact
 **Materialization:** External (Parquet)
-**Path:** `models/marts/sales/fact_orders.sql`
+**Path:** `models/core/marts/sales/fact_orders.sql`
 **Tags:** mart, sales, olap
 
 **Grain:** One row per order
@@ -311,7 +313,7 @@ UNNEST(o.order_line_items) as item
 
 **Type:** Fact
 **Materialization:** External (Parquet)
-**Path:** `models/marts/sales/fact_sales.sql`
+**Path:** `models/core/marts/sales/fact_sales.sql`
 **Tags:** mart, sales, olap
 
 **Grain:** One row per order line item
@@ -336,7 +338,7 @@ UNNEST(o.order_line_items) as item
 
 **Type:** Fact
 **Materialization:** External (Parquet)
-**Path:** `models/marts/sales/fact_targets.sql`
+**Path:** `models/core/marts/sales/fact_targets.sql`
 **Tags:** mart, sales, olap
 
 **Grain:** One row per staff/location/month

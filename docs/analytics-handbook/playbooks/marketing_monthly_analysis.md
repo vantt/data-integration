@@ -24,7 +24,7 @@
 
 ## Data Lineage
 
-- **Core Models:** [`fact_orders`](../../../transformation/models/marts/sales/fact_orders.sql), [`fact_sales`](../../../transformation/models/marts/sales/fact_sales.sql), [`fact_order_economics`](../../../transformation/models/marts/finance/fact_order_economics.sql), [`fact_marketing_spend`](../../../transformation/models/marts/marketing/fact_marketing_spend.sql)
+- **Core Models:** [`fact_orders`](../../../transformation/models/core/marts/sales/fact_orders.sql), [`fact_sales`](../../../transformation/models/core/marts/sales/fact_sales.sql), [`fact_order_economics`](../../../transformation/models/marts/finance/fact_order_economics.sql), [`fact_marketing_spend`](../../../transformation/models/marts/marketing/fact_marketing_spend.sql)
 - **Dimensions:** `dim_channels`, `dim_products`, `dim_customers`, `dim_promotions`, `dim_geography`
 
 ## Dashboard Structure (5 Tabs)

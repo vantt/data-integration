@@ -40,6 +40,7 @@ flowchart LR
 | `build-lake.sh <code_dir> <lake> [dbt args]` | Production build sequence: `ensure_dbt_directories.py`, `dbt parse`, `dbt build`, `refresh_rolling.py`. Saves `manifest.json`, `run_results.json`, `build_start` to `<lake>/_shadow_meta/`. |
 | `pytest-shadow.sh <code_dir> <lake> [args]` | pytest in the shadow container (pytest is not in the prod image). |
 | `gate.sh <M\|S> [--allow-new] [--allow-code-change]` | The refactor gate (below). |
+| `move_models.py --manifest M --buckets <patterns> [--dry-run]` | Move dbt models to `models/<module>/<layer>/` from `scripts/checks/model_buckets.yaml`, splitting properties YAML by text blocks (comments kept) and moving connector sources. |
 | `cleanup.sh <lake>... \| --all` | Delete shadow lakes. They hold customer PII; delete them after use and `--all` when the plan closes. |
 
 Checks used by the gate live in `scripts/checks/`:
@@ -111,7 +112,7 @@ still enforced by the golden snapshot.
 - dbt build has 633 nodes (76 external models, 16 incremental, 7 tables, 63 views, 14 seeds, 454 tests) and runs in ≈ 18 s on the shadow lake; baseline result `PASS=629 WARN=1` (`assert_overhead_accounts_classified`, also warns in prod).
 - `config.location` in the manifest is the unrendered string `{{ get_rolling_location() }}`; rolling models are detected by that string plus `materialized == 'external'` (`stg_marketing_spend` is a view with a stray `location` and writes nothing).
 - External models without a location write `<external_root>/<name>.parquet`; the warehouse view embeds an absolute path, so the golden reads the parquet file relative to the lake.
-- `orchestration/ops/__tests__/test_ingestion_health_retry.py::test_concurrent_writes_no_lock_error` failed once in eight full-suite runs (SQLite timing); it passed in the other runs on both baseline and branch.
+- `orchestration/ops/__tests__/test_ingestion_health_retry.py::test_concurrent_writes_no_lock_error` is flaky (SQLite lock timing, about 1 in 4 full-suite runs, on baseline too). The gate re-runs pytest once after a failure and prints `FLAKY` when the re-run passes; a test that fails twice fails the gate.
 - dagster-dbt passes a subset selection to dbt as the model `fqn` from the manifest loaded by the code server (e.g. `--select sapo_warehouse.marts.sales.fact_order_returns`), so a folder move changes the selection string; the code server must load a manifest parsed from the new layout (the container start command does).
 - Compiled SQL is deterministic: lake-A vs lake-A2 manifests give 0 differences over 162 models.
 - `dagster schedule list -f orchestration/definitions.py` reports all instigators as STOPPED while the webserver runs all 17 schedules and 9 sensors; use `instigator_state.py`.

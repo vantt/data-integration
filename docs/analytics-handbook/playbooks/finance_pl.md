@@ -10,10 +10,10 @@
 
 ## Data Lineage
 
-- **Revenue:** [`fact_orders`](../../../transformation/models/marts/sales/fact_orders.sql) — Sapo order-level revenue
-- **COGS & Margin:** [`int_misa_sales_lines`](../../../transformation/models/intermediate/misa/int_misa_sales_lines.sql) — MISA invoice-line with COGS
-- **Shopee Fees:** [`int_shopee_order_fees`](../../../transformation/models/intermediate/shopee/int_shopee_order_fees.sql) — Shopee platform economics
-- **Dimensions:** [`dim_date`](../../../transformation/models/marts/core/dim_date.sql), [`dim_channels`](../../../transformation/models/marts/core/dim_channels.sql)
+- **Revenue:** [`fact_orders`](../../../transformation/models/core/marts/sales/fact_orders.sql) — Sapo order-level revenue
+- **COGS & Margin:** [`int_misa_sales_lines`](../../../transformation/models/packs/finance/intermediate/misa/int_misa_sales_lines.sql) — MISA invoice-line with COGS
+- **Shopee Fees:** [`int_shopee_order_fees`](../../../transformation/models/packs/marketplace/intermediate/shopee/int_shopee_order_fees.sql) — Shopee platform economics
+- **Dimensions:** [`dim_date`](../../../transformation/models/core/marts/dim_date.sql), [`dim_channels`](../../../transformation/models/core/marts/dim_channels.sql)
 
 ## Reading Flow
 

@@ -22,9 +22,9 @@ The dashboard is organized into **4 tabs** for focused analysis:
 
 ## Data Lineage
 
-- **Core Model:** [`fact_orders`](../../../transformation/models/marts/sales/fact_orders.sql) — order-level metrics
-- **Line Items:** [`fact_sales`](../../../transformation/models/marts/sales/fact_sales.sql) — product-level metrics
-- **Payments:** [`fact_payments`](../../../transformation/models/marts/sales/fact_payments.sql) — payment method breakdown
+- **Core Model:** [`fact_orders`](../../../transformation/models/core/marts/sales/fact_orders.sql) — order-level metrics
+- **Line Items:** [`fact_sales`](../../../transformation/models/core/marts/sales/fact_sales.sql) — product-level metrics
+- **Payments:** [`fact_payments`](../../../transformation/models/core/marts/sales/fact_payments.sql) — payment method breakdown
 - **Dimensions:** `dim_channels`, `dim_products`, `dim_customers`, `dim_payment_methods`
 
 ## Tab Details

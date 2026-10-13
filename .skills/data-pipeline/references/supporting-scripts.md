@@ -82,7 +82,7 @@ Thường dùng khi debug dbt src_ model để xem raw data structure.
 
 ### `scripts/ensure_dbt_directories.py`
 
-**Mục đích:** Pre-create `rolling/{model}/` directories cho mỗi mart model trong `models/marts/`.
+**Mục đích:** Pre-create `rolling/{model}/` directories cho mọi model `external` dùng `get_rolling_location()`, ở bất kỳ thư mục module nào.
 
 **Tại sao cần:** dbt `COPY TO '{location}/{file}.parquet'` fail nếu parent directory không tồn tại. `get_rolling_location()` tạo path nhưng không tạo dir.
 
@@ -97,7 +97,7 @@ python scripts/ensure_dbt_directories.py
 - Tích hợp trong `transformation/scripts/run_dbt.py` wrapper
 
 **Input:** `DBT_EXPORT_PATH`, `DBT_PROJECT_DIR` env vars  
-**Behavior:** Scan `models/marts/**/*.sql`, tạo `{export_path}/rolling/{model_name}/` cho mỗi file.
+**Behavior:** Lấy danh sách model từ `transformation/target/manifest.json` (materialized `external` + location dùng `get_rolling_location`); chưa có manifest thì quét toàn bộ `models/**/*.sql` có gọi macro. Logic dùng chung: `transformation/scripts/rolling_dirs.py` (cũng được `sapo_dbt_assets` gọi sau `dbt parse`).
 
 ---
 
@@ -122,7 +122,7 @@ python transformation/scripts/run_dbt.py --select "tag:mart" "+dim_customers"
 
 **Features:**
 - Auto-resolve dbt executable (venv → PATH fallback)
-- Auto pre-create `rolling/{model}/` directories (scan `models/marts/`)
+- Auto pre-create `rolling/{model}/` directories (`transformation/scripts/rolling_dirs.py`)
 - Set CWD đúng `transformation/` (dbt yêu cầu)
 - Load `.env` via python-dotenv
 - Default select: `+tag:mart` (build tất cả mart models + upstream)

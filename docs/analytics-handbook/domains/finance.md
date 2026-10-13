@@ -11,7 +11,7 @@
 
 > **Description:** Channel-level budget/plan targets. Manually maintained CSV seed until a formal budget process exists. One row per (channel_name, period_month, metric_type, target_source).
 > **dbt Seed:** [`dim_channel_targets`](../../../transformation/seeds/dim_channel_targets.csv)
-> **dbt Model:** [`dim_channel_targets`](../../../transformation/models/marts/core/dim_channel_targets.sql)
+> **dbt Model:** [`dim_channel_targets`](../../../transformation/models/core/marts/dim_channel_targets.sql)
 > **Grain:** (channel_key, period_month, metric_type, target_source)
 > **Refresh:** `dbt seed --select dim_channel_targets && dbt build --select dim_channel_targets`
 
@@ -28,14 +28,14 @@
 ## Context: Profit & Loss (P&L) — Sapo Revenue
 
 > **Description:** Revenue-side P&L metrics from Sapo order data. COGS/expense metrics require MISA context below.
-> **dbt Source:** [`fact_orders`](../../../transformation/models/marts/sales/fact_orders.sql)
+> **dbt Source:** [`fact_orders`](../../../transformation/models/core/marts/sales/fact_orders.sql)
 > **Grain:** Per Order / Monthly
 
 ### Context Overview
 
 | Category | Foundational Analytical Questions | Related Metrics | Data Ready | Needs Added |
 |----------|-----------------------------------|-----------------|------------|-------------|
-| Profit & Loss (P&L) — Sapo Revenue | How do revenue, COGS, and profit combine into P&L performance? | 1. Gross Revenue (GMV), 2. Net Revenue, 3. Revenue Breakdown (Waterfall Components) | [`fact_orders`](../../../transformation/models/marts/sales/fact_orders.sql) | None documented |
+| Profit & Loss (P&L) — Sapo Revenue | How do revenue, COGS, and profit combine into P&L performance? | 1. Gross Revenue (GMV), 2. Net Revenue, 3. Revenue Breakdown (Waterfall Components) | [`fact_orders`](../../../transformation/models/core/marts/sales/fact_orders.sql) | None documented |
 
 ### Analytical Questions
 
@@ -53,7 +53,7 @@
 
 #### 1. Gross Revenue (GMV)
 
-> **dbt Model:** [`fact_orders`](../../../transformation/models/marts/sales/fact_orders.sql)
+> **dbt Model:** [`fact_orders`](../../../transformation/models/core/marts/sales/fact_orders.sql)
 
 - **Business Definition:** Tổng giá trị hàng hóa theo giá bán, trước chiết khấu. **Sapo giá bán đã gồm VAT** — gross_revenue = total_amount + discount_amount (VAT vẫn nhúng bên trong). Xem [Revenue Terminology](../guides/revenue_terminology.md).
 - **Logic (SQL):**
@@ -72,7 +72,7 @@
 
 #### 2. Net Revenue
 
-> **dbt Model:** [`fact_orders`](../../../transformation/models/marts/sales/fact_orders.sql)
+> **dbt Model:** [`fact_orders`](../../../transformation/models/core/marts/sales/fact_orders.sql)
 
 - **Business Definition:** Doanh thu thuần — sau chiết khấu, **đã trừ VAT** (= total_amount − vat_amount). VAT nhúng trong giá bán Sapo, không phải cộng thêm bên ngoài. Xem [Revenue Terminology](../guides/revenue_terminology.md).
 - **Logic (SQL):**
@@ -88,7 +88,7 @@
 
 #### 3. Revenue Breakdown (Waterfall Components)
 
-> **dbt Model:** [`fact_orders`](../../../transformation/models/marts/sales/fact_orders.sql)
+> **dbt Model:** [`fact_orders`](../../../transformation/models/core/marts/sales/fact_orders.sql)
 
 - **Business Definition:** Components of revenue flow for waterfall chart.
 - **Logic (SQL):**
@@ -108,7 +108,7 @@
 ## Context: COGS & Margin — MISA Sales Ledger
 
 > **Description:** Cost of Goods Sold and gross margin from MISA AMIS accounting system. Per-invoice-line grain with product-level COGS. Covers all channels (DAILY, ECOM, CS, KHAC).
-> **dbt Source:** [`int_misa_sales_lines`](../../../transformation/models/intermediate/misa/int_misa_sales_lines.sql)
+> **dbt Source:** [`int_misa_sales_lines`](../../../transformation/models/packs/finance/intermediate/misa/int_misa_sales_lines.sql)
 > **Grain:** Per Invoice Line
 > **Channel Classification:** `channel_code` (DAILY=Bán lẻ tại quầy, ECOM=Thương mại điện tử, CS=Công sở/B2B, KHAC=Khác) + `voucher_source_hint` (SAPO_DEALER, SHOPEE, AEON, OTHER)
 
@@ -116,7 +116,7 @@
 
 | Category | Foundational Analytical Questions | Related Metrics | Data Ready | Needs Added |
 |----------|-----------------------------------|-----------------|------------|-------------|
-| COGS & Margin — MISA Sales Ledger | How are COGS and margin changing by product or channel? | 4. COGS (Giá vốn hàng bán), 5. Gross Profit (Lãi gộp), 6. Gross Margin % (Biên lợi nhuận gộp), 7. Gross Margin by Channel, 8. COGS Ratio (Tỷ lệ giá vốn/doanh thu) | [`int_misa_sales_lines`](../../../transformation/models/intermediate/misa/int_misa_sales_lines.sql) | None documented |
+| COGS & Margin — MISA Sales Ledger | How are COGS and margin changing by product or channel? | 4. COGS (Giá vốn hàng bán), 5. Gross Profit (Lãi gộp), 6. Gross Margin % (Biên lợi nhuận gộp), 7. Gross Margin by Channel, 8. COGS Ratio (Tỷ lệ giá vốn/doanh thu) | [`int_misa_sales_lines`](../../../transformation/models/packs/finance/intermediate/misa/int_misa_sales_lines.sql) | None documented |
 
 ### Analytical Questions
 
@@ -134,7 +134,7 @@
 
 #### 4. COGS (Giá vốn hàng bán)
 
-> **dbt Model:** [`int_misa_sales_lines`](../../../transformation/models/intermediate/misa/int_misa_sales_lines.sql)
+> **dbt Model:** [`int_misa_sales_lines`](../../../transformation/models/packs/finance/intermediate/misa/int_misa_sales_lines.sql)
 
 - **Business Definition:** Giá vốn hàng bán — chi phí mua hàng tương ứng với doanh thu đã ghi nhận. Lấy từ sổ chi tiết bán hàng MISA.
 - **Logic (SQL):**
@@ -153,7 +153,7 @@
 
 #### 5. Gross Profit (Lãi gộp)
 
-> **dbt Model:** [`int_misa_sales_lines`](../../../transformation/models/intermediate/misa/int_misa_sales_lines.sql)
+> **dbt Model:** [`int_misa_sales_lines`](../../../transformation/models/packs/finance/intermediate/misa/int_misa_sales_lines.sql)
 
 - **Business Definition:** Doanh thu thuần trừ giá vốn. Cho biết lợi nhuận trước chi phí vận hành.
 - **Logic (SQL):**
@@ -170,7 +170,7 @@
 
 #### 6. Gross Margin % (Biên lợi nhuận gộp)
 
-> **dbt Model:** [`int_misa_sales_lines`](../../../transformation/models/intermediate/misa/int_misa_sales_lines.sql)
+> **dbt Model:** [`int_misa_sales_lines`](../../../transformation/models/packs/finance/intermediate/misa/int_misa_sales_lines.sql)
 
 - **Business Definition:** Phần trăm doanh thu còn lại sau giá vốn. Đo lường hiệu quả chiến lược giá.
 - **Logic (SQL):**
@@ -190,7 +190,7 @@
 
 #### 7. Gross Margin by Channel
 
-> **dbt Model:** [`int_misa_sales_lines`](../../../transformation/models/intermediate/misa/int_misa_sales_lines.sql)
+> **dbt Model:** [`int_misa_sales_lines`](../../../transformation/models/packs/finance/intermediate/misa/int_misa_sales_lines.sql)
 
 - **Business Definition:** Biên lợi nhuận gộp theo kênh bán hàng — so sánh hiệu quả giữa các kênh.
 - **Logic (SQL):**
@@ -214,7 +214,7 @@
 
 #### 8. COGS Ratio (Tỷ lệ giá vốn/doanh thu)
 
-> **dbt Model:** [`int_misa_sales_lines`](../../../transformation/models/intermediate/misa/int_misa_sales_lines.sql)
+> **dbt Model:** [`int_misa_sales_lines`](../../../transformation/models/packs/finance/intermediate/misa/int_misa_sales_lines.sql)
 
 - **Business Definition:** Phần trăm doanh thu bị giá vốn chiếm — nghịch đảo của Gross Margin.
 - **Logic (SQL):**
@@ -231,7 +231,7 @@
 ## Context: Order-Level Profitability
 
 > **Description:** Per-order P&L combining Sapo revenue, MISA COGS, and Shopee platform fees. Enables profitability analysis by channel, customer, staff, geography.
-> **dbt Source:** [`fact_order_economics`](../../../transformation/models/marts/sales/fact_order_economics.sql)
+> **dbt Source:** [`fact_order_economics`](../../../transformation/models/core/marts/sales/fact_order_economics.sql)
 > **Grain:** Per Order
 > **Join Keys:** `voucher_no` (MISA) = `order_code` (Sapo) = `order_code` (Shopee fees)
 > **Coverage:** ~65% of completed orders in MISA date range (cancelled/draft orders excluded from MISA)
@@ -240,7 +240,7 @@
 
 | Category | Foundational Analytical Questions | Related Metrics | Data Ready | Needs Added |
 |----------|-----------------------------------|-----------------|------------|-------------|
-| Order-Level Profitability | How much profit remains per order or channel after direct costs? | 9. Order Gross Profit (Lãi gộp đơn hàng), 10. Channel Net Profit (Lãi ròng kênh), 11. Operating Margin %, 12. Net Margin %, 13. EBITDA | [`fact_order_economics`](../../../transformation/models/marts/sales/fact_order_economics.sql) | None documented |
+| Order-Level Profitability | How much profit remains per order or channel after direct costs? | 9. Order Gross Profit (Lãi gộp đơn hàng), 10. Channel Net Profit (Lãi ròng kênh), 11. Operating Margin %, 12. Net Margin %, 13. EBITDA | [`fact_order_economics`](../../../transformation/models/core/marts/sales/fact_order_economics.sql) | None documented |
 
 ### Analytical Questions
 
@@ -258,7 +258,7 @@
 
 #### 9. Order Gross Profit (Lãi gộp đơn hàng)
 
-> **dbt Model:** [`fact_order_economics`](../../../transformation/models/marts/sales/fact_order_economics.sql)
+> **dbt Model:** [`fact_order_economics`](../../../transformation/models/core/marts/sales/fact_order_economics.sql)
 
 - **Business Definition:** Lãi gộp = Doanh thu thuần - Giá vốn. Tính per-order, join MISA COGS vào Sapo revenue.
 - **Logic (SQL):**
@@ -276,7 +276,7 @@
 
 #### 10. Channel Net Profit (Lãi ròng kênh)
 
-> **dbt Model:** [`fact_order_economics`](../../../transformation/models/marts/sales/fact_order_economics.sql)
+> **dbt Model:** [`fact_order_economics`](../../../transformation/models/core/marts/sales/fact_order_economics.sql)
 
 - **Business Definition:** Lãi ròng kênh = Gross Profit - Phí sàn (Shopee). Cho kênh non-Shopee thì = Gross Profit.
 - **Logic (SQL):**
@@ -348,7 +348,7 @@
 ## Context: Shopee Platform Economics
 
 > **Description:** Shopee channel fee structure, net settlement, and platform margin. Dùng để phân tích chi phí bán hàng trên Shopee và tối ưu lợi nhuận kênh.
-> **dbt Source:** [`int_shopee_order_fees`](../../../transformation/models/intermediate/shopee/int_shopee_order_fees.sql)
+> **dbt Source:** [`int_shopee_order_fees`](../../../transformation/models/packs/marketplace/intermediate/shopee/int_shopee_order_fees.sql)
 > **Grain:** Per Shopee Order
 > **Note:** Only covers orders with released payouts (payout_released_at IS NOT NULL).
 
@@ -356,7 +356,7 @@
 
 | Category | Foundational Analytical Questions | Related Metrics | Data Ready | Needs Added |
 |----------|-----------------------------------|-----------------|------------|-------------|
-| Shopee Platform Economics | How do Shopee fees and settlements affect channel margin? | 12. Shopee Net Settlement (Tổng phát hành), 13. Shopee Platform Fee Rate (Tỷ lệ phí sàn), 14. Shopee Fee Breakdown, 15. Shopee Settlement Margin (Biên lợi nhuận sàn) | [`int_shopee_order_fees`](../../../transformation/models/intermediate/shopee/int_shopee_order_fees.sql) | None documented |
+| Shopee Platform Economics | How do Shopee fees and settlements affect channel margin? | 12. Shopee Net Settlement (Tổng phát hành), 13. Shopee Platform Fee Rate (Tỷ lệ phí sàn), 14. Shopee Fee Breakdown, 15. Shopee Settlement Margin (Biên lợi nhuận sàn) | [`int_shopee_order_fees`](../../../transformation/models/packs/marketplace/intermediate/shopee/int_shopee_order_fees.sql) | None documented |
 
 ### Analytical Questions
 
@@ -374,7 +374,7 @@
 
 #### 12. Shopee Net Settlement (Tổng phát hành)
 
-> **dbt Model:** [`int_shopee_order_fees`](../../../transformation/models/intermediate/shopee/int_shopee_order_fees.sql)
+> **dbt Model:** [`int_shopee_order_fees`](../../../transformation/models/packs/marketplace/intermediate/shopee/int_shopee_order_fees.sql)
 
 - **Business Definition:** Số tiền Shopee thực chuyển về seller sau khi trừ toàn bộ phí, thuế, hoàn hàng. Khớp với cột "Tổng phát hành" trên Shopee Seller Center.
 - **Logic (SQL):**
@@ -390,7 +390,7 @@
 
 #### 13. Shopee Platform Fee Rate (Tỷ lệ phí sàn)
 
-> **dbt Model:** [`int_shopee_order_fees`](../../../transformation/models/intermediate/shopee/int_shopee_order_fees.sql)
+> **dbt Model:** [`int_shopee_order_fees`](../../../transformation/models/packs/marketplace/intermediate/shopee/int_shopee_order_fees.sql)
 
 - **Business Definition:** Tổng phí sàn Shopee trên doanh thu — bao gồm service fee, payment fee, fixed fee, infrastructure fee, voucher Xtra.
 - **Logic (SQL):**
@@ -408,7 +408,7 @@
 
 #### 14. Shopee Fee Breakdown
 
-> **dbt Model:** [`int_shopee_order_fees`](../../../transformation/models/intermediate/shopee/int_shopee_order_fees.sql)
+> **dbt Model:** [`int_shopee_order_fees`](../../../transformation/models/packs/marketplace/intermediate/shopee/int_shopee_order_fees.sql)
 
 - **Business Definition:** Chi tiết từng loại phí Shopee để xác định khoản nào chiếm tỷ trọng lớn nhất.
 - **Components:**
@@ -439,7 +439,7 @@
 
 #### 15. Shopee Settlement Margin (Biên lợi nhuận sàn)
 
-> **dbt Model:** [`int_shopee_order_fees`](../../../transformation/models/intermediate/shopee/int_shopee_order_fees.sql)
+> **dbt Model:** [`int_shopee_order_fees`](../../../transformation/models/packs/marketplace/intermediate/shopee/int_shopee_order_fees.sql)
 
 - **Business Definition:** Tỷ lệ tiền thực nhận so với doanh thu gộp — đo lường "mất mát" khi bán trên Shopee.
 - **Logic (SQL):**
@@ -528,7 +528,7 @@
 ## Context: Cost Ledger — Per-Order Costs
 
 > **Description:** Long-format cost ledger — 1 row per (order_id, cost_type). Covers COGS (from MISA), Shopee platform fees, taxes, shipping, and seller discounts (from Sapo). Amounts are always positive (ABS); sign/direction is derived from cost_category. Enables breakdown of "where does money go?" by channel and cost type.
-> **dbt Source:** [`fact_order_costs`](../../../transformation/models/marts/sales/fact_order_costs.sql)
+> **dbt Source:** [`fact_order_costs`](../../../transformation/models/core/marts/sales/fact_order_costs.sql)
 > **Grain:** Per (order_id, cost_type)
 > **cost_category values:** `COGS`, `PLATFORM_FEE`, `TAX`, `SHIPPING`, `DISCOUNT`
 > **cost_type values (subset):** `cogs`, `platform_service`, `platform_payment`, `platform_fixed`, `platform_affiliate`, `platform_piship`, `platform_infra`, `platform_voucher_xtra`, `tax_vat`, `tax_pit`, `shipping_platform`, `discount_seller_voucher`, `discount_bundle`, `discount_seller`, `discount_manual`
@@ -539,7 +539,7 @@
 
 | Category | Foundational Analytical Questions | Related Metrics | Data Ready | Needs Added |
 |----------|-----------------------------------|-----------------|------------|-------------|
-| Cost Ledger — Per-Order Costs | Which cost groups dominate by order, channel, or month? | 1. Total Costs (Tổng chi phí), 2. COGS Ratio — Cost Ledger (Tỷ lệ giá vốn / tổng chi phí), 3. Platform Fees Ratio (Tỷ lệ phí sàn / tổng chi phí), 4. Voucher / Discount Ratio (Tỷ lệ chiết khấu / tổng chi phí), 5. Cost Composition by Month (Cơ cấu chi phí theo tháng), 6. Top Channels by Total Cost (Kênh tốn nhiều chi phí nhất) | [`fact_order_costs`](../../../transformation/models/marts/sales/fact_order_costs.sql) | None documented |
+| Cost Ledger — Per-Order Costs | Which cost groups dominate by order, channel, or month? | 1. Total Costs (Tổng chi phí), 2. COGS Ratio — Cost Ledger (Tỷ lệ giá vốn / tổng chi phí), 3. Platform Fees Ratio (Tỷ lệ phí sàn / tổng chi phí), 4. Voucher / Discount Ratio (Tỷ lệ chiết khấu / tổng chi phí), 5. Cost Composition by Month (Cơ cấu chi phí theo tháng), 6. Top Channels by Total Cost (Kênh tốn nhiều chi phí nhất) | [`fact_order_costs`](../../../transformation/models/core/marts/sales/fact_order_costs.sql) | None documented |
 
 ### Analytical Questions
 
@@ -557,7 +557,7 @@
 
 #### 1. Total Costs (Tổng chi phí)
 
-> **dbt Model:** [`fact_order_costs`](../../../transformation/models/marts/sales/fact_order_costs.sql)
+> **dbt Model:** [`fact_order_costs`](../../../transformation/models/core/marts/sales/fact_order_costs.sql)
 
 - **Business Definition:** Tổng tất cả các loại chi phí phát sinh cho một đơn hàng hoặc một kỳ — bao gồm giá vốn, phí sàn, thuế, vận chuyển và chiết khấu. Đây là "tổng tiền đi ra" của doanh nghiệp.
 - **Logic (SQL):**
@@ -577,7 +577,7 @@
 
 #### 2. COGS Ratio — Cost Ledger (Tỷ lệ giá vốn / tổng chi phí)
 
-> **dbt Model:** [`fact_order_costs`](../../../transformation/models/marts/sales/fact_order_costs.sql)
+> **dbt Model:** [`fact_order_costs`](../../../transformation/models/core/marts/sales/fact_order_costs.sql)
 
 - **Business Definition:** Phần trăm giá vốn hàng bán trong tổng chi phí. Cho biết chi phí sản xuất/mua hàng chiếm bao nhiêu % tổng "tiền ra".
 - **Logic (SQL):**
@@ -599,7 +599,7 @@
 
 #### 3. Platform Fees Ratio (Tỷ lệ phí sàn / tổng chi phí)
 
-> **dbt Model:** [`fact_order_costs`](../../../transformation/models/marts/sales/fact_order_costs.sql)
+> **dbt Model:** [`fact_order_costs`](../../../transformation/models/core/marts/sales/fact_order_costs.sql)
 
 - **Business Definition:** Phần trăm phí nền tảng (Shopee: service, payment, fixed, affiliate, piship, infra, voucher xtra) trong tổng chi phí. Tăng cao cho thấy chi phí bán trên sàn đang bào mòn lợi nhuận.
 - **Logic (SQL):**
@@ -625,7 +625,7 @@
 
 #### 4. Voucher / Discount Ratio (Tỷ lệ chiết khấu / tổng chi phí)
 
-> **dbt Model:** [`fact_order_costs`](../../../transformation/models/marts/sales/fact_order_costs.sql)
+> **dbt Model:** [`fact_order_costs`](../../../transformation/models/core/marts/sales/fact_order_costs.sql)
 
 - **Business Definition:** Phần trăm chi phí chiết khấu (voucher seller, bundle deal, manual discount) trong tổng chi phí. Phản ánh mức độ phụ thuộc vào khuyến mãi để tăng doanh số.
 - **Logic (SQL):**
@@ -647,7 +647,7 @@
 
 #### 5. Cost Composition by Month (Cơ cấu chi phí theo tháng)
 
-> **dbt Model:** [`fact_order_costs`](../../../transformation/models/marts/sales/fact_order_costs.sql)
+> **dbt Model:** [`fact_order_costs`](../../../transformation/models/core/marts/sales/fact_order_costs.sql)
 
 - **Business Definition:** Breakdown chi phí theo từng cost_category (COGS, PLATFORM_FEE, TAX, SHIPPING, DISCOUNT) qua từng tháng. Dùng để vẽ stacked bar chart — thấy ngay chi phí nào đang tăng bất thường.
 - **Logic (SQL):**
@@ -669,7 +669,7 @@
 
 #### 6. Top Channels by Total Cost (Kênh tốn nhiều chi phí nhất)
 
-> **dbt Model:** [`fact_order_costs`](../../../transformation/models/marts/sales/fact_order_costs.sql)
+> **dbt Model:** [`fact_order_costs`](../../../transformation/models/core/marts/sales/fact_order_costs.sql)
 
 - **Business Definition:** Ranking kênh bán hàng theo tổng chi phí, kèm % breakdown từng loại chi phí. Giúp CFO xác định kênh nào "ăn" ngân sách nhiều nhất và theo loại chi phí nào.
 - **Logic (SQL):**
@@ -704,7 +704,7 @@
 ## Context: Returns & Refund Liability
 
 > **Description:** Per-return event tracking refund exposure, return rate, and reason analysis. Returns are recognized at return date — original order P&L is not restated. Dashboard: Return Impact Analysis [All].
-> **dbt Source:** [`fact_order_returns`](../../../transformation/models/marts/sales/fact_order_returns.sql)
+> **dbt Source:** [`fact_order_returns`](../../../transformation/models/core/marts/sales/fact_order_returns.sql)
 > **Grain:** Per Return Event (one row per Sapo return)
 > **Key Fields:** `return_id`, `order_code`, `return_date`, `returned_at`, `refund_amount`, `return_quantity`, `return_status`, `refund_status`, `return_reason`, `channel_key`, `date_key`
 > **Join:** `fact_order_returns.order_code` → `fact_orders.order_code` for order-date cohort; `channel_key` → `dim_channels` for channel name
@@ -713,7 +713,7 @@
 
 | Category | Foundational Analytical Questions | Related Metrics | Data Ready | Needs Added |
 |----------|-----------------------------------|-----------------|------------|-------------|
-| Returns & Refund Liability | How much revenue risk and refund liability is created by returns? | R1. Return Rate MTD (Ty le hoan hang), R2. Refund Liability (Gia tri hoan tien), R3. Average Days-to-Return (So ngay trung binh den hoan), R4. Return Reason Top (Ly do hoan pho bien), R5. Return Rate by Channel (Ty le hoan theo kenh), R6. Return Revenue Impact (Doanh thu bi hoan) | [`fact_order_returns`](../../../transformation/models/marts/sales/fact_order_returns.sql) | None documented |
+| Returns & Refund Liability | How much revenue risk and refund liability is created by returns? | R1. Return Rate MTD (Ty le hoan hang), R2. Refund Liability (Gia tri hoan tien), R3. Average Days-to-Return (So ngay trung binh den hoan), R4. Return Reason Top (Ly do hoan pho bien), R5. Return Rate by Channel (Ty le hoan theo kenh), R6. Return Revenue Impact (Doanh thu bi hoan) | [`fact_order_returns`](../../../transformation/models/core/marts/sales/fact_order_returns.sql) | None documented |
 
 ### Analytical Questions
 
@@ -731,7 +731,7 @@
 
 #### R1. Return Rate MTD (Ty le hoan hang)
 
-> **dbt Model:** [`fact_order_returns`](../../../transformation/models/marts/sales/fact_order_returns.sql)
+> **dbt Model:** [`fact_order_returns`](../../../transformation/models/core/marts/sales/fact_order_returns.sql)
 
 - **Business Definition:** Phan tram don hang bi hoan trong ky. So sanh so return event voi tong don hang hop le cung ky.
 - **Logic (SQL):**
@@ -762,7 +762,7 @@
 
 #### R2. Refund Liability (Gia tri hoan tien)
 
-> **dbt Model:** [`fact_order_returns`](../../../transformation/models/marts/sales/fact_order_returns.sql)
+> **dbt Model:** [`fact_order_returns`](../../../transformation/models/core/marts/sales/fact_order_returns.sql)
 
 - **Business Definition:** Tong gia tri hoan tien phat sinh trong ky — do muc do anh huong tai chinh truc tiep tu hang hoan.
 - **Logic (SQL):**
@@ -781,7 +781,7 @@
 
 #### R3. Average Days-to-Return (So ngay trung binh den hoan)
 
-> **dbt Model:** [`fact_order_returns`](../../../transformation/models/marts/sales/fact_order_returns.sql) JOIN [`fact_orders`](../../../transformation/models/marts/sales/fact_orders.sql)
+> **dbt Model:** [`fact_order_returns`](../../../transformation/models/core/marts/sales/fact_order_returns.sql) JOIN [`fact_orders`](../../../transformation/models/core/marts/sales/fact_orders.sql)
 
 - **Business Definition:** So ngay trung binh giua ngay dat hang va ngay hoan hang. Phat hien van de chat luong (hoan som) hoac gian lan (hoan muon).
 - **Logic (SQL):**
@@ -803,7 +803,7 @@
 
 #### R4. Return Reason Top (Ly do hoan pho bien)
 
-> **dbt Model:** [`fact_order_returns`](../../../transformation/models/marts/sales/fact_order_returns.sql)
+> **dbt Model:** [`fact_order_returns`](../../../transformation/models/core/marts/sales/fact_order_returns.sql)
 
 - **Business Definition:** Ly do hoan hang xuat hien nhieu nhat — giup xac dinh nguyen nhan goc re de cai thien chat luong/van hanh.
 - **Logic (SQL):**
@@ -822,7 +822,7 @@
 
 #### R5. Return Rate by Channel (Ty le hoan theo kenh)
 
-> **dbt Models:** [`fact_order_returns`](../../../transformation/models/marts/sales/fact_order_returns.sql), [`dim_channels`](../../../transformation/models/marts/core/dim_channels.sql)
+> **dbt Models:** [`fact_order_returns`](../../../transformation/models/core/marts/sales/fact_order_returns.sql), [`dim_channels`](../../../transformation/models/core/marts/dim_channels.sql)
 
 - **Business Definition:** Ty le hoan phan ra theo kenh ban hang. Kenh nao > 5% can dieu tra ngay.
 - **Logic (SQL):**
@@ -852,7 +852,7 @@
 
 #### R6. Return Revenue Impact (Doanh thu bi hoan)
 
-> **dbt Model:** [`fact_order_returns`](../../../transformation/models/marts/sales/fact_order_returns.sql)
+> **dbt Model:** [`fact_order_returns`](../../../transformation/models/core/marts/sales/fact_order_returns.sql)
 
 - **Business Definition:** Tong refund_amount theo ly do hoan — giup luong hoa muc do anh huong doanh thu theo tung nguyen nhan.
 - **Logic (SQL):**
@@ -879,7 +879,7 @@
 ## Context: Channel P&L Waterfall & Loss-Leader Detection
 
 > **Description:** Per-channel P&L combining Sapo revenue, MISA COGS, and Shopee platform fees at order level. Enables waterfall decomposition (Gross Revenue → Discounts → Net Revenue → COGS → Platform Fees → Net Profit) and loss-leader detection. Dashboard: Channel P&L Deep Dive [Cross].
-> **dbt Source:** [`fact_order_economics`](../../../transformation/models/marts/sales/fact_order_economics.sql)
+> **dbt Source:** [`fact_order_economics`](../../../transformation/models/core/marts/sales/fact_order_economics.sql)
 > **Grain:** Per Order (aggregated to channel × period for reporting)
 > **Filters:** `is_sales_channel = true AND status NOT IN ('CANCELLED','Voided') AND has_cogs = true`
 > **Join Keys:** `channel_key` → `dim_channels`; Shopee fees are pre-joined in mart via `order_code`
@@ -888,7 +888,7 @@
 
 | Category | Foundational Analytical Questions | Related Metrics | Data Ready | Needs Added |
 |----------|-----------------------------------|-----------------|------------|-------------|
-| Channel P&L Waterfall & Loss-Leader Detection | Which channels generate net profit and which behave as loss leaders? | CPL1. Channel Net Margin % (Biên lợi nhuận ròng kênh), CPL2. Loss Leader Flag (Cờ kênh lỗ), CPL3. Channel Variance vs Prior Period (Biến động so với kỳ trước), CPL4. Waterfall Components (Thành phần thác nước P&L), CPL5. Channel Scorecard (Bảng điểm kênh), CPL6. Net Margin % Heatmap — Channel × Month | [`fact_order_economics`](../../../transformation/models/marts/sales/fact_order_economics.sql) | None documented |
+| Channel P&L Waterfall & Loss-Leader Detection | Which channels generate net profit and which behave as loss leaders? | CPL1. Channel Net Margin % (Biên lợi nhuận ròng kênh), CPL2. Loss Leader Flag (Cờ kênh lỗ), CPL3. Channel Variance vs Prior Period (Biến động so với kỳ trước), CPL4. Waterfall Components (Thành phần thác nước P&L), CPL5. Channel Scorecard (Bảng điểm kênh), CPL6. Net Margin % Heatmap — Channel × Month | [`fact_order_economics`](../../../transformation/models/core/marts/sales/fact_order_economics.sql) | None documented |
 
 ### Analytical Questions
 
@@ -906,7 +906,7 @@
 
 #### CPL1. Channel Net Margin % (Biên lợi nhuận ròng kênh)
 
-> **dbt Model:** [`fact_order_economics`](../../../transformation/models/marts/sales/fact_order_economics.sql)
+> **dbt Model:** [`fact_order_economics`](../../../transformation/models/core/marts/sales/fact_order_economics.sql)
 
 - **Business Definition:** Tỷ lệ lợi nhuận ròng sau khi trừ COGS và toàn bộ phí platform (Shopee). Đây là chỉ số cuối cùng để phân biệt kênh lãi và kênh lỗ sau chi phí thực tế.
 - **Logic (SQL):**
@@ -937,7 +937,7 @@
 
 #### CPL2. Loss Leader Flag (Cờ kênh lỗ)
 
-> **dbt Model:** [`fact_order_economics`](../../../transformation/models/marts/sales/fact_order_economics.sql)
+> **dbt Model:** [`fact_order_economics`](../../../transformation/models/core/marts/sales/fact_order_economics.sql)
 
 - **Business Definition:** Kênh có `channel_net_profit < 0` sau khi trừ COGS và phí platform — cần điều tra ngay về chiến lược giá và chi phí sàn.
 - **Logic (SQL):**
@@ -961,7 +961,7 @@
 
 #### CPL3. Channel Variance vs Prior Period (Biến động so với kỳ trước)
 
-> **dbt Model:** [`fact_order_economics`](../../../transformation/models/marts/sales/fact_order_economics.sql)
+> **dbt Model:** [`fact_order_economics`](../../../transformation/models/core/marts/sales/fact_order_economics.sql)
 
 - **Business Definition:** So sánh Net Revenue và Net Margin % của kênh giữa kỳ hiện tại và kỳ trước (WoW, MoM, YoY). Phát hiện kênh nào đang suy giảm nhanh.
 - **Logic (SQL):**
@@ -1006,7 +1006,7 @@
 
 #### CPL4. Waterfall Components (Thành phần thác nước P&L)
 
-> **dbt Model:** [`fact_order_economics`](../../../transformation/models/marts/sales/fact_order_economics.sql)
+> **dbt Model:** [`fact_order_economics`](../../../transformation/models/core/marts/sales/fact_order_economics.sql)
 
 - **Business Definition:** Phân tách dòng tiền từ Gross Revenue → Discounts → Net Revenue → COGS → Platform Fees → Net Profit. Mỗi bước là một khoản trừ giúp thấy rõ tiền bị mất ở đâu.
 - **Components:**
@@ -1038,7 +1038,7 @@
 
 #### CPL5. Channel Scorecard (Bảng điểm kênh)
 
-> **dbt Model:** [`fact_order_economics`](../../../transformation/models/marts/sales/fact_order_economics.sql)
+> **dbt Model:** [`fact_order_economics`](../../../transformation/models/core/marts/sales/fact_order_economics.sql)
 
 - **Business Definition:** Một dòng/kênh với đầy đủ: Net Revenue, Gross Margin %, Net Margin %, Order Volume, Platform Fees. Cho phép Finance Director so sánh tất cả kênh trong một màn hình.
 - **Logic (SQL):**
@@ -1065,7 +1065,7 @@
 
 #### CPL6. Net Margin % Heatmap — Channel × Month
 
-> **dbt Model:** [`fact_order_economics`](../../../transformation/models/marts/sales/fact_order_economics.sql)
+> **dbt Model:** [`fact_order_economics`](../../../transformation/models/core/marts/sales/fact_order_economics.sql)
 
 - **Business Definition:** Ma trận kênh × tháng, màu sắc = Net Margin %. Phát hiện kênh nào đang suy giảm margin theo thời gian, hoặc tháng nào bất thường.
 - **Logic (SQL):**
@@ -1096,7 +1096,7 @@
 ## Context: SKU Cost & Margin Variance
 
 > **Description:** Per-SKU gross margin and COGS tracking from MISA sales ledger. Enables merchandising analysis of which SKUs drive profit vs. which have abnormal COGS drift. Promo lines excluded (`NOT is_promo_line`) to reflect true product economics.
-> **dbt Source:** [`int_misa_sales_lines`](../../../transformation/models/intermediate/misa/int_misa_sales_lines.sql)
+> **dbt Source:** [`int_misa_sales_lines`](../../../transformation/models/packs/finance/intermediate/misa/int_misa_sales_lines.sql)
 > **Grain:** Per SKU (aggregated from invoice lines)
 > **Audience:** Merchandising Manager, Finance
 
@@ -1104,7 +1104,7 @@
 
 | Category | Foundational Analytical Questions | Related Metrics | Data Ready | Needs Added |
 |----------|-----------------------------------|-----------------|------------|-------------|
-| SKU Cost & Margin Variance | Which SKUs have abnormal margin or COGS variance? | M1. SKU Gross Margin % (Biên lợi nhuận gộp theo SKU), M2. COGS Per Unit (Giá vốn trung bình mỗi đơn vị), M3. COGS Variance vs 3-Month Average (Sai lệch giá vốn so với trung bình 3 tháng), M4. SKU Revenue Share (Tỷ trọng doanh thu SKU), M5. Margin Outlier Flag (Cờ margin bất thường) | [`int_misa_sales_lines`](../../../transformation/models/intermediate/misa/int_misa_sales_lines.sql) | None documented |
+| SKU Cost & Margin Variance | Which SKUs have abnormal margin or COGS variance? | M1. SKU Gross Margin % (Biên lợi nhuận gộp theo SKU), M2. COGS Per Unit (Giá vốn trung bình mỗi đơn vị), M3. COGS Variance vs 3-Month Average (Sai lệch giá vốn so với trung bình 3 tháng), M4. SKU Revenue Share (Tỷ trọng doanh thu SKU), M5. Margin Outlier Flag (Cờ margin bất thường) | [`int_misa_sales_lines`](../../../transformation/models/packs/finance/intermediate/misa/int_misa_sales_lines.sql) | None documented |
 
 ### Analytical Questions
 
@@ -1122,7 +1122,7 @@
 
 #### M1. SKU Gross Margin % (Biên lợi nhuận gộp theo SKU)
 
-> **dbt Model:** [`int_misa_sales_lines`](../../../transformation/models/intermediate/misa/int_misa_sales_lines.sql)
+> **dbt Model:** [`int_misa_sales_lines`](../../../transformation/models/packs/finance/intermediate/misa/int_misa_sales_lines.sql)
 
 - **Business Definition:** Phần trăm doanh thu thuần còn lại sau giá vốn, tính theo từng SKU. Đo lường hiệu quả định giá và chiến lược sản phẩm ở cấp độ SKU.
 - **Logic (SQL):**
@@ -1152,7 +1152,7 @@
 
 #### M2. COGS Per Unit (Giá vốn trung bình mỗi đơn vị)
 
-> **dbt Model:** [`int_misa_sales_lines`](../../../transformation/models/intermediate/misa/int_misa_sales_lines.sql)
+> **dbt Model:** [`int_misa_sales_lines`](../../../transformation/models/packs/finance/intermediate/misa/int_misa_sales_lines.sql)
 
 - **Business Definition:** Giá vốn trung bình trên mỗi đơn vị bán ra của một SKU. Phản ánh chi phí nhập hàng thực tế và hữu ích để phát hiện thay đổi giá nhập đột biến.
 - **Logic (SQL):**
@@ -1178,7 +1178,7 @@
 
 #### M3. COGS Variance vs 3-Month Average (Sai lệch giá vốn so với trung bình 3 tháng)
 
-> **dbt Model:** [`int_misa_sales_lines`](../../../transformation/models/intermediate/misa/int_misa_sales_lines.sql)
+> **dbt Model:** [`int_misa_sales_lines`](../../../transformation/models/packs/finance/intermediate/misa/int_misa_sales_lines.sql)
 
 - **Business Definition:** So sánh giá vốn mỗi đơn vị của tháng hiện tại với trung bình 3 tháng gần nhất. Phát hiện bất thường chi phí nhập hàng (thay đổi nhà cung cấp, lỗi hạch toán, cost spike).
 - **Logic (SQL):**
@@ -1228,7 +1228,7 @@
 
 #### M4. SKU Revenue Share (Tỷ trọng doanh thu SKU)
 
-> **dbt Model:** [`int_misa_sales_lines`](../../../transformation/models/intermediate/misa/int_misa_sales_lines.sql)
+> **dbt Model:** [`int_misa_sales_lines`](../../../transformation/models/packs/finance/intermediate/misa/int_misa_sales_lines.sql)
 
 - **Business Definition:** Phần trăm doanh thu của một SKU trong tổng doanh thu kỳ. Kết hợp với Margin % để phân loại SKU: high-revenue+high-margin (star), high-revenue+low-margin (cash drain), low-revenue+high-margin (niche gem).
 - **Logic (SQL):**
@@ -1256,7 +1256,7 @@
 
 #### M5. Margin Outlier Flag (Cờ margin bất thường)
 
-> **dbt Model:** [`int_misa_sales_lines`](../../../transformation/models/intermediate/misa/int_misa_sales_lines.sql)
+> **dbt Model:** [`int_misa_sales_lines`](../../../transformation/models/packs/finance/intermediate/misa/int_misa_sales_lines.sql)
 
 - **Business Definition:** SKU được đánh dấu là "outlier" khi gross margin < 10%. Đây là ngưỡng cảnh báo cần hành động: rà soát giá bán, COGS, hoặc loại SKU khỏi danh mục.
 - **Logic (SQL):**
@@ -1298,7 +1298,7 @@
 > - **Sapo↔MISA match proxy:** `has_cogs = TRUE` (order has MISA invoice line joined via `voucher_no = order_code`)
 > - **Sapo↔Shopee match proxy:** `has_platform_fees = TRUE` (order has Shopee payout record)
 > - **Triple match (fully reconciled):** `has_cogs AND has_platform_fees` (Shopee orders only)
-> **dbt Source:** [`fact_order_economics`](../../../transformation/models/marts/sales/fact_order_economics.sql)
+> **dbt Source:** [`fact_order_economics`](../../../transformation/models/core/marts/sales/fact_order_economics.sql)
 > **Grain:** Per Order
 > **Known Limitation:** `has_cogs` coverage ≈ 65% of completed orders in MISA date range — unmatched orders include cancelled/draft + orders before MISA ingestion window.
 > **Caveat:** This is a derived proxy, not a true reconciliation ledger. Build `recon_sapo_orders_daily` + `recon_misa_daily` dbt models for a proper recon pipeline.
@@ -1307,7 +1307,7 @@
 
 | Category | Foundational Analytical Questions | Related Metrics | Data Ready | Needs Added |
 |----------|-----------------------------------|-----------------|------------|-------------|
-| Daily Reconciliation (Sapo ↔ MISA ↔ Shopee) | Do Sapo, MISA, and Shopee reconcile well enough to trust finance reporting? | RC1. MISA Coverage % (Tỷ lệ khớp MISA), RC2. Unmatched Rate — No MISA (Tỷ lệ thiếu MISA invoice), RC3. Shopee Fee Coverage % (Tỷ lệ có dữ liệu phí Shopee), RC4. Recon Status Distribution (Phân loại trạng thái đối soát), RC5. Daily Unmatched Trend (Xu hướng đơn chưa đối soát theo ngày), RC6. Sapo↔Shopee Fee Gap (Đơn Shopee thiếu dữ liệu phí) | [`fact_order_economics`](../../../transformation/models/marts/sales/fact_order_economics.sql) | None documented |
+| Daily Reconciliation (Sapo ↔ MISA ↔ Shopee) | Do Sapo, MISA, and Shopee reconcile well enough to trust finance reporting? | RC1. MISA Coverage % (Tỷ lệ khớp MISA), RC2. Unmatched Rate — No MISA (Tỷ lệ thiếu MISA invoice), RC3. Shopee Fee Coverage % (Tỷ lệ có dữ liệu phí Shopee), RC4. Recon Status Distribution (Phân loại trạng thái đối soát), RC5. Daily Unmatched Trend (Xu hướng đơn chưa đối soát theo ngày), RC6. Sapo↔Shopee Fee Gap (Đơn Shopee thiếu dữ liệu phí) | [`fact_order_economics`](../../../transformation/models/core/marts/sales/fact_order_economics.sql) | None documented |
 
 ### Analytical Questions
 
@@ -1325,7 +1325,7 @@
 
 #### RC1. MISA Coverage % (Tỷ lệ khớp MISA)
 
-> **dbt Model:** [`fact_order_economics`](../../../transformation/models/marts/sales/fact_order_economics.sql)
+> **dbt Model:** [`fact_order_economics`](../../../transformation/models/core/marts/sales/fact_order_economics.sql)
 
 - **Business Definition:** Phần trăm đơn hàng hoàn tất có MISA invoice khớp. Đây là proxy cho "Sapo↔MISA reconciled". Thấp hơn benchmark (≈65%) → cần kiểm tra MISA ingestion.
 - **Logic (SQL):**
@@ -1352,7 +1352,7 @@
 
 #### RC2. Unmatched Rate — No MISA (Tỷ lệ thiếu MISA invoice)
 
-> **dbt Model:** [`fact_order_economics`](../../../transformation/models/marts/sales/fact_order_economics.sql)
+> **dbt Model:** [`fact_order_economics`](../../../transformation/models/core/marts/sales/fact_order_economics.sql)
 
 - **Business Definition:** Phần trăm đơn hàng hoàn tất KHÔNG có MISA invoice. Đây là "unmatched orders" từ góc độ kế toán.
 - **Logic (SQL):**
@@ -1379,7 +1379,7 @@
 
 #### RC3. Shopee Fee Coverage % (Tỷ lệ có dữ liệu phí Shopee)
 
-> **dbt Model:** [`fact_order_economics`](../../../transformation/models/marts/sales/fact_order_economics.sql)
+> **dbt Model:** [`fact_order_economics`](../../../transformation/models/core/marts/sales/fact_order_economics.sql)
 
 - **Business Definition:** Phần trăm đơn hàng Shopee có dữ liệu payout/phí từ Shopee Seller Center. Thấp → thiếu settlement data → không tính được channel_net_profit chính xác.
 - **Logic (SQL):**
@@ -1404,7 +1404,7 @@
 
 #### RC4. Recon Status Distribution (Phân loại trạng thái đối soát)
 
-> **dbt Model:** [`fact_order_economics`](../../../transformation/models/marts/sales/fact_order_economics.sql)
+> **dbt Model:** [`fact_order_economics`](../../../transformation/models/core/marts/sales/fact_order_economics.sql)
 
 - **Business Definition:** Phân nhóm đơn hàng theo trạng thái recon: FULLY_RECONCILED / MISSING_MISA / MISSING_SHOPEE_FEES / UNRECONCILED. Proxy từ `has_cogs` và `has_platform_fees`.
 - **Logic (SQL):**
@@ -1432,7 +1432,7 @@
 
 #### RC5. Daily Unmatched Trend (Xu hướng đơn chưa đối soát theo ngày)
 
-> **dbt Model:** [`fact_order_economics`](../../../transformation/models/marts/sales/fact_order_economics.sql)
+> **dbt Model:** [`fact_order_economics`](../../../transformation/models/core/marts/sales/fact_order_economics.sql)
 
 - **Business Definition:** Tỷ lệ đơn không có MISA invoice theo ngày — 30 ngày gần nhất. Spike đột ngột → lỗi ingestion MISA hoặc Sapo data lag.
 - **Logic (SQL):**
@@ -1461,7 +1461,7 @@
 
 #### RC6. Sapo↔Shopee Fee Gap (Đơn Shopee thiếu dữ liệu phí)
 
-> **dbt Model:** [`fact_order_economics`](../../../transformation/models/marts/sales/fact_order_economics.sql)
+> **dbt Model:** [`fact_order_economics`](../../../transformation/models/core/marts/sales/fact_order_economics.sql)
 
 - **Business Definition:** Đơn Shopee có doanh thu nhưng thiếu `shopee_platform_fees` → channel_net_profit bị overstate. Số này là "fee gap" cho kế toán reconcile.
 - **Logic (SQL):**
@@ -1488,7 +1488,7 @@
 ## Context: Services Revenue
 
 > **Description:** Doanh thu dịch vụ (non-product) tracked separately for CFO P&L review. Covers US HR staffing services (DVCCNS/DVCCNS1), legacy office utilities (DVRENTAL/DVDIEN/etc. — discontinued 2022), and CPBH adjustment entries. Services have zero COGS in MISA — contribution margin = 100%.
-> **dbt Source:** [`int_misa_sales_lines`](../../../transformation/models/intermediate/misa/int_misa_sales_lines.sql) WHERE `is_service_line = true`
+> **dbt Source:** [`int_misa_sales_lines`](../../../transformation/models/packs/finance/intermediate/misa/int_misa_sales_lines.sql) WHERE `is_service_line = true`
 > **Grain:** Per Invoice Line
 > **Flag:** `is_service_line = (product_code LIKE 'DV%' OR product_code LIKE 'CPBH%')` — added in P0
 
@@ -1524,7 +1524,7 @@
 
 #### S1. Services Revenue
 
-> **dbt Model:** [`int_misa_sales_lines`](../../../transformation/models/intermediate/misa/int_misa_sales_lines.sql)
+> **dbt Model:** [`int_misa_sales_lines`](../../../transformation/models/packs/finance/intermediate/misa/int_misa_sales_lines.sql)
 
 - **Business Definition:** Tổng doanh thu từ các dòng dịch vụ (DV* + CPBH) trong kỳ. Bao gồm cả CPBH điều chỉnh âm — tổng có thể thấp hơn DV* alone nếu CPBH spike. Không bao gồm COGS vì services không có giá vốn.
 - **Logic (SQL):**
@@ -1540,7 +1540,7 @@
 
 #### S2. Services as % of Total Revenue
 
-> **dbt Model:** [`int_misa_sales_lines`](../../../transformation/models/intermediate/misa/int_misa_sales_lines.sql)
+> **dbt Model:** [`int_misa_sales_lines`](../../../transformation/models/packs/finance/intermediate/misa/int_misa_sales_lines.sql)
 
 - **Business Definition:** Tỷ lệ doanh thu dịch vụ trong tổng doanh thu MISA (DV* + hàng hóa). Đo mức độ đóng góp của mảng dịch vụ vào top-line. Baseline: ~9-10% (2.4B / ~26B total).
 - **Logic (SQL):**
@@ -1560,7 +1560,7 @@
 
 #### S3. Service Type Breakdown
 
-> **dbt Model:** [`int_misa_sales_lines`](../../../transformation/models/intermediate/misa/int_misa_sales_lines.sql)
+> **dbt Model:** [`int_misa_sales_lines`](../../../transformation/models/packs/finance/intermediate/misa/int_misa_sales_lines.sql)
 
 - **Business Definition:** Phân bổ doanh thu theo từng service code trong kỳ. Phân loại ACTIVE (HĐ cuối < 3 tháng), Low Activity (3-12 tháng), DISCONTINUED (> 12 tháng).
 - **Logic (SQL):**
@@ -1587,7 +1587,7 @@
 
 #### S4. CPBH Adjustments
 
-> **dbt Model:** [`int_misa_sales_lines`](../../../transformation/models/intermediate/misa/int_misa_sales_lines.sql)
+> **dbt Model:** [`int_misa_sales_lines`](../../../transformation/models/packs/finance/intermediate/misa/int_misa_sales_lines.sql)
 
 - **Business Definition:** Các dòng điều chỉnh Chi phí bán hàng khác (CPBH) — thường là giá trị âm, là reversals hoặc credit notes. Không phải "doanh thu thực" mà là kế toán adjustments. Alert nếu tháng bất kỳ > -100M VND.
 - **Logic (SQL):**
@@ -1626,8 +1626,8 @@
 ## Context: Cashflow (Dòng tiền vận hành)
 
 > **Description:** GL-based operational cash tracking — actual inflows, outflows, and running balance from MISA cash accounts (111x tiền mặt / 112x tiền gửi ngân hàng). Method: direct/operational (thu-chi + số dư quỹ), not the TT200 3-section indirect statement. Internal transfers between 111/112 are ALWAYS excluded from thu/chi totals.
-> **dbt Sources:** [`fact_cash_movement`](../../../transformation/models/marts/finance/fact_cash_movement.sql) (phase-03, available), [`fact_account_balance_monthly`](../../../transformation/models/marts/finance/fact_account_balance_monthly.sql) (phase-02, planned)
-> **Dimension:** [`dim_gl_account`](../../../transformation/models/marts/core/dim_gl_account.sql)
+> **dbt Sources:** [`fact_cash_movement`](../../../transformation/models/packs/finance/marts/fact_cash_movement.sql) (phase-03, available), [`fact_account_balance_monthly`](../../../transformation/models/packs/finance/marts/fact_account_balance_monthly.sql) (phase-02, planned)
+> **Dimension:** [`dim_gl_account`](../../../transformation/models/packs/finance/marts/dim_gl_account.sql)
 > **Grain (fact_cash_movement):** 1 row per cash journal line (accounts 111x/112x)
 > **Grain (fact_account_balance_monthly):** (account_code, period_month)
 > **Supersedes:** "Context: Cash Flow" above (that context referenced `fact_payments` which lacks inflow/outflow classification; this context uses the GL-based models)
@@ -1675,7 +1675,7 @@
 
 #### CF1. Số dư quỹ (`cash_balance`)
 
-> **dbt Model:** [`fact_account_balance_monthly`](../../../transformation/models/marts/finance/fact_account_balance_monthly.sql) (phase-02, planned) — or approximated from `fact_cash_movement.running_balance` for the latest row per account
+> **dbt Model:** [`fact_account_balance_monthly`](../../../transformation/models/packs/finance/marts/fact_account_balance_monthly.sql) (phase-02, planned) — or approximated from `fact_cash_movement.running_balance` for the latest row per account
 
 - **Business Definition:** Số dư cuối kỳ của tài khoản tiền (111+112). Đây là "tiền thực còn trong két và ngân hàng" — không phải lợi nhuận kế toán. Recon anchor tháng 6-2026: closing_balance = 164.5M VND.
 - **Logic (SQL):**
@@ -1710,7 +1710,7 @@
 
 #### CF2. Tổng thu (`cash_inflow`)
 
-> **dbt Model:** [`fact_cash_movement`](../../../transformation/models/marts/finance/fact_cash_movement.sql)
+> **dbt Model:** [`fact_cash_movement`](../../../transformation/models/packs/finance/marts/fact_cash_movement.sql)
 
 - **Business Definition:** Tổng tiền thực thu vào quỹ trong kỳ — chỉ tính giao dịch với bên ngoài (khách hàng, người cho vay, v.v.). LUÔN loại trừ `is_internal_transfer = TRUE` vì chuyển tiền giữa 111/112 nets về 0 và sẽ làm phình thu/chi giả tạo. Recon anchor tháng 6-2026: cash_inflow = 464.4M VND (chủ yếu "Bán hàng & phải thu KH").
 - **Logic (SQL):**
@@ -1730,7 +1730,7 @@
 
 #### CF3. Tổng chi (`cash_outflow`)
 
-> **dbt Model:** [`fact_cash_movement`](../../../transformation/models/marts/finance/fact_cash_movement.sql)
+> **dbt Model:** [`fact_cash_movement`](../../../transformation/models/packs/finance/marts/fact_cash_movement.sql)
 
 - **Business Definition:** Tổng tiền thực chi ra ngoài trong kỳ — loại trừ chuyển quỹ nội bộ. Breakdown theo cashflow_line cho biết khoản chi lớn nhất: Lương, BHXH & phải trả, NCC, CP BH&QLDN. Recon anchor tháng 6-2026: cash_outflow = 434.0M (Lương 238M, BHXH&phải trả 97M, nội bộ 66M excluded, CP BH&QLDN 19M, NCC 14M).
 - **Logic (SQL):**
@@ -1751,7 +1751,7 @@
 
 #### CF4. Dòng tiền ròng (`net_cash_flow`)
 
-> **dbt Model:** [`fact_cash_movement`](../../../transformation/models/marts/finance/fact_cash_movement.sql)
+> **dbt Model:** [`fact_cash_movement`](../../../transformation/models/packs/finance/marts/fact_cash_movement.sql)
 
 - **Business Definition:** Thu ròng trong kỳ = Tổng thu − Tổng chi (cả hai đã loại nội bộ). Nếu dương: quỹ tăng; âm: quỹ giảm. Không phải lợi nhuận kế toán — là cash thực tế tăng/giảm trong kỳ. Recon anchor tháng 6-2026: net_cash_flow = +30.4M (464.4M thu − 434.0M chi).
 - **Logic (SQL):**
@@ -1776,7 +1776,7 @@
 
 #### CF5. So sánh cùng kỳ năm trước (`net_cash_flow_yoy_pct`)
 
-> **dbt Model:** [`fact_cash_movement`](../../../transformation/models/marts/finance/fact_cash_movement.sql) — requires ≥13 months of history (multi-year MISA backfill, 2022→ present)
+> **dbt Model:** [`fact_cash_movement`](../../../transformation/models/packs/finance/marts/fact_cash_movement.sql) — requires ≥13 months of history (multi-year MISA backfill, 2022→ present)
 
 - **Business Definition:** So sánh CF1–CF4 với đúng tháng đó của năm trước (VD: tháng 6/2026 vs tháng 6/2025), thay vì tháng liền trước (MoM). Cần thiết vì dòng tiền có mùa vụ (VD: chi lương tháng 13/thưởng Tết dồn vào Q1 hàng năm) — MoM một mình gây báo động giả mỗi năm vào cùng thời điểm.
 - **Logic (SQL):**
@@ -1801,7 +1801,7 @@
 
 #### CF6. Lũy kế từ đầu năm (`net_cash_flow_ytd`)
 
-> **dbt Model:** [`fact_cash_movement`](../../../transformation/models/marts/finance/fact_cash_movement.sql)
+> **dbt Model:** [`fact_cash_movement`](../../../transformation/models/packs/finance/marts/fact_cash_movement.sql)
 
 - **Business Definition:** Tổng thu/chi/dòng tiền ròng cộng dồn từ tháng 1 đến tháng hiện tại của mỗi năm, để so sánh "năm nay tính đến hôm nay" vs "năm ngoái tính đến cùng điểm mốc" — quan trọng hơn total-năm khi năm chưa kết thúc.
 - **Logic (SQL):**
@@ -1822,7 +1822,7 @@
 
 #### CF7. Chỉ số mùa vụ theo tháng (`seasonality_index`)
 
-> **dbt Model:** [`fact_cash_movement`](../../../transformation/models/marts/finance/fact_cash_movement.sql) — chỉ đáng tin khi có ≥3 năm dữ liệu
+> **dbt Model:** [`fact_cash_movement`](../../../transformation/models/packs/finance/marts/fact_cash_movement.sql) — chỉ đáng tin khi có ≥3 năm dữ liệu
 
 - **Business Definition:** Giá trị trung bình của CF2/CF3/CF4 theo **tháng dương lịch** (1–12), gộp qua tất cả các năm có dữ liệu — trả lời "tháng nào lịch sử luôn cao/thấp bất kể năm nào" (VD: chi luôn cao tháng 1-2 do lương tháng 13 + thưởng Tết). Khác YoY (so 1 tháng cụ thể của 2 năm) — đây là pattern lặp lại **mọi năm**.
 - **Logic (SQL):**

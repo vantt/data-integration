@@ -155,7 +155,7 @@ Khi mart model thiếu `location=get_rolling_location()`:
 
 ## 6. Pre-Create Rolling Directories
 
-dbt `COPY TO '...'` fail nếu parent directory không tồn tại. Script `scripts/ensure_dbt_directories.py` scan `models/marts/**/*.sql` và pre-create:
+dbt `COPY TO '...'` fail nếu parent directory không tồn tại. Script `scripts/ensure_dbt_directories.py` (logic: `transformation/scripts/rolling_dirs.py`) lấy danh sách model rolling từ manifest, không phụ thuộc thư mục, và pre-create:
 
 ```
 rolling/dim_customers/

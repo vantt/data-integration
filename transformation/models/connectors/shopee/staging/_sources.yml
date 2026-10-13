@@ -1,0 +1,18 @@
+version: 2
+
+sources:
+
+  - name: shopee_raw
+    schema: main
+    meta:
+      external_location: "read_parquet('{{ env_var('DBT_DATA_LAKE_PATH') }}/shopee_raw/{name}/ingest_method=*/**/*.parquet', hive_partitioning=1, union_by_name=true)"
+    tables:
+      - name: order_revenue
+        description: "Shopee order-level revenue & fees (Doanh thu sheet, Order rows)"
+      - name: order_revenue_items
+        description: "Shopee order × product line items (Doanh thu sheet, Sku rows)"
+      - name: order_service_fees
+        description: "Shopee extra service fees: infrastructure + Xtra voucher (Service Fee Details sheet)"
+      - name: order_adjustments
+        description: "Shopee order-level adjustments: marketing fees, compensations (Adjustment sheet, detail rows only)"
+

@@ -134,7 +134,7 @@ Dùng blockquote style thống nhất trong toàn bộ handbook:
 Khi cần link tới file SQL thực tế:
 
 ```markdown
-> **dbt Model:** [`fact_orders`](../../../transformation/models/marts/sales/fact_orders.sql)
+> **dbt Model:** [`fact_orders`](../../../transformation/models/core/marts/sales/fact_orders.sql)
 ```
 
 ## Metric Status Lifecycle

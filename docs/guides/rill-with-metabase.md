@@ -787,5 +787,5 @@ Local repo references:
 - `docs/decisions/008-analytics-as-code.md`
 - `docs/architecture/overview.md`
 - `scripts/provisioning/bootstrap_serving_views.py`
-- `transformation/models/marts/sales/fact_orders.sql`
+- `transformation/models/core/marts/sales/fact_orders.sql`
 - `transformation/models/marts/schema.yml`

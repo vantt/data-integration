@@ -89,7 +89,7 @@ All 3 tabs share **byte-identical layout** — only the date predicate differs. 
 
 ## Data Lineage
 
-- **Core Model:** [`fact_orders`](../../../transformation/models/marts/sales/fact_orders.sql) — order-level metrics (revenue, status, timestamps)
+- **Core Model:** [`fact_orders`](../../../transformation/models/core/marts/sales/fact_orders.sql) — order-level metrics (revenue, status, timestamps)
 - **Dimensions:** `dim_channels` (channel names), `dim_customers` (customer name/phone), `dim_branch_location` (store/branch)
 
 ## Reconciliation Workflow

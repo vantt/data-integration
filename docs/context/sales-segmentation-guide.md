@@ -687,7 +687,7 @@ Fine Care,Fine Care,FC
 
 ### 9.1. dim_channels
 
-**File:** `transformation/models/marts/core/dim_channels.sql`
+**File:** `transformation/models/core/marts/dim_channels.sql`
 
 **Nguồn:** `ref_order_sources`, `ref_branch_locations`
 
@@ -749,7 +749,7 @@ Bảng `dim_channels` materialize đầy đủ **4 tầng** của hệ thống p
 
 ### 9.2. dim_products
 
-**File:** `transformation/models/marts/core/dim_products.sql`
+**File:** `transformation/models/core/marts/dim_products.sql`
 
 **Nguồn:** `std_order_items`, `ref_brands`
 
@@ -782,7 +782,7 @@ Bảng `dim_channels` materialize đầy đủ **4 tầng** của hệ thống p
 
 ### 9.3. dim_branch_locations
 
-**File:** `transformation/models/marts/core/dim_branch_location.sql`
+**File:** `transformation/models/core/marts/dim_branch_location.sql`
 
 | Cột                     | Kiểu  | Mô tả             |
 | ----------------------- | ----- | ----------------- |

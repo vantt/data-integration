@@ -1,0 +1,445 @@
+version: 2
+
+models:
+
+  - name: dim_branch_location
+    description: "Location/Warehouse dimension."
+    columns:
+      - name: branch_location_key
+        description: "Surrogate key for the branch or warehouse location."
+        tests: [unique, not_null]
+      - name: branch_location_id
+        description: "Native Sapo numeric ID for the branch location."
+      - name: branch_location_name
+        description: "Display name of the branch or warehouse (e.g., 'HCM Kho chính')."
+      - name: branch_location_code
+        description: "Short code identifying the branch location."
+
+  # Dimensions
+  - name: dim_channel_targets
+    description: >
+      Channel-level budget/target dimension. One row per (channel_key, period_month,
+      metric_type, target_source). Built from seed_channel_targets CSV; channel_key
+      resolved via join to dim_channels by channel_name.
+      metric_type: NET_REVENUE (VND), NET_MARGIN_PCT (%), ORDER_COUNT (count).
+    columns:
+      - name: channel_target_key
+        description: "Surrogate key for this channel-target record."
+        tests: [unique, not_null]
+      - name: channel_key
+        description: "Foreign key to dim_channels."
+        tests: [not_null]
+      - name: channel_name
+        description: "Display name of the channel this target applies to."
+      - name: period_month
+        description: "Month-start date (first day of the target month)."
+        tests: [not_null]
+      - name: metric_type
+        description: "Metric being targeted: NET_REVENUE (VND), NET_MARGIN_PCT (%), or ORDER_COUNT."
+        tests:
+          - not_null
+          - accepted_values:
+              arguments:
+                values: ['NET_REVENUE', 'NET_MARGIN_PCT', 'ORDER_COUNT']
+      - name: target_source
+        description: "Budget scenario: BUDGET (base plan), STRETCH (upside), or MIN_VIABLE (floor)."
+        tests:
+          - not_null
+          - accepted_values:
+              arguments:
+                values: ['BUDGET', 'STRETCH', 'MIN_VIABLE']
+      - name: target_value
+        description: "Numeric target value in the unit of metric_type (VND, %, or count)."
+        tests: [not_null]
+      - name: notes
+        description: "Optional free-text notes from the budget CSV."
+      - name: loaded_at
+        description: "Timestamp when this record was last loaded into the mart."
+
+  - name: dim_channels
+    description: "Sales channel dimension."
+    columns:
+      - name: channel_key
+        description: "Surrogate key for this channel record."
+        tests: [unique, not_null]
+      - name: channel_name
+        description: "Display name of the sales channel (e.g., 'Shopee VN', 'Zalo')."
+        data_type: varchar
+      - name: channel_code
+        description: "Short code identifying the channel."
+        data_type: varchar
+      - name: channel_category
+        description: "Tier 1. Online-Ecommerce / Offline / Internal."
+        data_type: varchar
+        tests:
+          - accepted_values:
+              arguments:
+                values: ['Online-Ecommerce', 'Offline', 'Internal']
+      - name: channel_format
+        description: "Tier 2. Marketplace / Social / Web / Retail / B2B / Direct / System / CrossBorder Fulfillment / Other."
+        data_type: varchar
+        tests:
+          - accepted_values:
+              arguments:
+                values: ['Marketplace', 'Social', 'Web', 'Retail', 'B2B', 'Direct', 'System', 'CrossBorder Fulfillment', 'Other']
+      - name: platform
+        description: "Technical platform or integration (e.g., 'Shopee', 'TikTok', 'POS')."
+        data_type: varchar
+      - name: channel_brand
+        description: "Brand that owns this channel"
+        data_type: varchar
+      - name: market
+        description: "Domestic / Export"
+        data_type: varchar
+      - name: source_type
+        description: "Source classification: channel, customer_type, team, purpose, arrangement"
+        data_type: varchar
+        tests:
+          - accepted_values:
+              arguments:
+                values: ['channel', 'customer_type', 'team', 'purpose', 'arrangement']
+      - name: is_sales_channel
+        description: "true = real sales channel (not System/Internal)"
+        data_type: boolean
+      - name: is_marketplace
+        description: "true = third-party marketplace platform (Marketplace or CrossBorder Fulfillment format); false = brand-owned/core channels (B2B/Social/Web/Retail/Direct)."
+        data_type: boolean
+
+  - name: dim_customers
+    description: "Customer dimension with 8 segmentation dimensions. See docs/context/customer-segmentation.md"
+    columns:
+      - name: customer_key
+        description: "Surrogate key for this customer record."
+        tests: [unique, not_null]
+      - name: customer_type
+        description: "Commercial relationship type (Manual from Sapo groups, + auto channel signal for CROSSBORDER). RETAIL/WHOLESALE/PARTNER/STAFF/KOL + CROSSBORDER (đơn US giao hàng hộ — người nhận VN; group-tag HOẶC có đơn trên kênh Sapo channel_name='US')."
+        data_type: varchar
+        tests:
+          - accepted_values:
+              arguments:
+                values: ['RETAIL', 'WHOLESALE', 'PARTNER', 'STAFF', 'KOL', 'CROSSBORDER']
+      - name: value_group
+        description: "Customer value tier (Auto): VALUE_VIP (>=50M or >=20 orders), VALUE_GOLD (>=20M), VALUE_SILVER (>=5M), VALUE_BRONZE (else)"
+        data_type: varchar
+        tests:
+          - accepted_values:
+              arguments:
+                values: ['VALUE_VIP', 'VALUE_GOLD', 'VALUE_SILVER', 'VALUE_BRONZE']
+      - name: lifecycle_stage
+        description: "Customer lifecycle state (Auto): NEW (<=30 days & <=2 orders), ACTIVE (<=90 days), AT_RISK (<=180 days), CHURNED (>180 days)"
+        data_type: varchar
+        tests:
+          - accepted_values:
+              arguments:
+                values: ['LIFECYCLE_NEW', 'LIFECYCLE_ACTIVE', 'LIFECYCLE_AT_RISK', 'LIFECYCLE_CHURNED']
+      - name: channel_preference
+        description: "Preferred purchase channel (Auto): CHANNEL_SOCIAL/MARKETPLACE/DIRECT/OFFLINE/OTHER based on mode of channel_format"
+        data_type: varchar
+        tests:
+          - accepted_values:
+              arguments:
+                values: ['CHANNEL_SOCIAL', 'CHANNEL_MARKETPLACE', 'CHANNEL_DIRECT', 'CHANNEL_OFFLINE', 'CHANNEL_OTHER']
+      - name: product_affinity
+        description: "Primary brand preference (Auto): Brand with >60% revenue share, else PRODUCT_MULTI"
+        data_type: varchar
+        tests:
+          - accepted_values:
+              arguments:
+                values: ['PRODUCT_FINE_JAPAN', 'PRODUCT_FG_CARE', 'PRODUCT_FINE_CARE', 'PRODUCT_MULTI']
+      - name: payment_behavior
+        description: "Payment pattern (Auto): PAYMENT_COD if >70% COD orders, else PAYMENT_PREPAID"
+        data_type: varchar
+        tests:
+          - accepted_values:
+              arguments:
+                values: ['PAYMENT_PREPAID', 'PAYMENT_COD', 'PAYMENT_CREDIT', 'PAYMENT_DELINQUENT']
+      - name: geo_region
+        description: "Geographic region (Auto): GEO_HCMC/HANOI/MEKONG/CENTRAL/OTHER based on province"
+        data_type: varchar
+        tests:
+          - accepted_values:
+              arguments:
+                values: ['GEO_HCMC', 'GEO_HANOI', 'GEO_MEKONG', 'GEO_CENTRAL', 'GEO_OTHER']
+      - name: acquisition_source
+        description: "Kênh giao dịch ĐẦU TIÊN của khách = channel_name của đơn sớm nhất (vd 'Zalo', 'Shopee - JPC SHOP'). Proxy cho 'khách đến từ đâu' vì Sapo không có field nguồn marketing. NULL nếu khách chưa có đơn. Roll-up lên channel_format/category qua dim_channels khi cần."
+        data_type: varchar
+        tests:
+          - relationships:
+              arguments:
+                to: ref('dim_channels')
+                field: channel_name
+              config:
+                where: "acquisition_source IS NOT NULL"
+      - name: lifetime_value
+        description: "Total collected from customer (after discounts, incl. tax). Formula: SUM(fact_orders.total_collected)"
+      - name: recency_days
+        description: "Days since last order. Formula: CURRENT_DATE - MAX(order_date)"
+      - name: customer_status
+        description: "DEPRECATED: Use lifecycle_stage. Legacy RFM Status: Active/At Risk/Churned"
+      - name: lifetime_gross_profit
+        description: "Lifetime gross profit from has_cogs active orders (VND). 0 if no margin data. Source: int_customer_economics."
+      - name: lifetime_contribution_margin
+        description: "Lifetime contribution margin = SUM(channel_net_profit) over has_cogs active orders (gross_profit − direct channel fees; EXCLUDES overhead). VND, 0 if no margin data. Use this — not fully-loaded — for customer-level margin: overhead is 98% revenue-weighted and penalizes large orders."
+      - name: avg_order_contribution_margin_pct
+        description: "Avg per-order contribution margin % (channel_net_profit / net_revenue). NULL for customers with no active orders."
+      - name: margin_cogs_coverage_pct
+        description: "Share of active orders with COGS data. Caveat metric for margin reliability. NULL for customers with no active orders."
+      - name: is_margin_negative
+        description: "TRUE if lifetime_contribution_margin < 0. FALSE if no margin data (safe default). Gate for activation: avoid high-touch outreach to margin-negative customers."
+
+  - name: dim_customers_base
+    description: "Base customer dimension (SCD Type 1) without circular dependencies."
+    columns:
+      - name: customer_key
+        description: "Surrogate key for this customer record."
+        tests: [unique, not_null]
+      - name: birth_date
+        description: "Date of Birth"
+      - name: gender
+        description: "Gender of the customer"
+      - name: customer_group
+        description: "Customer Group Code/Name"
+      - name: loyalty_points
+        description: "Loyalty points balance"
+
+  - name: dim_date
+    description: "Calendar date dimension."
+    columns:
+      - name: date_key
+        description: "Integer date key (YYYYMMDD)"
+        tests: [unique, not_null]
+      - name: date_actual
+        description: "Actual date value"
+
+  - name: dim_geography
+    description: "Geography dimension."
+    columns:
+      - name: geography_key
+        description: "Surrogate key for the province/district/ward/country combination."
+        tests: [unique, not_null]
+      - name: province
+        description: "Vietnamese province name (e.g., 'Hồ Chí Minh', 'Hà Nội')."
+      - name: district
+        description: "District within the province; sub-province granularity."
+      - name: ward
+        description: "Ward within the district; finest geographic granularity available."
+      - name: country
+        description: "Country name; defaults to 'Vietnam' when not provided by Sapo."
+      - name: last_seen_at
+        description: "Latest updated_at timestamp for this location across all source records."
+
+  - name: dim_order_status
+    description: "Order status dimension (Static)."
+    columns:
+      - name: status_key
+        description: "Surrogate key for the order status."
+        tests: [unique, not_null]
+      - name: status_code
+        description: "Order status code (OPEN, COMPLETED, CANCELLED, ARCHIVED, DRAFT)."
+      - name: description
+        description: "Human-readable label for the order status."
+
+  - name: dim_payment_methods
+    description: "Payment method dimension."
+    columns:
+      - name: payment_method_key
+        description: "Surrogate key for the payment method."
+        tests: [unique, not_null]
+      - name: payment_method_id
+        description: "Native Sapo numeric ID for the payment method."
+      - name: payment_method_name
+        description: "Display name of the payment method (e.g., 'Tiền mặt', 'Chuyển khoản')."
+      - name: payment_method_type
+        description: "Category or type of the payment method as returned by Sapo."
+
+  - name: dim_product_types
+    description: "Product type dimension."
+    columns:
+      - name: product_type_key
+        description: "Surrogate key for the product type."
+        tests: [unique, not_null]
+      - name: product_type_name
+        description: "Normalized product type name; 'Unknown' when Sapo product_type is NULL."
+      - name: product_type
+        description: "Raw product type value from Sapo order items."
+
+
+  - name: dim_products
+    description: "Product dimension derived from sales."
+    columns:
+      - name: product_key
+        description: "Surrogate key for this product record."
+        tests: [unique, not_null]
+      - name: brand_name
+        description: "Standardized product brand name"
+        data_type: varchar
+      - name: brand_code
+        description: "Product brand abbreviation code"
+        data_type: varchar
+
+  - name: dim_promotions
+    description: "Promotion dimension."
+    columns:
+      - name: promotion_key
+        description: "Surrogate key for the promotion (hashed from promotion_code)."
+        tests: [unique, not_null]
+      - name: promotion_code
+        description: "Discount/voucher code applied to the order."
+      - name: discount_amount
+        description: "Discount value associated with this promotion code."
+      - name: promotion_type
+        description: "Type of the promotion as returned by Sapo (e.g., 'percentage', 'fixed_amount')."
+
+  - name: dim_staff
+    description: "Salesperson/Staff dimension."
+    columns:
+      - name: staff_key
+        description: "Surrogate key for the staff member."
+        tests: [unique, not_null]
+      - name: staff_id
+        description: "Native Sapo account ID for the staff member."
+      - name: full_name
+        description: "Display name of the staff member."
+      - name: email
+        description: "Email address of the staff member."
+      - name: phone_number
+        description: "Phone number of the staff member."
+
+  - name: dim_teams
+    description: "Sales team dimension. See docs/context/team-management.md"
+    columns:
+      - name: team_key
+        description: "Surrogate key for this team record."
+        tests: [unique, not_null]
+      - name: team_code
+        description: "Team code (PK from Google Sheet)"
+        data_type: varchar
+        tests: [unique, not_null]
+      - name: team_name
+        description: "Team display name"
+        data_type: varchar
+      - name: revenue_type
+        description: "How team revenue is calculated: member, platform, channel_name"
+        data_type: varchar
+        tests:
+          - accepted_values:
+              arguments:
+                values: ['member', 'platform', 'channel_name']
+      - name: revenue_filter
+        description: "Comma-separated filter values (for platform/channel_name types)"
+        data_type: varchar
+      - name: active_member_count
+        description: "Count of currently active team members"
+        data_type: integer
+
+  - name: dim_time
+    description: "Time dimension (Minute grain) with business hour flags."
+    columns:
+      - name: time_key
+        description: "Integer HHMM (e.g., 0930, 2359)"
+        tests: [unique, not_null]
+      - name: time_of_day_24
+        description: "HH:MM format"
+      - name: time_of_day_12
+        description: "HH:MM AM/PM format"
+      - name: hour_24
+        description: "Hour of day (0-23)"
+      - name: is_business_hour
+        description: "Boolean: Is between 09:00 and 17:00"
+      - name: is_peak_hour
+        description: "Boolean: Is Lunch (11-14) or Dinner (16-19)"
+      - name: day_period
+        description: "Morning, Afternoon, Evening, Night"
+
+  - name: mart_deadstock_target_queue
+    description: >
+      Dead-stock → customer targeting engine. Grain: 1 row per (product_key × customer_key).
+      Joins own-brand FJV slow/dead SKUs (mart_product_health) with past buyers (fact_sales COMPLETED)
+      gated to 5 eligible strategic tiers. Drives two outreach legs: HUG (contactable) and
+      SHOPEE_NATIVE (masked-repeat). Includes rank, reason fragment, voucher eligibility,
+      and deterministic holdout flag for P3 measurement.
+    columns:
+      - name: product_key
+        description: "Surrogate product key (FK to dim_products)."
+        tests:
+          - not_null
+          - relationships:
+              arguments:
+                to: ref('dim_products')
+                field: product_key
+      - name: customer_key
+        description: "Surrogate customer key (FK to dim_customers)."
+        tests:
+          - not_null
+          - relationships:
+              arguments:
+                to: ref('dim_customers')
+                field: customer_key
+      - name: target_rank
+        description: "Row rank within each SKU: OVERDUE > DUE_SOON > ON_TRACK, then lifetime_value DESC, recency_days ASC."
+        tests: [not_null]
+      - name: route_channel
+        description: "HUG (contactable real phone) or SHOPEE_NATIVE (masked-repeat)."
+        tests:
+          - not_null
+          - accepted_values:
+              arguments:
+                values: ['HUG', 'SHOPEE_NATIVE']
+      - name: voucher_eligible
+        description: "FALSE for FULL_PRICE buyers (margin protection); TRUE otherwise."
+        tests: [not_null]
+      - name: is_holdout
+        description: "Deterministic ~20% holdout for P3 measurement (hash(customer_key||sku) % 10 < 2)."
+        tests: [not_null]
+    tests:
+      - dbt_utils.unique_combination_of_columns:
+          arguments:
+            combination_of_columns:
+              - product_key
+              - customer_key
+
+  - name: mart_product_action_queue
+    description: "Operational merchandising action queue — 1 row per product needing action (RESTOCK_NOW/CLEAR_DEADSTOCK/REVIEW_MARGIN/PROMOTE/DELIST)."
+    columns:
+      - name: product_key
+        description: "Surrogate product key."
+        tests: [not_null, unique]
+      - name: action_type
+        description: "Merchandising action."
+        tests:
+          - not_null
+          - accepted_values:
+              arguments:
+                values: ['RESTOCK_NOW', 'CLEAR_DEADSTOCK', 'REVIEW_MARGIN', 'PROMOTE', 'DELIST']
+      - name: priority_rank
+        tests: [not_null]
+
+  - name: mart_product_health
+    description: >
+      Current product-health state, 1 row per product. Synthesis of velocity × margin × inventory ×
+      lifecycle (analog of dim_customers for products). health_class (STAR/WORKHORSE/QUESTION/DOG) is
+      computed only over has_margin_data SKUs (~42 with COGS); velocity/inventory/lifecycle signals
+      cover all products. See domains/product.md → Product Health Classification.
+    columns:
+      - name: product_key
+        description: "Surrogate product key."
+        tests: [not_null, unique]
+      - name: abc_class
+        description: "Revenue-contribution class (A/B/C) from cumulative net_revenue share."
+        tests:
+          - accepted_values:
+              arguments:
+                values: ['A', 'B', 'C']
+      - name: health_class
+        description: "BCG-style velocity×margin class. NULL when no margin data."
+        tests:
+          - accepted_values:
+              arguments:
+                values: ['STAR', 'WORKHORSE', 'QUESTION', 'DOG', 'BALANCED']
+      - name: lifecycle_stage
+        description: "NEW/GROWING/MATURE/DECLINING/DORMANT."
+      - name: velocity_momentum
+        description: "ACCELERATING/STABLE/DECELERATING (NULL if <3 months history)."
+      - name: has_margin_data
+        description: "TRUE when SKU has COGS-based margin (~42 SKU); FALSE → health_class NULL."
+

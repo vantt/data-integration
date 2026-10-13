@@ -12,8 +12,8 @@
 
 ## Data Lineage
 
-- **Core Models:** [`dim_customers`](../../../transformation/models/marts/core/dim_customers.sql) — RFM `value_group`, `customer_status`, P3 behavioral labels, `lifetime_value`, `recency_days`
-- **Fact Tables:** [`fact_orders`](../../../transformation/models/marts/sales/fact_orders.sql), `fact_sales`, `mart_customer_status_snapshot_monthly`
+- **Core Models:** [`dim_customers`](../../../transformation/models/core/marts/dim_customers.sql) — RFM `value_group`, `customer_status`, P3 behavioral labels, `lifetime_value`, `recency_days`
+- **Fact Tables:** [`fact_orders`](../../../transformation/models/core/marts/sales/fact_orders.sql), `fact_sales`, `mart_customer_status_snapshot_monthly`
 - **Dimensions:** `dim_channels`, `dim_products`
 - **Scope note:** `scope_sales` + `is_active_order` filters apply to all `fact_orders` queries. `mart_customer_status_snapshot_monthly` drives MoM for Total/Active/LTV/Repeat heroes (no YoY until 24 months of data). New Customers hero uses `dim_customers` directly and has YoY.
 

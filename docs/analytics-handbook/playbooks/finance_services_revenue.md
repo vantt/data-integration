@@ -14,7 +14,7 @@
 
 ## Data Lineage
 
-- **Source:** [`int_misa_sales_lines`](../../../transformation/models/intermediate/misa/int_misa_sales_lines.sql) WHERE `is_service_line = true`
+- **Source:** [`int_misa_sales_lines`](../../../transformation/models/packs/finance/intermediate/misa/int_misa_sales_lines.sql) WHERE `is_service_line = true`
 - **Flag dependency:** `is_service_line = (product_code LIKE 'DV%' OR product_code LIKE 'CPBH%')` — implemented in P0
 - **Grain:** Per invoice line (posting_date, product_code, revenue_net_of_discount)
 - **No join needed:** Services không có COGS trong MISA → cogs_amount = 0 cho tất cả DV* lines

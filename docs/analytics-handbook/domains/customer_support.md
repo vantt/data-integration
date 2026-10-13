@@ -36,7 +36,7 @@
 
 #### 1. Social Sales Volume
 
-> **dbt Model:** [`fact_orders`](../../../transformation/models/marts/sales/fact_orders.sql)
+> **dbt Model:** [`fact_orders`](../../../transformation/models/core/marts/sales/fact_orders.sql)
 
 - **Business Definition:** GMV generated specifically from Social Media channels (Facebook, Zalo).
 - **Logic (SQL):**
@@ -59,7 +59,7 @@
 
 #### 2. Social Order Count
 
-> **dbt Model:** [`fact_orders`](../../../transformation/models/marts/sales/fact_orders.sql)
+> **dbt Model:** [`fact_orders`](../../../transformation/models/core/marts/sales/fact_orders.sql)
 
 - **Business Definition:** Number of successful orders originating from social channels.
 - **Logic (SQL):**

@@ -1,5 +1,153 @@
 description: Known boundary violations. Each needs a reason and a planned exit; check_boundaries.py fails on anything not listed here.
 allow:
+- rule: dbt-path
+  subject: dim_action_scenario_registry
+  target: models/marts/customer/dim_action_scenario_registry.sql not under models/tenants/fine_japan/
+  reason: Fine Japan tenant model still in its original layer folder. Exit - move into models/tenants/fine_japan/ with the tenant overlay.
+- rule: dbt-path
+  subject: dim_cash_allocation_policy
+  target: models/marts/finance/dim_cash_allocation_policy.sql not under models/tenants/fine_japan/
+  reason: Fine Japan tenant model still in its original layer folder. Exit - move into models/tenants/fine_japan/ with the tenant overlay.
+- rule: dbt-path
+  subject: fact_cashflow_budget
+  target: models/marts/finance/fact_cashflow_budget.sql not under models/tenants/fine_japan/
+  reason: Fine Japan tenant model still in its original layer folder. Exit - move into models/tenants/fine_japan/ with the tenant overlay.
+- rule: dbt-path
+  subject: fact_us_shipment_economics
+  target: models/marts/sales/fact_us_shipment_economics.sql not under models/tenants/fine_japan/
+  reason: Fine Japan tenant model still in its original layer folder. Exit - move into models/tenants/fine_japan/ with the tenant overlay.
+- rule: dbt-path
+  subject: int_crm_outreach_effort_events
+  target: models/marts/core/intermediate/int_crm_outreach_effort_events.sql not under models/tenants/fine_japan/
+  reason: Fine Japan tenant model still in its original layer folder. Exit - move into models/tenants/fine_japan/ with the tenant overlay.
+- rule: dbt-path
+  subject: int_crm_party_tag_flags
+  target: models/marts/customer/int_crm_party_tag_flags.sql not under models/tenants/fine_japan/
+  reason: Fine Japan tenant model still in its original layer folder. Exit - move into models/tenants/fine_japan/ with the tenant overlay.
+- rule: dbt-path
+  subject: int_order_overhead_allocation
+  target: models/intermediate/overhead/int_order_overhead_allocation.sql not under models/tenants/fine_japan/
+  reason: Fine Japan tenant model still in its original layer folder. Exit - move into models/tenants/fine_japan/ with the tenant overlay.
+- rule: dbt-path
+  subject: int_overhead_pool_monthly
+  target: models/intermediate/overhead/int_overhead_pool_monthly.sql not under models/tenants/fine_japan/
+  reason: Fine Japan tenant model still in its original layer folder. Exit - move into models/tenants/fine_japan/ with the tenant overlay.
+- rule: dbt-path
+  subject: int_us_shipment_line_prices
+  target: models/intermediate/us_shipment/int_us_shipment_line_prices.sql not under models/tenants/fine_japan/
+  reason: Fine Japan tenant model still in its original layer folder. Exit - move into models/tenants/fine_japan/ with the tenant overlay.
+- rule: dbt-path
+  subject: mart_cash_surplus_allocation
+  target: models/marts/finance/mart_cash_surplus_allocation.sql not under models/tenants/fine_japan/
+  reason: Fine Japan tenant model still in its original layer folder. Exit - move into models/tenants/fine_japan/ with the tenant overlay.
+- rule: dbt-path
+  subject: mart_cashflow_budget_vs_actual
+  target: models/marts/finance/mart_cashflow_budget_vs_actual.sql not under models/tenants/fine_japan/
+  reason: Fine Japan tenant model still in its original layer folder. Exit - move into models/tenants/fine_japan/ with the tenant overlay.
+- rule: dbt-path
+  subject: mart_cashflow_forecast
+  target: models/marts/finance/mart_cashflow_forecast.sql not under models/tenants/fine_japan/
+  reason: Fine Japan tenant model still in its original layer folder. Exit - move into models/tenants/fine_japan/ with the tenant overlay.
+- rule: dbt-path
+  subject: mart_cashflow_reserve_status
+  target: models/marts/finance/mart_cashflow_reserve_status.sql not under models/tenants/fine_japan/
+  reason: Fine Japan tenant model still in its original layer folder. Exit - move into models/tenants/fine_japan/ with the tenant overlay.
+- rule: dbt-path
+  subject: mart_cashflow_unmapped_actuals
+  target: models/marts/finance/mart_cashflow_unmapped_actuals.sql not under models/tenants/fine_japan/
+  reason: Fine Japan tenant model still in its original layer folder. Exit - move into models/tenants/fine_japan/ with the tenant overlay.
+- rule: dbt-path
+  subject: mart_crm_activity_log
+  target: models/marts/customer/mart_crm_activity_log.sql not under models/tenants/fine_japan/
+  reason: Fine Japan tenant model still in its original layer folder. Exit - move into models/tenants/fine_japan/ with the tenant overlay.
+- rule: dbt-path
+  subject: mart_crm_outreach_effort_by_action_weekly
+  target: models/marts/crm/mart_crm_outreach_effort_by_action_weekly.sql not under models/tenants/fine_japan/
+  reason: Fine Japan tenant model still in its original layer folder. Exit - move into models/tenants/fine_japan/ with the tenant overlay.
+- rule: dbt-path
+  subject: mart_customer_action_queue
+  target: models/marts/customer/mart_customer_action_queue.sql not under models/tenants/fine_japan/
+  reason: Fine Japan tenant model still in its original layer folder. Exit - move into models/tenants/fine_japan/ with the tenant overlay.
+- rule: dbt-path
+  subject: mart_customer_sku_action_queue
+  target: models/marts/customer/mart_customer_sku_action_queue.sql not under models/tenants/fine_japan/
+  reason: Fine Japan tenant model still in its original layer folder. Exit - move into models/tenants/fine_japan/ with the tenant overlay.
+- rule: dbt-path
+  subject: mart_hug_attribution
+  target: models/marts/core/mart_hug_attribution.sql not under models/tenants/fine_japan/
+  reason: Fine Japan tenant model still in its original layer folder. Exit - move into models/tenants/fine_japan/ with the tenant overlay.
+- rule: dbt-path
+  subject: mart_hug_optin
+  target: models/marts/customer/mart_hug_optin.sql not under models/tenants/fine_japan/
+  reason: Fine Japan tenant model still in its original layer folder. Exit - move into models/tenants/fine_japan/ with the tenant overlay.
+- rule: dbt-path
+  subject: mart_staff_performance_weekly
+  target: models/marts/crm/mart_staff_performance_weekly.sql not under models/tenants/fine_japan/
+  reason: Fine Japan tenant model still in its original layer folder. Exit - move into models/tenants/fine_japan/ with the tenant overlay.
+- rule: dbt-path
+  subject: src_hug_optin_event
+  target: models/staging/src_hug_optin_event.sql not under models/tenants/fine_japan/
+  reason: Fine Japan tenant model still in its original layer folder. Exit - move into models/tenants/fine_japan/ with the tenant overlay.
+- rule: dbt-path
+  subject: src_hug_scan
+  target: models/staging/src_hug_scan.sql not under models/tenants/fine_japan/
+  reason: Fine Japan tenant model still in its original layer folder. Exit - move into models/tenants/fine_japan/ with the tenant overlay.
+- rule: dbt-path
+  subject: stg_crm__activity_log
+  target: models/staging/stg_crm__activity_log.sql not under models/tenants/fine_japan/
+  reason: Fine Japan tenant model still in its original layer folder. Exit - move into models/tenants/fine_japan/ with the tenant overlay.
+- rule: dbt-path
+  subject: stg_crm__app_user
+  target: models/staging/stg_crm__app_user.sql not under models/tenants/fine_japan/
+  reason: Fine Japan tenant model still in its original layer folder. Exit - move into models/tenants/fine_japan/ with the tenant overlay.
+- rule: dbt-path
+  subject: stg_crm__campaign_target
+  target: models/staging/stg_crm__campaign_target.sql not under models/tenants/fine_japan/
+  reason: Fine Japan tenant model still in its original layer folder. Exit - move into models/tenants/fine_japan/ with the tenant overlay.
+- rule: dbt-path
+  subject: stg_crm__customer_profile_custom
+  target: models/staging/stg_crm__customer_profile_custom.sql not under models/tenants/fine_japan/
+  reason: Fine Japan tenant model still in its original layer folder. Exit - move into models/tenants/fine_japan/ with the tenant overlay.
+- rule: dbt-path
+  subject: stg_crm__hug_voucher
+  target: models/staging/stg_crm__hug_voucher.sql not under models/tenants/fine_japan/
+  reason: Fine Japan tenant model still in its original layer folder. Exit - move into models/tenants/fine_japan/ with the tenant overlay.
+- rule: dbt-path
+  subject: stg_crm__last_contact
+  target: models/staging/stg_crm__last_contact.sql not under models/tenants/fine_japan/
+  reason: Fine Japan tenant model still in its original layer folder. Exit - move into models/tenants/fine_japan/ with the tenant overlay.
+- rule: dbt-path
+  subject: stg_crm__note
+  target: models/staging/stg_crm__note.sql not under models/tenants/fine_japan/
+  reason: Fine Japan tenant model still in its original layer folder. Exit - move into models/tenants/fine_japan/ with the tenant overlay.
+- rule: dbt-path
+  subject: stg_crm__party_insight
+  target: models/staging/stg_crm__party_insight.sql not under models/tenants/fine_japan/
+  reason: Fine Japan tenant model still in its original layer folder. Exit - move into models/tenants/fine_japan/ with the tenant overlay.
+- rule: dbt-path
+  subject: stg_crm__party_tag
+  target: models/staging/stg_crm__party_tag.sql not under models/tenants/fine_japan/
+  reason: Fine Japan tenant model still in its original layer folder. Exit - move into models/tenants/fine_japan/ with the tenant overlay.
+- rule: dbt-path
+  subject: stg_crm__task
+  target: models/staging/stg_crm__task.sql not under models/tenants/fine_japan/
+  reason: Fine Japan tenant model still in its original layer folder. Exit - move into models/tenants/fine_japan/ with the tenant overlay.
+- rule: dbt-path
+  subject: stg_hug_optin_event
+  target: models/staging/stg_hug_optin_event.sql not under models/tenants/fine_japan/
+  reason: Fine Japan tenant model still in its original layer folder. Exit - move into models/tenants/fine_japan/ with the tenant overlay.
+- rule: dbt-path
+  subject: stg_hug_scan
+  target: models/staging/stg_hug_scan.sql not under models/tenants/fine_japan/
+  reason: Fine Japan tenant model still in its original layer folder. Exit - move into models/tenants/fine_japan/ with the tenant overlay.
+- rule: dbt-path
+  subject: stg_overhead_account_classification
+  target: models/staging/stg_overhead_account_classification.sql not under models/tenants/fine_japan/
+  reason: Fine Japan tenant model still in its original layer folder. Exit - move into models/tenants/fine_japan/ with the tenant overlay.
+- rule: dbt-path
+  subject: stg_us_shipment_prices
+  target: models/staging/stg_us_shipment_prices.sql not under models/tenants/fine_japan/
+  reason: Fine Japan tenant model still in its original layer folder. Exit - move into models/tenants/fine_japan/ with the tenant overlay.
 - rule: dbt-ref
   subject: dim_customer_addresses
   target: stg_sapo_v2_customer_addresses [core -> connector:sapo_v2]

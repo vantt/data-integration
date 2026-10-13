@@ -6,7 +6,7 @@ This document details the architecture, business logic, and development process 
 
 We follow a strict 3-layer pattern ("Hop 5" in our Data Pipeline):
 
-### Layer 1: Staging (`models/staging/sapo/`)
+### Layer 1: Staging (`models/connectors/sapo_v2/staging/`)
 
 - **Purpose**: Cleaning & Extraction.
 - **Input**: `src_` views (Raw Data Lake).
@@ -16,7 +16,7 @@ We follow a strict 3-layer pattern ("Hop 5" in our Data Pipeline):
   - **Flattening**: Bringing nested fields (Shipping Address, Customer Info) to the root level.
 - **Naming**: `stg_[source]_[entity]`.
 
-### Layer 2: Standard (`models/staging/standard/`)
+### Layer 2: Standard (`models/cdm/staging/`)
 
 - **Purpose**: Verification & Standardization ("Gold Standard").
 - **Input**: `stg_` models.
@@ -26,7 +26,7 @@ We follow a strict 3-layer pattern ("Hop 5" in our Data Pipeline):
   - **Tests**: Primary location for `unique`, `not_null`, and `accepted_values` tests.
 - **Naming**: `std_[entity]`.
 
-### Layer 3: Marts (`models/marts/`)
+### Layer 3: Marts (`models/core/marts/`, `models/packs/*/marts/`)
 
 - **Purpose**: Serving & Analytics (Star Schema).
 - **Input**: `std_` models.
@@ -82,7 +82,7 @@ Since we don't have a direct Product Sync pipeline yet, we **derive** products f
 
 ### Testing
 
-- **Schema Tests**: Always defined in `models/staging/standard/schema.yml`.
+- **Schema Tests**: Always defined in `models/cdm/staging/_cdm__models.yml`.
 - **Run**: `dbt test --select std_orders` (typically run via pipeline script).
 
 ### Deployment
