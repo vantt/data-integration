@@ -7,7 +7,7 @@
 -- INTERMEDIATE: ORDER TAGS
 -- =============================================================================
 -- Purpose: Unnest order tags JSON array and categorize each tag
--- Input: src_sapo_orders.tags (JSON string array)
+-- Input: std_order_tags.tags (JSON string array)
 -- Output: One row per order-tag pair with semantic category
 -- Docs: transformation/docs/TAG_HANDLING.md
 -- =============================================================================
@@ -16,8 +16,8 @@ WITH raw_tags AS (
     SELECT
         order_id,
         TRIM(REPLACE(tag.value::VARCHAR, '"', '')) as tag_value
-    -- T0.4 DECISION (2026-06-03): reads src_sapo_orders directly for $.tags. Deferred to v3 work (option a) — when v3 arrives, expose tags via std_orders or add a v3 path. Gated by Q1-Q5.
-    FROM {{ ref('src_sapo_v2_orders') }},
+    -- Reads the tags JSON through std_order_tags (core reads the canonical layer only).
+    FROM {{ ref('std_order_tags') }},
     LATERAL UNNEST(
         CASE
             WHEN tags IS NOT NULL AND tags NOT IN ('', '[]')

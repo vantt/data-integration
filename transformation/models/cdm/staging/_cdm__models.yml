@@ -226,3 +226,159 @@ models:
       - name: variant_id
         tests: [unique, not_null]
 
+  - name: std_customer_addresses
+    description: "Standardized customer addresses. Grain: 1/(sapo_customer_id, address_id)."
+    tests:
+      - std_column_contract:
+          config: {severity: warn}
+          columns:
+            - {name: sapo_customer_id, type: "VARCHAR"}
+            - {name: address_id, type: "VARCHAR"}
+            - {name: address1, type: "VARCHAR"}
+            - {name: address2, type: "VARCHAR"}
+            - {name: ward, type: "VARCHAR"}
+            - {name: district, type: "VARCHAR"}
+            - {name: city, type: "VARCHAR"}
+            - {name: province, type: "VARCHAR"}
+            - {name: zip, type: "VARCHAR"}
+            - {name: country, type: "VARCHAR"}
+            - {name: phone, type: "VARCHAR"}
+            - {name: company, type: "VARCHAR"}
+            - {name: first_name, type: "VARCHAR"}
+            - {name: last_name, type: "VARCHAR"}
+            - {name: source_system, type: "VARCHAR"}
+  - name: std_customer_contacts
+    description: "Standardized customer contacts. Grain: 1/(sapo_customer_id, contact_id)."
+    tests:
+      - std_column_contract:
+          config: {severity: warn}
+          columns:
+            - {name: sapo_customer_id, type: "VARCHAR"}
+            - {name: contact_id, type: "VARCHAR"}
+            - {name: contact_name, type: "VARCHAR"}
+            - {name: phone, type: "VARCHAR"}
+            - {name: email, type: "VARCHAR"}
+            - {name: position, type: "VARCHAR"}
+            - {name: organization, type: "VARCHAR"}
+            - {name: source_system, type: "VARCHAR"}
+  - name: std_customer_notes
+    description: "Standardized customer notes. Grain: 1/(sapo_customer_id, note_id)."
+    tests:
+      - std_column_contract:
+          config: {severity: warn}
+          columns:
+            - {name: sapo_customer_id, type: "VARCHAR"}
+            - {name: note_id, type: "VARCHAR"}
+            - {name: content, type: "VARCHAR"}
+            - {name: created_on, type: "VARCHAR"}
+            - {name: account_id, type: "VARCHAR"}
+            - {name: source_system, type: "VARCHAR"}
+  - name: std_customer_tags
+    description: "Standardized customer tags. Grain: 1/(sapo_customer_id, tag_name)."
+    tests:
+      - std_column_contract:
+          config: {severity: warn}
+          columns:
+            - {name: sapo_customer_id, type: "VARCHAR"}
+            - {name: tag_name, type: "VARCHAR"}
+            - {name: source_system, type: "VARCHAR"}
+  - name: std_order_events
+    description: "Standardized order history events (status/payment/fulfillment snapshots with previous values). Grain: 1/(order_id, snapshot_seq)."
+    tests:
+      - std_column_contract:
+          config: {severity: warn}
+          columns:
+            - {name: order_id, type: "VARCHAR"}
+            - {name: event_type, type: "VARCHAR"}
+            - {name: event_timestamp, type: "TIMESTAMP WITH TIME ZONE"}
+            - {name: actor_name, type: "VARCHAR"}
+            - {name: original_event_id, type: "VARCHAR"}
+            - {name: status, type: "VARCHAR"}
+            - {name: payment_status, type: "VARCHAR"}
+            - {name: fulfillment_status, type: "VARCHAR"}
+            - {name: cancelled_on, type: "VARCHAR"}
+            - {name: completed_on, type: "VARCHAR"}
+            - {name: finalized_on, type: "VARCHAR"}
+            - {name: snapshot_seq, type: "BIGINT"}
+            - {name: prev_status, type: "VARCHAR"}
+            - {name: prev_payment_status, type: "VARCHAR"}
+            - {name: prev_fulfillment_status, type: "VARCHAR"}
+            - {name: source_system, type: "VARCHAR"}
+  - name: std_order_tags
+    description: "Standardized order tags (raw JSON array per order). Grain: 1/order revision row of the source; consumers unnest and dedupe."
+    tests:
+      - std_column_contract:
+          config: {severity: warn}
+          columns:
+            - {name: order_id, type: "VARCHAR"}
+            - {name: tags, type: "VARCHAR"}
+            - {name: source_system, type: "VARCHAR"}
+  - name: std_teams
+    description: "Standardized sales teams. Grain: 1/team_code."
+    tests:
+      - std_column_contract:
+          config: {severity: warn}
+          columns:
+            - {name: team_key, type: "VARCHAR"}
+            - {name: team_code, type: "VARCHAR"}
+            - {name: team_name, type: "VARCHAR"}
+            - {name: revenue_type, type: "VARCHAR"}
+            - {name: revenue_filter, type: "VARCHAR"}
+            - {name: leader_email, type: "VARCHAR"}
+            - {name: description, type: "VARCHAR"}
+            - {name: ingest_method, type: "VARCHAR"}
+            - {name: source_system, type: "VARCHAR"}
+  - name: std_team_members
+    description: "Standardized team membership (SCD2). Grain: 1/(staff_email, team_code, effective_from)."
+    tests:
+      - std_column_contract:
+          config: {severity: warn}
+          columns:
+            - {name: membership_key, type: "VARCHAR"}
+            - {name: staff_email, type: "VARCHAR"}
+            - {name: team_code, type: "VARCHAR"}
+            - {name: effective_from, type: "DATE"}
+            - {name: effective_to, type: "DATE"}
+            - {name: is_active, type: "BOOLEAN"}
+            - {name: ingest_method, type: "VARCHAR"}
+            - {name: source_system, type: "VARCHAR"}
+  - name: std_targets
+    description: "Standardized sales targets. Grain: 1/target_key."
+    tests:
+      - std_column_contract:
+          config: {severity: warn}
+          columns:
+            - {name: target_key, type: "VARCHAR"}
+            - {name: target_code, type: "VARCHAR"}
+            - {name: cycle_start_date, type: "DATE"}
+            - {name: cycle_end_date, type: "DATE"}
+            - {name: cycle_type, type: "VARCHAR"}
+            - {name: branch_code, type: "VARCHAR"}
+            - {name: team_code, type: "VARCHAR"}
+            - {name: staff_email, type: "VARCHAR"}
+            - {name: sales_channel, type: "VARCHAR"}
+            - {name: product_sku, type: "VARCHAR"}
+            - {name: metric_code, type: "VARCHAR"}
+            - {name: target_val, type: "DECIMAL(18,2)"}
+            - {name: description, type: "VARCHAR"}
+            - {name: ingest_method, type: "VARCHAR"}
+            - {name: source_system, type: "VARCHAR"}
+  - name: std_marketing_spend
+    description: "Standardized marketing spend. Grain: 1/spend_id."
+    tests:
+      - std_column_contract:
+          config: {severity: warn}
+          columns:
+            - {name: spend_id, type: "VARCHAR"}
+            - {name: date, type: "VARCHAR"}
+            - {name: spend_code, type: "VARCHAR"}
+            - {name: campaign_id, type: "VARCHAR"}
+            - {name: spend_amount, type: "DECIMAL(15,2)"}
+            - {name: clicks, type: "INTEGER"}
+            - {name: impressions, type: "INTEGER"}
+            - {name: ingest_method, type: "VARCHAR"}
+            - {name: source_id, type: "VARCHAR"}
+            - {name: location_id, type: "VARCHAR"}
+            - {name: year, type: "BIGINT"}
+            - {name: month, type: "BIGINT"}
+            - {name: source_system, type: "VARCHAR"}

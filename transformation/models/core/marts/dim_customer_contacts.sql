@@ -13,7 +13,7 @@
 -- =================================================================================================
 
 WITH contacts AS (
-    SELECT * FROM {{ ref('stg_sapo_v2_customer_contacts') }}
+    SELECT * FROM {{ ref('std_customer_contacts') }}
 ),
 
 customers AS (

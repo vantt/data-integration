@@ -13,7 +13,7 @@
 -- =================================================================================================
 
 WITH notes AS (
-    SELECT * FROM {{ ref('stg_sapo_v2_customer_notes') }}
+    SELECT * FROM {{ ref('std_customer_notes') }}
 ),
 
 customers AS (

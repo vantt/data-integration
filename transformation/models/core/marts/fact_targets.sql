@@ -5,7 +5,7 @@
 ) }}
 
 WITH staged AS (
-    SELECT * FROM {{ ref('stg_targets') }}
+    SELECT * FROM {{ ref('std_targets') }}
 ),
 
 dim_date AS (

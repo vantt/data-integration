@@ -7,13 +7,13 @@
 -- MART: CUSTOMER TAGS
 -- =================================================================================================
 -- Purpose:
---   One row per (customer_key, tag_name). Joins stg_sapo_v2_customer_tags with
+--   One row per (customer_key, tag_name). Joins std_customer_tags with
 --   dim_customers_base to expose customer_key as the stable warehouse FK.
 -- Grain: customer × tag
 -- =================================================================================================
 
 WITH tags AS (
-    SELECT * FROM {{ ref('stg_sapo_v2_customer_tags') }}
+    SELECT * FROM {{ ref('std_customer_tags') }}
 ),
 
 customers AS (

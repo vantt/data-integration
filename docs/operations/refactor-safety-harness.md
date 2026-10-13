@@ -215,7 +215,7 @@ cột volatile khác          = count(c)
 | `tests` | Mất test khi tách file properties |
 | `description` (đã strip), `columns` | Mất tài liệu khi tách file properties |
 
-Các trường đường dẫn (`original_file_path`, `fqn`, `path`) **không** được so, vì dời file là mục đích của refactor. `location` được chuẩn hoá (bỏ hậu tố timestamp). `diff` có hai cờ: `--allow-new` (chấp nhận node mới) và `--allow-code-change` (chấp nhận đổi SQL; dữ liệu vẫn phải khớp golden).
+Các trường đường dẫn (`original_file_path`, `fqn`, `path`) **không** được so, vì dời file là mục đích của refactor. `location` được chuẩn hoá (bỏ hậu tố timestamp). `diff` có hai cờ: `--allow-new` (chấp nhận node mới) và `--allow-code-change` (chấp nhận đổi SQL; dữ liệu vẫn phải khớp golden). Khi có `--allow-code-change`, một thay đổi `depends_on` cũng được chấp nhận (in `INFO ... repointed dependency kept upstream: <dep cũ> -> via <dep mới>`) **chỉ khi mọi dependency bị bỏ vẫn là tổ tiên** của node trong đồ thị `depends_on` của nhánh, tức model đổi ref sang một view pass-through (`std_*`) mà lineage tới nguồn cũ không đổi. Dependency bị bỏ mà không còn là tổ tiên, hoặc không có cờ, vẫn là `DIFF`. Test: `scripts/tests/test_dbt_inventory.py`.
 
 `compiled-diff` so **SQL dbt thực sự đã chạy** (`compiled_code` trong manifest do `dbt build` ghi), đã chuẩn hoá khoảng trắng, theo `unique_id` (không phụ thuộc đường dẫn). Đây là bằng chứng mạnh nhất cho các thay đổi kiểu "thay khối CASE bằng macro trả về đúng SQL đó".
 

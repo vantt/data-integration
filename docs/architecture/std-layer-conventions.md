@@ -41,6 +41,21 @@ To version the raw layer, rename only the **dbt source alias** in `sources.yml` 
 ### R8 — Scheduling reality (this daemon)
 `dagster schedule stop/start -f <file>` via CLI is **ineffective** here (ephemeral code-location origin ≠ daemon's), so you cannot pause the pipeline that way and `schedule list` shows a misleading `[STOPPED]`. The realtime job keeps firing every 3 min. To truly pause, use the Dagster UI. Otherwise accept that a mid-edit auto-run may transiently FAIL and self-heal, and rely on R6's fresh-run + checksum gate.
 
+### R9 — Module dependency matrix and the std gate
+The gate is enforced by `scripts/checks/check_boundaries.py` (rule `dbt-ref`), not only by review: `core/` may `ref` only `cdm/`, `core/` and seeds, so a core model can never read a connector model (`stg_*`, `src_*` or a connector `int_*`). A connector that needs to reach core exposes the data through a `std_*` view in `models/cdm/staging/` (full matrix: [modules.md §3](modules.md)). A new `std_*` also needs an entry in `scripts/checks/model_buckets.yaml` (bucket `cdm`). Core models that read a std view keep an **explicit column list**, so `source_system` never leaks into a public table.
+
+Std views added for the core gate (all pass-through, `source_system` last, no `source_version`):
+
+| std | Source | `source_system` |
+|---|---|---|
+| `std_customer_addresses`, `std_customer_contacts`, `std_customer_notes`, `std_customer_tags` | `stg_sapo_v2_customer_*` | `sapo_v2` |
+| `std_order_events` | `int_order_snapshots_ranked` (history-log status snapshots) | `sapo_v2` |
+| `std_order_tags` | `src_sapo_v2_orders` (`order_id`, `tags`) | `sapo_v2` |
+| `std_teams`, `std_team_members`, `std_targets`, `std_marketing_spend` | `stg_teams`, `stg_team_members`, `stg_targets`, `stg_marketing_spend` | `gsheet` |
+
+### R10 — Schema test at warn level
+Every `std_*` added for the core gate carries the generic test `std_column_contract` (`transformation/tests/generic/std_column_contract.sql`) with `config: {severity: warn}`. It compares the view's column names, order and types with the list in the model's properties file and returns one row per mismatch. Types are copied from `information_schema` of a built warehouse, never written from memory. The test warns in the Dagster test results and does not block the nightly run; `contract: enforced` is deliberately not enabled yet.
+
 ## Checklist — adding or changing a Sapo entity
 - [ ] Does it feed a dim/fact/int? → it needs a `std_<entity>` (R1).
 - [ ] std = faithful pass-through, all columns, + source_system/source_version (R2), no version suffix (R3).
@@ -48,3 +63,5 @@ To version the raw layer, rename only the **dbt source alias** in `sources.yml` 
 - [ ] No new std for a consumer-less stg (R5).
 - [ ] Capture baseline → create std → repoint → fresh green run + checksum identical → commit (R6).
 - [ ] Raw/dlt untouched; source alias only (R7).
+- [ ] Added to `model_buckets.yaml` (cdm); no allowlist entry left for the leak it closes (R9).
+- [ ] `std_column_contract` test at `severity: warn` with types from the warehouse (R10).

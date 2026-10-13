@@ -10,7 +10,7 @@
 |---|---|
 | Bucket của mọi dbt model (172 model, kể cả 10 model đang tắt) | ✅ Khai báo trong `scripts/checks/model_buckets.yaml` |
 | Ma trận phụ thuộc, import chéo, seed trùng tên, URL cứng trong connector | ✅ Cưỡng chế bằng `scripts/checks/check_boundaries.py` (mục 3, mục 12) |
-| Vi phạm đã biết | 61 = 24 phụ thuộc (mục 3) + 37 model tenant chưa dời thư mục, ghi trong `scripts/checks/boundary_allowlist.yaml` kèm lý do và hướng thoát |
+| Vi phạm đã biết | 46 = 9 phụ thuộc (mục 3) + 37 model tenant chưa dời thư mục, ghi trong `scripts/checks/boundary_allowlist.yaml` kèm lý do và hướng thoát |
 | Thư mục dbt theo module `models/<module>/<layer>/` | ✅ 134 model (connectors, cdm, core, packs) + monitoring; ⏳ 37 model `tenant:fine_japan` còn ở `staging/`, `intermediate/`, `marts/` cũ |
 | Connector package cho orchestration, tenant overlay, taxonomy module | ⏳ Đích (mục 4, 5, 9, 10) |
 
@@ -216,7 +216,7 @@ Số model theo bucket (`model_buckets.yaml`):
 
 | Bucket | Model | Bucket | Model |
 |---|---|---|---|
-| connector:sapo_v2 | 28 | cdm | 14 |
+| connector:sapo_v2 | 28 | cdm | 24 |
 | connector:shopee | 8 | core | 61 |
 | connector:misa | 3 | pack:finance | 4 |
 | connector:gsheet | 4 | pack:marketplace | 3 |
@@ -224,14 +224,15 @@ Số model theo bucket (`model_buckets.yaml`):
 | connector:facebook_messenger (tắt) | 2 | pack:facebook_messenger (tắt) | 2 |
 | tenant:fine_japan | 37 | monitoring | 1 |
 
-Vi phạm đã biết (24):
+Vi phạm đã biết (9):
 
 | Nhóm | Số | Ví dụ | Hướng thoát |
 |---|---|---|---|
-| Core đọc thẳng staging của connector | 15 | `dim_customer_addresses` → `stg_sapo_v2_customer_addresses`; `fact_orders` → `stg_teams` | Thêm `std_*` pass-through, core chỉ đọc tầng canonical |
 | Tenant hook (core phụ thuộc dữ liệu FJ) | 4 | `dim_staff` → `stg_crm__app_user`; `fact_order_costs` → `int_order_overhead_allocation`; `mart_data_quality` → `fact_us_shipment_economics` | Tách phần FJ vào tenant overlay |
 | Core dùng dữ liệu kế toán MISA | 2 | `dim_sku_alias`, `mart_sku_economics_monthly` → `int_misa_sales_lines` | Đưa ledger qua tầng canonical như input tuỳ chọn |
 | Core trộn phí sàn Shopee | 3 | `fact_order_costs` → `stg_shopee_*`; `fact_order_economics` → `int_shopee_order_fees` | Chuyển phần phí sàn sang `pack:marketplace` |
+
+**Đã đóng (core đọc thẳng staging của connector, 15 cạnh):** core chỉ đọc `cdm/` qua 10 view `std_*` mới (mục 6). Đường đi trước → sau: `dim_customer_{addresses,contacts,notes,tags}` ← `stg_sapo_v2_customer_*` → `std_customer_*`; `fact_order_transitions` ← `int_order_snapshots_ranked` → `std_order_events` và `stg_sapo_v2_orders` → `std_orders`; `int_order_tags` ← `src_sapo_v2_orders` → `std_order_tags`; `dim_teams`, `fact_orders`, `fact_sales` ← `stg_teams`/`stg_team_members` → `std_teams`/`std_team_members`; `fact_targets` → `std_targets`; `fact_marketing_spend` → `std_marketing_spend`. `dim_gl_account` đã nằm ở `packs/finance` từ trước. Các cạnh còn lại ở bảng trên là nợ có chủ đích (tenant hook, MISA, phí sàn Shopee), đóng ở các phase sau.
 
 **Quyết định phân loại (13/10/2026):** COGS (`int_order_cogs_reconciled`, `int_order_promo_goods_cost`, `int_promo_642_monthly_total`, `mart_order_cogs_summary`) và tồn kho (`fact_inventory_*`, `int_sapo_inventories`, `int_return_sku_lines`, `mart_inventory_health`) thuộc **core**, không phải pack: các fact lõi (`fact_order_costs`, `fact_order_economics`, `mart_sku_economics_monthly`, `mart_product_health`) phụ thuộc vào chúng, và đây là phần chuẩn của bán hàng thương mại điện tử. `int_order_snapshots_ranked` đọc thẳng raw Sapo nên thuộc `connector:sapo_v2`.
 
@@ -343,6 +344,19 @@ flowchart LR
 ```
 
 Luật của tầng này theo `docs/architecture/std-layer-conventions.md`: R1 downstream không đọc `stg_*`; R2 pass-through trung thành + `source_system`. Mỗi `std_*` có test danh sách cột/kiểu mức **warn**. Owner: module CDM; connector chỉ cung cấp `stg_*` đầu vào.
+
+10 view `std_*` mới (tất cả `view`, pass-through trung thành, `source_system` ở cuối): 
+
+| View | Đọc từ | `source_system` | Core dùng |
+|---|---|---|---|
+| `std_customer_addresses/contacts/notes/tags` | `stg_sapo_v2_customer_*` | `sapo_v2` | `dim_customer_*` |
+| `std_order_events` | `int_order_snapshots_ranked` (lịch sử trạng thái đơn từ history log) | `sapo_v2` | `fact_order_transitions` |
+| `std_order_tags` | `src_sapo_v2_orders` (`order_id`, `tags`) | `sapo_v2` | `int_order_tags` |
+| `std_teams`, `std_team_members` | `stg_teams`, `stg_team_members` | `gsheet` | `dim_teams`, `fact_orders`, `fact_sales` |
+| `std_targets` | `stg_targets` | `gsheet` | `fact_targets` |
+| `std_marketing_spend` | `stg_marketing_spend` | `gsheet` | `fact_marketing_spend` |
+
+Cột `source_system` chỉ có trong `std_*`; các model core giữ danh sách cột tường minh nên cột này không lọt ra bảng public. `fact_order_transitions` lấy `order_code` từ `std_orders` (cùng nội dung `stg_sapo_v2_orders`). Test: generic test `std_column_contract` (`transformation/tests/generic/`) so khớp tên, thứ tự và kiểu cột với `information_schema`, `severity: warn`; kiểu lấy từ warehouse thật, không bật `contract: enforced`.
 
 ## 7. Core
 

@@ -5,7 +5,7 @@
 ) }}
 
 WITH staged AS (
-    SELECT * FROM {{ ref('stg_marketing_spend') }}
+    SELECT * FROM {{ ref('std_marketing_spend') }}
 ),
 
 dim_channels AS (

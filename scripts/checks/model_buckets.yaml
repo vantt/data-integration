@@ -10,19 +10,29 @@ pack_connectors:   # connectors a pack may read directly (all other packs go thr
   facebook_messenger: [facebook_messenger]
 
 buckets:
-  # --- cdm (14)
+  # --- cdm (24)
   std_accounts: cdm
+  std_customer_addresses: cdm
+  std_customer_contacts: cdm
+  std_customer_notes: cdm
+  std_customer_tags: cdm
   std_customers: cdm
   std_fulfillments: cdm
   std_inventory_movements: cdm
+  std_marketing_spend: cdm
   std_misa_account_ledger: cdm
   std_misa_sales_lines: cdm
   std_order_discount_items: cdm
+  std_order_events: cdm
   std_order_items: cdm
   std_order_returns: cdm
+  std_order_tags: cdm
   std_orders: cdm
   std_payments: cdm
   std_products: cdm
+  std_targets: cdm
+  std_team_members: cdm
+  std_teams: cdm
   std_variant_prices: cdm
   std_variants: cdm
   # --- connector:facebook_ads (3)

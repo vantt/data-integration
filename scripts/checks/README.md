@@ -9,7 +9,7 @@ true in code. The shadow gate ([scripts/shadow/README.md](../shadow/README.md)) 
 | `model_buckets.yaml` | data | Bucket (module) of every dbt model; `pack_connectors` for packs |
 | `boundary_allowlist.yaml` | data | Known violations, each with a reason and an exit |
 | `golden_snapshot.py`, `public_models.yaml` | data equality | Public tables identical before/after a change |
-| `dbt_inventory.py` | dbt contract | Relations, config, refs, tests, compiled SQL unchanged |
+| `dbt_inventory.py` | dbt contract | Relations, config, refs, tests, compiled SQL unchanged. With `--allow-code-change` a repointed ref is accepted only while the removed dependency stays an ancestor (INFO shows the new route) |
 | `dagster_inventory.py` | orchestration contract | Assets, checks, job selections, schedules, sensors, SLA unchanged |
 | `instigator_state.py` | deploy | Live schedule/sensor on/off state before vs after a deploy |
 | `guard_not_prod.py` | safety | Refuses paths inside the prod checkout |

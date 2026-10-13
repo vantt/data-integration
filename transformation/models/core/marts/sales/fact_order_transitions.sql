@@ -45,8 +45,8 @@ WITH transitions AS (
                 )) / 86400.0, 2
             )
         END AS days_since_prev_event
-    FROM {{ ref('int_order_snapshots_ranked') }} t
-    LEFT JOIN {{ ref('stg_sapo_v2_orders') }} o ON t.order_id = o.order_id
+    FROM {{ ref('std_order_events') }} t
+    LEFT JOIN {{ ref('std_orders') }} o ON t.order_id = o.order_id
 )
 SELECT *
 FROM transitions

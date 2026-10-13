@@ -14,7 +14,7 @@
 -- =================================================================================================
 
 WITH addresses AS (
-    SELECT * FROM {{ ref('stg_sapo_v2_customer_addresses') }}
+    SELECT * FROM {{ ref('std_customer_addresses') }}
 ),
 
 customers AS (

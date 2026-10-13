@@ -11,7 +11,10 @@ anything that changes a relation, a materialization, a tag used for selection,
 `on_schema_change`, seed `column_types`, or a ref is.
 
 `--allow-code-change` reports SQL checksum changes as information (phases that rewrite SQL
-prove data equality with the golden snapshot instead). `--allow-new` accepts added nodes.
+prove data equality with the golden snapshot instead) and, with it, a changed `depends_on`
+whose every removed dependency is still an ancestor of the node in the new graph (a model
+repointed to a pass-through keeps its lineage to the original source; reported as INFO with the
+new dependency it now goes through). `--allow-new` accepts added nodes and added dependencies.
 
   compiled-diff A_manifest.json B_manifest.json [--allow-code-change]
 
@@ -79,6 +82,29 @@ def _flat(d, prefix=""):
         yield prefix, d
 
 
+def _ancestors(inv: dict, uid: str) -> set[str]:
+    """All upstream nodes of `uid` in the inventory graph (sources and unknown ids are leaves)."""
+    seen: set[str] = set()
+    stack = list(inv.get(uid, {}).get("depends_on") or [])
+    while stack:
+        dep = stack.pop()
+        if dep not in seen:
+            seen.add(dep)
+            stack.extend(inv.get(dep, {}).get("depends_on") or [])
+    return seen
+
+
+def _repoint_info(a: dict, b: dict, uid: str) -> str | None:
+    """Describe a dependency change that keeps every removed dependency upstream; None otherwise."""
+    old, new = set(a[uid].get("depends_on") or []), set(b[uid].get("depends_on") or [])
+    removed, added = old - new, new - old
+    upstream = _ancestors(b, uid)
+    if not removed or not removed <= upstream:
+        return None
+    via = {r: sorted(d for d in added if r in _ancestors(b, d)) for r in removed}
+    return "; ".join(f"{r} -> via {', '.join(v)}" for r, v in sorted(via.items()))
+
+
 def cmd_diff(args: argparse.Namespace) -> int:
     a, b = json.load(open(args.a)), json.load(open(args.b))
     problems, info = [], []
@@ -96,6 +122,8 @@ def cmd_diff(args: argparse.Namespace) -> int:
                 info.append(msg)
             elif key == "depends_on" and args.allow_new and set(fa.get(key) or []) <= set(fb.get(key) or []):
                 info.append(msg)
+            elif key == "depends_on" and args.allow_code_change and (via := _repoint_info(a, b, uid)):
+                info.append(f"{uid}: repointed dependency kept upstream: {via}")
             else:
                 problems.append(msg)
     for m in info:

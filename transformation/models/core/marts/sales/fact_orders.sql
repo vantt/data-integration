@@ -30,11 +30,11 @@ first_shipment AS (
 
 -- Team membership with SCD2 (for member-based attribution)
 team_members AS (
-    SELECT * FROM {{ ref('stg_team_members') }}
+    SELECT * FROM {{ ref('std_team_members') }}
 ),
 
 teams AS (
-    SELECT * FROM {{ ref('stg_teams') }}
+    SELECT * FROM {{ ref('std_teams') }}
 ),
 
 -- Classify discount items to order-level summary

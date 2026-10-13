@@ -149,22 +149,6 @@ allow:
   target: models/staging/stg_us_shipment_prices.sql not under models/tenants/fine_japan/
   reason: Fine Japan tenant model still in its original layer folder. Exit - move into models/tenants/fine_japan/ with the tenant overlay.
 - rule: dbt-ref
-  subject: dim_customer_addresses
-  target: stg_sapo_v2_customer_addresses [core -> connector:sapo_v2]
-  reason: Core reads a connector staging model directly (std gate R1). Exit - add std_* pass-through views so core reads the canonical layer only.
-- rule: dbt-ref
-  subject: dim_customer_contacts
-  target: stg_sapo_v2_customer_contacts [core -> connector:sapo_v2]
-  reason: Core reads a connector staging model directly (std gate R1). Exit - add std_* pass-through views so core reads the canonical layer only.
-- rule: dbt-ref
-  subject: dim_customer_notes
-  target: stg_sapo_v2_customer_notes [core -> connector:sapo_v2]
-  reason: Core reads a connector staging model directly (std gate R1). Exit - add std_* pass-through views so core reads the canonical layer only.
-- rule: dbt-ref
-  subject: dim_customer_tags
-  target: stg_sapo_v2_customer_tags [core -> connector:sapo_v2]
-  reason: Core reads a connector staging model directly (std gate R1). Exit - add std_* pass-through views so core reads the canonical layer only.
-- rule: dbt-ref
   subject: dim_sku_alias
   target: int_misa_sales_lines [core -> pack:finance]
   reason: Core SKU cost/alias uses MISA sales lines (accounting source). Exit - expose ledger data through the canonical layer as an optional core input.
@@ -172,18 +156,6 @@ allow:
   subject: dim_staff
   target: stg_crm__app_user [core -> tenant:fine_japan]
   reason: Tenant hook - core logic depends on Fine Japan data (CRM users, overhead allocation, US shipment). Exit - split the FJ part into the tenant overlay.
-- rule: dbt-ref
-  subject: dim_teams
-  target: stg_team_members [core -> connector:gsheet]
-  reason: Core reads a connector staging model directly (std gate R1). Exit - add std_* pass-through views so core reads the canonical layer only.
-- rule: dbt-ref
-  subject: dim_teams
-  target: stg_teams [core -> connector:gsheet]
-  reason: Core reads a connector staging model directly (std gate R1). Exit - add std_* pass-through views so core reads the canonical layer only.
-- rule: dbt-ref
-  subject: fact_marketing_spend
-  target: stg_marketing_spend [core -> connector:gsheet]
-  reason: Core reads a connector staging model directly (std gate R1). Exit - add std_* pass-through views so core reads the canonical layer only.
 - rule: dbt-ref
   subject: fact_order_costs
   target: int_order_overhead_allocation [core -> tenant:fine_japan]
@@ -204,38 +176,6 @@ allow:
   subject: fact_order_economics
   target: int_shopee_order_fees [core -> pack:marketplace]
   reason: Core order cost/economics mixes in Shopee marketplace fees. Exit - move fee legs to pack marketplace.
-- rule: dbt-ref
-  subject: fact_order_transitions
-  target: int_order_snapshots_ranked [core -> connector:sapo_v2]
-  reason: Core reads a connector staging model directly (std gate R1). Exit - add std_* pass-through views so core reads the canonical layer only.
-- rule: dbt-ref
-  subject: fact_order_transitions
-  target: stg_sapo_v2_orders [core -> connector:sapo_v2]
-  reason: Core reads a connector staging model directly (std gate R1). Exit - add std_* pass-through views so core reads the canonical layer only.
-- rule: dbt-ref
-  subject: fact_orders
-  target: stg_team_members [core -> connector:gsheet]
-  reason: Core reads a connector staging model directly (std gate R1). Exit - add std_* pass-through views so core reads the canonical layer only.
-- rule: dbt-ref
-  subject: fact_orders
-  target: stg_teams [core -> connector:gsheet]
-  reason: Core reads a connector staging model directly (std gate R1). Exit - add std_* pass-through views so core reads the canonical layer only.
-- rule: dbt-ref
-  subject: fact_sales
-  target: stg_team_members [core -> connector:gsheet]
-  reason: Core reads a connector staging model directly (std gate R1). Exit - add std_* pass-through views so core reads the canonical layer only.
-- rule: dbt-ref
-  subject: fact_sales
-  target: stg_teams [core -> connector:gsheet]
-  reason: Core reads a connector staging model directly (std gate R1). Exit - add std_* pass-through views so core reads the canonical layer only.
-- rule: dbt-ref
-  subject: fact_targets
-  target: stg_targets [core -> connector:gsheet]
-  reason: Core reads a connector staging model directly (std gate R1). Exit - add std_* pass-through views so core reads the canonical layer only.
-- rule: dbt-ref
-  subject: int_order_tags
-  target: src_sapo_v2_orders [core -> connector:sapo_v2]
-  reason: Core reads a connector staging model directly (std gate R1). Exit - add std_* pass-through views so core reads the canonical layer only.
 - rule: dbt-ref
   subject: mart_data_quality
   target: fact_us_shipment_economics [core -> tenant:fine_japan]
