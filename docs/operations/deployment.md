@@ -670,7 +670,7 @@ bind-mounted into `data_platform` (`docker-compose.yml` volumes), so the prod ch
 never edited directly and a change goes live only through the steps below.
 
 Before deploying, the branch must pass the shadow gate (`scripts/shadow/gate.sh M` or `S`,
-see `scripts/shadow/README.md`). Never deploy while the nightly pipeline is red for another
+see [refactor-safety-harness.md](./refactor-safety-harness.md)). Never deploy while the nightly pipeline is red for another
 reason (freeze rule), and avoid the 02:30–04:00 nightly window.
 
 There is no quiet window: `pipeline_sapo_v2_realtime_schedule` runs every 3 minutes and

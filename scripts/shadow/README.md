@@ -1,5 +1,7 @@
 # Shadow environment and refactor gate
 
+Design and full explanation (what each check proves, how it works, limits): [docs/operations/refactor-safety-harness.md](../../docs/operations/refactor-safety-harness.md). This README is the command reference.
+
 Prove that a refactor changes no number, no public table name, no dbt relation/config and no
 Dagster wiring, without touching production. Production keeps running daily; it changes only
 through the deploy runbook in [docs/operations/deployment.md](../../docs/operations/deployment.md#refactor-deploys-shadow-verified).
