@@ -16,7 +16,7 @@ Dùng prompt bên dưới để bắt đầu một chat session mới với Clau
 - Cập nhật `transformation/seeds/properties.yml` nếu cần
 
 ### Bước 2: ref_brands.csv — Tạo seed mới
-- Tạo file `transformation/seeds/ref_brands.csv` theo schema phần 6.2.2
+- Tạo file `transformation/seeds/taxonomy/ref_brands.csv` theo schema phần 6.2.2
 - Tạo properties trong `transformation/seeds/properties.yml`
 - Trước khi viết, query dữ liệu thực tế vendor từ `std_order_items` (hoặc stg) để biết tất cả giá trị vendor đang có, rồi tạo mapping đầy đủ
 

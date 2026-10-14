@@ -1,19 +1,24 @@
 import pandas as pd
 import os
+import sys
 
 # Paths
 BASE_DIR = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
-SEEDS_DIR = os.path.join(BASE_DIR, 'transformation', 'seeds')
 OUTPUT_DIR = os.path.join(BASE_DIR, 'scripts', 'maintenance', 'output')
 
 os.makedirs(OUTPUT_DIR, exist_ok=True)
 
-def load_csv(filename):
-    return pd.read_csv(os.path.join(SEEDS_DIR, filename))
+if BASE_DIR not in sys.path:
+    sys.path.insert(0, BASE_DIR)
+
+from ingestion.src.utils.seed_paths import seed_path  # noqa: E402
+
+def load_csv(seed_name):
+    return pd.read_csv(seed_path(seed_name))
 
 def generate_spend_items():
     print("Generating Spend Items Dropdown...")
-    df = load_csv('ref_marketing_spend_map.csv')
+    df = load_csv('ref_marketing_spend_map')
     
     # We want: Display Name -> Spend Code
     # The file has: spend_code, display_name, ...
@@ -28,8 +33,8 @@ def generate_spend_items():
 
 def generate_channels():
     print("\nGenerating Channels Dropdown...")
-    sources = load_csv('ref_order_sources.csv')
-    locations = load_csv('ref_branch_locations.csv')
+    sources = load_csv('ref_order_sources')
+    locations = load_csv('ref_branch_locations')
     
     channels = []
     

@@ -3,7 +3,7 @@
 # built from the untouched `main` worktree) on a fresh shadow lake.
 #
 # Usage: scripts/shadow/gate.sh <M|S> [--allow-new] [--allow-code-change]
-#   M  move-only phases: golden + dbt inventory + compiled SQL + module boundaries + dagster inventory
+#   M  move-only phases: golden + dbt inventory + compiled SQL + module boundaries + taxonomy inventory (warn only) + dagster inventory
 #      + dagster-run dbt subset + pytest + empty-lake build
 #   S  SQL-changing phases: M + a second golden pass after --full-refresh of every
 #      incremental model and everything downstream (the incremental branch is exercised
@@ -84,6 +84,9 @@ check "${PIPESTATUS[0]}" "compiled SQL"
 step "3b. module boundaries (host python: needs crm/ and detailView/)"
 python3 "$BRANCH_DIR/scripts/checks/check_boundaries.py" --manifest "$SHADOW_ROOT/lake-B/_shadow_meta/manifest.json" | tail -5
 check "${PIPESTATUS[0]}" "module boundaries"
+
+step "3c. taxonomy inventory (warn only: a changed or new classification block is printed, never fails the gate)"
+python3 "$BRANCH_DIR/scripts/checks/check_taxonomy_inventory.py" --repo "$BRANCH_DIR" | tail -20
 
 step "4. dagster inventory (assets, checks, job selections, schedules, sensors, SLA)"
 "$RUN" "$BRANCH_DIR" "$SHADOW_ROOT" sh -c "

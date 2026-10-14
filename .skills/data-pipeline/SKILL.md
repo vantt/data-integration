@@ -181,7 +181,8 @@ transformation/                        # dbt layer
 │   └── marts/
 │       ├── core/dim_{entity}.sql      # External parquet (rolling)
 │       └── sales/fact_{process}.sql   # External parquet (rolling)
-├── seeds/ref_*.csv                    # Static reference data
+├── seeds/taxonomy/ref_*.csv           # Classification reference data (find with seed_path(name))
+├── seeds/seed_*.csv                   # Tenant seeds (budget, targets, SKU config)
 ├── macros/get_rolling_location.sql    # REQUIRED macro
 └── scripts/run_dbt.py                 # dbt build wrapper
 

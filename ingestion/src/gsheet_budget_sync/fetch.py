@@ -23,6 +23,7 @@ from datetime import datetime, timezone, timedelta
 import pandas as pd
 
 from ingestion.src import gsheet_auth
+from ingestion.src.utils.seed_paths import SEEDS_DIR as _SEEDS_DIR
 
 
 def _load_dotenv_local():
@@ -45,9 +46,8 @@ def _load_dotenv_local():
 
 _load_dotenv_local()
 
-_CURRENT_DIR = os.path.dirname(os.path.abspath(__file__))
-_PROJECT_ROOT = os.path.abspath(os.path.join(_CURRENT_DIR, "../../.."))
-SEEDS_DIR = os.path.join(_PROJECT_ROOT, "transformation", "seeds")
+# Seed base directory; individual seeds are located with seed_path(name, SEEDS_DIR).
+SEEDS_DIR = str(_SEEDS_DIR)
 
 _DEFAULT_SHEET_URL = (
     "https://docs.google.com/spreadsheets/d/15hba6bzrTRXUDXBeUg5_DhefrETX9kLGG8SnPJZzTfA/edit"

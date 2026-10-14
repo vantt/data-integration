@@ -268,7 +268,7 @@ def budget_sheet_sync_asset(context):
     """Daily sync for the Budget Sheet (BUDGET_ITEMS + ALLOCATION_POLICY tabs).
 
     Unlike the other sheets_* assets, this does NOT write to the gsheet_raw data lake —
-    it writes directly to 2 dbt seed CSVs (transformation/seeds/seed_cashflow_budget.csv,
+    it writes directly to 2 dbt seed CSVs (located by name with ingestion/src/utils/seed_paths.py: seed_cashflow_budget.csv,
     seed_cash_allocation_policy.csv) so the nightly `dbt build` picks them up. Scheduled at
     02:30 ICT, 30 min before the nightly dbt build (03:00 ICT).
 

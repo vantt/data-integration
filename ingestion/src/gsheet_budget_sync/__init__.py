@@ -34,6 +34,8 @@ import os
 
 import pandas as pd
 
+from ingestion.src.utils.seed_paths import seed_path
+
 from .fetch import (  # noqa: F401 — re-exported for `sync.X` compatibility
     SHEET_URL, SEEDS_DIR, GID_BUDGET_ITEMS, GID_ALLOCATION_POLICY, GID_REF,
     ValidationError, _fetch_tab_csv, load_ref_lines, _current_month_start,
@@ -102,8 +104,8 @@ def fetch_transform_and_save(dry_run: bool = False) -> int:
         )
 
     current_month_start = _current_month_start()
-    budget_seed_path = os.path.join(SEEDS_DIR, "seed_cashflow_budget.csv")
-    policy_seed_path = os.path.join(SEEDS_DIR, "seed_cash_allocation_policy.csv")
+    budget_seed_path = str(seed_path("seed_cashflow_budget", SEEDS_DIR))
+    policy_seed_path = str(seed_path("seed_cash_allocation_policy", SEEDS_DIR))
 
     merged_budget = merge_historical_budget(budget_seed_path, budget_df, current_month_start)
 

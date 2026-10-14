@@ -6,6 +6,7 @@ import requests
 import io
 
 import gsheet_auth
+from ingestion.src.utils.seed_paths import seed_path
 
 
 def _load_dotenv_local():
@@ -48,17 +49,14 @@ def fetch_and_save_marketing_spend():
     print(f"Fetching via Sheets API (gid=0): {SHEET_URL}")
 
     # --- MAPPING LOGIC START ---
-    base_dir = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
-    seeds_dir = os.path.join(base_dir, 'transformation', 'seeds')
-
-    def load_csv_as_df(filename):
-        return pd.read_csv(os.path.join(seeds_dir, filename))
+    def load_csv_as_df(seed_name):
+        return pd.read_csv(seed_path(seed_name))
 
     # 1. Load Reference Data
     try:
-        df_spend_cat = load_csv_as_df('ref_spend_category.csv')
-        df_sources = load_csv_as_df('ref_order_sources.csv')
-        df_locations = load_csv_as_df('ref_branch_locations.csv')
+        df_spend_cat = load_csv_as_df('ref_spend_category')
+        df_sources = load_csv_as_df('ref_order_sources')
+        df_locations = load_csv_as_df('ref_branch_locations')
     except Exception as e:
         print(f"Error loading reference seeds: {e}")
         raise e

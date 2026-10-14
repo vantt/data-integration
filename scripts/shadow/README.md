@@ -54,6 +54,7 @@ Checks used by the gate live in `scripts/checks/`:
 | `dagster_inventory.py` | Asset keys/groups, asset checks, job selections resolved to dbt unique_ids, schedules (cron, timezone, default status), sensors and resolved SLA are unchanged. |
 | `instigator_state.py` | Live on/off state of schedules/sensors on the prod webserver, before vs after a deploy. |
 | `check_boundaries.py` | Module dependency matrix, cross-component imports, duplicate seeds, hard-coded URLs in connectors (see `scripts/checks/README.md`). |
+| `check_taxonomy_inventory.py` | Classification `CASE` blocks and expressions still in dbt SQL match `taxonomy_inventory.yaml`; warns on a changed hash or a new `CASE` assigning a taxonomy column (see `scripts/checks/README.md`). |
 | `guard_not_prod.py` | Refuses paths inside `/home/vantt/app/fg-dataware-house`. |
 
 ## One-time setup
@@ -98,6 +99,7 @@ scripts/shadow/gate.sh S     # phases that rewrite SQL (3, 4)
 | dbt inventory diff | ✓ | ✓ |
 | Compiled SQL diff (what dbt executed, per model) | ✓ | ✓ |
 | Module boundaries (`check_boundaries.py`, host python) | ✓ | ✓ |
+| Taxonomy inventory (`check_taxonomy_inventory.py`, host python, warn only: prints `WARN`, never fails) | ✓ | ✓ |
 | Dagster inventory diff (incl. job → dbt unique_ids) | ✓ | ✓ |
 | dbt subset run through Dagster (`marts/fact_order_returns`, the `_fact_order_returns` job selection) | ✓ | ✓ |
 | pytest `ingestion/tests orchestration scripts/tests` | ✓ | ✓ |

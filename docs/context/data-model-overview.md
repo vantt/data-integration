@@ -115,6 +115,8 @@ Sapo `source` field chứa nhiều concepts khác nhau. Dùng `source_type` đ�
 | `purpose` | Mục đích đơn hàng | Test SP, Quà Tặng, Ưu đãi NV |
 | `arrangement` | Thỏa thuận đặc biệt | US (CrossBorder Fulfillment) |
 
+> **Đang lệch với code:** `source_type` của CS và Telesale là `channel` trong seed `transformation/seeds/taxonomy/ref_order_sources.csv`, không phải `team`. Xem [TAXONOMY.md#known-divergences](../../transformation/docs/TAXONOMY.md#known-divergences).
+
 Chi tiết: [sales-segmentation-guide.md - Section 7](./sales-segmentation-guide.md#7-known-limitations--source-field-overloading)
 
 ---

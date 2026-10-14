@@ -13,28 +13,31 @@ snapshot-paths: ["snapshots"]
 
 seeds:
   sapo_warehouse:
-    ref_order_sources:
-      +column_types:
-        id: varchar
-        name: varchar
-        status: boolean
-        platform: varchar
-        channel_format: varchar
-        is_generic_source: boolean
-        mapping_tag: varchar
-        channel_brand: varchar
-        market: varchar
-        source_type: varchar
-    ref_brands:
-      +column_types:
-        vendor_raw: varchar
-        brand_name: varchar
-        brand_code: varchar
-    ref_misa_channel_codes:
-      +column_types:
-        channel_code: varchar
-        channel_name: varchar
-        channel_group: varchar
+    # Classification seeds live in seeds/taxonomy/. +column_types is keyed by folder path
+    # (fqn), so each seed is configured under its folder, not under the project root.
+    taxonomy:
+      ref_order_sources:
+        +column_types:
+          id: varchar
+          name: varchar
+          status: boolean
+          platform: varchar
+          channel_format: varchar
+          is_generic_source: boolean
+          mapping_tag: varchar
+          channel_brand: varchar
+          market: varchar
+          source_type: varchar
+      ref_brands:
+        +column_types:
+          vendor_raw: varchar
+          brand_name: varchar
+          brand_code: varchar
+      ref_misa_channel_codes:
+        +column_types:
+          channel_code: varchar
+          channel_name: varchar
+          channel_group: varchar
     seed_action_scenario_registry:
       +column_types:
         enabled: boolean

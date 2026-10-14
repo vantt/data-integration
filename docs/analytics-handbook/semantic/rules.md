@@ -544,6 +544,8 @@ SELECT * FROM int_misa_sales_lines WHERE channel_code = 'shopee'  -- 'shopee' do
 | CS | Corporate / B2B | B2B channels |
 | KHAC | Other | Misc |
 
+> **Đang lệch với code:** seed `transformation/seeds/taxonomy/ref_misa_channel_codes.csv` ghi `DAILY` là "Đại lý" (`B2B_DEALER`) và `CS` là "Chăm sóc khách hàng" (`DIRECT_B2C`), ngược với bảng này và khối `CASE` ở trên. Chờ nghiệp vụ xác nhận bên nào đúng: [TAXONOMY.md#known-divergences](../../../transformation/docs/TAXONOMY.md#known-divergences).
+
 **Applies To:**
 - [gross_margin_pct](metrics.md#gross_margin_pct) — from MISA source; channel_code scope required
 - Analyses from `int_misa_sales_lines` — always scope by channel_code with awareness of the taxonomy gap

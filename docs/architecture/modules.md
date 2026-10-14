@@ -13,7 +13,8 @@
 | Vi phạm đã biết | 46 = 9 phụ thuộc (mục 3) + 37 model tenant chưa dời thư mục, ghi trong `scripts/checks/boundary_allowlist.yaml` kèm lý do và hướng thoát |
 | Thư mục dbt theo module `models/<module>/<layer>/` | ✅ 134 model (connectors, cdm, core, packs) + monitoring; ⏳ 37 model `tenant:fine_japan` còn ở `staging/`, `intermediate/`, `marts/` cũ |
 | Connector package cho orchestration (`orchestration/connectors/<id>/`, bật/tắt qua `config/modules.yaml`) | ✅ 5 connector: `sapo_v2`, `shopee`, `misa_amis`, `sheets`, `hug` (mục 4, 5) |
-| Tenant overlay, taxonomy module | ⏳ Đích (mục 9, 10) |
+| Taxonomy: đặc tả, seed phân loại, `seed_paths.py`, check kiểm kê | ✅ `transformation/docs/TAXONOMY.md`, `transformation/seeds/taxonomy/` (8 seed), `ingestion/src/utils/seed_paths.py`, `scripts/checks/check_taxonomy_inventory.py` (mục 9) |
+| Bộ máy phân loại (luật thành dữ liệu), tenant overlay | ⏳ Đích, bộ máy là plan riêng sau Đợt 1 (mục 9, 10) |
 
 Các mục dưới đây mô tả trạng thái đích; chỗ nào đã khớp code được đánh dấu ✅.
 
@@ -60,7 +61,7 @@ flowchart TB
         CDM[cdm/]
         CORE[core/]
         PACK[packs/]
-        TAX[taxonomy macros + seeds]
+        TAX[taxonomy seeds + spec]
         MON[monitoring/]
     end
     subgraph FJ["Tenant overlay Fine Japan"]
@@ -85,7 +86,7 @@ flowchart TB
     FB -.-> C5
     C1 & C2 & C3 & C4 --> CDM
     CDM --> CORE --> PACK
-    TAX -. "macro dùng trong" .-> CORE & PACK & FJD
+    TAX -. "seed dùng trong" .-> CORE & PACK & FJD
     CORE & PACK --> FJD
     CORE & PACK & FJD --> OLAP
     OLAP --> MB & EV & RL & CRMAPP & DV
@@ -143,7 +144,7 @@ flowchart LR
 | `export/marts/rolling/<model>/` | dbt model có `get_rolling_location()` | Kernel serving builder, Rill publish | Sửa tay |
 | `serving/olap.duckdb` | Kernel (`refresh_rolling.py`, `bootstrap_serving_views.py`) | Metabase, Evidence, CRM, detailView (read-only) | Mọi consumer ghi |
 | `monitoring_db` (health DB) | Kernel ops/sensors | Kernel asset checks, digest | Connector ghi trực tiếp (đi qua ops chung) |
-| `transformation/seeds/taxonomy/*.csv` | Taxonomy module; writer Python đi qua `seed_paths.py` | dbt seed | Ghi theo đường dẫn cứng |
+| `transformation/seeds/taxonomy/*.csv` | Taxonomy module; writer Python đi qua `seed_paths.py` ✅ | dbt seed | Ghi theo đường dẫn cứng (đường dẫn seed phải do `seed_path(name)` tra) |
 | `transformation/seeds/tenants/fine_japan/*.csv` | Tenant FJ (budget sync) | dbt seed | Module khác ghi |
 
 ### Vùng shadow (công cụ refactor, không phải prod)
@@ -195,7 +196,7 @@ flowchart TB
     CDM --> PACK
     CONN -. "chỉ connector pack khai báo<br/>marketplace→shopee, finance→misa,<br/>facebook_*→facebook_*" .-> PACK
     CDM & CORE & PACK & CONN --> TEN["tenants/fine_japan"]
-    TAX["macros/taxonomy + seeds/taxonomy"] --> CORE & PACK & TEN
+    TAX["seeds/taxonomy"] --> CORE & PACK & TEN
     ALL["mọi module"] --> MON["monitoring/ (chỉ đọc)"]
 
     CORE -. "❌ cấm: core → connectors" .-x CONN
@@ -412,11 +413,11 @@ flowchart TB
     end
     DIMS --> FACTS --> CUST & PROD
     COGS & INV --> FACTS
-    TAX["macros/taxonomy"] -. "phân loại" .-> DIMS & FACTS & CUST & PROD
+    TAX["seeds/taxonomy"] -. "phân loại" .-> DIMS & FACTS & CUST & PROD
     CORE --> ROLL["export/marts/rolling/&lt;model&gt;/"]
 ```
 
-- Core chỉ đọc `cdm/`, `core/`, seeds và macro taxonomy.
+- Core chỉ đọc `cdm/`, `core/` và seeds (kể cả `seeds/taxonomy`). Các luật phân loại còn viết trong SQL của core được kiểm kê ở `transformation/docs/TAXONOMY.md`.
 - Mọi tên model ở đây là **public** (76 serving view, Rill, CRM, detailView): không đổi tên khi refactor module.
 - Nợ còn lại: xem bảng vi phạm đã biết ở mục 3.
 
@@ -440,24 +441,42 @@ Một pack chỉ được đọc connector mà nó khai báo trong `pack_connect
 
 ## 9. Taxonomy module
 
+**Trạng thái:** phần đã làm là **đặc tả, seed và công cụ kiểm tra**. Chưa có macro taxonomy và chưa sửa model nào; các khối `CASE` phân loại vẫn nằm trong SQL của core. Bộ máy phân loại (luật thành dữ liệu, mỗi domain một model sinh từ macro chung) là **plan riêng sau Đợt 1**, thiết kế đã duyệt ở [taxonomy-engine.md](taxonomy-engine.md), bộ mã chuẩn của nó **chưa chốt**.
+
 ```mermaid
 flowchart TB
-    subgraph TAX["Taxonomy module"]
-        MAC["transformation/macros/taxonomy/&lt;domain&gt;.sql<br/>một macro cho mỗi biến thể luật<br/>(customer_type__dim_customers, __fact_orders, __benchmarks, ...)"]
+    subgraph TAX["Taxonomy module (hiện tại)"]
+        DOC["transformation/docs/TAXONOMY.md<br/>46 domain: vị trí, hash, biến thể thật,<br/>ngữ nghĩa nguyên văn, Known divergences"]
+        INV["scripts/checks/taxonomy_inventory.yaml<br/>+ check_taxonomy_inventory.py (chỉ cảnh báo)"]
         SEED["transformation/seeds/taxonomy/<br/>ref_order_sources, ref_brands, ref_misa_channel_codes,<br/>ref_payment_methods, ref_spend_category, ref_tag_categories,<br/>ref_gl_accounts, ref_branch_locations"]
-        DOC["transformation/docs/TAXONOMY.md<br/>kiểm kê + Known divergences"]
-        SP["ingestion/src/utils/seed_paths.py"]
+        SP["ingestion/src/utils/seed_paths.py<br/>seed_path(name) → Path"]
     end
-    WR1["scripts/maintenance/sync_seeds.py"] --> SP
-    WR2["ingestion/src/gsheet_marketing_spend.py"] --> SP
+    DOC <-. "hash khớp (test)" .-> INV
+    INV -. "so với" .-> SQL["CASE trong models/core, cdm, packs, ..."]
+    WR1["scripts/maintenance/sync_seeds.py<br/>(chạy tay: ref_order_sources, ref_branch_locations)"] --> SP
+    RD1["ingestion/src/gsheet_marketing_spend.py<br/>generate_dropdown.py (đọc)"] --> SP
+    WR3["ingestion/src/gsheet_budget_sync<br/>(seed_cashflow_budget, seed_cash_allocation_policy)"] --> SP
     SP --> SEED
-    MAC --> CORE["core/, packs/, tenants/"]
-    SEED -->|"ref()"| CORE
+    SEED -->|"ref()"| CORE["core/, packs/, tenants/"]
+    ENG["Bộ máy phân loại (plan sau Đợt 1)"] -. "thay các khối CASE" .-> SQL
 ```
+
+| Thành phần | Vai trò | Tài liệu |
+|---|---|---|
+| `transformation/docs/TAXONOMY.md` | Đặc tả: mọi luật phân loại (file:dòng, sha256, biến thể, ngữ nghĩa, tenant literal), đã là dữ liệu hay còn là SQL, Known divergences. Là **đặc tả đầu vào** của bộ máy | chính nó |
+| `docs/architecture/taxonomy-engine.md` | Thiết kế bộ máy phân loại (v2, đã duyệt hướng, chưa triển khai) | [taxonomy-engine.md](taxonomy-engine.md) |
+| `docs/reference/taxonomy/` | Bốn tài liệu tham chiếu bên ngoài (Shopify, Trung Quốc, nguồn TMĐT Việt Nam, chuẩn liên ngành) | [reference/taxonomy/](../reference/taxonomy/) |
+| `scripts/checks/check_taxonomy_inventory.py`, `taxonomy_inventory.yaml` | Cảnh báo khi khối đã kiểm kê đổi hash hoặc có `CASE` mới gán cột taxonomy; shadow gate bước 3c | [scripts/checks/README.md](../../scripts/checks/README.md#check_taxonomy_inventorypy) |
+| `ingestion/src/utils/seed_paths.py` | `seed_path(name)` tra thư mục thật của seed (quét `transformation/seeds/**/<name>.csv`, lỗi nếu không có hoặc trùng) | docstring của module |
+| `transformation/seeds/taxonomy/` | 8 seed phân loại; `+column_types` đặt dưới khoá `taxonomy:` trong `dbt_project.yml` | `transformation/AGENTS.md` |
+
+Ai ghi seed nào: `sync_seeds.py` (chạy tay) thêm dòng vào `ref_order_sources` và `ref_branch_locations`; không writer tự động nào ghi seed phân loại. Job Google Sheet 02:30 (`budget_sheet_sync_asset` gọi `gsheet_budget_sync`) ghi hai seed ngân sách của tenant (`seed_cashflow_budget`, `seed_cash_allocation_policy`, chưa dời khỏi `transformation/seeds/`), cũng qua `seed_path`. Bảng đầy đủ đọc/ghi: [TAXONOMY.md mục 5](../../transformation/docs/TAXONOMY.md#5-seed-phân-loại-và-ai-đọc-ai-ghi).
+
+Hình dạng luật hôm nay (chi tiết ở TAXONOMY.md, mục "Dạng luật"): ánh xạ trực tiếp, dò mẫu có ưu tiên, chia ngưỡng, tổ hợp, gán tay, phân cấp. Phần còn là SQL: hầu hết nhãn khách, kênh cấp 1, phạm vi đơn, loại giảm giá, trạng thái chuẩn. Phần đã là dữ liệu: nguồn đơn, thương hiệu, mã kênh MISA, nhóm tag đơn.
 
 | Thuộc sản phẩm | Thuộc tenant |
 |---|---|
-| Danh sách domain, tên macro, cơ chế `seed_path`, kiểm tra trùng seed | Giá trị seed, nội dung luật trong từng macro biến thể (sau này chuyển thành dữ liệu) |
+| Danh sách domain, cơ chế `seed_path`, kiểm tra trùng seed, check kiểm kê, đặc tả cấu trúc | Giá trị seed, nội dung luật (hôm nay nằm trong SQL core, sau này chuyển thành dữ liệu), literal như `CTN00014`, `'US'`, `'Đại Lý'` (danh sách ở TAXONOMY.md mục 6) |
 
 ## 10. Tenant overlay Fine Japan
 
@@ -496,6 +515,7 @@ flowchart TB
 | `dim_staff` | ref `stg_crm__app_user` | Tách enrich CRM ra tenant |
 | `mart_data_quality` | ref `fact_us_shipment_economics` | Tách check US ra tenant |
 | `dim_customers` | Logic SQL: CROSSBORDER dùng đơn kênh US (không phải cạnh ref, checker không thấy) | Quyết định nghiệp vụ + taxonomy |
+| Literal Fine Japan trong các khối `CASE` taxonomy của core (`CTN00014`, `KY_GUI`, `'US'`, `'Đại Lý'`, tên thương hiệu, từ khoá giảm giá) | Không phải cạnh ref, checker không thấy | Danh sách ở [TAXONOMY.md mục 6](../../transformation/docs/TAXONOMY.md#6-giá-trị-tenant-viết-cứng-trong-sql); chuyển vào tenant overlay cùng bộ máy |
 
 `int_customer_economics` và các model đọc `fact_order_costs` phụ thuộc tenant gián tiếp; khi tách phần overhead, các model này đổi theo.
 

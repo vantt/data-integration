@@ -101,6 +101,8 @@ AND customer_type = 'RETAIL'
 
 **Use in SQL:** `WHERE scope_retail` — không re-derive `customer_type = 'RETAIL' AND is_sales_channel = true`.
 
+> **Đang lệch với code:** `fact_orders.scope_retail` còn loại thêm đơn trên kênh `channel_format = 'B2B'` (đại lý còn gắn RETAIL), và `scope_b2b` có thêm điều kiện kênh B2B; định nghĩa ở trên chưa nêu. Xem [TAXONOMY.md#known-divergences](../../../transformation/docs/TAXONOMY.md#known-divergences) và [#order_scope](../../../transformation/docs/TAXONOMY.md#order_scope).
+
 #### 🎯 When to Use
 Bắt buộc cho mọi metric có ngữ cảnh retail: [discount_rate](metrics.md#discount_rate), [discount_amount](metrics.md#discount_amount), [aov](metrics.md#aov), [retention_rate](metrics.md#retention_rate). Không dùng scope_sales khi phân tích promotion — B2B discount = giá sỉ cố định, sẽ méo kết quả.
 

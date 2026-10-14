@@ -122,7 +122,7 @@ graph TD
 > **Note về Tầng 4 — Gian hàng / Điểm bán:**
 > - Đây là đơn vị cụ thể nhất mà khách hàng tương tác: 1 shop trên marketplace, 1 cửa hàng POS, 1 page Facebook, v.v.
 > - **Mapping 1:1 với field `order_source` (source_name/source_id)** của Sapo. Mỗi giá trị Sapo `source_name` = 1 "Gian hàng / Điểm bán".
-> - Seed file tham chiếu: `transformation/seeds/ref_order_sources.csv`.
+> - Seed file tham chiếu: `transformation/seeds/taxonomy/ref_order_sources.csv`.
 
 #### Bảng phân loại đầy đủ
 
@@ -483,6 +483,8 @@ id,name,source_type,channel_format,...
 4110169,US,arrangement,CrossBorder Fulfillment,...
 ```
 
+> **Đang lệch với code:** `source_type` của CS và Telesale là `channel` trong seed `transformation/seeds/taxonomy/ref_order_sources.csv`, không phải `team`. Xem [TAXONOMY.md#known-divergences](../../transformation/docs/TAXONOMY.md#known-divergences).
+
 ### Cách sử dụng
 
 | Nhu cầu | Cách filter |
@@ -585,7 +587,7 @@ Seed files là các file CSV chứa dữ liệu phân loại, được maintain 
 
 ### 8.1. ref_order_sources.csv — Danh sách nguồn đơn hàng
 
-**File:** `transformation/seeds/ref_order_sources.csv`
+**File:** `transformation/seeds/taxonomy/ref_order_sources.csv`
 
 Mỗi dòng đại diện cho một nguồn đơn hàng cụ thể trong Sapo (một shop trên sàn, một page Facebook, POS, hoặc nguồn nội bộ).
 
@@ -641,9 +643,11 @@ id,name,status,source_type,channel_format,is_generic_source,platform,mapping_tag
 3988160,Test Sản Phẩm,false,purpose,System,false,System,,,Domestic
 ```
 
+> **Đang lệch với code:** `source_type` của CS và Telesale là `channel` trong seed `transformation/seeds/taxonomy/ref_order_sources.csv`, không phải `team`. Xem [TAXONOMY.md#known-divergences](../../transformation/docs/TAXONOMY.md#known-divergences).
+
 ### 8.2. ref_brands.csv — Chuẩn hóa vendor
 
-**File:** `transformation/seeds/ref_brands.csv`
+**File:** `transformation/seeds/taxonomy/ref_brands.csv`
 
 Bảng mapping để chuẩn hóa giá trị `vendor` trên Sapo thành tên thương hiệu sản phẩm thống nhất.
 
@@ -673,7 +677,7 @@ Fine Care,Fine Care,FC
 
 ### 8.3. ref_branch_locations.csv — Danh sách chi nhánh
 
-**File:** `transformation/seeds/ref_branch_locations.csv`
+**File:** `transformation/seeds/taxonomy/ref_branch_locations.csv`
 
 | Cột     | Kiểu   | Mô tả                  | Ví dụ                |
 | -------- | ------- | ---------------------- | -------------------- |

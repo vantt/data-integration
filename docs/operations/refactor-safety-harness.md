@@ -106,6 +106,7 @@ flowchart TB
 | `scripts/checks/dbt_inventory.py` | So sánh relation/config/SQL dbt |
 | `scripts/checks/dagster_inventory.py` | So sánh wiring Dagster |
 | `scripts/checks/check_boundaries.py` | Ranh giới module ([scripts/checks/README.md](../../scripts/checks/README.md)) |
+| `scripts/checks/check_taxonomy_inventory.py` + `taxonomy_inventory.yaml` | Cảnh báo khi khối `CASE` phân loại đổi hoặc mọc thêm; không bao giờ làm gate fail ([scripts/checks/README.md](../../scripts/checks/README.md#check_taxonomy_inventorypy), đặc tả: [TAXONOMY.md](../../transformation/docs/TAXONOMY.md)) |
 | `scripts/checks/instigator_state.py` | Trạng thái schedule/sensor trên prod trước/sau deploy |
 
 ## 4. Cô lập khỏi prod bằng cách nào
@@ -227,6 +228,10 @@ Các trường đường dẫn (`original_file_path`, `fqn`, `path`) **không** 
 
 Kiểm tra ma trận phụ thuộc giữa các module, import chéo giữa component, seed trùng tên, URL cứng trong connector, và model nằm đúng thư mục module. Chạy bằng Python của host vì cần thấy cả `crm/` và `detailView/` (container `data_platform` không mount hai thư mục này; checker báo lỗi `py-scan` nếu thiếu, để không pass giả). Chi tiết: [scripts/checks/README.md](../../scripts/checks/README.md).
 
+### 6.3b Taxonomy inventory (`check_taxonomy_inventory.py`)
+
+So các khối `CASE` và biểu thức phân loại còn viết trong SQL dbt với `scripts/checks/taxonomy_inventory.yaml` (hash từng khối). **Chỉ cảnh báo**: in `WARN changed` khi một khối đã kiểm kê bị sửa, `WARN new` khi có `CASE ... END AS <cột taxonomy>` mới, nhưng không làm gate fail (quyết định của plan: luật có thể đổi có chủ đích, miễn là không đổi âm thầm). Khi gate báo, người làm phải cập nhật `transformation/docs/TAXONOMY.md` và inventory. Chạy bằng Python của host. Chi tiết: [scripts/checks/README.md](../../scripts/checks/README.md#check_taxonomy_inventorypy).
+
 ### 6.4 Dagster inventory (`dagster_inventory.py`)
 
 Nạp `orchestration.definitions.defs` trong container shadow và ghi lại:
@@ -278,7 +283,8 @@ flowchart TB
     S1["1. clone lake-B + build nhánh"] --> S2["2. golden lake-A vs lake-B"]
     S2 --> S3["3. dbt inventory + compiled SQL"]
     S3 --> S3b["3b. module boundaries (host)"]
-    S3b --> S4["4. dagster inventory"]
+    S3b --> S3c["3c. taxonomy inventory (host, chỉ cảnh báo)"]
+    S3c --> S4["4. dagster inventory"]
     S4 --> S4b["4b. dbt subset qua Dagster (lake-D)"]
     S4b --> S5["5. pytest (+1 lần chạy lại)"]
     S5 --> S6["6. lake-E: xoá rolling, build, golden"]
@@ -295,6 +301,7 @@ flowchart TB
 | Golden | ✓ | ✓ | ~5 s |
 | dbt inventory + compiled SQL | ✓ | ✓ | ~5 s |
 | Module boundaries | ✓ | ✓ | ~1 s |
+| Taxonomy inventory (chỉ cảnh báo) | ✓ | ✓ | < 1 s |
 | Dagster inventory | ✓ | ✓ | ~10 s |
 | Dagster subset run | ✓ | ✓ | ~15 s |
 | pytest | ✓ | ✓ | ~5 s |

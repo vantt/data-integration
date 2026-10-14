@@ -4,6 +4,8 @@
 > **Cập nhật:** 2026-04-18
 > **Bảo trì:** Data Team
 
+> **Lưu ý:** các khối SQL trong tài liệu này minh hoạ ý đồ nghiệp vụ (tên cột giả định, có nhánh chưa triển khai như `PAYMENT_CREDIT`). Luật đang chạy thật, vị trí trong code và chỗ khác với tài liệu này: [transformation/docs/TAXONOMY.md](../../transformation/docs/TAXONOMY.md).
+
 ## Tài liệu này trả lời những câu hỏi nào?
 
 1. Có những cách nào để phân loại khách hàng?

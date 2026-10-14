@@ -2949,7 +2949,7 @@ Sau đó `dbt seed --select ref_order_sources` + `dbt run --full-refresh --selec
 3. Silent misclassification không raise error — cần data test: `assert count(channel_name = 'Shopee (Unspecified)') < threshold` hoặc `assert count(channel_name LIKE 'Shopee - %') / count(source_id = '3988158') > 0.95`.
 4. Sau `dbt seed` thay đổi reference data: luôn full-refresh incremental models downstream nếu reference data ảnh hưởng đến staging join.
 
-**Reference:** `transformation/seeds/ref_order_sources.csv:31`; `transformation/models/staging/stg_sapo_orders.sql:26-34`
+**Reference:** `transformation/seeds/taxonomy/ref_order_sources.csv:31`; `transformation/models/staging/stg_sapo_orders.sql:26-34`
 
 
 ### L86 — Metabase progress.goal là số tĩnh — không thể dùng query column làm goal động

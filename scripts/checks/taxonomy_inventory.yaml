@@ -1,0 +1,608 @@
+version: 1
+description: 'Inventory of classification rules that still live in dbt SQL. Human-readable spec: transformation/docs/TAXONOMY.md. Verified by scripts/checks/check_taxonomy_inventory.py.'
+domains:
+  channel_format:
+    columns: []
+    blocks: []
+  platform:
+    columns: []
+    blocks: []
+  source_type:
+    columns: []
+    blocks: []
+  channel_brand:
+    columns: []
+    blocks: []
+  channel_category:
+    columns:
+    - channel_category
+    blocks:
+    - file: transformation/models/core/marts/dim_channels.sql
+      line: 115
+      alias: channel_category
+      kind: case
+      sha256: f3ac6821312db94d93f4323356ca0819f3dbe9fbb8f07bdf8d5ae5fc7c1294af
+  is_sales_channel:
+    columns: []
+    blocks:
+    - file: transformation/models/core/marts/dim_channels.sql
+      line: 138
+      alias: is_sales_channel
+      kind: expr
+      snippet: channel_format NOT IN ('System', 'CrossBorder Fulfillment', 'Other') as is_sales_channel,
+      sha256: 5a52048e97e7c37e6d5f47682ea09ba1ae63dff27e360ade65ae35b394f17993
+    - file: transformation/models/core/marts/dim_channels.sql
+      line: 143
+      alias: is_marketplace
+      kind: expr
+      snippet: channel_format IN ('Marketplace', 'CrossBorder Fulfillment') as is_marketplace,
+      sha256: 95f8f18667ec5eadb12313cc8a0a0bb04ee2a5611f2e703178638723838e856f
+    - file: transformation/models/core/marts/dim_channels.sql
+      line: 160
+      alias: unknown_member
+      kind: expr
+      snippet: '''Internal'' as channel_category, ''Other'' as channel_format, ''Other'' as platform, cast(null as varchar) as channel_brand, ''Domestic'' as market, ''channel'' as source_type, false as is_sales_channel, false as is_marketplace,'
+      sha256: f896361d14af9f57ad95fe44e53be09cb4c4c673dcb9d240193997baccbaeb76
+  channel_tree:
+    columns:
+    - dim_channels.sql:channel_name
+    blocks:
+    - file: transformation/models/core/marts/dim_channels.sql
+      line: 42
+      alias: channel_name
+      kind: case
+      sha256: d4c00e3d49e9abb5cf57883fdee6dc61c1988e8ba704d1eb6f45d449de34a281
+  storefront:
+    columns:
+    - channel_key
+    blocks:
+    - file: transformation/models/connectors/sapo_v2/staging/stg_sapo_v2_orders.sql
+      line: 26
+      alias: final_source_id
+      kind: expr
+      snippet: coalesce(cast(mt.id as string), cast(o.source_id as string)) as final_source_id,
+      sha256: a67cf65a0b7fae9403bdf458b82c51a110a4f067f3192e442032429403de26fe
+    - file: transformation/models/connectors/sapo_v2/staging/stg_sapo_v2_orders.sql
+      line: 34
+      alias: mapping_tag_join
+      kind: expr
+      snippet: AND o.tags LIKE '%' || mt.mapping_tag || '%'
+      sha256: cce2782c98ebe0ec9423d88300d564542a26504394403fc48c952fb0a98545f6
+    - file: transformation/models/core/marts/dim_channels.sql
+      line: 66
+      alias: generic_channel_name
+      kind: expr
+      snippet: s.platform || ' - ' || l.name as channel_name,
+      sha256: 3a58bea5b191e0aa213480b985690ca45c016345a5ddece6f23cbca8ec864767
+    - file: transformation/models/core/marts/sales/fact_orders.sql
+      line: 148
+      alias: channel_key
+      kind: case
+      sha256: e85d8a30b54c12fe285e581f5eac6ff54be6dfe2311edd68e03e2269ebaad102
+    - file: transformation/models/core/marts/sales/fact_sales.sql
+      line: 44
+      alias: channel_key
+      kind: case
+      sha256: 8519e9ecf4d47bdd6421e5f1100e6fc82a0cc85a027b7501fc0860a0d5e975a0
+  order_scope:
+    columns: []
+    blocks:
+    - file: transformation/models/core/marts/sales/fact_orders.sql
+      line: 206
+      alias: scope_sales
+      kind: expr
+      snippet: COALESCE(ch.is_sales_channel, false) AS scope_sales,
+      sha256: f3f12afd463bb137c4177fdb5cb9bb53717775d954bec404f4b8526dda7f3a37
+    - file: transformation/models/core/marts/sales/fact_orders.sql
+      line: 207
+      alias: scope_retail
+      kind: expr
+      snippet: COALESCE(ch.is_sales_channel, false) AND COALESCE(cu2.customer_type, 'RETAIL') = 'RETAIL' AND COALESCE(ch.channel_format, '') <> 'B2B' AS scope_retail,
+      sha256: 24f1f85a15a97497355544f8d70b6d8f52c0f7f3eeee16f28168f3f4c52230af
+    - file: transformation/models/core/marts/sales/fact_orders.sql
+      line: 215
+      alias: scope_b2b
+      kind: expr
+      snippet: COALESCE(ch.is_sales_channel, false) AND ( COALESCE(cu2.customer_type, 'RETAIL') IN ('WHOLESALE', 'PARTNER') OR COALESCE(ch.channel_format, '') = 'B2B' ) AS scope_b2b,
+      sha256: cc679b97e17e194796589cef7a1aaf330bb31e9b1fc4edc9d4103cd2a0baf896
+  customer_type:
+    columns:
+    - customer_type
+    blocks:
+    - file: transformation/models/core/marts/sales/fact_orders.sql
+      line: 110
+      alias: customer_type
+      kind: case
+      sha256: cd3b4336145ee07d392dcf3f77a39ad998e75d60e0f701aef2429010f03b5a21
+    - file: transformation/models/core/marts/intermediate/int_customer_benchmarks.sql
+      line: 47
+      alias: customer_type
+      kind: case
+      sha256: cdba7656ddd12c6e2a23820121ccc0840fc46e9c0b5143603a7d8fd55d07032a
+    - file: transformation/models/core/marts/dim_customers.sql
+      line: 215
+      alias: customer_type
+      kind: case
+      sha256: 50f92d1d6276b72775e62cfc50fa3de10d98c75b8d248e2f0ba816d0f9b350cd
+  value_group:
+    columns:
+    - value_group
+    blocks:
+    - file: transformation/models/core/marts/dim_customers.sql
+      line: 233
+      alias: value_group
+      kind: case
+      sha256: c348e384807653eb6cbffef11b1e2e239660643d6543f3f323ddc476b512a4b0
+    - file: transformation/models/core/marts/intermediate/int_customer_benchmarks.sql
+      line: 56
+      alias: value_group
+      kind: case
+      sha256: 679d2fa2d5ac16a64bb0f3beaf97d1fa9c842b78eb5892339826ea16b388d0d6
+  customer_lifecycle_stage:
+    columns:
+    - dim_customers.sql:lifecycle_stage
+    blocks:
+    - file: transformation/models/core/marts/dim_customers.sql
+      line: 241
+      alias: lifecycle_stage
+      kind: case
+      sha256: 6f17c964bd9f06326a3352e967efcd30fb4939a75b41278315f608e3ace6816c
+  product_lifecycle_stage:
+    columns:
+    - mart_product_health.sql:lifecycle_stage
+    blocks:
+    - file: transformation/models/core/marts/mart_product_health.sql
+      line: 172
+      alias: lifecycle_stage
+      kind: case
+      sha256: afbfb9b20e9bc47e5aae724cf017c90dc6f75d71df0542531aa7e69593fd74ca
+  customer_status:
+    columns:
+    - customer_status
+    - mart_customer_status_snapshot_monthly.sql:status
+    - mart_retention_waterfall_monthly.sql:status
+    blocks:
+    - file: transformation/models/core/marts/dim_customers.sql
+      line: 121
+      alias: customer_status
+      kind: case
+      sha256: 350a2b6d1fbd1e5b2eca585d18cb0ee1453a7b61474555c337bbd0a4bfad42bc
+    - file: transformation/models/core/marts/customer/mart_customer_status_snapshot_monthly.sql
+      line: 78
+      alias: status
+      kind: case
+      sha256: 251e777c88ccf3a01bac47a5e383402085c0d037c25e475c90dfe3a8ee5f5454
+    - file: transformation/models/core/marts/customer/mart_retention_waterfall_monthly.sql
+      line: 84
+      alias: status
+      kind: case
+      sha256: 19dfcf4b49079ffe5b380a092a967b2990e06b19ee8e35b3857f2c714ee42a32
+  next_purchase_signal:
+    columns:
+    - next_purchase_signal
+    blocks:
+    - file: transformation/models/core/marts/dim_customers.sql
+      line: 279
+      alias: next_purchase_signal
+      kind: case
+      sha256: f81570a5bd72156f72e8e60c2e8303b28dad208caeb59f4fe709403617ee99b4
+    - file: transformation/models/core/marts/customer/mart_customer_status_snapshot_monthly.sql
+      line: 121
+      alias: next_purchase_signal
+      kind: case
+      sha256: fca9a17cf1819ae5418105675a2b7266d6432cadf5d6e2d15aba008e64e6e74b
+  channel_preference:
+    columns:
+    - channel_preference
+    blocks:
+    - file: transformation/models/core/marts/intermediate/int_customer_metrics.sql
+      line: 95
+      alias: channel_preference
+      kind: case
+      sha256: b9ba266f7a295a27b82d73134d0e83c6de526e20949b8919259da4591b2d9b0b
+  product_affinity:
+    columns:
+    - product_affinity
+    blocks:
+    - file: transformation/models/core/marts/intermediate/int_customer_metrics.sql
+      line: 290
+      alias: product_affinity
+      kind: case
+      sha256: 4a56fca5257d261ee78863dbe6db1ca22a1c593bcbca0d3d26c90013d0a198ab
+  payment_behavior:
+    columns:
+    - payment_behavior
+    blocks:
+    - file: transformation/models/core/marts/intermediate/int_customer_metrics.sql
+      line: 326
+      alias: payment_behavior
+      kind: case
+      sha256: 4abc56a6163fe1748369270a92b8b779f578d35cc6db89b0aa755002fa7b32cc
+  geo_region:
+    columns:
+    - geo_region
+    blocks:
+    - file: transformation/models/core/marts/dim_customers.sql
+      line: 287
+      alias: geo_region
+      kind: case
+      sha256: 20c90a8c4938dbe91e33351035e6fcdf2baefd9ee77c3d5a2aae31407f980a7f
+  acquisition_source:
+    columns: []
+    blocks:
+    - file: transformation/models/core/marts/intermediate/int_customer_metrics.sql
+      line: 115
+      alias: acquisition_source
+      kind: expr
+      snippet: SELECT customer_key, channel_name AS acquisition_source
+      sha256: 8042a6049ea5e9d728ef1cde9d4938a71f17da6e443a48ac73e9ab3c57bf8797
+    - file: transformation/models/core/marts/mart_deadstock_target_queue.sql
+      line: 203
+      alias: acquisition_source_exclusion
+      kind: expr
+      snippet: AND COALESCE(e.acquisition_source, '') <> 'Đại Lý'
+      sha256: 0f73836e4a7ee257bc4bd684658bb0bd174414f235a2af5fec7b60888821772a
+  is_us_gift_recipient:
+    columns: []
+    blocks:
+    - file: transformation/models/core/marts/dim_customers.sql
+      line: 32
+      alias: us_channel_customers
+      kind: expr
+      snippet: SELECT DISTINCT fo.customer_key FROM {{ ref('fact_orders') }} fo JOIN {{ ref('dim_channels') }} ch ON fo.channel_key = ch.channel_key WHERE ch.channel_name = 'US' AND fo.status != 'CANCELLED'
+      sha256: c35a15945492eb7b6298850f8dd1534d0e7b7d4a98c5caeb5e4d720748707a8b
+    - file: transformation/models/core/marts/dim_customers.sql
+      line: 330
+      alias: is_us_gift_recipient
+      kind: expr
+      snippet: (customer_group_code LIKE '%TYPE_CROSSBORDER%' OR customer_group_name LIKE '%TYPE_CROSSBORDER%' OR customer_group_code LIKE '%CTN00014%' OR customer_group_name LIKE '%CTN00014%' OR EXISTS (SELECT 1 FROM us_channel_customers uc WHERE uc.customer_key = joined_data.customer_key)) AS is_us_gift_recipient,
+      sha256: 28ea72d7e8d0d2d87a2cf50ab4f2a6c821a67c5609493a5ebcbed95af2294a75
+    - file: transformation/models/intermediate/us_shipment/int_us_shipment_line_prices.sql
+      line: 25
+      alias: us_channel_filter
+      kind: expr
+      snippet: WHERE ch.channel_name = 'US'
+      sha256: ede2b4d67d93ea04d55c31e15e609c4bea3dbc5d7cdeb611d0ab2cb4c89bee1b
+  benchmark_status:
+    columns:
+    - benchmark_status
+    blocks:
+    - file: transformation/models/core/marts/intermediate/int_customer_benchmarks.sql
+      line: 75
+      alias: benchmark_status
+      kind: case
+      sha256: 4d7094bf04cc83a1380098fe56dffeeb5f9fef7a2c7c8b0f94c3ca58f29194fa
+  contact_quality:
+    columns:
+    - source_contact_quality
+    - contact_quality
+    blocks:
+    - file: transformation/models/core/marts/dim_customers.sql
+      line: 337
+      alias: source_contact_quality
+      kind: case
+      sha256: f371e21c795ab4d4f96e946a173d68bde0bc5dfa518f6841b1df3c38bc81f5f1
+    - file: transformation/models/core/marts/dim_customers.sql
+      line: 344
+      alias: contact_quality
+      kind: case
+      sha256: 07c889918edd086a5405ba7697a4db940a10d79102d4f98c41d021d7cfc586ea
+  strategic_tier:
+    columns:
+    - strategic_tier
+    - tier_reason
+    blocks:
+    - file: transformation/models/core/marts/customer/mart_customer_tier.sql
+      line: 37
+      alias: strategic_tier
+      kind: case
+      sha256: 346a6358e03623d9bf96b98f2c2116afd800043122c18ce23d90c2fd747018ca
+    - file: transformation/models/core/marts/customer/mart_customer_tier.sql
+      line: 78
+      alias: tier_reason
+      kind: case
+      sha256: e21c69344fb0e77cdbaf59c48e0af609475cb42ca88a551b0f057885ea7ce343
+  entry_basket:
+    columns:
+    - basket_size
+    - entry_value_band
+    blocks:
+    - file: transformation/models/core/marts/intermediate/int_customer_entry_attributes.sql
+      line: 106
+      alias: basket_size
+      kind: case
+      sha256: f82923d509fb81b5a2fd2d181f1fb12914576fbd59699b730ac6628f9cb332b5
+    - file: transformation/models/core/marts/intermediate/int_customer_entry_attributes.sql
+      line: 111
+      alias: entry_value_band
+      kind: case
+      sha256: 8e3ce967387ce8271ffb93abb97a7e0642c2cd6a2479910bcc8bd5eddfbda85f
+  deadstock_route_channel:
+    columns:
+    - route_channel
+    blocks:
+    - file: transformation/models/core/marts/mart_deadstock_target_queue.sql
+      line: 176
+      alias: route_channel
+      kind: case
+      sha256: 2daa9dfaeea546bb6d8f1f4982cdb1db5993f4d10994ebe9e8e3f9a38520a34d
+  discount_type:
+    columns:
+    - discount_type
+    blocks:
+    - file: transformation/models/core/marts/sales/fact_orders.sql
+      line: 47
+      alias: discount_type
+      kind: case
+      sha256: 7ea0802ef42f7945fb4a8808603f6af34dcf27f286e7dc28b3ae8aff0b6cd9d8
+    - file: transformation/models/core/marts/sales/fact_order_costs.sql
+      line: 118
+      alias: discount_type
+      kind: case
+      sha256: 7ea0802ef42f7945fb4a8808603f6af34dcf27f286e7dc28b3ae8aff0b6cd9d8
+    - file: transformation/models/core/marts/sales/fact_orders.sql
+      line: 78
+      alias: primary_discount_type
+      kind: expr
+      snippet: MAX_BY(discount_type, amount) AS primary_discount_type
+      sha256: 11452389794f3a268681a9c908f37f1d9cc1c031221c5129eab16d3e78e92c00
+    - file: transformation/models/core/marts/sales/fact_order_costs.sql
+      line: 158
+      alias: primary_discount_type_per_cost_type
+      kind: expr
+      snippet: MAX_BY(discount_type, amount) AS discount_type,
+      sha256: da99a902bbba789ea901d9afbe41cace2a64be90dec6c06bb1dba3dc685ce78c
+  discount_group:
+    columns: []
+    blocks:
+    - file: transformation/models/core/marts/intermediate/int_customer_discount_metrics.sql
+      line: 89
+      alias: voucher
+      kind: expr
+      snippet: WHERE primary_discount_type = 'voucher_promotional'
+      sha256: a1f38e161043595182ea556694fe117b07b7d892f1690549c8e0b546939a1329
+    - file: transformation/models/core/marts/intermediate/int_customer_discount_metrics.sql
+      line: 109
+      alias: campaign
+      kind: expr
+      snippet: WHERE primary_discount_type IN ('bundle', 'campaign', 'sampling_gift')
+      sha256: 7a90b685161962a36ca44ea2ee22bc879a42fa4a9bce9ec06fed8479f0e73353
+    - file: transformation/models/core/marts/intermediate/int_customer_discount_metrics.sql
+      line: 129
+      alias: negotiated
+      kind: expr
+      snippet: WHERE primary_discount_type IN ( 'negotiated_micro', 'negotiated_standard', 'negotiated_deep', 'wholesale_explicit', 'employee_internal', 'overseas' )
+      sha256: 670e8c40353d93dbb97cccba75951c7df16fabd78b6f9f2c97e12abff3411eb0
+  discount_cost_type:
+    columns:
+    - cost_type
+    blocks:
+    - file: transformation/models/core/marts/sales/fact_order_costs.sql
+      line: 109
+      alias: cost_type
+      kind: case
+      sha256: 8f5ce62438716f3351e1cc6969f7fdf5028e9d938cda444dde1df8131fbe1807
+  promo_dependency:
+    columns:
+    - discount_sensitivity
+    - discount_dependency
+    blocks:
+    - file: transformation/models/core/marts/dim_customers.sql
+      line: 271
+      alias: discount_sensitivity
+      kind: case
+      sha256: 26f23fb0a24c3dba9cf7f866c823f4ba21f82442aba987c379e714287f1b073e
+    - file: transformation/models/core/marts/intermediate/int_product_discount_dependency.sql
+      line: 30
+      alias: discount_dependency
+      kind: case
+      sha256: 016e2d47d4df10cd28179bb8abe4c9db55277b3ec28319c8e6f8bc881fb23ade
+  order_tag:
+    columns:
+    - suggestion
+    blocks:
+    - file: transformation/models/core/intermediate/tags/int_order_tags.sql
+      line: 53
+      alias: tag_match_join
+      kind: expr
+      snippet: ON (m.match_type = 'exact' AND t.tag_value = m.pattern) OR (m.match_type = 'prefix' AND t.tag_value LIKE m.pattern) OR (m.match_type = 'contains' AND t.tag_value LIKE m.pattern)
+      sha256: d2837e9d87311ca9ccf1b2bfa1a516f463ca0333e03e5df57a0cf25c795eb782
+    - file: transformation/models/core/intermediate/tags/int_order_tags.sql
+      line: 47
+      alias: tag_priority_pick
+      kind: expr
+      snippet: ROW_NUMBER() OVER ( PARTITION BY t.order_id, t.tag_value ORDER BY m.priority ASC NULLS LAST ) as rn
+      sha256: 9873f2dd99c9cdea002ad792efab423ef77a02240fd662ab1b426aeabd14a7cd
+    - file: transformation/models/monitoring/monitor_uncategorized_tags.sql
+      line: 28
+      alias: suggestion
+      kind: case
+      sha256: dc56e7f2922a6e849e3560ef25237181a7553ffeb74ddd2a2703e231aff9cc4b
+  product_matrix:
+    columns:
+    - abc_class
+    - health_class
+    blocks:
+    - file: transformation/models/core/marts/mart_product_health.sql
+      line: 68
+      alias: abc_class
+      kind: case
+      sha256: eace5d64447f6cde148dd7df436b4eaf1b7e988d8ff764fdb062ec2033c8f29e
+    - file: transformation/models/core/marts/mart_product_health.sql
+      line: 156
+      alias: health_class
+      kind: case
+      sha256: 9a4214b3e42d623cd733ce48977fad749a2d4b5f5cc52624bce32eb305e64e78
+  product_velocity_momentum:
+    columns:
+    - velocity_momentum
+    blocks:
+    - file: transformation/models/core/marts/intermediate/int_product_velocity_trend.sql
+      line: 73
+      alias: velocity_momentum
+      kind: case
+      sha256: 43ea46dff9d3c78a51aba7c1a90ec06ecd7cc37a199c9b358896c4a502f5e941
+  sku_alias_vts_prefix:
+    columns:
+    - misa_join_key
+    blocks:
+    - file: transformation/models/core/marts/dim_sku_alias.sql
+      line: 68
+      alias: misa_join_key
+      kind: case
+      sha256: 50fe1d95004f57518d681df946a3308134e0178f30eb12a43655ae317e76d073
+  time_bucket:
+    columns:
+    - am_pm
+    - is_business_hour
+    - is_peak_hour
+    - day_period
+    blocks:
+    - file: transformation/models/core/marts/dim_time.sql
+      line: 32
+      alias: am_pm
+      kind: case
+      sha256: 49ec7389cc80232c52c34d6872204e356a6a7dceddfb879f8d58fd17af8a4944
+    - file: transformation/models/core/marts/dim_time.sql
+      line: 38
+      alias: is_business_hour
+      kind: case
+      sha256: 42d121c822154e574eab1a7f5871b14ce9486d8230d3f90bf011cca2c72329ee
+    - file: transformation/models/core/marts/dim_time.sql
+      line: 43
+      alias: is_peak_hour
+      kind: case
+      sha256: 5f3a8e04705827cb8fd40c31a9fc78050ac63c2f7cd331cdc87a13a4f61d3bec
+    - file: transformation/models/core/marts/dim_time.sql
+      line: 51
+      alias: day_period
+      kind: case
+      sha256: 3fa4f2b3b74f24b2bcdf6a9f8273a25daf963797d771f4b93b0f08f91d4df464
+  contact_result:
+    columns:
+    - outcome_label
+    - is_recently_contacted_positively
+    blocks:
+    - file: transformation/models/marts/customer/mart_crm_activity_log.sql
+      line: 30
+      alias: is_reached
+      kind: expr
+      snippet: a.contact_outcome IN ('answered', 'replied', 'met') AS is_reached,
+      sha256: 0bab23088ca88bbaa487bccb3bf4941899385059c59b252aae8fdf6124a61008
+    - file: transformation/models/marts/customer/mart_crm_activity_log.sql
+      line: 31
+      alias: outcome_label
+      kind: case
+      sha256: 5eec090cb265ee9b3f898fff700b48bf503de7d813d2738d57b1e783eda6e041
+    - file: transformation/models/marts/customer/mart_customer_action_queue.sql
+      line: 189
+      alias: is_recently_contacted_positively
+      kind: case
+      sha256: 7bf1994938d86868c93ad78e68f7e5e840573d3e515e38c16fc02f30f66141c6
+    - file: transformation/models/marts/customer/mart_customer_sku_action_queue.sql
+      line: 199
+      alias: is_recently_contacted_positively
+      kind: case
+      sha256: 7bf1994938d86868c93ad78e68f7e5e840573d3e515e38c16fc02f30f66141c6
+    - file: transformation/models/marts/crm/mart_staff_performance_weekly.sql
+      line: 34
+      alias: contacts_reached
+      kind: expr
+      snippet: WHERE contact_outcome IN ( 'answered', 'replied', 'met', 'callback', 'refused', 'purchased' )
+      sha256: 9b2debf6154919c412a0fa854324dd143c6b9fefbb697a609233cbf45f40b5d9
+    - file: transformation/models/marts/core/intermediate/int_crm_outreach_effort_events.sql
+      line: 198
+      alias: is_reached_wide
+      kind: expr
+      snippet: ap.contact_outcome IN ( 'answered', 'replied', 'met', 'callback', 'refused', 'purchased' ) AS is_reached,
+      sha256: 6fd5089ee6e46c7a43334b7ea2ad6215397cc15a34cccefb6b8dd1987c869580
+  misa_channel_group:
+    columns: []
+    blocks:
+    - file: transformation/models/connectors/misa/staging/stg_misa_sales_lines.sql
+      line: 66
+      alias: channel_group
+      kind: expr
+      snippet: COALESCE(ch.channel_group, 'UNKNOWN') AS channel_group,
+      sha256: 682728d44ed2731c763379ba7645ca639864dd9cf7a1131cddf071f68317cae0
+  gl_cashflow_line:
+    columns:
+    - cashflow_line
+    blocks:
+    - file: transformation/models/packs/finance/marts/dim_gl_account.sql
+      line: 76
+      alias: cashflow_line
+      kind: case
+      sha256: 29af943196d3d1a07ec1a14beb8e94bdcca076154730ad09927c264d24907df1
+  cost_account_group:
+    columns:
+    - cost_account_group
+    blocks:
+    - file: transformation/models/cdm/staging/std_misa_sales_lines.sql
+      line: 81
+      alias: cost_account_group
+      kind: case
+      sha256: 8e656c72fd07bbe041dbd15879861450e3eb369751c215783467bb3e002de815
+  voucher_source_hint:
+    columns:
+    - voucher_source_hint
+    blocks:
+    - file: transformation/models/connectors/misa/staging/stg_misa_sales_lines.sql
+      line: 69
+      alias: voucher_source_hint
+      kind: case
+      sha256: 851b6eed5b41934f11fa054419570bccdb836b9d70eb600ac4e0ef4d029c337f
+  order_status_family:
+    columns:
+    - std_orders.sql:status
+    - std_orders.sql:payment_status
+    - std_orders.sql:fulfillment_status
+    - std_fulfillments.sql:status
+    - std_payments.sql:status
+    blocks:
+    - file: transformation/models/cdm/staging/std_orders.sql
+      line: 57
+      alias: status
+      kind: case
+      sha256: 04c6dbc1fdd54f6414b8aa4f90756af66f2f04f6dcceff06de9a8b69f72258b6
+    - file: transformation/models/cdm/staging/std_orders.sql
+      line: 65
+      alias: payment_status
+      kind: case
+      sha256: 6eaae52048c3a35b3cfe2f6313e093689bd0f1384dec9a487e83fc906213a9d6
+    - file: transformation/models/cdm/staging/std_orders.sql
+      line: 73
+      alias: fulfillment_status
+      kind: case
+      sha256: bef2d730195ff84bcbf51a43b092ca285466c3d459dcb34bcf458449ffd44a1c
+    - file: transformation/models/cdm/staging/std_fulfillments.sql
+      line: 21
+      alias: status
+      kind: case
+      sha256: 0a513d621559d859394c2fd2f59dfa0fe510a762acd139c3f0021d3ae7575b87
+    - file: transformation/models/cdm/staging/std_payments.sql
+      line: 35
+      alias: status
+      kind: case
+      sha256: 560b556378fb5ab1ba8ac95a49692d577e12055d9d3c085b07679ba63b6585b9
+  team_assignment:
+    columns: []
+    blocks:
+    - file: transformation/models/core/marts/sales/fact_orders.sql
+      line: 231
+      alias: team_join
+      kind: expr
+      snippet: LEFT JOIN team_members tm ON lower(dseller.email) = tm.staff_email AND cast(orders.created_at as date) >= tm.effective_from AND (tm.effective_to IS NULL OR cast(orders.created_at as date) <= tm.effective_to)
+      sha256: e6fd65cdf38030a8c900d5e978bebc042a80f030151fbfa22c57045cd498935f
+  payment_method_type:
+    columns: []
+    blocks: []
+  product_brand:
+    columns: []
+    blocks: []
+  spend_category:
+    columns: []
+    blocks: []
+  branch_location:
+    columns: []
+    blocks: []

@@ -521,7 +521,7 @@ LIMIT 5;
 **Step 4: Add to CSV**
 
 ```csv
-# Edit: transformation/seeds/ref_tag_categories.csv
+# Edit: transformation/seeds/taxonomy/ref_tag_categories.csv
 # Add new row:
 NewPattern,category_name,match_type,Human readable description
 ```
@@ -552,7 +552,7 @@ print(result)
 **Step 6: Commit**
 
 ```bash
-git add transformation/seeds/ref_tag_categories.csv
+git add transformation/seeds/taxonomy/ref_tag_categories.csv
 git commit -m "feat(tags): add pattern for NewTagName -> category_name"
 git push
 ```
@@ -686,7 +686,7 @@ print(con.execute('SELECT COUNT(*) FROM monitor_uncategorized_tags').fetchone()[
 
 # === ADD PATTERN ===
 # 1. Edit CSV (use any editor)
-nano transformation/seeds/ref_tag_categories.csv
+nano transformation/seeds/taxonomy/ref_tag_categories.csv
 
 # 2. Deploy
 docker exec data_platform bash -c "cd /app/transformation && dbt seed --select ref_tag_categories"
@@ -699,7 +699,7 @@ print(con.execute('SELECT COUNT(*) FROM monitor_uncategorized_tags').fetchone()[
 "
 
 # === COMMIT ===
-git add transformation/seeds/ref_tag_categories.csv
+git add transformation/seeds/taxonomy/ref_tag_categories.csv
 git commit -m 'feat(tags): add pattern for X'
 git push
 ```

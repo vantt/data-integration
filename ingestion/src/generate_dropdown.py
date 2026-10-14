@@ -5,22 +5,25 @@ import sys
 # Setup paths
 current_dir = os.path.dirname(os.path.abspath(__file__))
 project_root = os.path.dirname(os.path.dirname(current_dir))
-seeds_dir = os.path.join(project_root, 'transformation', 'seeds')
+if project_root not in sys.path:
+    sys.path.insert(0, project_root)
 
-def load_csv_as_df(filename):
-    file_path = os.path.join(seeds_dir, filename)
-    if not os.path.exists(file_path):
-        print(f"Error: File not found at {file_path}")
+from ingestion.src.utils.seed_paths import seed_path, SeedNotFoundError  # noqa: E402
+
+def load_csv_as_df(seed_name):
+    try:
+        return pd.read_csv(seed_path(seed_name))
+    except SeedNotFoundError as e:
+        print(f"Error: {e}")
         sys.exit(1)
-    return pd.read_csv(file_path)
 
 def generate_dropdown_options():
     print("Generating dropdown options...")
     
     # 1. Load Data
-    df_spend = load_csv_as_df('ref_spend_category.csv')
-    df_sources = load_csv_as_df('ref_order_sources.csv')
-    df_locations = load_csv_as_df('ref_branch_locations.csv')
+    df_spend = load_csv_as_df('ref_spend_category')
+    df_sources = load_csv_as_df('ref_order_sources')
+    df_locations = load_csv_as_df('ref_branch_locations')
 
     # 2. Process Spend Categories
     # We just need the unique names

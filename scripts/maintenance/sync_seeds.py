@@ -2,6 +2,7 @@ import duckdb
 import pandas as pd
 import os
 import re
+import sys
 
 # Configuration
 # Environment Variables (Standardized)
@@ -10,6 +11,12 @@ PROJECT_DIR = os.environ.get("DBT_PROJECT_DIR", "../../transformation")
 
 DB_PATH = os.path.join(DATA_LAKE_PATH, "sapo_warehouse.duckdb")
 SEEDS_DIR = os.path.join(PROJECT_DIR, "seeds")
+
+_REPO_ROOT = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+if _REPO_ROOT not in sys.path:
+    sys.path.insert(0, _REPO_ROOT)
+
+from ingestion.src.utils.seed_paths import seed_path  # noqa: E402
 RAW_SCHEMA = "sapo_raw"
 
 # Allowlist regex for CSV-sourced IDs used in SQL NOT IN clauses
@@ -17,12 +24,15 @@ RAW_SCHEMA = "sapo_raw"
 _ID_RE = re.compile(r'^[a-zA-Z0-9_\-]+$')
 
 def sync_seeds():
+    # Seeds live in subfolders; resolve them by name so a move never breaks this script.
+    sources_csv = seed_path("ref_order_sources", SEEDS_DIR)
+    locations_csv = seed_path("ref_branch_locations", SEEDS_DIR)
     print("Connecting to DuckDB...")
     con = duckdb.connect(DB_PATH)
     try:
         # 1. Sync Order Sources
         print("Syncing Order Sources...")
-        existing_sources = pd.read_csv(f"{SEEDS_DIR}/ref_order_sources.csv")
+        existing_sources = pd.read_csv(sources_csv)
         existing_ids = {i for i in existing_sources['id'].astype(str) if _ID_RE.match(i)}
 
         # Query Raw for new IDs
@@ -76,7 +86,7 @@ def sync_seeds():
                 ]]
 
                 # Append
-                new_sources_df.to_csv(f"{SEEDS_DIR}/ref_order_sources.csv", mode='a', header=False, index=False)
+                new_sources_df.to_csv(sources_csv, mode='a', header=False, index=False)
             else:
                 print("No new sources found.")
 
@@ -85,7 +95,7 @@ def sync_seeds():
 
         # 2. Sync Branch Locations
         print("Syncing Branch Locations...")
-        existing_locs = pd.read_csv(f"{SEEDS_DIR}/ref_branch_locations.csv")
+        existing_locs = pd.read_csv(locations_csv)
         existing_loc_ids = {i for i in existing_locs['id'].astype(str) if _ID_RE.match(i)}
 
         try:
@@ -101,7 +111,7 @@ def sync_seeds():
 
             if not new_locs_df.empty:
                 print(f"Found {len(new_locs_df)} new locations. Appending...")
-                new_locs_df.to_csv(f"{SEEDS_DIR}/ref_branch_locations.csv", mode='a', header=False, index=False)
+                new_locs_df.to_csv(locations_csv, mode='a', header=False, index=False)
             else:
                 print("No new locations found.")
 

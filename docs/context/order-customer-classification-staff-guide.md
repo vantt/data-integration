@@ -217,7 +217,7 @@ flowchart LR
 
 ## 8. Dữ liệu tham chiếu (Seed / nguồn sự thật)
 
-### 8.1. `transformation/seeds/ref_order_sources.csv` — nguồn sự thật của KÊNH
+### 8.1. `transformation/seeds/taxonomy/ref_order_sources.csv` — nguồn sự thật của KÊNH
 Mỗi nguồn đơn 1 dòng. Cột quyết định:
 
 | Cột | Mô tả | Ví dụ |
@@ -249,43 +249,19 @@ Marketplace / Social / Web          → 'Online-Ecommerce'
 Retail / B2B / Direct               → 'Offline'
 System / CrossBorder Fulfillment / (ELSE)  → 'Internal'
 ```
-**is_sales_channel** (verbatim):
-```sql
-channel_format NOT IN ('System', 'CrossBorder Fulfillment', 'Other') as is_sales_channel
-```
-**customer_type** — `dim_customers.sql` (regex đã mở rộng — ĐÃ XÁC NHẬN 2026-06-05; channel-signal bổ sung 2026-07-08):
-```sql
-CASE
-  WHEN customer_group LIKE '%TYPE_WHOLESALE%'
-    OR customer_group LIKE '%WHOLESALE%'        THEN 'WHOLESALE'
-  WHEN customer_group LIKE '%TYPE_PARTNER%'
-    OR customer_group LIKE '%KY_GUI%'           THEN 'PARTNER'
-  WHEN customer_group LIKE '%TYPE_STAFF%'       THEN 'STAFF'
-  WHEN customer_group LIKE '%TYPE_KOL%'         THEN 'KOL'
-  WHEN customer_group LIKE '%TYPE_CROSSBORDER%'
-    OR customer_group LIKE '%CTN00014%'
-    OR EXISTS (SELECT 1 FROM us_channel_customers uc  -- NEW 2026-07-08: has >=1 order on
-               WHERE uc.customer_key = joined_data.customer_key)  -- Sapo channel_name='US' (auto, not manual tag)
-                                                 THEN 'CROSSBORDER'
-  ELSE 'RETAIL'
-END
-```
+**is_sales_channel** — `dim_channels.sql`: `channel_format NOT IN ('System', 'CrossBorder Fulfillment', 'Other')`. Nguyên văn và cách xử lý NULL: [TAXONOMY.md#is_sales_channel](../../transformation/docs/TAXONOMY.md#is_sales_channel).
+
+**customer_type** — `dim_customers.sql` (regex đã mở rộng — ĐÃ XÁC NHẬN 2026-06-05; channel-signal bổ sung 2026-07-08). Khối `CASE` nguyên văn, thứ tự ưu tiên thật (WHOLESALE > PARTNER > STAFF > KOL > CROSSBORDER > RETAIL), hai bản logic khác nhau (`dim_customers` so với `fact_orders`/`int_customer_benchmarks`) và nghĩa của `LIKE` với `_`: [TAXONOMY.md#customer_type](../../transformation/docs/TAXONOMY.md#customer_type). Bản chép SQL cũ ở đây đã bỏ vì lệch với code (code so khớp `customer_group_code`/`customer_group_name`, không phải blob `customer_group`).
+
 Lưu ý thứ tự: WHOLESALE/PARTNER/STAFF/KOL vẫn kiểm tra TRƯỚC CROSSBORDER — channel-signal chỉ bổ sung (OR), không đổi precedence. Khách vừa có group WHOLESALE vừa có đơn US-channel vẫn là WHOLESALE.
-**value_group** (tự động, theo chi tiêu trọn đời):
-```sql
-CASE
-  WHEN monetary_value >= 50000000 OR frequency >= 20 THEN 'VALUE_VIP'
-  WHEN monetary_value >= 20000000 THEN 'VALUE_GOLD'
-  WHEN monetary_value >=  5000000 THEN 'VALUE_SILVER'
-  ELSE 'VALUE_BRONZE'
-END
-```
+
+**value_group** (tự động, theo chi tiêu trọn đời): VIP khi chi tiêu ≥ 50 triệu **hoặc** ≥ 20 đơn; GOLD ≥ 20 triệu; SILVER ≥ 5 triệu; còn lại BRONZE. Nguyên văn: [TAXONOMY.md#value_group](../../transformation/docs/TAXONOMY.md#value_group).
 **acquisition_source:** Giờ = `channel_name` của đơn hàng đầu tiên của khách (ĐÃ IMPLEMENT). Không còn luôn NULL.
 
 ## 10. Quy trình vận hành (theo tình huống)
 
 ### Khi thêm **nguồn đơn mới** (vd "Shopee - New Brand")
-1. Mở `transformation/seeds/ref_order_sources.csv`, thêm 1 dòng: `name`, `channel_format` (chọn đúng: Marketplace/Social/Web/Retail/B2B/Direct), `platform`, `source_type=channel`, `is_generic_source` (false trừ khi nở theo location).
+1. Mở `transformation/seeds/taxonomy/ref_order_sources.csv`, thêm 1 dòng: `name`, `channel_format` (chọn đúng: Marketplace/Social/Web/Retail/B2B/Direct), `platform`, `source_type=channel`, `is_generic_source` (false trừ khi nở theo location).
 2. Chạy lại seed + mart: `dbt seed` rồi `dbt build -s dim_channels+` (build dim_channels và downstream).
 3. Verify: `SELECT channel_name, channel_category, is_sales_channel FROM dim_channels WHERE channel_name LIKE 'Shopee%'` — đúng category + `is_sales_channel=true`.
 

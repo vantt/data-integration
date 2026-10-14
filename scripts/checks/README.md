@@ -6,6 +6,7 @@ true in code. The shadow gate ([scripts/shadow/README.md](../shadow/README.md)) 
 | File | Kind | Purpose |
 |---|---|---|
 | `check_boundaries.py` | rule check | Module dependency matrix, cross-component imports, duplicate seeds, hard-coded URLs in connectors |
+| `check_taxonomy_inventory.py`, `taxonomy_inventory.yaml` | warn-only check + data | Classification `CASE` blocks and expressions still in dbt SQL match the inventory (hash per block); a new `CASE` assigning a known taxonomy column is reported |
 | `model_buckets.yaml` | data | Bucket (module) of every dbt model; `pack_connectors` for packs |
 | `boundary_allowlist.yaml` | data | Known violations, each with a reason and an exit |
 | `golden_snapshot.py`, `public_models.yaml` | data equality | Public tables identical before/after a change |
@@ -13,6 +14,35 @@ true in code. The shadow gate ([scripts/shadow/README.md](../shadow/README.md)) 
 | `dagster_inventory.py` | orchestration contract | Assets, checks, job selections, schedules, sensors, SLA unchanged |
 | `instigator_state.py` | deploy | Live schedule/sensor on/off state before vs after a deploy |
 | `guard_not_prod.py` | safety | Refuses paths inside the prod checkout |
+
+## check_taxonomy_inventory.py
+
+```bash
+python3 scripts/checks/check_taxonomy_inventory.py          # compare code with the inventory (exit 0 always)
+python3 scripts/checks/check_taxonomy_inventory.py --list   # print file:line, column and sha256 of every CASE block that assigns a taxonomy column
+```
+
+The spec is [transformation/docs/TAXONOMY.md](../../transformation/docs/TAXONOMY.md); this check keeps it from
+drifting while the classification rules are still SQL. The machine-readable inventory is
+`taxonomy_inventory.yaml` (chosen over parsing the markdown: the hashes stay exact and the test
+can load it). Each domain lists its `columns` and its `blocks`:
+
+| Block `kind` | Found by | Meaning of `sha256` |
+|---|---|---|
+| `case` | `CASE ... END [AS] alias` scan of `transformation/models` and `transformation/macros`; comments and string literals are skipped | sha256 of the block with comments removed and whitespace collapsed |
+| `expr` | normalized `snippet` must occur in the normalized file | sha256 of the same snippet |
+
+`columns` entries are a column name (any file) or `file.sql:column` (only that file, for generic names such as `status`).
+
+| Output | Meaning | What to do |
+|---|---|---|
+| `WARN changed` | An inventoried block no longer matches its hash: the rule was edited | Update `TAXONOMY.md`, then the `line`/`sha256`/`snippet` in the inventory. A change of numbers belongs to an S gate |
+| `WARN new` | A `CASE ... END AS <taxonomy column>` that is not inventoried | Add it to the inventory and `TAXONOMY.md`, or reuse the existing rule |
+| `WARN missing` | An inventoried file is gone | Update the inventory (file moved or deleted) |
+| `INFO moved` | Block unchanged, line number differs | Optional: refresh `line` |
+
+It only warns: classification rules may change on purpose, but never silently. The shadow gate prints the
+result in step 3c. Tests: `scripts/tests/test_check_taxonomy_inventory.py`.
 
 ## check_boundaries.py
 

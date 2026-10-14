@@ -23,6 +23,27 @@ and `python3 scripts/checks/check_boundaries.py --manifest target/manifest.json`
 Models of `tenant:fine_japan` still sit in the old top-level `staging/`, `intermediate/`,
 `marts/` folders until the tenant overlay is moved.
 
+## Classification rules (taxonomy)
+
+Every rule that assigns a business label (`customer_type`, `value_group`, `channel_category`,
+`discount_type`, tag category, ...) is inventoried in `docs/TAXONOMY.md`: where it lives, how many
+real variants exist, exact semantics, and what is still SQL versus data. Read it before changing or
+adding such a rule, and update it in the same change.
+
+- Seeds that classify live in `seeds/taxonomy/`. Python code finds a seed by name with
+  `seed_path("<name>")` from `ingestion/src/utils/seed_paths.py`; never hard-code the folder.
+  Seed names stay unique across folders (`check_boundaries.py` rule `seed-duplicate`).
+- `+column_types` for a seed in a subfolder goes under that folder's key in the `seeds:` block of
+  `dbt_project.yml` (the key is the folder path, not the seed name alone).
+- `python3 scripts/checks/check_taxonomy_inventory.py` compares the `CASE` blocks and expressions
+  with `scripts/checks/taxonomy_inventory.yaml` (warn only, exit 0), next to `check_boundaries.py`.
+  `WARN changed` means a rule was edited: update `TAXONOMY.md` and re-record the hash
+  in the inventory file (`--list` prints the current line and sha256 of every `CASE` block).
+  `WARN new` means a new `CASE` assigns a known taxonomy column: add it to the inventory and the
+  spec, or reuse the existing rule. The shadow gate prints these warnings in step 3c.
+- Do not change a classification rule while moving files; a rule change alters numbers and goes
+  through the S gate with the impact stated.
+
 ## Core Mandates
 
 ### 1. Mart Location Configuration (CRITICAL)
