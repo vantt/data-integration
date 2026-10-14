@@ -6,6 +6,8 @@ import sys
 import threading
 from typing import Any, Mapping
 
+from orchestration.connectors import load_enabled
+
 # Hard timeout for dbt subprocess. Prevents infinite hang when DuckDB checkpoint stalls.
 # Normal runs complete in <2 min; 15 min is generous safety margin.
 DBT_TIMEOUT_SEC = int(os.environ.get("DBT_TIMEOUT_SEC", "900"))
@@ -31,43 +33,26 @@ dbt_project = DbtProject(
 # We rely on `run_dagster.ps1` to pre-parse the manifest at startup.
 
 class SapoDbtTranslator(DagsterDbtTranslator):
+    """Keeps default dbt asset keys except for sources a connector ingests itself.
+
+    Those map to the connector's ingest asset: DBT_SOURCE_KEYS of every connector enabled
+    in config/modules.yaml, as {source_name: {table name: AssetKey}} ("*" = any other table).
+    """
+
+    def __init__(self):
+        super().__init__()
+        self._source_keys: dict[str, dict[str, AssetKey]] = {}
+        for connector in load_enabled():
+            for source_name, tables in connector.DBT_SOURCE_KEYS.items():
+                self._source_keys.setdefault(source_name, {}).update(tables)
+
     def get_asset_key(self, dbt_resource_props: Mapping[str, Any]) -> AssetKey:
-        resource_type = dbt_resource_props.get("resource_type")
-        source_name = dbt_resource_props.get("source_name")
-        name = dbt_resource_props.get("name")
-
-        if resource_type == "source":
-            if source_name == "sapo_v2_raw":
-                if name == "order":
-                    return AssetKey(["sapo", "ingest_sapo_v2_orders_batch_asset"])
-                elif name == "customer":
-                    return AssetKey(["sapo", "ingest_sapo_v2_customers_batch_asset"])
-                elif name == "account":
-                    return AssetKey(["sapo", "ingest_sapo_v2_accounts_batch_asset"])
-                elif name == "product":
-                    return AssetKey(["sapo", "ingest_sapo_v2_products_batch_asset"])
-                elif name == "inventory_transaction_v2":
-                    return AssetKey(["sapo", "ingest_sapo_v2_inventory_transactions_asset"])
-            elif source_name == "gsheet_raw":
-                if name == "targets_raw":
-                    return AssetKey(["sheets", "sheets_targets_asset"])
-                elif name == "marketing_spend_raw":
-                    return AssetKey(["sheets", "sheets_marketing_spend_asset"])
-                # Note: teams_raw and team_members_raw both come from sheets_team_config_asset
-                # but cannot share the same asset key — dependency omitted by design.
-
-            elif source_name == "misa_raw":
-                # Two source tables under misa_raw — each maps to its own file-drop asset.
-                if name == "account_ledger":
-                    return AssetKey(["misa_amis", "misa_account_ledger_file_drop_asset"])
-                # Default: sales_lines (and any future misa_raw tables) → sales asset
-                return AssetKey(["misa_amis", "misa_sales_file_drop_asset"])
-
-            elif source_name == "shopee_raw":
-                # 4 source tables, each maps to its corresponding @multi_asset output.
-                # Unique key per resource satisfies dagster-dbt's uniqueness requirement.
-                return AssetKey(["shopee", name])
-
+        if dbt_resource_props.get("resource_type") == "source":
+            tables = self._source_keys.get(dbt_resource_props.get("source_name"), {})
+            name = dbt_resource_props.get("name")
+            key = tables.get(name, tables.get("*"))
+            if key is not None:
+                return key
         return super().get_asset_key(dbt_resource_props)
 
 def _gc_rolling_parquet(context: AssetExecutionContext) -> None:

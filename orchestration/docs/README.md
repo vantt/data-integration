@@ -25,8 +25,9 @@ dagster dev
 ```
 orchestration/
 ├── definitions.py          # Main definitions entry point
+├── connectors/<id>/        # One package per source (assets, jobs, schedules, sensors)
+├── config/                 # modules.yaml (enabled connectors), ingestion_sla.yaml
 ├── assets/
-│   ├── sapo_v2_assets.py   # Ingestion asset definitions
 │   ├── dbt.py              # dbt asset integration
 │   └── serving.py          # Serving layer assets
 ├── jobs/

@@ -12,7 +12,8 @@
 | Ma trận phụ thuộc, import chéo, seed trùng tên, URL cứng trong connector | ✅ Cưỡng chế bằng `scripts/checks/check_boundaries.py` (mục 3, mục 12) |
 | Vi phạm đã biết | 46 = 9 phụ thuộc (mục 3) + 37 model tenant chưa dời thư mục, ghi trong `scripts/checks/boundary_allowlist.yaml` kèm lý do và hướng thoát |
 | Thư mục dbt theo module `models/<module>/<layer>/` | ✅ 134 model (connectors, cdm, core, packs) + monitoring; ⏳ 37 model `tenant:fine_japan` còn ở `staging/`, `intermediate/`, `marts/` cũ |
-| Connector package cho orchestration, tenant overlay, taxonomy module | ⏳ Đích (mục 4, 5, 9, 10) |
+| Connector package cho orchestration (`orchestration/connectors/<id>/`, bật/tắt qua `config/modules.yaml`) | ✅ 5 connector: `sapo_v2`, `shopee`, `misa_amis`, `sheets`, `hug` (mục 4, 5) |
+| Tenant overlay, taxonomy module | ⏳ Đích (mục 9, 10) |
 
 Các mục dưới đây mô tả trạng thái đích; chỗ nào đã khớp code được đánh dấu ✅.
 
@@ -236,20 +237,21 @@ Vi phạm đã biết (9):
 
 **Quyết định phân loại (13/10/2026):** COGS (`int_order_cogs_reconciled`, `int_order_promo_goods_cost`, `int_promo_642_monthly_total`, `mart_order_cogs_summary`) và tồn kho (`fact_inventory_*`, `int_sapo_inventories`, `int_return_sku_lines`, `mart_inventory_health`) thuộc **core**, không phải pack: các fact lõi (`fact_order_costs`, `fact_order_economics`, `mart_sku_economics_monthly`, `mart_product_health`) phụ thuộc vào chúng, và đây là phần chuẩn của bán hàng thương mại điện tử. `int_order_snapshots_ranked` đọc thẳng raw Sapo nên thuộc `connector:sapo_v2`.
 
-## 4. Kernel
+## 4. Kernel ✅
 
-Kernel là phần dùng chung cho mọi tenant. Các file kernel **giữ nguyên vị trí** (dời sẽ làm hỏng đường dẫn tính theo `__file__`) và được nhận diện bằng tài liệu.
+Kernel là phần dùng chung cho mọi tenant. Các file kernel **giữ nguyên vị trí** (dời sẽ làm hỏng đường dẫn tính theo `__file__`: `ops/purge_runs.py`, `asset_checks/sla_loader.py`, `ops/system_backup.py`) và được nhận diện bằng tài liệu này.
 
 ```mermaid
 flowchart TB
     subgraph KERNEL["Kernel"]
-        DEF["orchestration/definitions.py<br/>ghép connector + tenant từ modules.yaml<br/>job chéo nguồn: nightly, full refresh, _fact_order_returns"]
-        REG["orchestration/connectors/__init__.py<br/>load_enabled()"]
+        DEF["orchestration/definitions.py<br/>ghép kernel + connector từ modules.yaml<br/>job chéo nguồn: nightly, full refresh<br/>health, maintain, crm_backup"]
+        REG["orchestration/connectors/__init__.py<br/>enabled_ids(), load_enabled(), load_enabled_jobs()"]
         CFG["orchestration/config/<br/>modules.yaml, ingestion_sla.yaml"]
-        DBTA["assets/dbt.py<br/>@dbt_assets, translator ghép DBT_SOURCE_KEYS<br/>tạo thư mục rolling theo manifest"]
+        JS["orchestration/job_support.py<br/>SYNC_TAGS, has_active_run, long_dbt_rw_holder"]
+        DBTA["assets/dbt.py<br/>@dbt_assets, SapoDbtTranslator (ghép DBT_SOURCE_KEYS)<br/>tạo thư mục rolling theo manifest"]
         SERV["assets/serving.py, rill.py<br/>scripts/provisioning/*"]
         CHK["asset_checks/<br/>freshness, row_trend, cursor, reconciliation,<br/>kpi_closure, sla_loader, health_db"]
-        SEN["sensors/<br/>failure_alerting, stuck_run_alerter,<br/>concurrency_pool_janitor, health_db_watchdog"]
+        SEN["sensors/<br/>failure_alerting, stuck_run_alerter,<br/>concurrency_pool_janitor, health_db_watchdog,<br/>file_drop_sensors (factory)"]
         OPS["ops/<br/>ingestion_health, dlt_metrics, file_metrics,<br/>morning_digest, system_backup, purge_runs"]
         NOTI["notifications/lark_client.py"]
         RUN["ingestion/src/utils/<br/>pipeline_runner, shared_cookie_manager, seed_paths<br/>ingestion/src/file-drop-utils.py"]
@@ -257,30 +259,40 @@ flowchart TB
     CFG --> REG --> DEF
     DEF --> DBTA & SERV & CHK & SEN & OPS
     CHK & SEN & OPS --> NOTI
-    REG -. "ghép DIGEST_DISPLAY,<br/>JOB_MAX_RUNTIME, CHECK_ASSET_DEFS" .-> OPS & SEN & CHK
+    REG -. "ASSETS, JOBS, SCHEDULES, SENSORS" .-> DEF
+    REG -. "DIGEST_ASSETS/DIGEST_DISPLAY → morning_digest<br/>JOB_MAX_RUNTIME → stuck_run_alerter<br/>CHECK_ASSET_DEFS → asset_checks<br/>DBT_SOURCE_KEYS → assets/dbt.py" .-> OPS & SEN & CHK & DBTA
 ```
 
 | Giao diện kernel cung cấp | Ai dùng |
 |---|---|
-| `SYNC_TAGS` / `duckdb_lock` (khoá ghi DuckDB) | Mọi job ghi warehouse |
+| `SYNC_TAGS` (`job_support.py`) và `duckdb_lock` (khoá ghi DuckDB) | Mọi job ghi warehouse |
+| `has_active_run`, `long_dbt_rw_holder` (`job_support.py`) | Schedule của connector (bỏ tick khi run trước còn chạy hoặc nightly đang giữ `dbt_rw`) |
+| `make_file_drop_sensor(...)` (`sensors/file_drop_sensors.py`) | Connector shopee, misa_amis (sensor theo dõi thư mục thả file .xlsx) |
+| `load_dlt_configuration`, `DLT_DIR` (`assets/utils.py`) | Mọi `assets.py` của connector: đường dẫn script ingestion lấy từ `DLT_DIR`, không tính theo `__file__` nên package dời được |
 | `run_pipeline(...)` (dlt) | Connector sapo_v2, hug |
 | `get_data_lake_path()`, partition writer | Connector shopee, misa_amis |
 | `seed_path(name)` | Taxonomy writers, budget sync |
 | `send_lark_card(...)` | Sensors, ops |
-| SLA (`ingestion_sla.yaml`, khoá `<prefix>/<function_name>`) | Asset checks |
+| SLA (`ingestion_sla.yaml`, khoá `<prefix>/<function_name>`; thiếu file thì `sla_loader` raise) | Asset checks |
 
-**Kernel không import connector hay tenant**; chỉ nhận dữ liệu qua `load_enabled()`.
+**Kernel không import connector theo tên**: nó nhận dữ liệu qua `load_enabled()` / `load_enabled_jobs()`. Chiều ngược lại được phép: connector import hạ tầng kernel (`assets/utils.py`, `ops/*`, `job_support.py`, asset kernel như `dbt`, `serving`, `rill` để chọn trong job).
 
-## 5. Connectors
+Job chéo nguồn nằm trong `definitions.py`: `pipeline_batch_nightly_job` và `pipeline_batch_fullrefresh_job` chọn `NIGHTLY_ASSETS` của mọi connector đang bật cùng toàn bộ dbt và serving.
+
+Còn nằm ngoài package vì chứa giá trị riêng của Fine Japan: `sensors/sheets_modified_sensor.py` (URL Google Sheet mặc định). Connector `sheets` khai báo nó trong `SENSORS`; giá trị URL chuyển sang cấu hình tenant ở bước tenant overlay.
+
+## 5. Connectors ✅
 
 ### 5.1 Hợp đồng chung của một connector
+
+Mỗi connector là package `orchestration/connectors/<id>/`; `orchestration/config/modules.yaml` liệt kê các id được bật (thứ tự file = thứ tự dòng trong morning digest). Package chỉ export list/dict thuần, không có lớp registry. Chi tiết hợp đồng, cách thêm/bỏ connector: [orchestration/connectors/README.md](../../orchestration/connectors/README.md).
 
 ```mermaid
 flowchart LR
     subgraph PKG["orchestration/connectors/&lt;id&gt;/"]
-        A["assets.py<br/>ASSETS"]
+        A["assets.py<br/>các asset ingest"]
+        M["__init__.py<br/>ASSETS, CHECK_ASSET_DEFS, NIGHTLY_ASSETS,<br/>DIGEST_ASSETS, DIGEST_DISPLAY,<br/>JOB_MAX_RUNTIME, DBT_SOURCE_KEYS"]
         J["jobs.py<br/>JOBS, SCHEDULES, SENSORS"]
-        M["__init__.py<br/>DIGEST_DISPLAY, JOB_MAX_RUNTIME,<br/>CHECK_ASSET_DEFS, DBT_SOURCE_KEYS"]
     end
     subgraph ING["ingestion/"]
         E["run_*.py + src/&lt;source&gt;/"]
@@ -293,8 +305,34 @@ flowchart LR
     A -->|"import / importlib"| E --> RAW
     RAW --> SRC --> ST
     ST --> CDM["cdm/std_*"]
-    M --> KER["Kernel registry"]
+    A --> M
+    M --> KER["Kernel: load_enabled()"]
+    J --> KER2["Kernel: load_enabled_jobs()"]
 ```
+
+`jobs.py` tách khỏi `__init__.py` để tránh vòng import: `assets/dbt.py` đọc `DBT_SOURCE_KEYS` từ package, còn job cần `dbt.sapo_dbt_assets`.
+
+| Export | Kiểu | Kernel dùng ở đâu |
+|---|---|---|
+| `ASSETS` | list asset | `definitions.py` |
+| `CHECK_ASSET_DEFS` | `dict[sla_key, asset \| AssetKey]` | `asset_checks/__init__.py` (freshness, not-empty, trend, cursor) |
+| `NIGHTLY_ASSETS` | list asset ingest | job nightly và full refresh |
+| `DIGEST_ASSETS`, `DIGEST_DISPLAY` | `list[(short, sla_key, recon_key\|None)]`, `dict[str, tuple[str, str, str]]` | `ops/morning_digest.py` |
+| `JOB_MAX_RUNTIME` | `dict[str, timedelta]` theo tên job | `sensors/stuck_run_alerter.py` |
+| `DBT_SOURCE_KEYS` | `dict[source_name, dict[table, AssetKey]]` (`"*"` = bảng còn lại) | `SapoDbtTranslator` |
+| `JOBS`, `SCHEDULES`, `SENSORS` | list | `definitions.py` |
+
+Bất biến: tên asset key, check key, job, schedule (cron, timezone, default status), sensor và tập `unique_id` dbt mà mỗi job chọn không đổi khi dời code (trạng thái bật/tắt schedule trên prod gắn với code location + repository + tên). `scripts/shadow/gate.sh M` chứng minh bằng Dagster inventory.
+
+Bỏ một connector khỏi `modules.yaml` chỉ làm mất asset, job, schedule, sensor, check và dòng digest của connector đó (đã thử trong shadow với `hug`).
+
+| Connector | Asset | Job (schedule) | Sensor |
+|---|---|---|---|
+| `sapo_v2` | 7 `ingest_sapo_v2_*` (`sapo/…`) | `pipeline_sapo_v2_realtime_job` (*/3), `…_incremental_job` (*/10), `…_hourly_job` (:25) | — |
+| `shopee` | `shopee_income_file_drop_asset` (multi-asset, 4 output) | `ingest_filedrop_shopee_job` | `ingest_filedrop_shopee_sensor` |
+| `misa_amis` | 2 `misa_*_download_asset`, 2 `misa_*_file_drop_asset` | `ingest_weekly_job`, `ingest_monthly_job` (3 schedule), `ingest_filedrop_misa_job`, `ingest_filedrop_misa_account_ledger_job` | `ingest_filedrop_misa_sensor`, `ingest_filedrop_misa_account_ledger_sensor` |
+| `sheets` | 5 `sheets_*_asset`, `budget_sheet_sync_asset`, `budget_suggestion_writeback_asset` | `ingest_sheets_sync_job`, `budget_sheet_sync_job` (02:30), `budget_suggestion_writeback_job` (1st, 08:00) | `ingest_sheets_modified_sensor` |
+| `hug` | `ingest_hug_webhook_consumer_asset` | `pipeline_hug_realtime_job` (*/3) | — |
 
 | Connector | Ingestion | Raw | dbt | Ra cdm |
 |---|---|---|---|---|

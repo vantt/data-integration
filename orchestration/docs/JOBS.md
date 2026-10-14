@@ -191,7 +191,7 @@ ingest_sheets_sync_job = define_asset_job(
 budget_sheet_sync_job = define_asset_job(
     name="budget_sheet_sync_job",
     selection=AssetSelection.assets(
-        sheets_assets.budget_sheet_sync_asset,
+        budget_sheet_sync_asset,
     ),
 )
 ```
@@ -210,7 +210,7 @@ budget_sheet_sync_job = define_asset_job(
 budget_suggestion_writeback_job = define_asset_job(
     name="budget_suggestion_writeback_job",
     selection=AssetSelection.assets(
-        sheets_assets.budget_suggestion_writeback_asset,
+        budget_suggestion_writeback_asset,
     ),
 )
 ```

@@ -1,7 +1,7 @@
 """Load and merge SLA config from orchestration/config/ingestion_sla.yaml.
 
 Provides a single entry point: get_sla(asset_key_str) -> dict.
-Falls back to defaults for any key not explicitly listed — never raises.
+A missing file raises; a key not listed under `assets:` falls back to the defaults.
 """
 from __future__ import annotations
 
@@ -24,14 +24,9 @@ def _load() -> dict[str, Any]:
     if _sla_cache is not None:
         return _sla_cache
 
-    try:
-        with open(_CONFIG_PATH) as fh:
-            raw = yaml.safe_load(fh)
-    except FileNotFoundError:
-        _log.warning("ingestion_sla.yaml not found at %s — using hardcoded defaults", _CONFIG_PATH)
-        raw = {}
-
-    _sla_cache = raw or {}
+    # No fallback: a missing file would silently drop every freshness/trend threshold.
+    with open(_CONFIG_PATH) as fh:
+        _sla_cache = yaml.safe_load(fh) or {}
     return _sla_cache
 
 
@@ -44,7 +39,7 @@ def get_sla(asset_key_str: str) -> dict[str, Any]:
     """Return merged SLA config for the given asset key string.
 
     Keys in the per-asset block override defaults. Missing asset falls back
-    entirely to defaults. Never raises.
+    entirely to defaults.
     """
     data = _load()
     defaults = data.get("defaults", {})

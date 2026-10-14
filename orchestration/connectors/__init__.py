@@ -1,0 +1,39 @@
+"""Connector packages: one package per data source under orchestration/connectors/<id>/.
+
+`orchestration/config/modules.yaml` lists the enabled ids. A package exports plain
+lists/dicts (see connectors/README.md for the contract):
+
+  <id>/__init__.py   ASSETS, CHECK_ASSET_DEFS, NIGHTLY_ASSETS, DIGEST_ASSETS,
+                     DIGEST_DISPLAY, JOB_MAX_RUNTIME, DBT_SOURCE_KEYS
+  <id>/jobs.py       JOBS, SCHEDULES, SENSORS
+
+Jobs live in their own module because they select the dbt assets, and assets/dbt.py in
+turn reads DBT_SOURCE_KEYS from the packages: importing jobs from the package __init__
+would make that a cycle.
+"""
+from __future__ import annotations
+
+import importlib
+from pathlib import Path
+from types import ModuleType
+
+import yaml
+
+_MODULES_FILE = Path(__file__).resolve().parents[1] / "config" / "modules.yaml"
+
+
+def enabled_ids() -> list[str]:
+    """Connector ids from modules.yaml, in file order."""
+    with open(_MODULES_FILE) as fh:
+        data = yaml.safe_load(fh) or {}
+    return list(data.get("connectors") or [])
+
+
+def load_enabled(ids: list[str] | None = None) -> list[ModuleType]:
+    """Import the enabled connector packages (assets and data, no jobs)."""
+    return [importlib.import_module(f"{__name__}.{i}") for i in (enabled_ids() if ids is None else ids)]
+
+
+def load_enabled_jobs(ids: list[str] | None = None) -> list[ModuleType]:
+    """Import `<id>.jobs` (JOBS, SCHEDULES, SENSORS) of the enabled connectors."""
+    return [importlib.import_module(f"{__name__}.{i}.jobs") for i in (enabled_ids() if ids is None else ids)]

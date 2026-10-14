@@ -14,7 +14,6 @@ from dagster import (
     ScheduleDefinition,
     define_asset_job,
     AssetSelection,
-    AssetKey,
     schedule,
     DefaultScheduleStatus,
     RunRequest,
@@ -29,14 +28,18 @@ from orchestration.asset_checks import ALL_CHECKS
 from orchestration.asset_checks.reconciliation_checks import RECON_CHECKS
 from orchestration.asset_checks.kpi_closure_checks import KPI_CHECKS
 from dagster_dbt import DbtCliResource
-from orchestration.assets import sapo_v2_assets, sheets_assets, shopee_assets, misa_amis_assets, dbt, serving, rill, reconciliation, kpi_closure, crm_sync, hug_assets, crm_writeback_assets, approach_script_generation
+from orchestration.assets import dbt, serving, rill, reconciliation, kpi_closure, crm_sync, crm_writeback_assets, approach_script_generation
+from orchestration.connectors import load_enabled, load_enabled_jobs
+from orchestration.job_support import (
+    ACTIVE_STATUSES as _ACTIVE_STATUSES,
+    SYNC_TAGS,
+    has_active_run as _has_active_run,
+)
 from orchestration.ops.system_backup import maintain_backup_platform_job
 from orchestration.ops.morning_digest import health_report_digest_job
 from orchestration.ops.purge_runs import maintain_cleanup_job
 from orchestration.sensors.failure_alerting import health_alert_failure_sensor
-from orchestration.sensors.sheets_modified_sensor import ingest_sheets_modified_sensor
 from orchestration.sensors.stuck_run_alerter import health_alert_stuckrun_sensor
-from orchestration.sensors.file_drop_sensors import ingest_filedrop_shopee_sensor, ingest_filedrop_misa_sensor, ingest_filedrop_misa_account_ledger_sensor
 from orchestration.sensors.concurrency_pool_janitor import health_concurrency_pool_janitor
 from orchestration.sensors.health_db_watchdog_sensor import health_db_watchdog_sensor
 
@@ -44,7 +47,13 @@ from orchestration.sensors.health_db_watchdog_sensor import health_db_watchdog_s
 # (docker-compose.yml command: `python scripts/ensure_dbt_directories.py && ...`).
 # Don't call it from here: definitions.py is re-imported on every gRPC code
 # server spawn (e.g. each `dagster job launch`), which would add noise.
-all_assets = load_assets_from_modules([sapo_v2_assets, sheets_assets, shopee_assets, misa_amis_assets, dbt, serving, rill, reconciliation, kpi_closure, crm_sync, hug_assets, crm_writeback_assets, approach_script_generation])
+kernel_assets = load_assets_from_modules([dbt, serving, rill, reconciliation, kpi_closure, crm_sync, crm_writeback_assets, approach_script_generation])
+
+# Connectors enabled in orchestration/config/modules.yaml contribute their own assets,
+# jobs, schedules and sensors.
+connectors = load_enabled()
+connector_jobs = load_enabled_jobs()
+all_assets = [*kernel_assets, *(a for c in connectors for a in c.ASSETS)]
 
 # ------------------------------------------------------------------------------
 # ASSET SELECTIONS
@@ -72,161 +81,10 @@ all_dbt_assets = AssetSelection.assets(dbt.sapo_dbt_assets)
 # JOBS
 # ------------------------------------------------------------------------------
 
-# All sync jobs share the 'dbt_rw' concurrency group (limit 1 in dagster.yaml) —
-# this is the single-source-of-truth mutex for DuckDB writers. QueuedRunCoordinator
-# enforces it at the instance level, replacing the old manual SkipReason logic.
-SYNC_TAGS = {"concurrency_group": "dbt_rw"}
-
-# 1. Realtime Job (Webhook)
-pipeline_sapo_v2_realtime_job = define_asset_job(
-    name="pipeline_sapo_v2_realtime_job",
-    selection=AssetSelection.assets(sapo_v2_assets.ingest_sapo_v2_webhook_consumer_asset) | all_dbt_assets | AssetSelection.assets(serving.build_serving_db) | AssetSelection.assets(rill.build_rill_publish) | AssetSelection.assets(crm_sync.crm_cache_refresh),
-    tags=SYNC_TAGS,
-)
-
-# 1b. Hug Realtime Job (Hug webhook poll — separate dataset from Sapo)
-pipeline_hug_realtime_job = define_asset_job(
-    name="pipeline_hug_realtime_job",
-    selection=AssetSelection.assets(hug_assets.ingest_hug_webhook_consumer_asset),
-    tags=SYNC_TAGS,
-)
-
-# 2. Incremental Job (History Log)
-pipeline_sapo_v2_incremental_job = define_asset_job(
-    name="pipeline_sapo_v2_incremental_job",
-    selection=AssetSelection.assets(sapo_v2_assets.ingest_sapo_v2_history_log_asset) | all_dbt_assets | AssetSelection.assets(serving.build_serving_db) | AssetSelection.assets(rill.build_rill_publish) | AssetSelection.assets(crm_sync.crm_cache_refresh),
-    tags={**SYNC_TAGS, "dagster/max_retries": "0"},
-)
-
-# 2.5 Sheets Job (Manual or sensor-triggered on sheet edit)
-# Ingests Google Sheets (Targets, Marketing Spend) AND cascades downstream:
-# dbt models that depend on the raw sheet tables + serving_db refresh.
-#
-# Why downstream is included: sheets are rarely edited (manual input by analysts)
-# and users expect the dashboard to reflect the change without waiting for
-# the 04:00 nightly. `AssetSelection.downstream()` limits the cascade to
-# marts that actually depend on these sources (fact_targets, fact_marketing_spend,
-# and anything derived) — NOT the whole dbt graph.
-_sheets_sources = (
-    AssetSelection.assets(sheets_assets.sheets_targets_asset)
-    | AssetSelection.assets(sheets_assets.sheets_marketing_spend_asset)
-    | AssetSelection.assets(sheets_assets.sheets_team_config_asset)
-    | AssetSelection.assets(sheets_assets.sheets_us_shipment_prices_asset)
-    | AssetSelection.assets(sheets_assets.sheets_overhead_classification_asset)
-)
-ingest_sheets_sync_job = define_asset_job(
-    name="ingest_sheets_sync_job",
-    selection=(
-        _sheets_sources
-        | _sheets_sources.downstream()
-        | AssetSelection.assets(serving.build_serving_db)
-        | AssetSelection.assets(rill.build_rill_publish)
-        | AssetSelection.assets(crm_sync.crm_cache_refresh)
-    ),
-    tags=SYNC_TAGS,
-)
-
-# 2.6 Shopee file-drop sync job
-# Ingests Shopee income Excel → dbt (shopee chain only) → serving_db.
-# shopee_income_file_drop_asset is a @multi_asset with 4 outputs (one per table),
-# so .downstream() resolves only shopee-dependent dbt models — not the full graph.
-# fact_order_returns is added explicitly: it is not downstream of shopee_source, but
-# fact_order_economics (which IS downstream) depends on it — without this, the first
-# file-drop run on a fresh deploy fails because the parquet does not yet exist.
-_shopee_source = AssetSelection.assets(shopee_assets.shopee_income_file_drop_asset)
-_fact_order_returns = AssetSelection.assets(AssetKey(["marts", "fact_order_returns"]))
-ingest_filedrop_shopee_job = define_asset_job(
-    name="ingest_filedrop_shopee_job",
-    selection=(
-        _shopee_source
-        | _shopee_source.downstream()
-        | _fact_order_returns
-        | AssetSelection.assets(serving.build_serving_db)
-        | AssetSelection.assets(crm_sync.crm_cache_refresh)
-    ),
-    tags=SYNC_TAGS,
-)
-
-# Cadence-based ingest jobs — browser automation, no DuckDB writes, no SYNC_TAGS lock.
-# Add new assets to the matching job; schedules below stay unchanged.
-ingest_weekly_job = define_asset_job(
-    name="ingest_weekly_job",
-    selection=AssetSelection.assets(
-        misa_amis_assets.misa_sales_download_asset,
-    ),
-)
-
-ingest_monthly_job = define_asset_job(
-    name="ingest_monthly_job",
-    selection=AssetSelection.assets(
-        misa_amis_assets.misa_account_ledger_download_asset,
-    ),
-)
-
-# Daily budget sheet sync — writes dbt seeds directly (not the gsheet_raw data lake),
-# scheduled 30 min before the nightly dbt build so seeds are fresh when `dbt build` runs.
-budget_sheet_sync_job = define_asset_job(
-    name="budget_sheet_sync_job",
-    selection=AssetSelection.assets(
-        sheets_assets.budget_sheet_sync_asset,
-    ),
-)
-
-# Monthly budget suggestion write-back (Phase 5) — computes + writes "Gợi Ý" cells for next
-# month only, never "Budget". Requires GOOGLE_SHEETS_SERVICE_ACCOUNT_KEY_PATH (shared GCP
-# service account, Editor access on this sheet) — fails loud at RUNTIME, not at code-load,
-# if unset. See plans/260707-1201-google-sheets-service-account/phase-01-service-account-setup.md.
-budget_suggestion_writeback_job = define_asset_job(
-    name="budget_suggestion_writeback_job",
-    selection=AssetSelection.assets(
-        sheets_assets.budget_suggestion_writeback_asset,
-    ),
-)
-
-# 2.7 MISA sales-ledger file-drop sync job
-_misa_source = AssetSelection.assets(misa_amis_assets.misa_sales_file_drop_asset)
-ingest_filedrop_misa_job = define_asset_job(
-    name="ingest_filedrop_misa_job",
-    selection=(
-        _misa_source
-        | _misa_source.downstream()
-        | _fact_order_returns
-        | AssetSelection.assets(serving.build_serving_db)
-        | AssetSelection.assets(crm_sync.crm_cache_refresh)
-    ),
-    tags=SYNC_TAGS,
-)
-
-# 2.8 MISA account-ledger file-drop sync job
-# Ingests Sổ chi tiết các tài khoản (overhead 6421/6422) → dbt (account-ledger chain) → serving_db.
-# No _fact_order_returns dependency: account-ledger is an independent overhead pool source.
-_misa_account_ledger_source = AssetSelection.assets(misa_amis_assets.misa_account_ledger_file_drop_asset)
-ingest_filedrop_misa_account_ledger_job = define_asset_job(
-    name="ingest_filedrop_misa_account_ledger_job",
-    selection=(
-        _misa_account_ledger_source
-        | _misa_account_ledger_source.downstream()
-        | AssetSelection.assets(serving.build_serving_db)
-        | AssetSelection.assets(crm_sync.crm_cache_refresh)
-    ),
-    tags=SYNC_TAGS,
-)
-
+# Cross-source jobs: they select ingest assets from every enabled connector.
 # 3. Nightly Reconciliation Job (Batch — incremental from last cursor)
 _nightly_batch_selection = (
-    AssetSelection.assets(sapo_v2_assets.ingest_sapo_v2_orders_batch_asset) |
-    AssetSelection.assets(sapo_v2_assets.ingest_sapo_v2_customers_batch_asset) |
-    AssetSelection.assets(sapo_v2_assets.ingest_sapo_v2_accounts_batch_asset) |
-    AssetSelection.assets(sapo_v2_assets.ingest_sapo_v2_products_batch_asset) |
-    AssetSelection.assets(sapo_v2_assets.ingest_sapo_v2_inventory_transactions_asset) |
-    AssetSelection.assets(sheets_assets.sheets_targets_asset) |
-    AssetSelection.assets(sheets_assets.sheets_marketing_spend_asset) |
-    AssetSelection.assets(sheets_assets.sheets_team_config_asset) |
-    AssetSelection.assets(sheets_assets.sheets_us_shipment_prices_asset) |
-    AssetSelection.assets(sheets_assets.sheets_overhead_classification_asset) |
-    AssetSelection.assets(shopee_assets.shopee_income_file_drop_asset) |
-    AssetSelection.assets(misa_amis_assets.misa_sales_file_drop_asset) |
-    AssetSelection.assets(misa_amis_assets.misa_account_ledger_file_drop_asset) |
+    AssetSelection.assets(*(a for c in connectors for a in c.NIGHTLY_ASSETS)) |
     AssetSelection.groups("crm_writeback") |
     all_dbt_assets |
     AssetSelection.assets(serving.build_serving_db) |
@@ -250,23 +108,6 @@ pipeline_batch_fullrefresh_job = define_asset_job(
     tags={**SYNC_TAGS, "full_refresh": "true", "inventory_window": "day"},
 )
 
-# 3c. Generic Sapo hourly job — runs inventory-transactions-v2 ingestion through
-# the real-time inventory chain: ingest → src_ → std_ → fact_inventory_movements
-# (current on-hand + COGS refresh each hour). The daily on-hand snapshot
-# (fact_inventory_onhand_daily, ~1.9M rows, DAILY grain) is intentionally left to
-# the nightly job. Self-refresh serving views auto-pick the latest mart parquet,
-# so no serving asset is needed here. Add future hourly assets to this selection.
-pipeline_sapo_v2_hourly_job = define_asset_job(
-    name="pipeline_sapo_v2_hourly_job",
-    # dbt models tagged 'hourly' in schema.yml are exposed as Dagster tag "dagster-dbt/hourly".
-    # This avoids hard-coded AssetKey strings that break silently on model rename.
-    selection=(
-        AssetSelection.assets(sapo_v2_assets.ingest_sapo_v2_inventory_transactions_asset)
-        | AssetSelection.tag("dagster-dbt/hourly", "")
-    ),
-    tags=SYNC_TAGS,
-)
-
 # ------------------------------------------------------------------------------
 # SCHEDULES
 # ------------------------------------------------------------------------------
@@ -281,66 +122,14 @@ pipeline_sapo_v2_hourly_job = define_asset_job(
 #   eventually run and pick up the latest data.
 # - This is the minimal logic needed: cross-job = coordinator, self-overlap = schedule.
 
-# Active states: anything that hasn't terminated. NOT_STARTED is included
-# to catch runs that were created but haven't been picked up yet.
-_ACTIVE_STATUSES = [
-    DagsterRunStatus.QUEUED,
-    DagsterRunStatus.NOT_STARTED,
-    DagsterRunStatus.STARTING,
-    DagsterRunStatus.STARTED,
-]
-
-
-def _has_active_run(context, job_name: str) -> str | None:
-    """Return run_id of an active run for this job, or None if none active."""
-    runs = context.instance.get_runs(
-        filters=RunsFilter(job_name=job_name, statuses=_ACTIVE_STATUSES),
-        limit=1,
-    )
-    return runs[0].run_id if runs else None
-
-
-# Long-running dbt_rw jobs (60-90+ min). Submitting realtime/incremental while
-# these are STARTED causes NOT_STARTED accumulation: the submitted run can't be
-# dequeued (dbt_rw=1 occupied), blocks subsequent ticks via _has_active_run,
-# and eventually hits the 90-min QUEUE_STUCK_THRESHOLD and gets auto-canceled.
-# Better to skip the tick and retry next tick (3-10 min later).
-_LONG_DPT_RW_JOBS = ["pipeline_batch_nightly_job", "pipeline_batch_fullrefresh_job"]
-
-# Statuses that mean a job is ACTUALLY running (holds the dbt_rw slot).
-# Exclude NOT_STARTED — a NOT_STARTED batch job hasn't acquired the slot yet
-# and may fail to start; we shouldn't pre-emptively block on it.
-_RUNNING_STATUSES = [
-    DagsterRunStatus.QUEUED,
-    DagsterRunStatus.STARTING,
-    DagsterRunStatus.STARTED,
-]
-
-
-def _long_dbt_rw_holder(context) -> str | None:
-    """Return job_name if a long-running dbt_rw job is currently active (holds slot)."""
-    for job_name in _LONG_DPT_RW_JOBS:
-        runs = context.instance.get_runs(
-            filters=RunsFilter(job_name=job_name, statuses=_RUNNING_STATUSES),
-            limit=1,
-        )
-        if runs:
-            return job_name
-    return None
-
+# Active states, has_active_run and long_dbt_rw_holder live in orchestration/job_support.py
+# (shared with the connector packages).
 
 # Jobs that use duckdb_lock (write to DuckDB). Health checks should yield to these.
 # Built dynamically from all jobs defined in this module that carry SYNC_TAGS
 # (concurrency_group == "dbt_rw") — eliminates the drift risk of a manual list.
 _ALL_SYNC_JOBS = [
-    pipeline_sapo_v2_realtime_job,
-    pipeline_hug_realtime_job,
-    pipeline_sapo_v2_incremental_job,
-    pipeline_sapo_v2_hourly_job,
-    ingest_sheets_sync_job,
-    ingest_filedrop_shopee_job,
-    ingest_filedrop_misa_job,
-    ingest_filedrop_misa_account_ledger_job,
+    *(j for c in connector_jobs for j in c.JOBS),
     pipeline_batch_nightly_job,
     pipeline_batch_fullrefresh_job,
 ]
@@ -353,7 +142,7 @@ _INGESTION_JOBS = [
 def _has_active_ingestion(context) -> str | None:
     """Return job_name of any active ingestion job, or None if all idle.
 
-    Issues one get_runs() query per job (N=10 SQLite reads per call). Called
+    Issues one get_runs() query per job (N≈10 SQLite reads per call). Called
     during the post-purge backup-sensor window (every 60 s while ingestion
     active) — acceptable load. A future optimisation would batch into a single
     get_run_records(filters=RunsFilter(job_names=[...], statuses=...)) call if
@@ -370,90 +159,6 @@ def _has_active_ingestion(context) -> str | None:
 
 
 @schedule(
-    job=pipeline_sapo_v2_realtime_job,
-    cron_schedule="*/3 * * * *",
-    execution_timezone="Asia/Ho_Chi_Minh",
-)
-def pipeline_sapo_v2_realtime_schedule(context):
-    active = _has_active_run(context, "pipeline_sapo_v2_realtime_job")
-    if active:
-        return SkipReason(f"realtime: previous run still active ({active[:8]})")
-    # Yield to long-running batch jobs: a new run can't start (dbt_rw=1 occupied)
-    # and would sit NOT_STARTED for 60-90+ min before being auto-canceled.
-    # Skip this tick; the next tick in 3 min will retry.
-    holder = _long_dbt_rw_holder(context)
-    if holder:
-        return SkipReason(f"realtime: yielding to {holder} (dbt_rw occupied)")
-    # Yield to maintain_cleanup: VACUUM on index.db holds an exclusive SQLite lock, causing
-    # log event writes to fail for concurrent jobs → stuck sensor kills them as "inactive".
-    # Skip instead; next tick in 3 min retries after cleanup completes (~15-20 min window).
-    if _has_active_run(context, "maintain_cleanup_job"):
-        return SkipReason("realtime: yielding to maintain_cleanup (SQLite index.db lock)")
-    return RunRequest(run_key=None)
-
-
-@schedule(
-    job=pipeline_hug_realtime_job,
-    cron_schedule="*/3 * * * *",
-    execution_timezone="Asia/Ho_Chi_Minh",
-)
-def pipeline_hug_realtime_schedule(context):
-    active = _has_active_run(context, "pipeline_hug_realtime_job")
-    if active:
-        return SkipReason(f"hug_realtime: previous run still active ({active[:8]})")
-    holder = _long_dbt_rw_holder(context)
-    if holder:
-        return SkipReason(f"hug_realtime: yielding to {holder} (dbt_rw occupied)")
-    if _has_active_run(context, "maintain_cleanup_job"):
-        return SkipReason("hug_realtime: yielding to maintain_cleanup (SQLite index.db lock)")
-    return RunRequest(run_key=None)
-
-
-@schedule(
-    job=pipeline_sapo_v2_incremental_job,
-    # Skip 3 AM hour entirely — nightly batch runs then and holds the
-    # dbt_rw slot for ~30-60 minutes. Excluding this hour prevents incremental
-    # ticks from piling up while nightly is running.
-    #
-    # If nightly overruns past 4 AM, _long_dbt_rw_holder() skips the tick
-    # instead of creating a NOT_STARTED run that would sit for 60-90+ min
-    # and trigger QUEUE_STUCK_THRESHOLD auto-cancel.
-    cron_schedule="*/10 0-2,4-23 * * *",
-    execution_timezone="Asia/Ho_Chi_Minh",
-)
-def pipeline_sapo_v2_incremental_schedule(context):
-    active = _has_active_run(context, "pipeline_sapo_v2_incremental_job")
-    if active:
-        return SkipReason(f"incremental: previous run still active ({active[:8]})")
-    holder = _long_dbt_rw_holder(context)
-    if holder:
-        return SkipReason(f"incremental: yielding to {holder} (dbt_rw occupied)")
-    if _has_active_run(context, "maintain_cleanup_job"):
-        return SkipReason("incremental: yielding to maintain_cleanup (SQLite index.db lock)")
-    return RunRequest(run_key=None)
-
-
-@schedule(
-    job=pipeline_sapo_v2_hourly_job,
-    # Run at :25 each hour, skip 3 AM (nightly batch holds dbt_rw ~30-60 min).
-    # Minute :25 avoids collision with realtime (*/3) and incremental (*/10).
-    # If nightly overruns past 4 AM, _long_dbt_rw_holder() skips the tick.
-    cron_schedule="25 0-2,4-23 * * *",
-    execution_timezone="Asia/Ho_Chi_Minh",
-)
-def pipeline_sapo_v2_hourly_schedule(context):
-    active = _has_active_run(context, "pipeline_sapo_v2_hourly_job")
-    if active:
-        return SkipReason(f"hourly: previous run still active ({active[:8]})")
-    holder = _long_dbt_rw_holder(context)
-    if holder:
-        return SkipReason(f"hourly: yielding to {holder} (dbt_rw occupied)")
-    if _has_active_run(context, "maintain_cleanup_job"):
-        return SkipReason("hourly: yielding to maintain_cleanup (SQLite index.db lock)")
-    return RunRequest(run_key=None)
-
-
-@schedule(
     job=pipeline_batch_nightly_job,
     cron_schedule="0 3 * * *",
     execution_timezone="Asia/Ho_Chi_Minh",
@@ -462,81 +167,6 @@ def pipeline_batch_nightly_schedule(context):
     active = _has_active_run(context, "pipeline_batch_nightly_job")
     if active:
         return SkipReason(f"nightly: previous run still active ({active[:8]})")
-    return RunRequest(run_key=None)
-
-
-# Monday 07:00 ICT — runs all assets in ingest_weekly_job (currently: MISA sales ledger).
-# 1st of month 07:00 ICT — runs all assets in ingest_monthly_job (currently: MISA account ledger).
-# To add a new periodic ingest task: add its asset to the matching job above — no new schedule needed.
-@schedule(
-    job=ingest_weekly_job,
-    cron_schedule="0 7 * * 1",
-    execution_timezone="Asia/Ho_Chi_Minh",
-)
-def ingest_weekly_schedule(context):
-    active = _has_active_run(context, "ingest_weekly_job")
-    if active:
-        return SkipReason(f"ingest_weekly: previous run still active ({active[:8]})")
-    return RunRequest(run_key=None)
-
-
-@schedule(
-    job=ingest_monthly_job,
-    cron_schedule="0 7 1 * *",
-    execution_timezone="Asia/Ho_Chi_Minh",
-)
-def ingest_monthly_schedule(context):
-    active = _has_active_run(context, "ingest_monthly_job")
-    if active:
-        return SkipReason(f"ingest_monthly: previous run still active ({active[:8]})")
-    return RunRequest(run_key=None)
-
-
-# Day 10, 07:00 ICT — re-pull of ingest_monthly_job (currently: MISA account ledger).
-# MISA's books for a month typically don't close/finalize until day ~5-10 of the
-# following month, so the day-1 pull above often misses late bookkeeping entries.
-# The downloader defaults to "last month" and the ingest mechanism fully replaces
-# (UPSERT-by year/month) the target month's partition on each run, so re-running
-# on day 10 is safe/idempotent — no double-counting, just fresher data.
-@schedule(
-    job=ingest_monthly_job,
-    cron_schedule="0 7 10 * *",
-    execution_timezone="Asia/Ho_Chi_Minh",
-)
-def ingest_monthly_repull_schedule(context):
-    active = _has_active_run(context, "ingest_monthly_job")
-    if active:
-        return SkipReason(f"ingest_monthly_repull: previous run still active ({active[:8]})")
-    return RunRequest(run_key=None)
-
-
-# 02:30 ICT daily — 30 min before the nightly dbt build (03:00 ICT) so fresh budget
-# seeds are in place before `dbt build` runs.
-@schedule(
-    job=budget_sheet_sync_job,
-    cron_schedule="30 2 * * *",
-    execution_timezone="Asia/Ho_Chi_Minh",
-)
-def budget_sheet_sync_schedule(context):
-    active = _has_active_run(context, "budget_sheet_sync_job")
-    if active:
-        return SkipReason(f"budget_sheet_sync: previous run still active ({active[:8]})")
-    return RunRequest(run_key=None)
-
-
-# 1st of month, 08:00 ICT — after ingest_monthly_job (07:00 ICT) lands fresh MISA account-ledger
-# actuals, so recurring/reserve suggestions reflect the latest month's real numbers. Will raise
-# loud (RuntimeError, caught by health_alert_failure_sensor) every tick until a human completes
-# the GCP service-account setup described in gsheet_budget_sync.py — expected until then.
-@schedule(
-    job=budget_suggestion_writeback_job,
-    cron_schedule="0 8 1 * *",
-    execution_timezone="Asia/Ho_Chi_Minh",
-)
-def budget_suggestion_writeback_schedule(context):
-    active = _has_active_run(context, "budget_suggestion_writeback_job")
-    if active:
-        return SkipReason(f"budget_suggestion_writeback: previous run still active ({active[:8]})")
     return RunRequest(run_key=None)
 
 
@@ -762,19 +392,8 @@ defs = Definitions(
     # require the job to be present in the repository.
     asset_checks=[*ALL_CHECKS, *RECON_CHECKS, *KPI_CHECKS],
     jobs=[
-        # ingest_*
-        pipeline_sapo_v2_realtime_job,
-        pipeline_hug_realtime_job,
-        pipeline_sapo_v2_incremental_job,
-        pipeline_sapo_v2_hourly_job,
-        ingest_sheets_sync_job,
-        ingest_weekly_job,
-        ingest_monthly_job,
-        budget_sheet_sync_job,
-        budget_suggestion_writeback_job,
-        ingest_filedrop_shopee_job,
-        ingest_filedrop_misa_job,
-        ingest_filedrop_misa_account_ledger_job,
+        # ingest_* (per connector)
+        *(j for c in connector_jobs for j in c.JOBS),
         # pipeline_batch_*
         pipeline_batch_nightly_job,
         pipeline_batch_fullrefresh_job,
@@ -789,19 +408,10 @@ defs = Definitions(
         crm_backup_job,
     ],
     schedules=[
-        # ingest_*
-        pipeline_sapo_v2_realtime_schedule,
-        pipeline_hug_realtime_schedule,
-        pipeline_sapo_v2_incremental_schedule,
-        pipeline_sapo_v2_hourly_schedule,
+        # ingest_* (per connector; add assets to a connector's jobs, not new schedules here)
+        *(sch for c in connector_jobs for sch in c.SCHEDULES),
         # transform_*
         pipeline_batch_nightly_schedule,
-        # cadence-based ingest (add assets to jobs above, not new schedules here)
-        ingest_weekly_schedule,
-        ingest_monthly_schedule,
-        ingest_monthly_repull_schedule,
-        budget_sheet_sync_schedule,
-        budget_suggestion_writeback_schedule,
         # health_*
         health_recon_daily_schedule,
         health_kpi_closure_schedule,
@@ -813,11 +423,8 @@ defs = Definitions(
         crm_backup_schedule,
     ],
     sensors=[
-        # ingest_*
-        ingest_sheets_modified_sensor,
-        ingest_filedrop_shopee_sensor,
-        ingest_filedrop_misa_sensor,
-        ingest_filedrop_misa_account_ledger_sensor,
+        # ingest_* (per connector)
+        *(sen for c in connector_jobs for sen in c.SENSORS),
         # health_*
         health_alert_failure_sensor,
         health_alert_stuckrun_sensor,

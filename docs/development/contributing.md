@@ -439,7 +439,7 @@ Brief description of changes
    ingestion/.dlt/config.toml
 
 4. Add Dagster asset
-   orchestration/assets/sapo_v2_assets.py
+   orchestration/connectors/<id>/assets.py (+ jobs.py; see orchestration/connectors/README.md)
 
 5. Update documentation
    ingestion/docs/PIPELINES.md

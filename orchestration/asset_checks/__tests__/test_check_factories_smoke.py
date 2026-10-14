@@ -158,7 +158,7 @@ def test_consecutive_empty_returns_zero_for_no_cursor_data(temp_db):
 
 def test_freshness_check_passes_for_recent_run(temp_db):
     from dagster import build_asset_context
-    from orchestration.assets import sapo_v2_assets
+    from orchestration.connectors.sapo_v2 import assets as sapo_v2_assets
     from orchestration.asset_checks.freshness_checks import make_freshness_check
 
     check_fn = make_freshness_check(sapo_v2_assets.ingest_sapo_v2_orders_batch_asset, "sapo/ingest_sapo_v2_orders_batch_asset")
@@ -171,7 +171,7 @@ def test_freshness_check_passes_for_recent_run(temp_db):
 
 def test_freshness_check_fails_for_stale_run(temp_db):
     from dagster import build_asset_context
-    from orchestration.assets import sapo_v2_assets
+    from orchestration.connectors.sapo_v2 import assets as sapo_v2_assets
     from orchestration.asset_checks.freshness_checks import make_freshness_check
 
     # customers_batch last ran 50h ago, SLA=28h
@@ -187,7 +187,7 @@ def test_freshness_check_fails_for_stale_run(temp_db):
 
 def test_freshness_check_warns_for_no_history(temp_db):
     from dagster import build_asset_context
-    from orchestration.assets import sapo_v2_assets
+    from orchestration.connectors.sapo_v2 import assets as sapo_v2_assets
     from orchestration.asset_checks.freshness_checks import make_freshness_check
 
     check_fn = make_freshness_check(sapo_v2_assets.ingest_sapo_v2_accounts_batch_asset, "sapo/ingest_sapo_v2_accounts_batch_asset")
@@ -206,7 +206,7 @@ def test_freshness_check_warns_for_no_history(temp_db):
 
 def test_not_empty_check_warns_for_zero_rows(temp_db):
     from dagster import build_asset_context
-    from orchestration.assets import sapo_v2_assets
+    from orchestration.connectors.sapo_v2 import assets as sapo_v2_assets
     from orchestration.asset_checks.row_trend_checks import make_not_empty_check
 
     check_fn = make_not_empty_check(sapo_v2_assets.ingest_sapo_v2_products_batch_asset, "sapo/ingest_sapo_v2_products_batch_asset")
@@ -223,7 +223,7 @@ def test_not_empty_check_warns_for_zero_rows(temp_db):
 
 def test_cursor_stall_check_detects_streak(temp_db):
     from dagster import build_asset_context
-    from orchestration.assets import sapo_v2_assets
+    from orchestration.connectors.sapo_v2 import assets as sapo_v2_assets
     from orchestration.asset_checks.cursor_checks import make_cursor_stall_check
 
     check_fn = make_cursor_stall_check(sapo_v2_assets.ingest_sapo_v2_history_log_asset, "sapo/ingest_sapo_v2_history_log_asset")
@@ -236,7 +236,7 @@ def test_cursor_stall_check_detects_streak(temp_db):
 
 
 def test_cursor_stall_check_returns_none_for_non_sapo(temp_db):
-    from orchestration.assets import shopee_assets
+    from orchestration.connectors.shopee import assets as shopee_assets
     from orchestration.asset_checks.cursor_checks import make_cursor_stall_check
 
     result = make_cursor_stall_check(shopee_assets.shopee_income_file_drop_asset, "shopee/shopee_income_file_drop_asset")

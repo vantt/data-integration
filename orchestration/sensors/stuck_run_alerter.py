@@ -26,6 +26,7 @@ from dagster import (
     sensor,
 )
 
+from orchestration.connectors import load_enabled
 from orchestration.notifications.lark_client import send_lark_card
 
 logger = logging.getLogger(__name__)
@@ -67,15 +68,9 @@ QUEUE_STUCK_THRESHOLD = timedelta(minutes=20)
 # Nightly/fullrefresh: max legitimate ~90 min → 120 min gives 33% headroom.
 # Health jobs: max legitimate ~5 min → 30 min gives 6× headroom.
 # Default (unlisted jobs): 90 min conservative.
+# Per-connector jobs come from JOB_MAX_RUNTIME of the connectors enabled in
+# config/modules.yaml; the entries below are cross-source and kernel jobs.
 _JOB_MAX_RUNTIME: dict[str, timedelta] = {
-    "pipeline_sapo_v2_realtime_job": timedelta(minutes=45),
-    "pipeline_hug_realtime_job": timedelta(minutes=45),
-    "pipeline_sapo_v2_incremental_job": timedelta(minutes=45),
-    "pipeline_sapo_v2_hourly_job": timedelta(minutes=45),
-    "ingest_sheets_sync_job": timedelta(minutes=45),
-    "ingest_filedrop_shopee_job": timedelta(minutes=45),
-    "ingest_filedrop_misa_job": timedelta(minutes=45),
-    "ingest_filedrop_misa_account_ledger_job": timedelta(minutes=45),
     "pipeline_batch_nightly_job": timedelta(minutes=120),
     "pipeline_batch_fullrefresh_job": timedelta(minutes=120),
     "health_checks_asset_job": timedelta(minutes=30),
@@ -85,6 +80,8 @@ _JOB_MAX_RUNTIME: dict[str, timedelta] = {
     "maintain_cleanup_job": timedelta(minutes=60),
     "maintain_backup_platform_job": timedelta(minutes=60),
 }
+for _connector in load_enabled():
+    _JOB_MAX_RUNTIME.update(_connector.JOB_MAX_RUNTIME)
 _JOB_MAX_RUNTIME_DEFAULT = timedelta(minutes=90)
 
 # Max run_ids kept in cursor to prevent unbounded growth.

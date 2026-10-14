@@ -1,0 +1,14 @@
+# Connectors loaded by orchestration/definitions.py, in this order (the order is the
+# row order of the morning digest). Remove an id to drop that connector's assets, jobs,
+# schedules, sensors, asset checks and digest rows; nothing else needs editing.
+# Restart the Dagster code server after changing this file.
+#
+# facebook_ads / facebook_messenger: ingestion scripts exist but there is no Dagster
+# asset yet (dormant) — add a package under orchestration/connectors/ and list it here
+# once there is one.
+connectors:
+  - sapo_v2
+  - shopee
+  - misa_amis
+  - sheets
+  - hug
