@@ -1,11 +1,33 @@
 # Evidence (static report pages)
 
-Evidence builds the static report pages served at http://evidence.lan.fwg.vn (port 3006 locally).
+Evidence builds the static report pages served at http://evidence.lan.fwg.vn, behind Caddy
+basic_auth. The container has no host port: the pages bundle customer data and order economics.
 Pages live in `pages/`, SQL sources in `sources/datalake/`, and the image is defined by
 `Dockerfile.evidence` at the repository root. The container copies
 `app_data/data_lake/serving/olap.duckdb` into `sources/datalake/`, runs `evidence sources` and
 `evidence build`, then serves the static build. `docker compose restart evidence` rebuilds the
 site from the current serving database; it does not reinstall packages.
+
+## Access
+
+The only way in is the Caddy route `evidence.lan.fwg.vn` (container `caddy-global`), which asks for
+a user name and password (`basic_auth`). The credentials are compose variables in the root `.env`
+(not `.env.docker`, which only reaches the container): `EVIDENCE_BASIC_AUTH_USER` and
+`EVIDENCE_BASIC_AUTH_HASH` (bcrypt). `docker compose` refuses to start any service while either is
+missing, so a route without auth never reaches `caddy-global`.
+
+Set or change the password without it appearing on screen or in shell history:
+
+```bash
+read -rs -p 'Evidence password: ' P; echo
+H=$(printf '%s\n' "$P" | docker exec -i caddy-global caddy hash-password); unset P
+sed -i '/^EVIDENCE_BASIC_AUTH_/d' .env
+printf "EVIDENCE_BASIC_AUTH_USER=%s\nEVIDENCE_BASIC_AUTH_HASH='%s'\n" "<user name>" "$H" >> .env; unset H
+docker compose up -d evidence    # recreate the container so caddy-global reads the new labels
+```
+
+Check: `curl -s -o /dev/null -w '%{http_code}' https://evidence.lan.fwg.vn/` answers 401 without
+credentials.
 
 ## Areas and generated pages
 

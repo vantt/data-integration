@@ -33,7 +33,7 @@ Shared skills live in `.skills/` and are available as slash commands via `.claud
 - **Evidence Pages**: `evidence/pages/`
 - **Evidence Source Config**: `evidence/sources/datalake/connection.yaml`
 - **Deploy**: `docker compose restart evidence` (rebuilds static site on each restart)
-- **URL**: http://evidence.lan.fwg.vn (port 3006 locally)
+- **URL**: http://evidence.lan.fwg.vn (Caddy basic_auth; no host port, see `evidence/README.md`)
 
 ### Metabase Debugging
 

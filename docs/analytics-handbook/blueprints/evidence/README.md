@@ -52,7 +52,7 @@ last_modified: YYYY-MM-DD
 2. Copy the blueprint's "Page Body" section into `evidence/pages/<slug>/index.md`.
 3. Add a link from `evidence/pages/index.md`.
 4. `docker compose restart evidence` (rebuild: cp → sources → build → preview).
-5. Verify at `http://evidence.lan.fwg.vn/<slug>` (or `localhost:3006/<slug>`).
+5. Verify at `http://evidence.lan.fwg.vn/<slug>` (basic_auth; the container has no host port).
 
 ## Limitations vs Metabase (apply to every Evidence blueprint)
 

@@ -119,8 +119,11 @@ services:
     restart: unless-stopped
     mem_limit: 2g
     cpus: 1
-    ports:
-      - "3006:3000"
+    # No host port: the pages bundle customer data (PII) and order economics, so the only way
+    # in is Caddy with basic_auth below. Credentials come from the compose `.env` (not
+    # .env.docker, which only reaches the container): EVIDENCE_BASIC_AUTH_USER and
+    # EVIDENCE_BASIC_AUTH_HASH (bcrypt, from `caddy hash-password`). Compose refuses to start
+    # when either is missing, so a broken route never reaches caddy-global.
     environment:
       - TZ=Asia/Ho_Chi_Minh
     networks:
@@ -132,8 +135,9 @@ services:
       - ./evidence/scripts:/app/scripts
       - ./app_data/data_lake:/app/var/data_lake:ro
     labels:
-      caddy: evidence.lan.fwg.vn
-      caddy.reverse_proxy: "{{upstreams 3000}}"
+      - caddy=evidence.lan.fwg.vn
+      - caddy.basic_auth.${EVIDENCE_BASIC_AUTH_USER:?set EVIDENCE_BASIC_AUTH_USER in .env (see evidence/README.md)}=${EVIDENCE_BASIC_AUTH_HASH:?set EVIDENCE_BASIC_AUTH_HASH in .env (see evidence/README.md)}
+      - caddy.reverse_proxy={{upstreams 3000}}
 
   # Cloudflare Tunnel — outbound-only, no inbound ports needed.
   # Public hostname config: Cloudflare dashboard → Networks → Tunnels.
