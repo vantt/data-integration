@@ -14,7 +14,7 @@
 6. [Các phép kiểm tra và cách hoạt động](#6-các-phép-kiểm-tra-và-cách-hoạt-động)
 7. [Gate: chạy cả quy trình bằng một lệnh](#7-gate-chạy-cả-quy-trình-bằng-một-lệnh)
 8. [Đọc kết quả và xử lý khi fail](#8-đọc-kết-quả-và-xử-lý-khi-fail)
-9. [Vận hành và bảo trì](#9-vận-hành-và-bảo-trì)
+9. [Vận hành và bảo trì](#9-vận-hành-và-bảo-trì) (gồm vòng đời: dùng lâu dài sau module hoá, §9.4)
 10. [Giới hạn: harness không chứng minh được gì](#10-giới-hạn-harness-không-chứng-minh-được-gì)
 11. [Bằng chứng harness hoạt động](#11-bằng-chứng-harness-hoạt-động)
 
@@ -152,7 +152,11 @@ sequenceDiagram
     A-->>B: so sánh golden, inventory, SQL
 ```
 
-Cả hai bên đi từ cùng một `lake-base`, cùng image, cùng ngày, nên mọi khác biệt chỉ có thể đến từ code. Trước mỗi build, `clone-lake.sh` **xoá toàn bộ file parquet rolling** (giữ trạng thái DuckDB), để một model không được build lại sẽ không có output và bị phát hiện, thay vì "giống hệt" nhờ file thừa kế từ prod.
+Cả hai bên đi từ cùng một `lake-base`, cùng image, cùng ngày, nên mọi khác biệt chỉ có thể đến từ code.
+
+**Cùng ngày là bắt buộc.** Nhiều model tính theo ngày hiện tại (`recency_days`, `snapshot_date`, các hàng đợi hành động), nên baseline build hôm qua và nhánh build hôm nay sẽ khác ở những cột đó dù code không đổi (đã gặp ngày 14/10/2026: 8 bảng khác chỉ vì đổi ngày). Vì vậy `gate.sh` kiểm tra ngày build của lake-A theo giờ Việt Nam; nếu khác hôm nay, gate tự build lại lake-A từ worktree baseline, chụp lại golden, xuất lại hai inventory và xoá lake-AF trước khi so.
+
+Trước mỗi build, `clone-lake.sh` **xoá toàn bộ file parquet rolling** (giữ trạng thái DuckDB), để một model không được build lại sẽ không có output và bị phát hiện, thay vì "giống hệt" nhờ file thừa kế từ prod.
 
 ### 5.3 Build giống prod
 
@@ -330,14 +334,39 @@ Các lệnh có trong [scripts/shadow/README.md § One-time setup](../../scripts
 
 | Sự kiện | Việc cần làm |
 |---|---|
-| `main` có commit mới (vd. vừa deploy một phase, hoặc có fix khác) | `git -C /home/vantt/app/fg-dw-baseline checkout --detach <main mới>`, rebase nhánh lên `main`, build lại lake-A, capture lại golden, export lại `dbt-main.json` và `dagster-main.json`, xoá `lake-AF` để gate S dựng lại |
+| Sang ngày mới | Không cần làm gì: gate tự build lại lake-A, golden và inventory baseline (mục 5.2) |
+| `main` có commit mới (vd. vừa deploy một phase, hoặc có fix khác) | `git -C /home/vantt/app/fg-dw-baseline checkout --detach main`, rebase nhánh lên `main`, rồi xoá `lake-A/_shadow_meta/build_start` hoặc đợi sang ngày để gate tự build lại; hoặc build tay lake-A, capture golden, export lại `dbt-main.json` và `dagster-main.json`, xoá `lake-AF` |
 | Muốn dữ liệu mới hơn | `prepare-shadow.sh` với hai backup mới hơn, rồi làm như dòng trên |
 | Thêm bảng public mới | Chạy lại `golden_snapshot.py init` (giữ nguyên `volatile_columns`), rồi build hai lần (lake-A, lake-A2) để kiểm tra bảng mới có cột volatile không |
 | Đổi image prod (rebuild `data_platform`) | Chạy lại `prepare-shadow.sh` để lấy extensions/phụ thuộc khớp image mới |
 
 ### 9.3 Dọn dẹp
 
-Lake chứa PII khách hàng. Gate tự xoá lake của nhánh sau mỗi lần chạy; lake-A, lake-A2, lake-AF và `lake-base` được giữ trong suốt đợt refactor và xoá bằng `scripts/shadow/cleanup.sh --all` khi đóng plan, cùng với hai worktree (`git worktree remove`).
+Lake chứa PII khách hàng. Gate tự xoá lake của nhánh sau mỗi lần chạy; lake-A, lake-A2, lake-AF và `lake-base` được giữ trong suốt một đợt thay đổi và xoá bằng `scripts/shadow/cleanup.sh --all` khi đợt đó kết thúc, cùng với các worktree (`git worktree remove`). Lần sau cần dùng thì dựng lại từ backup mới nhất (mục 9.1), mất vài phút.
+
+### 9.4 Vòng đời: công cụ dùng lâu dài, dữ liệu shadow dùng theo đợt
+
+Harness **không chỉ dành cho đợt module hoá**. Code (`scripts/shadow/`, `scripts/checks/`) và tài liệu là một phần lâu dài của repo; chỉ dữ liệu shadow là tạm thời.
+
+| Thành phần | Vòng đời |
+|---|---|
+| `scripts/shadow/*`, `scripts/checks/*`, tài liệu này | Lâu dài, được commit và bảo trì như code khác |
+| `check_boundaries.py` + `model_buckets.yaml` + allowlist | Lâu dài, chạy ở **mọi** thay đổi dbt/Python (quy tắc trong `transformation/AGENTS.md`) |
+| `instigator_state.py` + runbook deploy | Lâu dài, dùng ở mọi lần deploy cần dừng `data_platform` |
+| `/home/vantt/app/fg-dw-shadow` (lake, deps) | Theo đợt: dựng khi bắt đầu một thay đổi cần gate, xoá khi xong |
+| Worktree baseline / nhánh | Theo đợt |
+
+Các tình huống nên chạy gate sau khi module hoá xong:
+
+| Tình huống | Gate | Gate chứng minh gì |
+|---|---|---|
+| Refactor dbt hoặc orchestration (tách package, đổi tên thư mục, dọn code) | M hoặc S | Không đổi số, không đổi wiring |
+| Nâng version `dbt-duckdb`, `duckdb`, `dagster`, `dagster-dbt`, `dlt` (rebuild image) | S, với `SHADOW_IMAGE` trỏ image mới | Version mới cho cùng số liệu; khác biệt (nếu có) chỉ đúng bảng/cột |
+| Thêm connector mới (Haravan, Nhanh, ...) | S `--allow-new` | Thêm nguồn không làm đổi số liệu của nguồn cũ |
+| Thay đổi **có chủ đích** làm đổi số (vd. thống nhất định nghĩa CROSSBORDER) | S, đọc khác biệt thay vì đòi PASS | Danh sách chính xác bảng/cột/khoá bị ảnh hưởng, dùng làm báo cáo tác động trước khi duyệt |
+| Sửa lỗi trong một model | S | Chỉ đúng bảng mong đợi thay đổi, không lan sang bảng khác |
+
+Khi dùng cho thay đổi không phải module hoá, các bước giống mục 9.1: dựng shadow từ hai backup mới nhất, tạo worktree baseline tại `main` và worktree nhánh, chạy gate.
 
 ## 10. Giới hạn: harness không chứng minh được gì
 

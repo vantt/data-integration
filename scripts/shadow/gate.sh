@@ -46,6 +46,24 @@ golden_pair() {  # <baseline lake> <branch lake>
 
 [ -f "$SHADOW_ROOT/lake-A/_shadow_meta/golden.json" ] || { echo "missing baseline lake-A (see scripts/shadow/README.md)" >&2; exit 1; }
 
+# Models compute date-relative values (recency_days, snapshot_date, action queues), so the
+# baseline and the branch must be built on the same calendar day (ICT). A baseline from an
+# earlier day is rebuilt here, together with the cached full-refresh baseline.
+TODAY="$(TZ=Asia/Ho_Chi_Minh date +%F)"
+BASE_DAY="$(TZ=Asia/Ho_Chi_Minh date -d "$(cat "$SHADOW_ROOT/lake-A/_shadow_meta/build_start")" +%F)"
+if [ "$BASE_DAY" != "$TODAY" ]; then
+  step "0. baseline built on $BASE_DAY, today is $TODAY: rebuilding lake-A from $BASELINE_DIR"
+  "$SCRIPT_DIR/clone-lake.sh" lake-A >/dev/null
+  "$SCRIPT_DIR/build-lake.sh" "$BASELINE_DIR" lake-A | tail -1
+  "$RUN" "$BRANCH_DIR" "$SHADOW_ROOT" python scripts/checks/golden_snapshot.py capture --lake $M/lake-A --models $MODELS --out $M/lake-A/_shadow_meta/golden.json | tail -1
+  "$SCRIPT_DIR/cleanup.sh" lake-AF >/dev/null 2>&1 || true
+  # inventories describe the baseline code, so export them from the baseline worktree
+  "$RUN" "$BASELINE_DIR" "$SHADOW_ROOT" sh -c "
+    python scripts/checks/dbt_inventory.py export --manifest $M/lake-A/_shadow_meta/manifest.json --out $M/inventory/dbt-main.json && \
+    python scripts/checks/dagster_inventory.py export --manifest $M/lake-A/_shadow_meta/manifest.json --out $M/inventory/dagster-main.json 2>/dev/null" | tail -2
+fi
+echo "baseline: $(cat "$SHADOW_ROOT/lake-A/_shadow_meta/code_ref")"
+
 step "1. build branch on fresh lake-B"
 "$SCRIPT_DIR/clone-lake.sh" lake-B >/dev/null
 "$SCRIPT_DIR/build-lake.sh" "$BRANCH_DIR" lake-B | tail -2; check "${PIPESTATUS[0]}" "dbt build (branch)"

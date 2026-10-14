@@ -104,7 +104,7 @@ scripts/shadow/gate.sh S     # phases that rewrite SQL (3, 4)
 | Empty-rolling lake build + golden (catches directory pre-creation bugs) | ✓ | ✓ |
 | `--full-refresh` on baseline (lake-AF) and branch (lake-BF) + golden | | ✓ |
 
-A full S gate takes about 2–3 minutes (dbt build ≈ 20 s per lake). Branch lakes are deleted at
+The gate first checks that lake-A was built today (ICT) and rebuilds it from the baseline worktree otherwise, because models compute date-relative values. A full S gate takes about 2–3 minutes (dbt build ≈ 20 s per lake). Branch lakes are deleted at
 the end. `--allow-new` accepts added nodes/assets and grown job selections (printed as INFO);
 `--allow-code-change` accepts SQL checksum changes in the dbt inventory while data equality is
 still enforced by the golden snapshot.
