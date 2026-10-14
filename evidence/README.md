@@ -26,15 +26,17 @@ lock is that container's own lockfile):
 | `tailwindcss` | 3.4.18 |
 | `autoprefixer` | 10.5.4 |
 
-These were built with node 20.20.2 and npm 10.8.2 (`node:20-slim` base image).
+The base image is pinned too: `Dockerfile.evidence` uses `node:20.20.2-slim` (node 20.20.2,
+npm 10.8.2, Debian 12.13), the same versions the production image was built with.
 
 ## Upgrading deliberately
 
 Upgrade on a branch, never on the production checkout:
 
-1. Change the version in `package.json` (exact version, no `^`, `~` or `latest`).
+1. Change the version in `package.json` (exact version, no `^`, `~` or `latest`). To upgrade
+   node, change the `FROM` tag in `Dockerfile.evidence` to another exact tag.
 2. Regenerate the lock without installing, using the same node image as the Dockerfile:
-   `docker run --rm -u $(id -u):$(id -g) -e HOME=/tmp -v "$PWD/evidence":/w -w /w node:20-slim npm install --package-lock-only --include=dev --ignore-scripts`
+   `docker run --rm -u $(id -u):$(id -g) -e HOME=/tmp -v "$PWD/evidence":/w -w /w node:20.20.2-slim npm install --package-lock-only --include=dev --ignore-scripts`
 3. Build an image under a test tag (`docker build -f Dockerfile.evidence -t evidence-test .`)
    and run it under another container name, without the production ports or network. Mount
    copies of `pages/`, `sources/` and `scripts/`, and mount `app_data/data_lake` read-only.

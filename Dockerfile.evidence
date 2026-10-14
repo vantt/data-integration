@@ -1,4 +1,6 @@
-FROM node:20-slim
+# Base image pinned to the node/npm/Debian versions the production image was built with
+# (node 20.20.2, npm 10.8.2, Debian 12.13); upgrade procedure: evidence/README.md.
+FROM node:20.20.2-slim
 WORKDIR /app
 
 # curl required for HEALTHCHECK
