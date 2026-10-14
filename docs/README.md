@@ -23,6 +23,7 @@ This documentation follows a **progressive disclosure** model. Start with Level 
 | [Data Model](./architecture/data-model.md) | Table relationships, grains, keys, and planned model map | 20 min |
 | [Data Dictionary](./architecture/data-dictionary.md) | Column reference, entities, business metrics | 30 min |
 | [Modules](./architecture/modules.md) | Module boundaries: who writes what, allowed dependencies, enforcement | 20 min |
+| [Canonical Layer](./architecture/canonical-layer.md) | Why core reads only std_* views, how pass-through and column tests work | 20 min |
 
 ### Level 3: Operate (2-3 hours)
 
@@ -55,6 +56,7 @@ Find any topic in one lookup:
 | [Data Model](./architecture/data-model.md) | Table inventory, grains, keys, relationships, planned models |
 | [Data Dictionary](./architecture/data-dictionary.md) | Entity schemas, column definitions, field meanings |
 | [Modules](./architecture/modules.md) | Module authority and boundaries (connectors, cdm, core, packs, tenants) |
+| [Canonical Layer](./architecture/canonical-layer.md) | The std_* contract between connectors and core |
 | [Source Entities](./architecture/source-entities/index.md) | Raw source payloads, ingestion envelope, source-level schemas |
 | [Glossary](./development/glossary.md) | Terms, naming conventions |
 

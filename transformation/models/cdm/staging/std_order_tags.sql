@@ -5,7 +5,8 @@
 
 -- Standard order tags (raw JSON array per order): thin pass-through over src_sapo_v2_orders.
 -- Grain: 1/order revision row of the source; consumers unnest and dedupe.
--- Same columns, types and order as the source, plus source_system at the end.
+-- Projects only order_id and tags (the one consumer, int_order_tags, needs no other column;
+-- the source is wide), with the source's names and types, plus source_system at the end.
 -- Core models read this instead of the connector model (std gate R1).
 
 WITH source_data AS (

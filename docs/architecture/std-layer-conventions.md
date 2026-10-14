@@ -2,7 +2,7 @@
 
 Rules for working with the Sapo (and future multi-version) source layer in `transformation/`. Established during the P0 std-gate completion (2026-06-03) and the Sapo v2→v3 migration prep. Follow these so every entity is handled consistently — for v2 today and v3 later.
 
-> Companion docs: [`naming-conventions.md`](naming-conventions.md) (column/model names), the migration plan `plans/260603-1730-sapo-std-gate-and-naming/` (`verification-protocol.md` for the exact checks), and `transformation/AGENTS.md` (dbt-layer rules).
+> Companion docs: [`canonical-layer.md`](canonical-layer.md) (what the canonical layer does and how: views, column tests, boundary checks, verification), [`naming-conventions.md`](naming-conventions.md) (column/model names), the migration plan `plans/260603-1730-sapo-std-gate-and-naming/` (`verification-protocol.md` for the exact checks), and `transformation/AGENTS.md` (dbt-layer rules).
 
 ## Layer model
 
