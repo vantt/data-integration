@@ -13,7 +13,7 @@ WITH econ AS (
         count(*)                              AS total_orders,
         count(*) FILTER (WHERE has_cogs)          AS cogs_matched,
         count(*) FILTER (WHERE has_platform_fees) AS fees_matched
-    FROM {{ ref('fact_order_economics') }}
+    FROM {{ pack_ref('finance', 'fact_order_economics') }}
 ),
 ordcnt AS ( SELECT count(*) AS n FROM {{ ref('fact_orders') }} ),
 uscnt  AS ( SELECT count(*) AS n FROM {{ ref('fact_us_shipment_economics') }} ),

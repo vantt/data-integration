@@ -1,0 +1,6 @@
+version: 2
+
+models:
+  - name: int_customer_economics
+    data_tests:
+      - pack_contract   # columns core reads (dim_customers): macros/packs/pack_contracts.sql

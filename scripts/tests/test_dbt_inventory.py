@@ -85,3 +85,11 @@ def test_compiled_diff_ignores_disabled_models(tmp_path, capsys):
     args = argparse.Namespace(a=str(tmp_path / "a.json"), b=str(tmp_path / "b.json"), allow_code_change=False)
     assert dbt_inventory.cmd_compiled_diff(args) == 0
     assert "1 vs 1 models" in capsys.readouterr().out
+
+
+def test_added_test_on_a_node_needs_allow_new(tmp_path, capsys):
+    a = {"m": {**_node(), "tests": ["test.p.unique_m"]}}
+    b = {"m": {**_node(), "tests": ["test.p.pack_contract_m", "test.p.unique_m"]}}
+    assert _diff(tmp_path, a, b) == 1
+    assert _diff(tmp_path, a, b, allow_new=True) == 0
+    assert _diff(tmp_path, b, a, allow_new=True) == 1    # a removed test is always a difference

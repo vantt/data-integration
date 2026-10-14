@@ -55,4 +55,4 @@ Steps, once core reads the pack only through `pack_ref`:
 3. Run `scripts/checks/run-all.sh`; a pack that another enabled pack depends on fails `dbt parse` (hug → finance, finance → marketplace, sales_playbook → crm).
 4. Restart the Dagster code server.
 
-**Not possible yet for `crm`, `finance` and `marketplace` (which finance needs):** core still refs their models directly (8 hooks in `scripts/checks/boundary_allowlist.yaml`), core reads tenant seeds, and the connector jobs select the crm pack's `crm_cache_refresh`. Plan `plans/261014-2225-pack-mechanism/` removes these (phases 3–6).
+**Not possible yet in production:** for `finance` and `marketplace` (which finance needs), core still refs `mart_sku_economics_monthly` directly (4 hooks in `scripts/checks/boundary_allowlist.yaml`) and reads tenant seeds; for `crm`, the connector jobs still select the crm pack's `crm_cache_refresh` (dbt alone already builds with `crm` and `sales_playbook` off, see `docs/architecture/modules.md` §8.1). Plan `plans/261014-2225-pack-mechanism/` removes these (phases 4–6).

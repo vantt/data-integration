@@ -513,11 +513,11 @@ models:
       - name: as_of_ict
         description: "Timestamp (ICT) when this snapshot was computed."
       - name: total_orders
-        description: "Total order count in fact_order_economics at snapshot time."
+        description: "Total order count in fact_order_economics (pack finance, via pack_ref) at snapshot time. 0 khi tắt pack finance."
       - name: cogs_rate_pct
-        description: "Percentage of orders with COGS data (has_cogs = true)."
+        description: "Percentage of orders with COGS data (has_cogs = true). NULL khi tắt pack finance."
       - name: platform_fees_rate_pct
-        description: "Percentage of orders with Shopee platform-fee data."
+        description: "Percentage of orders with Shopee platform-fee data. NULL khi tắt pack finance."
       - name: fulfillment_coverage_pct
         description: "Percentage of orders that have at least one fulfillment record."
       - name: return_rate_pct

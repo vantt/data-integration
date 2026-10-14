@@ -177,15 +177,15 @@ models:
       - name: customer_status
         description: "DEPRECATED: Use lifecycle_stage. Legacy RFM Status: Active/At Risk/Churned"
       - name: lifetime_gross_profit
-        description: "Lifetime gross profit from has_cogs active orders (VND). 0 if no margin data. Source: int_customer_economics."
+        description: "Lifetime gross profit from has_cogs active orders (VND). 0 if no margin data. Source: int_customer_economics (pack finance, via pack_ref). NULL khi tắt pack finance."
       - name: lifetime_contribution_margin
-        description: "Lifetime contribution margin = SUM(channel_net_profit) over has_cogs active orders (gross_profit − direct channel fees; EXCLUDES overhead). VND, 0 if no margin data. Use this — not fully-loaded — for customer-level margin: overhead is 98% revenue-weighted and penalizes large orders."
+        description: "Lifetime contribution margin = SUM(channel_net_profit) over has_cogs active orders (gross_profit − direct channel fees; EXCLUDES overhead). VND, 0 if no margin data. Use this — not fully-loaded — for customer-level margin: overhead is 98% revenue-weighted and penalizes large orders. NULL khi tắt pack finance."
       - name: avg_order_contribution_margin_pct
-        description: "Avg per-order contribution margin % (channel_net_profit / net_revenue). NULL for customers with no active orders."
+        description: "Avg per-order contribution margin % (channel_net_profit / net_revenue). NULL for customers with no active orders. NULL khi tắt pack finance."
       - name: margin_cogs_coverage_pct
-        description: "Share of active orders with COGS data. Caveat metric for margin reliability. NULL for customers with no active orders."
+        description: "Share of active orders with COGS data. Caveat metric for margin reliability. NULL for customers with no active orders. NULL khi tắt pack finance."
       - name: is_margin_negative
-        description: "TRUE if lifetime_contribution_margin < 0. FALSE if no margin data (safe default). Gate for activation: avoid high-touch outreach to margin-negative customers."
+        description: "TRUE if lifetime_contribution_margin < 0. FALSE if no margin data (safe default). Gate for activation: avoid high-touch outreach to margin-negative customers. NULL khi tắt pack finance (không phải FALSE)."
 
   - name: dim_customers_base
     description: "Base customer dimension (SCD Type 1) without circular dependencies."

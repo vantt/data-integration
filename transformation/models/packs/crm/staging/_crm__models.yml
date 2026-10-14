@@ -35,3 +35,7 @@ models:
       - name: tag_id
         tests: [not_null]
 
+
+  - name: stg_crm__app_user
+    data_tests:
+      - pack_contract   # columns core reads (dim_staff): macros/packs/pack_contracts.sql

@@ -2,19 +2,6 @@ description: Known boundary violations, generated from the dbt manifest and the 
   fails on anything not listed here and on entries that no longer occur.
 allow:
 - rule: dbt-ref
-  subject: dim_customers
-  target: int_customer_economics [core -> pack:finance]
-  reason: 'Pack hook (core -> finance): dim_customers takes lifetime_gross_profit and lifetime_contribution_margin from int_customer_economics. Exit - read the two columns through pack_ref(''finance'',
-    ...) after Đợt 1 (empty columns when finance is off).'
-- rule: dbt-ref
-  subject: dim_sku_alias
-  target: int_misa_sales_lines [core -> pack:finance]
-  reason: Core SKU cost/alias uses MISA sales lines (accounting source). Exit - expose ledger data through the canonical layer as an optional core input.
-- rule: dbt-ref
-  subject: dim_staff
-  target: stg_crm__app_user [core -> pack:crm]
-  reason: 'Pack hook (core -> crm): dim_staff takes crm_user_id from stg_crm__app_user. Exit - read crm_user_id through pack_ref(''crm'', ...) after Đợt 1.'
-- rule: dbt-ref
   subject: fact_order_costs
   target: stg_shopee_order_revenue [pack:finance -> connector:shopee]
   reason: Finance cost ledger mixes in Shopee marketplace fees read straight from the shopee connector (shopee is not in finance's pack_connectors, kept strict on purpose). Exit - move fee legs to pack
@@ -49,10 +36,6 @@ allow:
   target: stg_crm__last_contact [pack:sales_playbook -> pack:crm]
   reason: 'Pack -> pack (sales_playbook -> crm), declared: the SKU action queue reads the CRM last contact. Exit - declare sales_playbook as depending on crm and read via pack_ref(''crm'', ...) after Đợt
     1.'
-- rule: dbt-ref
-  subject: mart_data_quality
-  target: fact_order_economics [core -> pack:finance]
-  reason: Monitoring check inside a core mart reads finance (fact_order_economics). Exit - move the finance checks of mart_data_quality into the finance pack (or monitoring/) after Đợt 1.
 - rule: dbt-ref
   subject: mart_data_quality
   target: fact_us_shipment_economics [core -> tenant:fine_japan]

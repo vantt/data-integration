@@ -14,7 +14,8 @@ anything that changes a relation, a materialization, a tag used for selection,
 prove data equality with the golden snapshot instead) and, with it, a changed `depends_on`
 whose every removed dependency is still an ancestor of the node in the new graph (a model
 repointed to a pass-through keeps its lineage to the original source; reported as INFO with the
-new dependency it now goes through). `--allow-new` accepts added nodes and added dependencies.
+new dependency it now goes through). `--allow-new` accepts added nodes, added dependencies and
+added tests on an existing node.
 
   compiled-diff A_manifest.json B_manifest.json [--allow-code-change]
 
@@ -129,7 +130,7 @@ def cmd_diff(args: argparse.Namespace) -> int:
             msg = f"{uid}: {key}: {fa.get(key)!r} -> {fb.get(key)!r}"
             if key == "checksum" and args.allow_code_change:
                 info.append(msg)
-            elif key == "depends_on" and args.allow_new and set(fa.get(key) or []) <= set(fb.get(key) or []):
+            elif key in ("depends_on", "tests") and args.allow_new and set(fa.get(key) or []) <= set(fb.get(key) or []):
                 info.append(msg)
             elif key == "depends_on" and args.allow_code_change and (via := _repoint_info(a, b, uid)):
                 info.append(f"{uid}: repointed dependency kept upstream: {via}")

@@ -98,7 +98,7 @@ vts_to_vcs_candidates AS (
 ),
 misa_codes AS (
     SELECT DISTINCT product_code
-    FROM {{ ref('int_misa_sales_lines') }}
+    FROM {{ pack_ref('finance', 'int_misa_sales_lines') }}
     WHERE is_promo_line = false
       AND is_service_line = false
 ),

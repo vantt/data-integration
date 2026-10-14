@@ -31,10 +31,13 @@ Không có biến dbt riêng. Cấu hình phía orchestration (đường dẫn C
 - Toàn bộ dữ liệu trong `crm_export` (khách, nhân viên, tag, ghi chú) là của Fine Japan.
 - Nhãn kết quả liên hệ (`contact_result`, `outcome_label`, tập `is_reached`) đang viết trong SQL, kiểm kê ở [TAXONOMY.md](../../../docs/TAXONOMY.md).
 
+## Lõi đọc gì từ pack này
+
+Chỉ `dim_staff` đọc `stg_crm__app_user` (`crm_user_id`, `email`, `is_active`) qua `pack_ref('crm', 'stg_crm__app_user')`; hợp đồng cột trong `pack_contracts()` ([transformation/macros/packs/pack_contracts.sql](../../../macros/packs/pack_contracts.sql)), test `pack_contract` gắn trên `stg_crm__app_user`. Tắt pack `crm` thì `dim_staff.crm_user_id` NULL, các cột khác giữ nguyên ([docs/architecture/modules.md](../../../../docs/architecture/modules.md) mục 7 và 8.1). Pack `sales_playbook` đọc thẳng model crm nên phải tắt cùng.
+
 ## Phụ thuộc chéo (ghi trong `scripts/checks/boundary_allowlist.yaml`)
 
-- `dim_staff` (core) → `stg_crm__app_user` (cột `crm_user_id`): pack hook.
 - `mart_customer_action_queue`, `mart_customer_sku_action_queue` (`sales_playbook`) → `stg_crm__last_contact`, `int_crm_party_tag_flags`: pack → pack.
 - `stg_crm__*` đọc source `crm_export` (luật `dbt-source` chỉ cho connector/tenant đọc source).
 
-Hướng thoát sau Đợt 1: macro `pack_ref` và khai báo source của pack. Chuẩn hoá CRM (cấu trúc dữ liệu, entity, quyền, API/CLI/MCP) là hạng mục roadmap, không làm trong Đợt 1.
+Hướng thoát: khai báo phụ thuộc pack → pack và source của pack (cạnh lõi → crm đã qua `pack_ref`). Chuẩn hoá CRM (cấu trúc dữ liệu, entity, quyền, API/CLI/MCP) là hạng mục roadmap, không làm trong Đợt 1.

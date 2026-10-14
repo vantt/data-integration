@@ -12,7 +12,7 @@ metrics AS (
 ),
 
 economics AS (
-    SELECT * FROM {{ ref('int_customer_economics') }}
+    SELECT * FROM {{ pack_ref('finance', 'int_customer_economics') }}
 ),
 
 benchmarks AS (
@@ -347,11 +347,13 @@ SELECT
     END AS contact_quality,
 
     -- Contribution margin economics (channel_net_profit basis; excludes overhead)
-    COALESCE(lifetime_gross_profit, 0)              AS lifetime_gross_profit,
-    COALESCE(lifetime_contribution_margin, 0)       AS lifetime_contribution_margin,
+    {#- Pack finance off (pack_ref): every economics column stays NULL, no COALESCE to 0/FALSE:
+        missing cost data is not zero profit. #}
+    {% if pack_enabled('finance') %}COALESCE(lifetime_gross_profit, 0){% else %}lifetime_gross_profit{% endif %}              AS lifetime_gross_profit,
+    {% if pack_enabled('finance') %}COALESCE(lifetime_contribution_margin, 0){% else %}lifetime_contribution_margin{% endif %}       AS lifetime_contribution_margin,
     avg_order_contribution_margin_pct,              -- NULL when no active orders
     margin_cogs_coverage_pct,                       -- NULL when no active orders
-    COALESCE(is_margin_negative, FALSE)             AS is_margin_negative,
+    {% if pack_enabled('finance') %}COALESCE(is_margin_negative, FALSE){% else %}is_margin_negative{% endif %}             AS is_margin_negative,
 
     -- Pre-computed profitability/returns metrics (avoids live JOIN on C360 load)
     total_cogs,                                     -- NULL when no COGS-matched orders

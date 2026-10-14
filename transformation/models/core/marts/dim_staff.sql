@@ -8,7 +8,7 @@ WITH staff_source AS (
 ),
 
 crm_users AS (
-    SELECT crm_user_id, email FROM {{ ref('stg_crm__app_user') }}
+    SELECT crm_user_id, email FROM {{ pack_ref('crm', 'stg_crm__app_user') }}
     WHERE is_active = TRUE
 )
 

@@ -42,6 +42,8 @@ models:
 
 
   - name: fact_order_economics
+    data_tests:
+      - pack_contract   # columns core reads (mart_data_quality): macros/packs/pack_contracts.sql
     description: "Per-order profitability: Sapo revenue + COGS (Sapo-MAC primary / MISA TK632 fallback) + Shopee platform fees. Grain: one row per order."
     columns:
       - name: order_id
