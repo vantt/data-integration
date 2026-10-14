@@ -9,6 +9,7 @@ import sys
 from pathlib import Path
 
 import pytest
+import yaml
 
 _SCRIPTS_DIR = str(Path(__file__).resolve().parents[1])
 if _SCRIPTS_DIR not in sys.path:
@@ -219,3 +220,124 @@ def test_planted_tenant_seed_read_fails_the_check(tmp_path, monkeypatch, capsys)
     monkeypatch.setattr(sys, "argv", ["check_boundaries.py", "--manifest", str(tmp_path / "manifest.json")])
     assert cb.main() == 1
     assert "VIOLATION [dbt-seed] dim_x -> seed_x [core -> tenant:fine_japan]" in capsys.readouterr().out
+
+
+# ------------------------------------------------------------------ pack_ref and the pack switch
+def _core_reading(raw_code, enabled=True):
+    node = _model("dim_x", ["model.p.int_cost"], "models/core/marts/dim_x.sql")
+    node["raw_code"] = raw_code
+    node["config"] = {"enabled": enabled}
+    return {"nodes": {
+        "model.p.dim_x": node,
+        "model.p.int_cost": _model("int_cost", [], "models/packs/finance/marts/int_cost.sql"),
+    }, "disabled": {}}
+
+
+HOOK_SPEC = {"buckets": {"dim_x": "core", "int_cost": "pack:finance"}, "pack_connectors": {}}
+VIOLATION = ("dbt-ref", "dim_x", "int_cost [core -> pack:finance]")
+
+
+@pytest.mark.parametrize("raw_code,contracts,ok", [
+    ("SELECT * FROM {{ pack_ref('finance', 'int_cost') }}", {"int_cost": "finance"}, True),
+    ('SELECT * FROM {{ pack_ref("finance", "int_cost", {"a": "DOUBLE"}) }}', {"int_cost": "finance"}, True),
+    ("SELECT * FROM {{ ref('int_cost') }}", {"int_cost": "finance"}, False),               # direct ref
+    ("SELECT * FROM {{ pack_ref('finance', 'int_cost') }}", {}, False),                    # no contract
+    ("SELECT * FROM {{ pack_ref('finance', 'int_cost') }}", {"int_cost": "crm"}, False),   # contract of another pack
+    ("SELECT * FROM {{ pack_ref(pack='finance', model='int_cost') }}", {"int_cost": "finance"}, False),  # other spelling
+    ("{{ pack_ref('finance', 'int_cost') }} JOIN {{ ref('int_cost') }}", {"int_cost": "finance"}, False),  # mixed
+])
+def test_core_reads_a_pack_only_through_pack_ref_with_a_contract(raw_code, contracts, ok):
+    found = cb.dbt_violations(_core_reading(raw_code), HOOK_SPEC, contracts)
+    assert (VIOLATION not in found) is ok
+
+
+def test_disabled_models_keep_bucket_and_path_rules_but_no_edge_rules():
+    manifest = _core_reading("SELECT * FROM {{ ref('int_cost') }}", enabled=False)
+    off = _model("off_x", ["model.p.int_cost"], "models/marts/off_x.sql")
+    manifest["disabled"] = {"model.p.off_x": [off]}
+    spec = {"buckets": {**HOOK_SPEC["buckets"], "off_x": "core"}, "pack_connectors": {}}
+    found = cb.dbt_violations(manifest, spec, {})
+    assert VIOLATION not in found
+    assert not [f for f in found if f[0] == "dbt-ref"]
+    assert ("dbt-path", "off_x", "models/marts/off_x.sql not under models/core/") in found
+
+
+def test_contracts_are_read_from_the_macro_file(tmp_path):
+    path = tmp_path / "pack_contracts.sql"
+    path.write_text("{# '<model>': {'pack': '<pack>', ... e.g. 'x_doc': {'pack': 'doc'} #}\n"
+                    "{% macro pack_contracts() %}\n  {{ return({\n"
+                    "    'int_customer_economics': {'pack': 'finance', 'columns': {'customer_id': 'VARCHAR'}},\n"
+                    "    \"stg_crm__app_user\": {\"pack\": \"crm\", \"columns\": {}},\n  }) }}\n{% endmacro %}\n")
+    assert cb.pack_contract_models(str(path)) == {"int_customer_economics": "finance", "stg_crm__app_user": "crm"}
+
+
+def test_committed_pack_contracts_parse():
+    assert isinstance(cb.pack_contract_models(), dict)
+
+
+def _yaml(doc):
+    return yaml.safe_dump(doc, sort_keys=False)
+
+
+def _pack_tree(tmp_path, monkeypatch, modules, enabled_var, folders, defaults=None, pack_ids=None):
+    defaults = modules if defaults is None else defaults
+    pack_ids = folders if pack_ids is None else pack_ids
+    _write(tmp_path / "modules.yaml", _yaml({"packs": modules}))
+    packs_cfg = {p: {"+enabled": cb.ENABLED_TEMPLATE.format(pack=p, default=repr(list(defaults)))} for p in folders}
+    _write(tmp_path / "dbt_project.yml", _yaml({
+        "name": "sapo_warehouse", "models": {"sapo_warehouse": {"packs": packs_cfg}},
+        "vars": {"external_root": "x", "enabled_packs": enabled_var}}))
+    for p in folders:
+        (tmp_path / "packs" / p).mkdir(parents=True)
+    _write(tmp_path / "macros" / "pack_enabled.sql",
+           "{% macro pack_ids() %}\n  {{ return(" + repr(list(pack_ids)) + ") }}\n{% endmacro %}\n")
+    monkeypatch.setattr(cb, "MODULES_FILE", str(tmp_path / "modules.yaml"))
+    monkeypatch.setattr(cb, "DBT_PROJECT_FILE", str(tmp_path / "dbt_project.yml"))
+    monkeypatch.setattr(cb, "PACK_MODELS_DIR", str(tmp_path / "packs"))
+    monkeypatch.setattr(cb, "PACK_MACROS_DIR", str(tmp_path / "macros"))
+
+
+def test_module_config_in_sync(tmp_path, monkeypatch):
+    _pack_tree(tmp_path, monkeypatch, ["crm", "finance"], ["crm", "finance"], ["crm", "finance", "hug"])
+    assert cb.module_config_violations() == ([], "")
+
+
+@pytest.mark.parametrize("kwargs,subject", [
+    ({"enabled_var": ["crm"]}, "vars.enabled_packs"),
+    ({"defaults": ["crm"]}, "models.packs.finance.+enabled"),
+    ({"pack_ids": ["crm", "finance"]}, "pack_ids()"),
+    ({"modules": ["crm", "finance", "nope"], "enabled_var": ["crm", "finance", "nope"],
+      "defaults": ["crm", "finance", "nope"]}, "modules.yaml packs.nope"),
+])
+def test_module_config_mismatch_fails_and_prints_the_block(tmp_path, monkeypatch, kwargs, subject):
+    args = {"modules": ["crm", "finance"], "enabled_var": ["crm", "finance"], "folders": ["crm", "finance", "hug"]}
+    args.update(kwargs)
+    _pack_tree(tmp_path, monkeypatch, **args)
+    problems, block = cb.module_config_violations()
+    assert subject in [s for _, s, _ in problems]
+    modules = args["modules"]
+    assert f"  enabled_packs: [{', '.join(modules)}]" in block
+    assert f"('hug' in var('enabled_packs', {modules!r}))" in block
+    assert "return(['crm', 'finance', 'hug'])" in block
+
+
+def test_committed_pack_switch_is_in_sync():
+    """modules.yaml, dbt_project.yml and pack_ids() of this checkout agree."""
+    assert cb.module_config_violations() == ([], "")
+
+
+def test_module_config_problem_fails_main(tmp_path, monkeypatch, capsys):
+    _pack_tree(tmp_path, monkeypatch, ["crm", "finance"], ["crm"], ["crm", "finance"])
+    (tmp_path / "manifest.json").write_text('{"nodes": {}, "disabled": {}}')
+    (tmp_path / "buckets.yaml").write_text("buckets: {}\npack_connectors: {}\n")
+    (tmp_path / "allow.yaml").write_text("allow: []\n")
+    for top in ("crm", "detailView", "ingestion"):
+        (tmp_path / top).mkdir()
+    monkeypatch.setattr(cb, "ROOT", str(tmp_path))
+    monkeypatch.setattr(cb, "BUCKETS_FILE", str(tmp_path / "buckets.yaml"))
+    monkeypatch.setattr(cb, "ALLOWLIST_FILE", str(tmp_path / "allow.yaml"))
+    monkeypatch.setattr(sys, "argv", ["check_boundaries.py", "--manifest", str(tmp_path / "manifest.json")])
+    assert cb.main() == 1
+    out = capsys.readouterr().out
+    assert "VIOLATION [module-config] vars.enabled_packs" in out
+    assert "Expected pack switch" in out and "enabled_packs: [crm, finance]" in out

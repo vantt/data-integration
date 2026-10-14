@@ -2,7 +2,7 @@
 
 One package per product pack under `orchestration/packs/<id>/`. A pack is reusable product logic (CRM, HUG, finance, sales playbook) that runs on the data the connectors bring in; the business (tenant) only supplies data and configuration. The kernel (`definitions.py`) knows packs only through the ids listed under `packs:` in [`../config/modules.yaml`](../config/modules.yaml). Architecture: [docs/architecture/modules.md §8](../../docs/architecture/modules.md).
 
-Enabled today: `crm`, `hug`, `finance`, `sales_playbook`. The dbt side of each pack lives in `transformation/models/packs/<id>/` (each with a README).
+Enabled today (all seven dbt pack folders): `crm`, `hug`, `finance`, `sales_playbook`, `marketplace`, `facebook_ads`, `facebook_messenger`. The dbt side of each pack lives in `transformation/models/packs/<id>/`. The same list is the dbt variable `enabled_packs` (below).
 
 ## Contract
 
@@ -14,7 +14,7 @@ Plain Python exporting lists — no base class, no registry object.
 | `<id>/__init__.py` | `NIGHTLY_ASSETS` (subset of `ASSETS`) | `pipeline_batch_nightly_job` and `pipeline_batch_fullrefresh_job` |
 | `<id>/jobs.py` | `JOBS`, `SCHEDULES`, `SENSORS` | `definitions.py` |
 
-A pack with no Dagster code of its own (`hug`, `finance`: their models run inside the kernel's dbt assets) exports empty lists, so the enabled packs match the dbt side. `orchestration.packs` exposes `enabled_ids()`, `load_enabled()` and `load_enabled_jobs()` (same loader as connectors: `orchestration/module_registry.py`).
+A pack with no Dagster code of its own (`hug`, `finance`, `marketplace`, `facebook_ads`, `facebook_messenger`: their models run inside the kernel's dbt assets, or are disabled) exports empty lists, so the enabled packs match the dbt side. `orchestration.packs` exposes `enabled_ids()`, `load_enabled()` and `load_enabled_jobs()` (same loader as connectors: `orchestration/module_registry.py`).
 
 | Pack | Assets | Job (schedule) | README |
 |---|---|---|---|
@@ -22,6 +22,9 @@ A pack with no Dagster code of its own (`hug`, `finance`: their models run insid
 | `sales_playbook` | `approach_script_autogen` (group `approach_script_autogen`) | — | [sales_playbook/README.md](sales_playbook/README.md) |
 | `hug` | — | — | [hug/README.md](hug/README.md) |
 | `finance` | — | — | [finance/README.md](finance/README.md) |
+| `marketplace` | — | — | [marketplace/README.md](marketplace/README.md) |
+| `facebook_ads` | — (dbt models disabled in their own config) | — | [facebook_ads/README.md](facebook_ads/README.md) |
+| `facebook_messenger` | — (dbt models disabled in their own config) | — | [facebook_messenger/README.md](facebook_messenger/README.md) |
 
 ## Rules
 
@@ -32,4 +35,24 @@ A pack with no Dagster code of its own (`hug`, `finance`: their models run insid
 
 ## Turning a pack off
 
-Not supported yet. Connector jobs still select `crm_cache_refresh`, and core dbt models read pack models (pack hooks in `scripts/checks/boundary_allowlist.yaml`). The `pack_ref` macro and the `enabled_packs` dbt variable come after Đợt 1 (`plans/261013-1751-modularize-data-platform-suite/roadmap.md`, "Cơ chế pack").
+Design: [docs/architecture/modules.md §8.1](../../docs/architecture/modules.md#81-bậttắt-pack-công-tắc-pack).
+
+`packs:` in `config/modules.yaml` is the source; `transformation/dbt_project.yml` keeps a checked copy because dbt cannot read this file:
+
+| Where | What |
+|---|---|
+| `config/modules.yaml` `packs:` | Packs of this deployment. Dagster loads only these packages |
+| `dbt_project.yml` `vars.enabled_packs` | Same ids, same order. `pack_enabled()` / `pack_ref()` read it in models |
+| `dbt_project.yml` `models: sapo_warehouse: packs: <id>: +enabled` | One line per pack folder, with the same list as `var()` default (dbt renders this file before its own `vars:`). Disables the whole folder |
+| `transformation/macros/packs/pack_enabled.sql` `pack_ids()` | Every pack folder, enabled or not |
+
+`python3 scripts/checks/check_boundaries.py --manifest <manifest>` (rule `module-config`, also in `scripts/checks/run-all.sh` and the shadow gate) fails when these disagree and prints the block to paste.
+
+Steps, once core reads the pack only through `pack_ref`:
+
+1. Remove the id from `packs:` in `config/modules.yaml`.
+2. Run `check_boundaries.py` and paste the printed block into `dbt_project.yml` (`vars.enabled_packs` and every `+enabled` default).
+3. Run `scripts/checks/run-all.sh`; a pack that another enabled pack depends on fails `dbt parse` (hug → finance, finance → marketplace, sales_playbook → crm).
+4. Restart the Dagster code server.
+
+**Not possible yet for `crm`, `finance` and `marketplace` (which finance needs):** core still refs their models directly (8 hooks in `scripts/checks/boundary_allowlist.yaml`), core reads tenant seeds, and the connector jobs select the crm pack's `crm_cache_refresh`. Plan `plans/261014-2225-pack-mechanism/` removes these (phases 3–6).

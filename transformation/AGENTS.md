@@ -23,8 +23,32 @@ between modules keeps its relation. Every model is listed in `scripts/checks/mod
 and `python3 scripts/checks/check_boundaries.py --manifest target/manifest.json` must pass.
 The old top-level `staging/`, `intermediate/`, `marts/` folders are gone; a new model goes into
 a module folder. Logic is product (pack), data and configuration belong to the business
-(tenant): Fine Japan's business seeds live in `seeds/tenants/fine_japan/`. Core reading a pack or
-a tenant is a hook that must be listed in `scripts/checks/boundary_allowlist.yaml`.
+(tenant): Fine Japan's business seeds live in `seeds/tenants/fine_japan/`. Core reading a tenant
+is a hook that must be listed in `scripts/checks/boundary_allowlist.yaml`.
+
+Packs can be switched off (design: `docs/architecture/modules.md` §8.1):
+
+- **Core reads a pack only through `pack_ref`.** Write it literally and positionally:
+  `{{ pack_ref('<pack>', '<model>') }}` (optionally a third argument, a subset of the contract
+  columns). `check_boundaries.py` accepts a core -> pack edge only for that spelling, only when
+  the model has no direct `ref('<model>')` and only when the model has a contract. Never add a
+  direct `ref()` from core to a pack model; the 8 existing ones are allowlisted until they move.
+- **The contract lives in `pack_contracts()`** (`macros/packs/pack_contracts.sql`): one entry
+  `'<model>': {'pack': '<pack>', 'columns': {'<column>': '<DuckDB type>', ...}}` per pack model
+  core reads, listing only the columns core uses. Attach `data_tests: - pack_contract` to that
+  model in the pack's properties file so a type or column change in the pack fails the build.
+  With the pack on, `pack_ref` compiles to exactly what `ref()` did; off, to an empty relation
+  with these columns, so read pack data with `LEFT JOIN` (an inner or cross join returns no rows).
+- **The switch is declared three times and checked** (`check_boundaries.py` rule
+  `module-config`): `packs:` in `orchestration/config/modules.yaml` (source), `vars.enabled_packs`
+  in `dbt_project.yml`, and the default list inside the `+enabled` of every
+  `models: sapo_warehouse: packs: <id>:` (dbt renders `dbt_project.yml` before its own `vars:`,
+  so the default must be repeated there). A new pack folder needs its `+enabled` line and an
+  entry in `pack_ids()` (`macros/packs/pack_enabled.sql`); the check prints the block to paste.
+- A pack may still `ref()` another pack it depends on (hug -> finance, finance -> marketplace,
+  sales_playbook -> crm): turning the target off fails `dbt parse`, by design.
+- Tests that `ref` a disabled model are disabled by dbt silently. Keep singular tests where they
+  are; scripts reading `manifest.nodes` must skip `config.enabled = false`.
 
 Seeds: every module may read `seeds/taxonomy/`. A tenant seed (`seeds/tenants/<tenant>/`) may be
 read by packs, `monitoring` and that tenant only; core, `cdm` and connectors may not (rule

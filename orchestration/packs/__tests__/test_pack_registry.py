@@ -41,7 +41,8 @@ def test_unknown_pack_fails_loudly(modules_file):
 
 
 def test_every_enabled_pack_honours_the_contract():
-    assert packs.enabled_ids() == ["crm", "hug", "finance", "sales_playbook"]
+    assert packs.enabled_ids() == ["crm", "hug", "finance", "sales_playbook", "marketplace",
+                                   "facebook_ads", "facebook_messenger"]
     for pkg, jobs in zip(packs.load_enabled(), packs.load_enabled_jobs()):
         for name in PACKAGE_EXPORTS:
             assert isinstance(getattr(pkg, name), list), f"{pkg.__name__} lacks {name}"
@@ -58,3 +59,11 @@ def test_crm_pack_keeps_its_asset_and_job_names():
     jobs = packs.load_enabled_jobs(["crm"])[0]
     assert [j.name for j in jobs.JOBS] == ["crm_backup_job"]
     assert [s.name for s in jobs.SCHEDULES] == ["crm_backup_schedule"]
+
+
+def test_packs_without_dagster_code_export_empty_lists():
+    """marketplace and facebook_* exist so modules.yaml lists every dbt pack folder."""
+    ids = ["marketplace", "facebook_ads", "facebook_messenger"]
+    for pkg, jobs in zip(packs.load_enabled(ids), packs.load_enabled_jobs(ids)):
+        assert pkg.ASSETS == [] and pkg.NIGHTLY_ASSETS == []
+        assert jobs.JOBS == [] and jobs.SCHEDULES == [] and jobs.SENSORS == []

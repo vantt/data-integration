@@ -43,6 +43,7 @@ flowchart LR
 | `clone-lake.sh <name> [--empty-rolling]` | Copy `lake-base` and delete rolling parquet files (or the whole `rolling/` tree) so every rolling model must be rebuilt. |
 | `run-shadow.sh <code_dir> <lake_dir> <cmd...>` | Run a command in a one-off container from the prod image: `--network none`, current uid, env allowlist, code mounted per subdirectory exactly like `docker-compose.yml`. Refuses any path under the prod checkout. |
 | `build-lake.sh <code_dir> <lake> [dbt args]` | Production build sequence: `ensure_dbt_directories.py`, `dbt parse`, `dbt build`, `refresh_rolling.py`. Saves `manifest.json`, `run_results.json`, `build_start` to `<lake>/_shadow_meta/`. |
+| `build-profile.sh <code_dir> '<dbt vars>' [lake]` | Build a lake (default `lake-P`, rolling tree emptied) with a non-default dbt profile, e.g. packs off (`'{enabled_packs: []}'`); print the `run_results` summary, or the parse/compile error when dbt built nothing, and the golden compare with lake-A for information. Exit code = dbt build. Deletes the lake unless `KEEP=1`. |
 | `pytest-shadow.sh <code_dir> <lake> [args]` | pytest in the shadow container (pytest is not in the prod image). |
 | `gate.sh <M\|S> [--allow-new] [--allow-code-change]` | The refactor gate (below). |
 | `move_models.py --manifest M --buckets <patterns> [--dry-run]` | Move dbt models to `models/<module>/<layer>/` from `scripts/checks/model_buckets.yaml`, splitting properties YAML by text blocks (comments kept) and moving connector sources. |

@@ -1,0 +1,3 @@
+JOBS = []
+SCHEDULES = []
+SENSORS = []

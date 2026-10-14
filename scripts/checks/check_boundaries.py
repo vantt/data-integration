@@ -14,8 +14,11 @@ Rules (design: docs/architecture/modules.md §2b, §3 and §12):
                   the kernel from modules.yaml; a known coupling is allowlisted per file.
   dbt-bucket      every dbt model (enabled or disabled) has a bucket in model_buckets.yaml.
   dbt-path        a model's file lives under models/<module folder of its bucket>/.
-  dbt-ref         a model may only depend on models allowed by the bucket matrix below
-                  (core -> packs and core -> tenants are hooks: allowlist only).
+  dbt-ref         an enabled model may only depend on models allowed by the bucket matrix below.
+                  core -> pack:<p> model <m> is allowed only through pack_ref: the core model's
+                  raw SQL calls pack_ref('<p>', '<m>'...), never ref('<m>'), and <m> has a
+                  contract for pack <p> in transformation/macros/packs/pack_contracts.sql.
+                  Other core -> packs and core -> tenants edges are hooks: allowlist only.
   dbt-source      only connector:* and tenant:* models read dbt sources.
   dbt-seed        a tenant seed (transformation/seeds/tenants/<t>/) is business data: only
                   packs, monitoring and tenant:<t> itself may ref it; core, cdm and connectors
@@ -27,6 +30,17 @@ Rules (design: docs/architecture/modules.md §2b, §3 and §12):
                   name in a string literal there (tenant values belong in tenant config:
                   orchestration/tenants/<t>/config.py).
   pack-url        the same for orchestration/packs/**.
+  module-config   the pack switch is declared consistently: `packs:` in
+                  orchestration/config/modules.yaml == `vars.enabled_packs` in
+                  transformation/dbt_project.yml; every folder under transformation/models/packs/
+                  has `+enabled` with exactly that default list; pack_ids() in
+                  transformation/macros/packs/pack_enabled.sql lists the pack folders. Never
+                  allowlisted; the check prints the block to paste.
+
+Disabled models (dbt `config.enabled = false`, e.g. a pack turned off) still need a bucket and
+the right folder, but their dependencies are not checked: dbt does not resolve them. Run the check
+on the manifest of the default profile (no --vars), where every pack of modules.yaml is enabled;
+a manifest built with packs turned off reports their allowlisted edges as stale.
 
 Matrix (row = model's bucket, may depend on):
   connector:<x>   connector:<x>, seeds
@@ -56,6 +70,10 @@ HERE = os.path.dirname(os.path.abspath(__file__))
 ROOT = os.path.dirname(os.path.dirname(HERE))
 BUCKETS_FILE = os.path.join(HERE, "model_buckets.yaml")
 ALLOWLIST_FILE = os.path.join(HERE, "boundary_allowlist.yaml")
+MODULES_FILE = os.path.join(ROOT, "orchestration", "config", "modules.yaml")
+DBT_PROJECT_FILE = os.path.join(ROOT, "transformation", "dbt_project.yml")
+PACK_MODELS_DIR = os.path.join(ROOT, "transformation", "models", "packs")
+PACK_MACROS_DIR = os.path.join(ROOT, "transformation", "macros", "packs")
 
 PY_RULES = [
     ("crm", {"orchestration", "ingestion", "transformation"}),
@@ -173,6 +191,28 @@ def _module_dir(bucket: str) -> str | None:
 
 
 TENANT_SEED_RE = re.compile(r"^seeds/tenants/([^/]+)/")
+# pack_ref('<pack>', '<model>' ... — the one accepted spelling (positional, literal ids).
+PACK_REF_RE = re.compile(r"""pack_ref\(\s*(['"])(\w+)\1\s*,\s*(['"])(\w+)\3""")
+# ref('<model>' not preceded by a word character, so pack_ref( does not count.
+DIRECT_REF_RE = re.compile(r"""(?<!\w)ref\(\s*['"](\w+)['"]""")
+# An entry of pack_contracts(): '<model>': {'pack': '<pack>'
+CONTRACT_RE = re.compile(r"""['"](\w+)['"]\s*:\s*\{\s*['"]pack['"]\s*:\s*['"](\w+)['"]""")
+
+
+def pack_contract_models(path: str | None = None) -> dict[str, str]:
+    """model -> pack declared in pack_contracts() (transformation/macros/packs/pack_contracts.sql)."""
+    path = path or os.path.join(PACK_MACROS_DIR, "pack_contracts.sql")
+    if not os.path.exists(path):
+        return {}
+    source = re.sub(r"\{#.*?#\}", "", open(path, encoding="utf-8").read(), flags=re.S)
+    return {m: p for m, p in CONTRACT_RE.findall(source)}
+
+
+def _pack_ref_allowed(raw_code: str, pack: str, model: str, contracts: dict[str, str]) -> bool:
+    """A core -> pack edge is legal only when it comes from pack_ref and the model has a contract."""
+    calls = {(m.group(2), m.group(4)) for m in PACK_REF_RE.finditer(raw_code or "")}
+    direct = set(DIRECT_REF_RE.findall(raw_code or ""))
+    return (pack, model) in calls and model not in direct and contracts.get(model) == pack
 
 
 def _seed_reader_allowed(src_bucket: str, tenant: str) -> bool:
@@ -181,12 +221,19 @@ def _seed_reader_allowed(src_bucket: str, tenant: str) -> bool:
             or src_bucket == f"tenant:{tenant}")
 
 
-def dbt_violations(manifest: dict, spec: dict) -> list[tuple[str, str, str]]:
+def _enabled(node: dict) -> bool:
+    return (node.get("config") or {}).get("enabled", True) is not False
+
+
+def dbt_violations(manifest: dict, spec: dict, contracts: dict[str, str] | None = None) -> list[tuple[str, str, str]]:
     buckets: dict = spec["buckets"]
     pack_connectors = spec.get("pack_connectors", {})
+    contracts = {} if contracts is None else contracts
     out = []
     nodes = dict(manifest["nodes"])
+    disabled = set()
     for uid, versions in manifest.get("disabled", {}).items():
+        disabled.add(uid)
         nodes.setdefault(uid, versions[0])
     models = {uid: n for uid, n in nodes.items() if n["resource_type"] == "model"}
     tenant_seeds = {}                                   # seed unique_id -> tenant id
@@ -205,6 +252,8 @@ def dbt_violations(manifest: dict, spec: dict) -> list[tuple[str, str, str]]:
         path = n.get("original_file_path", "")
         if expected and not path.startswith(f"models/{expected}/"):
             out.append(("dbt-path", name, f"{path} not under models/{expected}/"))
+        if uid in disabled or not _enabled(n):
+            continue                                  # not built: dbt does not resolve its refs
         for dep in n.get("depends_on", {}).get("nodes", []):
             kind, dep_name = dep.split(".")[0], dep.split(".")[-1]
             if kind == "source":
@@ -212,11 +261,65 @@ def dbt_violations(manifest: dict, spec: dict) -> list[tuple[str, str, str]]:
                     out.append(("dbt-source", name, dep.split(".", 2)[-1]))
             elif kind == "model":
                 dst_b = buckets.get(dep_name)
+                if (src_b == "core" and dst_b and dst_b.startswith("pack:")
+                        and _pack_ref_allowed(n.get("raw_code", ""), dst_b.split(":", 1)[1], dep_name, contracts)):
+                    continue
                 if dst_b and not _allowed(src_b, dst_b, pack_connectors):
                     out.append(("dbt-ref", name, f"{dep_name} [{src_b} -> {dst_b}]"))
             elif dep in tenant_seeds and not _seed_reader_allowed(src_b, tenant_seeds[dep]):
                 out.append(("dbt-seed", name, f"{dep_name} [{src_b} -> tenant:{tenant_seeds[dep]}]"))
     return out
+
+
+# ------------------------------------------------------------------ pack switch
+ENABLED_TEMPLATE = "{{{{ ('{pack}' in var('enabled_packs', {default})) | as_bool }}}}"
+PACK_IDS_RE = re.compile(r"\{%-?\s*macro\s+pack_ids\(\)\s*-?%\}(.*?)\{%-?\s*endmacro", re.S)
+
+
+def _yaml_list(ids: list[str]) -> str:
+    return "[" + ", ".join(ids) + "]"
+
+
+def expected_pack_config(modules_packs: list[str], folders: list[str]) -> str:
+    """The dbt side of the pack switch for `modules_packs`, ready to paste."""
+    default = repr(list(modules_packs))
+    lines = ["# transformation/dbt_project.yml, under models: sapo_warehouse: packs: <pack>:"]
+    lines += [f"      {p}:\n        +enabled: \"{ENABLED_TEMPLATE.format(pack=p, default=default)}\"" for p in folders]
+    lines += ["# transformation/dbt_project.yml, under vars:",
+              f"  enabled_packs: {_yaml_list(modules_packs)}",
+              "# transformation/macros/packs/pack_enabled.sql, macro pack_ids():",
+              f"  {{{{ return({repr(list(folders))}) }}}}"]
+    return "\n".join(lines)
+
+
+def module_config_violations() -> tuple[list[tuple[str, str, str]], str]:
+    """modules.yaml packs == vars.enabled_packs == every +enabled default; pack_ids() == pack folders."""
+    out = []
+    modules = (yaml.safe_load(open(MODULES_FILE)) or {}).get("packs") or []
+    project = yaml.safe_load(open(DBT_PROJECT_FILE)) or {}
+    folders = sorted(d for d in os.listdir(PACK_MODELS_DIR)
+                     if os.path.isdir(os.path.join(PACK_MODELS_DIR, d))) if os.path.isdir(PACK_MODELS_DIR) else []
+    enabled_var = (project.get("vars") or {}).get("enabled_packs")
+    if enabled_var != modules:
+        out.append(("module-config", "vars.enabled_packs", f"{enabled_var} != modules.yaml packs {modules}"))
+    for p in modules:
+        if p not in folders:
+            out.append(("module-config", f"modules.yaml packs.{p}", "no folder transformation/models/packs/" + p))
+    pack_cfg = (((project.get("models") or {}).get(project.get("name", ""), {}) or {}).get("packs") or {})
+    default = repr(list(modules))
+    for p in folders:
+        got = (pack_cfg.get(p) or {}).get("+enabled")
+        if got != ENABLED_TEMPLATE.format(pack=p, default=default):
+            out.append(("module-config", f"models.packs.{p}.+enabled",
+                        "missing" if got is None else f"{got!r} is not the expected switch"))
+    for p in sorted(set(pack_cfg) - set(folders)):
+        out.append(("module-config", f"models.packs.{p}", "configured in dbt_project.yml but no folder"))
+    macro_path = os.path.join(PACK_MACROS_DIR, "pack_enabled.sql")
+    m = PACK_IDS_RE.search(open(macro_path, encoding="utf-8").read()) if os.path.exists(macro_path) else None
+    ids = re.findall(r"['\"](\w+)['\"]", m.group(1)) if m else None
+    if ids is None or sorted(ids) != folders:
+        out.append(("module-config", "pack_ids()", f"{ids} != pack folders {folders}"))
+    return out, (expected_pack_config(modules, folders) if out else "")
 
 
 # ------------------------------------------------------------------ files
@@ -269,8 +372,10 @@ def main() -> int:
 
     spec = yaml.safe_load(open(BUCKETS_FILE))
     manifest = json.load(open(args.manifest))
-    found = (python_violations() + orchestration_violations() + dbt_violations(manifest, spec)
+    found = (python_violations() + orchestration_violations()
+             + dbt_violations(manifest, spec, pack_contract_models())
              + seed_violations() + url_violations())
+    config_problems, expected_block = module_config_violations()
     found_keys = {(r, s, t) for r, s, t in found}
 
     allow = yaml.safe_load(open(ALLOWLIST_FILE)) if os.path.exists(ALLOWLIST_FILE) else {}
@@ -294,6 +399,11 @@ def main() -> int:
         print(f"wrote {ALLOWLIST_FILE}: {len(found_keys)} entries")
         return 0
 
+    for r, s, t in config_problems:                # never allowlisted
+        print(f"VIOLATION [{r}] {s}: {t}")
+    if expected_block:
+        print("Expected pack switch (from orchestration/config/modules.yaml and the pack folders):")
+        print(expected_block)
     new = sorted(k for k in found_keys if k not in allowed)
     stale = sorted(k for k in allowed if k not in found_keys)
     for r, s, t in new:
@@ -304,8 +414,9 @@ def main() -> int:
     for r, _, _ in found_keys:
         by_rule[r] += 1
     print(f"boundaries: {len(found_keys)} known ({dict(sorted(by_rule.items()))}), "
-          f"{len(new)} new violation(s), {len(stale)} stale allowlist entr(y/ies)")
-    return 1 if new or stale else 0
+          f"{len(new)} new violation(s), {len(stale)} stale allowlist entr(y/ies), "
+          f"{len(config_problems)} module-config problem(s)")
+    return 1 if new or stale or config_problems else 0
 
 
 if __name__ == "__main__":

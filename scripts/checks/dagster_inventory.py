@@ -23,6 +23,25 @@ def _key(k) -> str:
     return "/".join(k.path)
 
 
+def asset_key_to_unique_id(manifest: dict, translator) -> dict[str, str]:
+    """Asset key -> dbt unique_id of every enabled model, seed, snapshot and source.
+
+    Nodes with `config.enabled = false` are skipped: they are not built, so no asset may resolve
+    to them (dbt keeps such nodes in `nodes` when a model they ref is disabled).
+    """
+    out = {}
+    for uid, node in {**manifest["nodes"], **manifest.get("sources", {})}.items():
+        if node["resource_type"] not in {"model", "seed", "snapshot", "source"}:
+            continue
+        if (node.get("config") or {}).get("enabled", True) is False:
+            continue
+        try:
+            out[_key(translator.get_asset_key(node))] = uid
+        except Exception:  # sources without a mapping keep their default key
+            continue
+    return out
+
+
 def cmd_export(args: argparse.Namespace) -> int:
     from orchestration.asset_checks import sla_loader
     from orchestration.assets.dbt import SapoDbtTranslator
@@ -31,15 +50,7 @@ def cmd_export(args: argparse.Namespace) -> int:
     repo = defs.get_repository_def()
     graph = repo.asset_graph
 
-    manifest = json.load(open(args.manifest))
-    translator = SapoDbtTranslator()
-    key_to_uid = {}
-    for uid, node in {**manifest["nodes"], **manifest.get("sources", {})}.items():
-        if node["resource_type"] in {"model", "seed", "snapshot", "source"}:
-            try:
-                key_to_uid[_key(translator.get_asset_key(node))] = uid
-            except Exception:  # sources without a mapping keep their default key
-                continue
+    key_to_uid = asset_key_to_unique_id(json.load(open(args.manifest)), SapoDbtTranslator())
 
     assets = {}
     for k in sorted(graph.get_all_asset_keys(), key=_key):

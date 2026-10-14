@@ -16,15 +16,21 @@ connectors:
   - hug
 
 # packs: reusable product logic under orchestration/packs/<id>/ (dbt side:
-# transformation/models/packs/<id>/). Packs without Dagster code (hug, finance) export empty
-# lists. Turning a pack off is not supported yet: connector jobs still select the crm pack's
-# crm_cache_refresh and core dbt models still read pack models (hooks in
-# scripts/checks/boundary_allowlist.yaml); the pack_ref switch comes after Đợt 1.
+# transformation/models/packs/<id>/). Packs without Dagster code (hug, finance, marketplace,
+# facebook_*) export empty lists. This list must equal `vars.enabled_packs` and the default list
+# of every `+enabled` under `models: sapo_warehouse: packs:` in transformation/dbt_project.yml
+# (check_boundaries.py rule `module-config` fails and prints the block to paste). A pack missing
+# here is not built by dbt and its Dagster package is not loaded. Turning a pack off is not
+# complete yet: core still refs pack models directly until the hooks move to pack_ref, and
+# connector jobs still select the crm pack's crm_cache_refresh (docs/architecture/modules.md §8).
 packs:
   - crm
   - hug
   - finance
   - sales_playbook
+  - marketplace
+  - facebook_ads
+  - facebook_messenger
 
 # tenants: the business this deployment runs for. Its configuration
 # (orchestration/tenants/<id>/config.py) is read through orchestration.tenants.setting().

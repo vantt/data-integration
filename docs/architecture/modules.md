@@ -15,7 +15,8 @@
 | Quyết định kiến trúc | ✅ [ADR-015](../decisions/015-module-boundaries.md) (ranh giới module), [ADR-016](../decisions/016-taxonomy-module.md) (taxonomy), [ADR-017](../decisions/017-packs-and-tenants.md) (pack và tenant) |
 | Thư mục dbt theo module `models/<module>/<layer>/` | ✅ Mọi model nằm trong module (connectors, cdm, core, packs, tenants) hoặc `monitoring/`; thư mục cũ `staging/`, `intermediate/`, `marts/` và `models/sources.yml` đã bỏ |
 | Connector package cho orchestration (`orchestration/connectors/<id>/`, bật/tắt qua `config/modules.yaml`) | ✅ 5 connector: `sapo_v2`, `shopee`, `misa_amis`, `sheets`, `hug` (mục 4, 5) |
-| Pack sản phẩm (`models/packs/<id>/`, `orchestration/packs/<id>/`, khai báo trong `config/modules.yaml`) | ✅ `crm`, `hug`, `finance`, `sales_playbook` (thử nghiệm) cùng `marketplace`, `facebook_*` (chỉ dbt) (mục 8); ⏳ bật/tắt pack (`pack_ref`) sau Đợt 1 |
+| Pack sản phẩm (`models/packs/<id>/`, `orchestration/packs/<id>/`, khai báo trong `config/modules.yaml`) | ✅ 7 pack: `crm`, `hug`, `finance`, `sales_playbook` (thử nghiệm), `marketplace`, `facebook_ads`, `facebook_messenger` (mục 8) |
+| Công tắc pack (`enabled_packs`, `+enabled` theo thư mục, `pack_enabled`/`pack_ref`, hợp đồng cột `pack_contracts()`, rule `module-config`) | ✅ Cơ chế có (mục 8); ⏳ 8 hook lõi → pack còn `ref()` thẳng nên chưa tắt được pack nào có hook (plan `261014-2225-pack-mechanism`, phase 3–4) |
 | Taxonomy: đặc tả, seed phân loại, `seed_paths.py`, check kiểm kê | ✅ `transformation/docs/TAXONOMY.md`, `transformation/seeds/taxonomy/` (8 seed), `ingestion/src/utils/seed_paths.py`, `scripts/checks/check_taxonomy_inventory.py` (mục 9) |
 | Tenant overlay Fine Japan | ✅ Tối thiểu: US shipment (dbt), `seeds/tenants/fine_japan/`, `orchestration/tenants/fine_japan/config.py` (endpoint CRM); 6 URL Google Sheet chỉ ở biến môi trường `SOURCES__SPREADSHEET_URL__*`, không còn URL mặc định trong code (mục 10) |
 | Bộ máy phân loại (luật thành dữ liệu) | ⏳ Plan riêng sau Đợt 1 (mục 9) |
@@ -33,6 +34,7 @@ Các mục dưới đây mô tả trạng thái đích; chỗ nào đã khớp c
 6. [CDM (canonical layer)](#6-cdm-canonical-layer)
 7. [Core](#7-core)
 8. [Packs](#8-packs-)
+   - [8.1 Bật/tắt pack](#81-bậttắt-pack-công-tắc-pack)
 9. [Taxonomy module](#9-taxonomy-module)
 10. [Tenant overlay Fine Japan](#10-tenant-overlay-fine-japan-)
 11. [Serving và người tiêu thụ](#11-serving-và-người-tiêu-thụ)
@@ -226,7 +228,7 @@ flowchart TB
     ALL["mọi module"] --> MON["monitoring/ (chỉ đọc)"]
 
     CORE -. "❌ cấm: core → connectors" .-x CONN
-    CORE -. "⚠ pack hook (allowlist)" .-> PACK
+    CORE -. "pack_ref + hợp đồng cột<br/>(hook cũ: ⚠ allowlist)" .-> PACK
     CORE -. "⚠ tenant hook (allowlist)" .-> TEN
     PACK -. "⚠ pack → pack khai báo (allowlist)" .-> PACK
 ```
@@ -235,12 +237,12 @@ flowchart TB
 |---|---|---|---|---|---|---|
 | **connectors/<x>** | chỉ `<x>` | ❌ | ❌ | ❌ | ❌ | ✅ (seed tenant: ❌) |
 | **cdm** | ✅ | ✅ | ❌ | ❌ | ❌ | ✅ (seed tenant: ❌) |
-| **core** | ❌ | ✅ | ✅ | ⚠ pack hook | ⚠ tenant hook | ✅ (seed tenant: ⚠) |
+| **core** | ❌ | ✅ | ✅ | chỉ qua `pack_ref` (hook cũ: ⚠) | ⚠ tenant hook | ✅ (seed tenant: ⚠) |
 | **packs/<p>** | connector khai báo (khác: ⚠) | ✅ | ✅ | chỉ `<p>` (khác: ⚠ khai báo) | ❌ | ✅ |
 | **tenants/<t>** | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ |
 | **monitoring** | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ |
 
-⚠ = chỉ được qua một mục trong `scripts/checks/boundary_allowlist.yaml` kèm lý do và hướng thoát; ma trận không bao giờ cho phép core → packs hay core → tenants. `check_boundaries.py` fail khi có cạnh mới ngoài ma trận, và cả khi một mục allowlist không còn xảy ra (để allowlist không phình). Allowlist được **sinh từ manifest** (`depends_on` của mọi model, kể cả model tắt) và từ import Python của `orchestration/connectors/**`, `orchestration/packs/**` (`--write-allowlist`), không viết tay. Đọc source dbt chỉ dành cho connector và tenant (luật `dbt-source`). Cột seeds: seed dùng chung (`seeds/taxonomy/`, ...) ai cũng đọc; seed tenant (`seeds/tenants/<t>/`) chỉ pack, `monitoring` và chính tenant `<t>` được đọc (luật `dbt-seed`).
+⚠ = chỉ được qua một mục trong `scripts/checks/boundary_allowlist.yaml` kèm lý do và hướng thoát; ma trận không bao giờ cho phép core → tenants. **Core → pack** hợp lệ khi và chỉ khi đi qua macro `pack_ref('<pack>', '<model>')` (mục 8): `check_boundaries.py` (luật `dbt-ref`) chấp nhận cạnh core → `pack:<p>` tới model `m` chỉ khi `raw_code` của model lõi gọi đúng dạng `pack_ref('<p>', '<m>'` (vị trí, nháy đơn hoặc kép), không có `ref('<m>')` thẳng, và `m` có hợp đồng của pack `<p>` trong `pack_contracts()`. Cạnh core → pack bằng `ref()` thẳng vẫn là vi phạm (8 hook cũ trong allowlist, chuyển sang `pack_ref` ở phase 3–4 của plan cơ chế pack). `check_boundaries.py` fail khi có cạnh mới ngoài ma trận, và cả khi một mục allowlist không còn xảy ra (để allowlist không phình). Allowlist được **sinh từ manifest** (`depends_on` của model đang bật; model tắt vẫn phải có bucket và nằm đúng thư mục, nhưng dbt không phân giải ref của nó nên không kiểm cạnh) và từ import Python của `orchestration/connectors/**`, `orchestration/packs/**` (`--write-allowlist`), không viết tay. Đọc source dbt chỉ dành cho connector và tenant (luật `dbt-source`). Cột seeds: seed dùng chung (`seeds/taxonomy/`, ...) ai cũng đọc; seed tenant (`seeds/tenants/<t>/`) chỉ pack, `monitoring` và chính tenant `<t>` được đọc (luật `dbt-seed`).
 
 Số model theo bucket (`model_buckets.yaml`, 182 model gồm 10 đang tắt):
 
@@ -260,7 +262,7 @@ Vi phạm đã biết (36, đúng bằng allowlist):
 
 | Nhóm | Số | Cạnh | Hướng thoát |
 |---|---|---|---|
-| Pack hook (core → pack) | 8 | `dim_customers` → `int_customer_economics` (`lifetime_gross_profit`, `lifetime_contribution_margin`); `dim_staff` → `stg_crm__app_user` (`crm_user_id`); `int_product_velocity_trend`, `mart_inventory_health` → `mart_sku_economics_monthly` (chỉ tốc độ bán); `mart_product_health`, `mart_product_action_queue` → `mart_sku_economics_monthly` (`realized_margin_pct`, `cogs_variance_pct`, `margin_outlier`); `mart_data_quality` → `fact_order_economics` (kiểm tra chất lượng); `dim_sku_alias` → `int_misa_sales_lines` (có từ trước) | `pack_ref` sau Đợt 1; tách `mart_sku_economics_monthly` thành phần doanh số/tốc độ bán (lõi) và phần chi phí/biên (finance) |
+| Pack hook (core → pack) | 8 | `dim_customers` → `int_customer_economics` (`lifetime_gross_profit`, `lifetime_contribution_margin`); `dim_staff` → `stg_crm__app_user` (`crm_user_id`); `int_product_velocity_trend`, `mart_inventory_health` → `mart_sku_economics_monthly` (chỉ tốc độ bán); `mart_product_health`, `mart_product_action_queue` → `mart_sku_economics_monthly` (`realized_margin_pct`, `cogs_variance_pct`, `margin_outlier`); `mart_data_quality` → `fact_order_economics` (kiểm tra chất lượng); `dim_sku_alias` → `int_misa_sales_lines` (có từ trước) | `pack_ref` (cơ chế có, mục 8.1; áp cho từng hook ở phase 3–4 của plan cơ chế pack); tách `mart_sku_economics_monthly` thành phần doanh số/tốc độ bán (lõi) và phần chi phí/biên (finance) |
 | Tenant hook (core → tenant) | 1 | `mart_data_quality` → `fact_us_shipment_economics` | Dời check US vào `tenants/fine_japan` |
 | Lõi đọc seed tenant (`dbt-seed`) | 3 | `dim_channel_targets` → `seed_channel_targets`; `int_customer_sku_supply_tracking` → `seed_sku_regimen_config`; `dim_sku_alias` → `seed_sku_alias_manual` | Sau Đợt 1, cùng `pack_ref`: lõi có seed mặc định rỗng đúng cột, tenant ghi đè |
 | Pack → pack (khai báo) | 5 | `mart_hug_attribution` (hug) → `fact_order_economics` (finance); `fact_order_economics` (finance) → `int_shopee_order_fees` (marketplace); `mart_customer_action_queue` → `stg_crm__last_contact`, `int_crm_party_tag_flags`; `mart_customer_sku_action_queue` → `stg_crm__last_contact` (sales_playbook → crm) | Khai báo phụ thuộc pack + `pack_ref` sau Đợt 1 |
@@ -497,8 +499,8 @@ flowchart LR
 | `crm` | 14 model: 9 `stg_crm__*`, `int_crm_party_tag_flags`, `int_crm_outreach_effort_events`, `mart_crm_activity_log`, `mart_crm_outreach_effort_by_action_weekly`, `mart_staff_performance_weekly` | `crm_writeback_assets.py` (11 export), `crm_sync.py` (`crm_cache_refresh`, `crm_backup`, `crm_restore_verify`), `jobs.py` (`crm_backup_job`, `crm_backup_schedule`) | — (đọc source `crm_export`) | [dbt](../../transformation/models/packs/crm/README.md), [orchestration](../../orchestration/packs/crm/README.md) |
 | `hug` | 5 model: `stg_hug_scan`, `stg_hug_optin_event`, `stg_crm__hug_voucher`, `mart_hug_optin`, `mart_hug_attribution` | không có code (ingestion là connector `hug`) | `hug` | [dbt](../../transformation/models/packs/hug/README.md), [orchestration](../../orchestration/packs/hug/README.md) |
 | `sales_playbook` (thử nghiệm, chưa chuẩn hoá) | 3 model: `mart_customer_action_queue`, `mart_customer_sku_action_queue`, `dim_action_scenario_registry` | `approach_script_generation.py` (`approach_script_autogen`) | — | [dbt](../../transformation/models/packs/sales_playbook/README.md), [orchestration](../../orchestration/packs/sales_playbook/README.md) |
-| `marketplace` | 3 model `int_shopee_order_*` | — | `shopee` | — |
-| `facebook_ads`, `facebook_messenger` (tắt) | 2 + 2 model | — | `facebook_*` | — |
+| `marketplace` | 3 model `int_shopee_order_*` | không có code (rỗng) | `shopee` | [orchestration](../../orchestration/packs/marketplace/README.md) |
+| `facebook_ads`, `facebook_messenger` (model tắt trong config của từng model) | 2 + 2 model | không có code (rỗng) | `facebook_*` | [facebook_ads](../../orchestration/packs/facebook_ads/README.md), [facebook_messenger](../../orchestration/packs/facebook_messenger/README.md) |
 
 HUG là module **nối lại khách từ sàn thương mại điện tử về mua trực tiếp với shop** (tại quầy, website). Pack finance giữ **toàn bộ chi phí và lợi nhuận**; lõi giữ doanh thu (quyết định 14/10/2026, mục 3).
 
@@ -507,7 +509,57 @@ Quy tắc:
 - Một pack chỉ đọc `cdm`, `core`, chính nó và connector khai báo trong `pack_connectors` của `model_buckets.yaml` (finance → misa, marketplace → shopee, hug → hug, facebook_* → facebook_*). Pack → pack khác và pack → connector khác chỉ qua allowlist (mục 3).
 - Orchestration: mỗi pack là package `orchestration/packs/<id>/` export `ASSETS`, `NIGHTLY_ASSETS` (`__init__.py`) và `JOBS`, `SCHEDULES`, `SENSORS` (`jobs.py`); `definitions.py` nạp các pack liệt kê ở `packs:` trong `config/modules.yaml` giống connector, và đưa `NIGHTLY_ASSETS` vào job nightly/full refresh. Hợp đồng: [orchestration/packs/README.md](../../orchestration/packs/README.md).
 - Pack không import pack khác, connector không import pack (luật `orch-import`); pack không chứa URL/domain cứng (luật `pack-url`), endpoint lấy qua `orchestration.tenants.setting()`.
-- **Chưa bật/tắt được pack.** Bỏ một pack khỏi `modules.yaml` hôm nay làm hỏng: job của 4 connector chọn `crm_cache_refresh`, lõi đọc model của pack (pack hook). Hướng sau Đợt 1: macro `pack_ref(pack, model, columns)` trả `ref()` khi pack bật, bảng rỗng đúng cột khi tắt; danh sách pack bật lấy từ `modules.yaml` qua biến dbt `enabled_packs`.
+- Bật/tắt pack: mục 8.1. Lõi đọc pack chỉ qua `pack_ref` với hợp đồng cột; cạnh pack → pack vẫn là `ref()`.
+
+### 8.1 Bật/tắt pack (công tắc pack)
+
+Plan `plans/261014-2225-pack-mechanism/`. Kết quả spike (dbt-core 1.11.12, dbt-duckdb 1.10.1): `plans/261014-2225-pack-mechanism/reports/spike-dbt-pack-switch.md`.
+
+```mermaid
+flowchart LR
+    MY["orchestration/config/modules.yaml<br/>packs: (chuẩn)"] -->|"Dagster: load_enabled()"| ORCH["orchestration/packs/&lt;id&gt;/"]
+    MY -. "rule module-config<br/>(check_boundaries.py)" .- PRJ
+    subgraph PRJ["transformation/dbt_project.yml (bản sao có kiểm)"]
+        V["vars.enabled_packs"]
+        E["models: packs: &lt;id&gt;: +enabled<br/>var('enabled_packs', [mặc định])"]
+    end
+    E -->|"tắt cả thư mục"| PM["models/packs/&lt;id&gt;/"]
+    V --> PR["pack_ref(pack, model, columns)"]
+    PC["pack_contracts()<br/>(hợp đồng cột)"] --> PR & T["test pack_contract<br/>(gắn trên model pack)"]
+    PR -->|"bật: ref(model)"| PM
+    PR -->|"tắt: (SELECT CAST(NULL AS t) AS c ... WHERE FALSE)"| CORE["model lõi"]
+```
+
+**Nguồn khai báo.** `packs:` trong `orchestration/config/modules.yaml` là danh sách chuẩn của một triển khai (Fine Japan: cả 7 pack). dbt không đọc được file YAML tuỳ ý lúc parse, và `dbt parse` chạy ở nhiều nơi không qua Dagster (lệnh start container, `build-lake.sh`, `run-all.sh`), nên `transformation/dbt_project.yml` giữ bản sao:
+
+| Chỗ | Nội dung | Ai đọc |
+|---|---|---|
+| `vars.enabled_packs` | Danh sách pack bật, cùng id và thứ tự `modules.yaml` | `pack_enabled()`/`pack_ref()` trong model (ngữ cảnh model thấy khối `vars:`) |
+| `models: sapo_warehouse: packs: <id>: +enabled` | `"{{ ('<id>' in var('enabled_packs', [<danh sách mặc định>])) \| as_bool }}"`, một dòng cho **mọi** thư mục `models/packs/<id>/` | dbt khi nạp project: tắt cả thư mục pack (model, test generic của nó) |
+| `pack_ids()` (`macros/packs/pack_enabled.sql`) | Mọi pack có thư mục, bật hay tắt | `pack_enabled()`: id lạ là lỗi biên dịch |
+
+Danh sách mặc định phải lặp trong từng `+enabled`, vì dbt render `dbt_project.yml` trước khi nạp khối `vars:` của chính file đó: `var()` ở đây chỉ thấy `--vars` (thiếu mặc định thì `dbt parse` lỗi `Required var 'enabled_packs' not found`; spike b). Rule **`module-config`** của `check_boundaries.py` giữ ba chỗ khớp nhau: `modules.yaml packs` == `vars.enabled_packs` == danh sách mặc định trong mọi `+enabled` (so nguyên chuỗi với mẫu), mỗi thư mục pack có `+enabled`, mỗi pack của `modules.yaml` có thư mục, `pack_ids()` == tập thư mục pack. Lệch thì check fail (không allowlist được) và in sẵn khối cần dán. `--vars '{enabled_packs: [...]}'` ghi đè cả hai phía (biến và mặc định); chỉ dùng cho profile thử trên shadow (`scripts/shadow/build-profile.sh`), không dùng trên prod.
+
+**Macro** (`transformation/macros/packs/`):
+
+| Macro | Hợp đồng |
+|---|---|
+| `pack_enabled(pack)` | `pack in var('enabled_packs')`; pack không có trong `pack_ids()` là lỗi biên dịch |
+| `pack_contracts()` | Dict `{'<model pack>': {'pack': '<pack>', 'columns': {'<cột>': '<kiểu DuckDB>'}}}`: **một chỗ duy nhất** khai báo cột lõi đọc từ pack. `check_boundaries.py` đọc cặp model → pack bằng regex, nên mỗi mục viết đúng dạng `'<model>': {'pack': '<pack>', ...}` |
+| `pack_ref(pack, model, columns=none)` | Bật: `return(ref(model))`, SQL compile ra đúng chuỗi relation như `ref()` cũ (spike: 8/8 model hook giống hệt) và lineage giữ cạnh lõi → pack. Tắt: `(SELECT CAST(NULL AS <kiểu>) AS <cột>, ... WHERE FALSE)`, không gọi `ref()` nên dbt không ghi cạnh và model pack đã tắt không cần có. Lỗi biên dịch khi: model không có hợp đồng, hợp đồng thuộc pack khác, `columns` (tập con tuỳ chọn cho model lõi chỉ đọc vài cột) có cột hoặc kiểu không có trong hợp đồng |
+| test generic `pack_contract` (`tests/generic/pack_contract.sql`) | Gắn vào model pack (`data_tests: - pack_contract` trong file properties của pack); so `information_schema.columns` của relation với hợp đồng (tên, kiểu; không phân biệt hoa thường, bỏ khoảng trắng; cột thừa được phép); một dòng cho mỗi cột thiếu hoặc sai kiểu; mức `error` |
+
+Mọi quyết định dựa trên `var` (không `run_query`, không `graph`), nên lineage tĩnh và đổi `--vars` làm dbt parse lại toàn bộ (spike a, f). Hợp đồng còn rỗng; phase 3–4 thêm mục cho từng hook.
+
+**Quan hệ rỗng và JOIN.** `LEFT JOIN` vào quan hệ rỗng giữ mọi dòng lõi, cột pack thành NULL. `JOIN` inner hoặc `CROSS JOIN` vào dữ liệu pack ra 0 dòng khi pack tắt; khi áp `pack_ref` cho một hook phải xem lại các chỗ đó (đã biết: `dim_sku_alias` `INNER JOIN` mã MISA, chuỗi `int_product_velocity_trend` → `mart_product_health` đọc `mart_sku_economics_monthly`).
+
+**Test khi pack tắt.** dbt tự tắt (không lỗi, không cảnh báo) mọi test có `ref` tới model đã tắt, kể cả 6 test đơn lẻ trong `transformation/tests/` đọc model finance/marketplace; node test vẫn nằm trong `manifest.nodes` với `config.enabled = false`. Vì vậy `dbt_inventory.py`, `dagster_inventory.py` bỏ qua node có `config.enabled = false`, và `check_boundaries.py` không kiểm cạnh của model tắt (vẫn kiểm bucket và thư mục). Test bị tắt có `depends_on` rỗng nên không thành asset check của Dagster (đã thấy với pack `hug`; ca test giữ một cạnh tới model lõi, như `assert_overhead_accounts_classified`, kiểm lại khi tắt được finance).
+
+**Phụ thuộc pack → pack đã biết** (vẫn là `ref()` thẳng, allowlist mục 3): `hug` → `finance` (`mart_hug_attribution` → `fact_order_economics`), `finance` → `marketplace` (`fact_order_economics` → `int_shopee_order_fees`), `sales_playbook` → `crm`. Tắt một pack mà vẫn bật pack phụ thuộc nó thì `dbt parse` lỗi rõ (fail closed), ví dụ `Model 'model.sapo_warehouse.mart_hug_attribution' ... depends on a node named 'fact_order_economics' which is disabled`.
+
+**Pack chỉ có tên.** `facebook_ads`, `facebook_messenger` có trong `enabled_packs` nhưng 4 model của chúng tắt bằng `config(enabled=false)` trong từng model; config trong model thắng config theo thư mục, nên `+enabled: true` không bật lại. `marketplace`, `facebook_*` có package Dagster rỗng để `modules.yaml` khớp phía dbt.
+
+**Tắt một pack (khi các hook đã chuyển sang `pack_ref`).** Bỏ id khỏi `packs:` trong `modules.yaml`, chạy `check_boundaries.py` và dán khối nó in vào `dbt_project.yml` (`vars.enabled_packs` và danh sách mặc định của mọi `+enabled`), chạy `scripts/checks/run-all.sh`, rồi khởi động lại code server Dagster. **Hôm nay chưa làm được** với pack có hook: lõi còn `ref()` thẳng vào `finance` và `crm` (8 hook), lõi đọc seed tenant (phase 5) và job connector chọn `crm_cache_refresh` (phase 6). Build thử `scripts/shadow/build-profile.sh <worktree> '{enabled_packs: []}'` ngày 14/10/2026 dừng ở lỗi đầu tiên `Model 'model.sapo_warehouse.dim_sku_alias' ... depends on a node named 'int_misa_sales_lines' which is disabled` (dbt dừng ở lỗi đầu; các hook còn lại là 8 cạnh `core -> pack` trong allowlist).
 
 ## 9. Taxonomy module
 

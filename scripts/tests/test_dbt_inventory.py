@@ -53,3 +53,35 @@ def test_repoint_without_allow_code_change_is_rejected(tmp_path, capsys):
     rc = _diff(tmp_path, BASE, new, allow_new=True)
     assert rc == 1
     assert "DIFF core: depends_on" in capsys.readouterr().out
+
+
+def _manifest_with_disabled_test() -> dict:
+    model = {"resource_type": "model", "depends_on": {"nodes": []}, "config": {"enabled": True},
+             "checksum": {"checksum": "c"}, "compiled_code": "select 1"}
+    return {"nodes": {
+        "model.p.core_x": model,
+        "model.p.off_y": {**model, "config": {"enabled": False}, "compiled_code": "select 2"},
+        "test.p.on_t": {"resource_type": "test", "depends_on": {"nodes": ["model.p.core_x"]}, "config": {"enabled": True}},
+        # dbt keeps a singular test whose pack model is disabled, with enabled false
+        "test.p.off_t": {"resource_type": "test", "depends_on": {"nodes": ["model.p.core_x"]}, "config": {"enabled": False}},
+    }}
+
+
+def test_export_ignores_disabled_nodes(tmp_path):
+    (tmp_path / "m.json").write_text(json.dumps(_manifest_with_disabled_test()))
+    out = tmp_path / "inv.json"
+    assert dbt_inventory.cmd_export(argparse.Namespace(manifest=str(tmp_path / "m.json"), out=str(out))) == 0
+    inv = json.loads(out.read_text())
+    assert sorted(inv) == ["model.p.core_x"]
+    assert inv["model.p.core_x"]["tests"] == ["test.p.on_t"]
+
+
+def test_compiled_diff_ignores_disabled_models(tmp_path, capsys):
+    a = _manifest_with_disabled_test()
+    b = _manifest_with_disabled_test()
+    del b["nodes"]["model.p.off_y"]
+    (tmp_path / "a.json").write_text(json.dumps(a))
+    (tmp_path / "b.json").write_text(json.dumps(b))
+    args = argparse.Namespace(a=str(tmp_path / "a.json"), b=str(tmp_path / "b.json"), allow_code_change=False)
+    assert dbt_inventory.cmd_compiled_diff(args) == 0
+    assert "1 vs 1 models" in capsys.readouterr().out

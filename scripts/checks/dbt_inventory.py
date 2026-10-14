@@ -18,6 +18,10 @@ new dependency it now goes through). `--allow-new` accepts added nodes and added
 
   compiled-diff A_manifest.json B_manifest.json [--allow-code-change]
 
+Nodes with `config.enabled = false` are ignored everywhere: dbt keeps a test whose model is
+disabled (e.g. a pack turned off) in `nodes` with enabled false, and it neither runs nor belongs
+to the contract.
+
 Compares the SQL dbt actually executed (`compiled_code` in the manifest written by
 `dbt build`) per model, whitespace-normalized and independent of file paths. Moving files or
 replacing an inline CASE with a macro that returns the same SQL must produce no difference.
@@ -34,6 +38,12 @@ IGNORED_CONFIG_KEYS = {"packages", "docs"}
 _TS_SUFFIX = re.compile(r"_\d{14}(?=\.parquet$)")
 
 
+def _enabled_nodes(manifest: dict) -> dict:
+    """manifest["nodes"] without the nodes dbt marked disabled."""
+    return {uid: n for uid, n in manifest["nodes"].items()
+            if (n.get("config") or {}).get("enabled", True) is not False}
+
+
 def _normalize_config(cfg: dict) -> dict:
     out = {k: v for k, v in cfg.items() if k not in IGNORED_CONFIG_KEYS}
     loc = out.get("location")
@@ -43,8 +53,7 @@ def _normalize_config(cfg: dict) -> dict:
 
 
 def cmd_export(args: argparse.Namespace) -> int:
-    manifest = json.load(open(args.manifest))
-    nodes = manifest["nodes"]
+    nodes = _enabled_nodes(json.load(open(args.manifest)))
     tests_per_node: dict[str, list[str]] = {}
     for uid, n in nodes.items():
         if n["resource_type"] == "test":
@@ -140,7 +149,7 @@ def _norm_sql(code: str) -> str:
 
 def cmd_compiled_diff(args: argparse.Namespace) -> int:
     def load(path):
-        nodes = json.load(open(path))["nodes"]
+        nodes = _enabled_nodes(json.load(open(path)))
         return {uid: _norm_sql(n.get("compiled_code")) for uid, n in nodes.items()
                 if n["resource_type"] == "model" and n.get("compiled_code") is not None}
     a, b = load(args.a), load(args.b)

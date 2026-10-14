@@ -104,24 +104,36 @@ models:
           format: "parquet"
         +tags: ["olap"]
         +on_schema_change: sync_all_columns
+    # Pack switch (docs/architecture/modules.md §8). A pack folder is built only when its id is in
+    # the dbt variable `enabled_packs`. dbt renders this file before the `vars:` block below is
+    # loaded, so var() here sees only `--vars`; the default list is therefore repeated in every
+    # `+enabled` and must equal `vars.enabled_packs` and `packs:` in
+    # orchestration/config/modules.yaml (check_boundaries.py rule `module-config` prints the block).
     packs:
       finance:
+        +enabled: "{{ ('finance' in var('enabled_packs', ['crm', 'hug', 'finance', 'sales_playbook', 'marketplace', 'facebook_ads', 'facebook_messenger'])) | as_bool }}"
         staging: *layer_staging
         intermediate: *layer_intermediate
         marts: *layer_marts
       marketplace:
+        +enabled: "{{ ('marketplace' in var('enabled_packs', ['crm', 'hug', 'finance', 'sales_playbook', 'marketplace', 'facebook_ads', 'facebook_messenger'])) | as_bool }}"
         intermediate: *layer_intermediate
       crm:
+        +enabled: "{{ ('crm' in var('enabled_packs', ['crm', 'hug', 'finance', 'sales_playbook', 'marketplace', 'facebook_ads', 'facebook_messenger'])) | as_bool }}"
         staging: *layer_staging
         marts: *layer_marts
       hug:
+        +enabled: "{{ ('hug' in var('enabled_packs', ['crm', 'hug', 'finance', 'sales_playbook', 'marketplace', 'facebook_ads', 'facebook_messenger'])) | as_bool }}"
         staging: *layer_staging
         marts: *layer_marts
       sales_playbook:
+        +enabled: "{{ ('sales_playbook' in var('enabled_packs', ['crm', 'hug', 'finance', 'sales_playbook', 'marketplace', 'facebook_ads', 'facebook_messenger'])) | as_bool }}"
         marts: *layer_marts
       facebook_ads:
+        +enabled: "{{ ('facebook_ads' in var('enabled_packs', ['crm', 'hug', 'finance', 'sales_playbook', 'marketplace', 'facebook_ads', 'facebook_messenger'])) | as_bool }}"
         marts: *layer_marts
       facebook_messenger:
+        +enabled: "{{ ('facebook_messenger' in var('enabled_packs', ['crm', 'hug', 'finance', 'sales_playbook', 'marketplace', 'facebook_ads', 'facebook_messenger'])) | as_bool }}"
         marts: *layer_marts
     tenants:
       fine_japan:
@@ -131,3 +143,7 @@ models:
 
 vars:
   external_root: "{{ env_var('DBT_EXPORT_PATH') }}"
+  # Packs built by this deployment, same ids and order as `packs:` in
+  # orchestration/config/modules.yaml. Read by pack_enabled()/pack_ref() in models; override with
+  # --vars '{enabled_packs: [...]}' (e.g. scripts/shadow/build-profile.sh).
+  enabled_packs: [crm, hug, finance, sales_playbook, marketplace, facebook_ads, facebook_messenger]
