@@ -1,0 +1,12 @@
+# Sunday 00:30 ICT: outside the nightly pipeline (02:30-04:00) and before the 01:04 backup.
+# Persistent=false: a missed run is skipped, never replayed at boot (it would stop Metabase
+# at an unplanned time).
+[Unit]
+Description=Weekly cold copy of the Metabase H2 database
+
+[Timer]
+OnCalendar=Sun *-*-* 00:30:00 Asia/Ho_Chi_Minh
+Persistent=false
+
+[Install]
+WantedBy=timers.target

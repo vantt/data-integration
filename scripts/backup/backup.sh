@@ -2,9 +2,12 @@
 # =============================================================================
 # Data Integration Platform - Automated Backup Script (Linux/Docker version)
 # =============================================================================
-# Hot backup variant for running inside Docker containers.
-# Does NOT stop containers (Dagster would kill itself). Metabase H2 DB may
-# have minor inconsistency — acceptable trade-off for automated scheduling.
+# Hot backup variant for running inside the data_platform container (job
+# maintain_backup_platform_job). Does NOT stop containers (Dagster would kill itself).
+# Copies data_lake, dagster_home, input_source and config files. Metabase is NOT copied
+# here (metabase_data is not mounted in this container): this script exports Metabase
+# content as JSON through the API (metabase_export.py), and the H2 file is copied cold on
+# the host by metabase_cold_backup.sh (weekly timer + before deploys that write to Metabase).
 #
 # Usage:
 #   ./backup.sh                                   # Use env var defaults
@@ -193,6 +196,18 @@ for f in .env.docker docker-compose.yml Dockerfile.dataplatform Dockerfile.metab
     fi
 done
 log "Config files backed up (${COPIED} found)."
+
+# --- Step 2b: Export Metabase content through its API ---
+# metabase_data is not mounted in this container; the H2 file itself is copied cold on the
+# host (metabase_cold_backup.sh). This export is a readable JSON record of collections, cards
+# and dashboards. A failure is a warning only: it never fails the data backup.
+log "Exporting Metabase content (API)..."
+MB_RC=0
+MB_OUT="$(python3 "$(dirname "${BASH_SOURCE[0]}")/metabase_export.py" "${BACKUP_DIR}/metabase_export" 2>&1)" || MB_RC=$?
+while IFS= read -r line; do [ -n "$line" ] && log "$line"; done <<< "$MB_OUT"
+if [ "$MB_RC" -ne 0 ]; then
+    log "WARNING: Metabase export failed (rc=${MB_RC}); data backup is unaffected"
+fi
 
 # --- Step 3: Finalize ---
 # Cleanup (rotation + failed-dir removal) is handled by the EXIT trap so it
