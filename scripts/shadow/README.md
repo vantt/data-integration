@@ -19,8 +19,10 @@ flowchart LR
         BASE["lake-base<br/>warehouse+exports from backup N-1<br/>raw folders from backup N"]
         A["lake-A / lake-A2 / lake-AF<br/>baseline builds"]
         B["lake-B / lake-E / lake-BF<br/>branch builds (deleted after each gate)"]
-        DEPS["deps/<br/>dbt_packages, home/.duckdb, home/pylib (pytest), wheels"]
         INV["inventory/<br/>dbt-*.json, dagster-*.json, instigators-*.json"]
+    end
+    subgraph TL["~/.cache/fg-dw-tools (SHADOW_DEPS, mode 0700, no data, long-lived)"]
+        DEPS["deps/<br/>dbt_packages, home/.duckdb, home/pylib (pytest), wheels"]
     end
     subgraph WT["Worktrees"]
         BL["fg-dw-baseline (main, detached)"]
@@ -36,7 +38,8 @@ flowchart LR
 
 | Script | Purpose |
 |---|---|
-| `prepare-shadow.sh <backup_new> <backup_prev>` | Build `lake-base` from two backups and the offline deps (dbt_packages, DuckDB extensions, pinned pytest). |
+| `prepare-shadow.sh <backup_new> <backup_prev>` | Build `lake-base` from two backups, then run `prepare-deps.sh`. |
+| `prepare-deps.sh` | Build the offline tools (dbt_packages, DuckDB extensions, pinned pytest) in `$SHADOW_DEPS` (default `~/.cache/fg-dw-tools/deps`). They hold no data and live outside the shadow root, so `cleanup.sh --all` keeps them and `scripts/checks/run-all.sh` works between refactor waves. Re-run after the prod image or `dbt_packages` change. |
 | `clone-lake.sh <name> [--empty-rolling]` | Copy `lake-base` and delete rolling parquet files (or the whole `rolling/` tree) so every rolling model must be rebuilt. |
 | `run-shadow.sh <code_dir> <lake_dir> <cmd...>` | Run a command in a one-off container from the prod image: `--network none`, current uid, env allowlist, code mounted per subdirectory exactly like `docker-compose.yml`. Refuses any path under the prod checkout. |
 | `build-lake.sh <code_dir> <lake> [dbt args]` | Production build sequence: `ensure_dbt_directories.py`, `dbt parse`, `dbt build`, `refresh_rolling.py`. Saves `manifest.json`, `run_results.json`, `build_start` to `<lake>/_shadow_meta/`. |

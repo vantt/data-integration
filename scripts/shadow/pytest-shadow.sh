@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
-# Run pytest inside the shadow container. pytest lives in <shadow>/deps/home/pylib (see
-# prepare-shadow.sh) and is put on PYTHONPATH only for this command.
+# Run pytest inside the shadow container. pytest lives in $SHADOW_DEPS/home/pylib (see
+# prepare-deps.sh) and is put on PYTHONPATH only for this command.
 #
 # Usage: scripts/shadow/pytest-shadow.sh <code_dir> <lake_name> [pytest args...]
 #   e.g. scripts/shadow/pytest-shadow.sh /home/vantt/app/fg-dw-modular lake-B ingestion/tests orchestration scripts/tests -q

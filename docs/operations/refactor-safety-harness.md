@@ -68,10 +68,12 @@ flowchart TB
     end
     subgraph SH["/home/vantt/app/fg-dw-shadow (0700)"]
         BASE[lake-base]
-        DEPS["deps/<br/>dbt_packages, extensions, pytest"]
         LA["lake-A, lake-AF<br/>(baseline)"]
         LB["lake-B, lake-D, lake-E, lake-BF<br/>(nhánh, xoá sau mỗi gate)"]
         INV["inventory/<br/>dbt-main.json, dagster-main.json"]
+    end
+    subgraph TL["~/.cache/fg-dw-tools (SHADOW_DEPS, 0700, không chứa dữ liệu, dùng lâu dài)"]
+        DEPS["deps/<br/>dbt_packages, extensions, pytest"]
     end
     subgraph TOOLS["Công cụ"]
         RS["run-shadow.sh<br/>container cô lập"]
@@ -94,7 +96,8 @@ flowchart TB
 | File | Vai trò |
 |---|---|
 | `scripts/checks/guard_not_prod.py` | Chặn mọi đường dẫn nằm trong checkout prod |
-| `scripts/shadow/prepare-shadow.sh` | Dựng `lake-base` từ backup và các phụ thuộc offline |
+| `scripts/shadow/prepare-shadow.sh` | Dựng `lake-base` từ backup, rồi gọi `prepare-deps.sh` |
+| `scripts/shadow/prepare-deps.sh` | Dựng các phụ thuộc offline (dbt_packages, extensions, pytest) ở `$SHADOW_DEPS`, mặc định `~/.cache/fg-dw-tools/deps`, ngoài thư mục shadow |
 | `scripts/shadow/clone-lake.sh` | Tạo một lake làm việc từ `lake-base`, xoá parquet rolling |
 | `scripts/shadow/run-shadow.sh` | Chạy một lệnh trong container cô lập dựng từ image prod |
 | `scripts/shadow/build-lake.sh` | Build một lake theo đúng trình tự prod |
@@ -345,11 +348,11 @@ Các lệnh có trong [scripts/shadow/README.md § One-time setup](../../scripts
 | Một phase vừa được chấp nhận (commit trên nhánh), hoặc `main` có commit mới | Baseline luôn là **commit được chấp nhận gần nhất**, không nhất thiết là `main`: nếu baseline cũ hơn, gate của phase sau thấy cả thay đổi của phase trước (đã gặp 14/10/2026). `git -C /home/vantt/app/fg-dw-baseline checkout --detach <commit chấp nhận gần nhất>`, rồi build lại lake-A bằng tay (`clone-lake.sh lake-A`, `build-lake.sh <baseline> lake-A`), capture golden, export lại `dbt-main.json` và `dagster-main.json` từ worktree baseline, xoá `lake-AF` |
 | Muốn dữ liệu mới hơn | `prepare-shadow.sh` với hai backup mới hơn, rồi làm như dòng trên |
 | Thêm bảng public mới | Chạy lại `golden_snapshot.py init` (giữ nguyên `volatile_columns`), rồi build hai lần (lake-A, lake-A2) để kiểm tra bảng mới có cột volatile không |
-| Đổi image prod (rebuild `data_platform`) | Chạy lại `prepare-shadow.sh` để lấy extensions/phụ thuộc khớp image mới |
+| Đổi image prod (rebuild `data_platform`) hoặc `dbt_packages` | Chạy lại `prepare-deps.sh` để lấy extensions/phụ thuộc khớp image mới |
 
 ### 9.3 Dọn dẹp
 
-Lake chứa PII khách hàng. Gate tự xoá lake của nhánh sau mỗi lần chạy; lake-A, lake-A2, lake-AF và `lake-base` được giữ trong suốt một đợt thay đổi và xoá bằng `scripts/shadow/cleanup.sh --all` khi đợt đó kết thúc, cùng với các worktree (`git worktree remove`). Lần sau cần dùng thì dựng lại từ backup mới nhất (mục 9.1), mất vài phút.
+Lake chứa PII khách hàng. Gate tự xoá lake của nhánh sau mỗi lần chạy; lake-A, lake-A2, lake-AF và `lake-base` được giữ trong suốt một đợt thay đổi và xoá bằng `scripts/shadow/cleanup.sh --all` khi đợt đó kết thúc, cùng với các worktree (`git worktree remove`). Lần sau cần dùng thì dựng lại từ backup mới nhất (mục 9.1), mất vài phút. Phụ thuộc offline ở `~/.cache/fg-dw-tools/deps` không bị xoá, vì không chứa dữ liệu và `scripts/checks/run-all.sh` cần nó.
 
 ### 9.4 Vòng đời: công cụ dùng lâu dài, dữ liệu shadow dùng theo đợt
 
@@ -360,7 +363,8 @@ Harness **không chỉ dành cho đợt module hoá**. Code (`scripts/shadow/`, 
 | `scripts/shadow/*`, `scripts/checks/*`, tài liệu này | Lâu dài, được commit và bảo trì như code khác |
 | `check_boundaries.py` + `model_buckets.yaml` + allowlist | Lâu dài, chạy ở **mọi** thay đổi dbt/Python (quy tắc trong `transformation/AGENTS.md`) |
 | `instigator_state.py` + runbook deploy | Lâu dài, dùng ở mọi lần deploy cần dừng `data_platform` |
-| `/home/vantt/app/fg-dw-shadow` (lake, deps) | Theo đợt: dựng khi bắt đầu một thay đổi cần gate, xoá khi xong |
+| `/home/vantt/app/fg-dw-shadow` (lake, golden, inventory: dữ liệu, có PII) | Theo đợt: dựng khi bắt đầu một thay đổi cần gate, xoá khi xong (`cleanup.sh --all`) |
+| `~/.cache/fg-dw-tools/deps` (`SHADOW_DEPS`: dbt_packages, extensions, pytest; không chứa dữ liệu) | Lâu dài: `scripts/checks/run-all.sh` cần nó giữa các đợt; dựng lại bằng `prepare-deps.sh` khi đổi image |
 | Worktree baseline / nhánh | Theo đợt |
 
 Các tình huống nên chạy gate sau khi module hoá xong:

@@ -29,9 +29,10 @@ for forbidden in --env-file app_data/secrets agent_codex_config; do
   case " $* " in *"$forbidden"*) echo "run-shadow: refused argument containing $forbidden" >&2; exit 1 ;; esac
 done
 
-DEPS="$SHADOW_ROOT/deps"
+# Offline tools (no data) live outside the shadow root: scripts/shadow/prepare-deps.sh.
+DEPS="${SHADOW_DEPS:-${XDG_CACHE_HOME:-$HOME/.cache}/fg-dw-tools/deps}"
 [ -d "$DEPS/dbt_packages" ] && [ -d "$DEPS/home/.duckdb" ] || {
-  echo "run-shadow: missing $DEPS (run scripts/shadow/prepare-shadow.sh first)" >&2; exit 1; }
+  echo "run-shadow: missing $DEPS (run scripts/shadow/prepare-deps.sh first)" >&2; exit 1; }
 
 code_mounts=()
 for d in transformation ingestion orchestration scripts webhook_consumer; do

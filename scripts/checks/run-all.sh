@@ -7,8 +7,9 @@
 #
 # dbt, Dagster and pytest run in the shadow container (scripts/shadow/run-shadow.sh: prod
 # image, --network none, no secrets) on an EMPTY scratch lake created under $SHADOW_ROOT and
-# deleted on exit; no lake with data is read. Only $SHADOW_ROOT/deps is required
-# (dbt_packages, DuckDB extensions, pinned pytest; scripts/shadow/prepare-shadow.sh).
+# deleted on exit; no lake with data is read, so it works after the shadow data is deleted.
+# Only the offline tools are required: $SHADOW_DEPS (default ~/.cache/fg-dw-tools/deps;
+# dbt_packages, DuckDB extensions, pinned pytest; scripts/shadow/prepare-deps.sh).
 # check_boundaries.py runs with host python3 because crm/ and detailView/ are not mounted in
 # the container.
 #
@@ -31,8 +32,13 @@ MANIFEST="$CODE_DIR/transformation/target/manifest.json"
 
 [ -d "$CODE_DIR/transformation" ] && [ -d "$CODE_DIR/orchestration" ] || {
   echo "run-all: $CODE_DIR is not a checkout of this repo" >&2; exit 2; }
-[ -d "$SHADOW_ROOT/deps/dbt_packages" ] && [ -d "$SHADOW_ROOT/deps/home/pylib" ] || {
-  echo "run-all: missing $SHADOW_ROOT/deps (run scripts/shadow/prepare-shadow.sh, or set SHADOW_ROOT)" >&2; exit 2; }
+DEPS="${SHADOW_DEPS:-${XDG_CACHE_HOME:-$HOME/.cache}/fg-dw-tools/deps}"
+[ -d "$DEPS/dbt_packages" ] && [ -d "$DEPS/home/pylib" ] || {
+  echo "run-all: missing $DEPS (run scripts/shadow/prepare-deps.sh, or set SHADOW_DEPS)" >&2; exit 2; }
+
+# The scratch lake must live under $SHADOW_ROOT (run-shadow.sh), which may not exist between
+# refactor waves; create it private.
+mkdir -p "$SHADOW_ROOT" && chmod 700 "$SHADOW_ROOT"
 
 LAKE="$(mktemp -d "$SHADOW_ROOT/checks-XXXXXX")" || exit 2
 chmod 700 "$LAKE"

@@ -33,9 +33,10 @@ scripts/checks/run-all.sh <worktree>      # or another worktree; the prod checko
 
 The container steps go through `scripts/shadow/run-shadow.sh` (prod image, `--network none`, no
 secrets, no `SOURCES__*` variables) on an **empty** scratch lake created under `$SHADOW_ROOT`
-and deleted on exit, so they never read customer data. Only `$SHADOW_ROOT/deps` is needed
-(`dbt_packages`, DuckDB extensions, pinned pytest), built by `scripts/shadow/prepare-shadow.sh`;
-set `SHADOW_ROOT` to use another root. All steps run; the script ends with `RUN-ALL: PASS` (exit 0)
+(created if missing, mode 0700) and deleted on exit, so they never read customer data and work
+after the shadow data is deleted. Only the offline tools are needed: `$SHADOW_DEPS` (default
+`~/.cache/fg-dw-tools/deps`: `dbt_packages`, DuckDB extensions, pinned pytest), built by
+`scripts/shadow/prepare-deps.sh`; set `SHADOW_ROOT` / `SHADOW_DEPS` to use other locations. All steps run; the script ends with `RUN-ALL: PASS` (exit 0)
 or `RUN-ALL: FAIL` (exit 1). It does not prove data equality: a change that moves models or
 edits SQL still needs `scripts/shadow/gate.sh M|S` before deploy.
 
