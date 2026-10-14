@@ -1271,6 +1271,7 @@ Không thuộc phase này: domain cấp đơn `sales_line` / `order_nature`; see
 
 - Comment ở `transformation/models/monitoring/monitor_uncategorized_tags.sql` L10 vẫn ghi đường dẫn cũ `seeds/ref_tag_categories.csv`. Sửa comment làm đổi SQL biên dịch nên **chưa sửa**; sửa cùng một thay đổi có phép so compiled SQL được phép (hoặc cùng đợt sửa model đầu tiên).
 - Các tài liệu nghiệp vụ lệch với code (mục Known divergences) chỉ được thêm một dòng ghi chú trỏ về mục này; nội dung chờ nghiệp vụ trả lời.
+- Hai khối `customer_type` ở `fact_orders.sql` L110 và `int_customer_benchmarks.sql` L47 là cùng một luật chép ở hai nơi (chỉ khác tiền tố `c.`). Không sửa SQL để chúng giống từng ký tự: việc đó đổi SQL biên dịch mà không giải quyết chuyện chép hai nơi. Chúng là ứng viên đầu tiên để gộp về một chỗ (macro chung hoặc luật của bộ máy). Cùng lúc đó sửa comment sai ở `int_customer_benchmarks.sql` ("mirrors dim_customers.sql exactly": thực tế khối này giống `fact_orders`, không có điều kiện đơn kênh US của `dim_customers`).
 - Chuyển các khối `CASE` thành luật dữ liệu là việc của plan bộ máy sau Đợt 1. Mốc dự phòng: khoảng 6 tuần sau khi Đợt 1 đóng mà bộ máy chưa chạy song song được `customer_type` trên prod thì tách các khối này thành macro nguyên văn.
 
 ## 11. Câu hỏi cho nghiệp vụ
