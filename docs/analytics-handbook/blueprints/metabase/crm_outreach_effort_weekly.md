@@ -13,7 +13,7 @@ issues:
 > **Collection:** Operations > Periodic Reviews
 > **Role:** Sales Ops Lead, CS Manager
 > **Archetype:** Weekly Review Board (1 tab)
-> **Source mart:** `mart_staff_performance_weekly` (`transformation/models/marts/crm/mart_staff_performance_weekly.sql`)
+> **Source mart:** `mart_staff_performance_weekly` (`transformation/models/packs/crm/marts/mart_staff_performance_weekly.sql`)
 > **Related:** `plans/260709-1638-crm-outreach-effort-report/phase-04-reporting-surface-and-validation.md` (Track A scope)
 
 Weekly review board cho Sprint Gọi Ra 45 ngày — thứ Hai hằng tuần. Đo nỗ lực gọi ra (calls_dialed → contacts_reached → conversations_count), tránh dùng doanh thu làm KPI sớm (doanh thu là lagging indicator 49-157 ngày). Không có filter — dashboard luôn hiển thị tuần dữ liệu mới nhất (`MAX(week_start_date)`) vs tuần liền trước.

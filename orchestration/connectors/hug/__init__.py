@@ -1,4 +1,4 @@
-"""Hug webhook connector (moves to the Fine Japan tenant overlay in a later step)."""
+"""Hug webhook connector: ingests HUG scan/opt-in events for the hug pack (orchestration/packs/hug/)."""
 from datetime import timedelta
 
 from .assets import ingest_hug_webhook_consumer_asset

@@ -231,7 +231,7 @@
 ## Context: Order-Level Profitability
 
 > **Description:** Per-order P&L combining Sapo revenue, MISA COGS, and Shopee platform fees. Enables profitability analysis by channel, customer, staff, geography.
-> **dbt Source:** [`fact_order_economics`](../../../transformation/models/core/marts/sales/fact_order_economics.sql)
+> **dbt Source:** [`fact_order_economics`](../../../transformation/models/packs/finance/marts/sales/fact_order_economics.sql)
 > **Grain:** Per Order
 > **Join Keys:** `voucher_no` (MISA) = `order_code` (Sapo) = `order_code` (Shopee fees)
 > **Coverage:** ~65% of completed orders in MISA date range (cancelled/draft orders excluded from MISA)
@@ -240,7 +240,7 @@
 
 | Category | Foundational Analytical Questions | Related Metrics | Data Ready | Needs Added |
 |----------|-----------------------------------|-----------------|------------|-------------|
-| Order-Level Profitability | How much profit remains per order or channel after direct costs? | 9. Order Gross Profit (Lãi gộp đơn hàng), 10. Channel Net Profit (Lãi ròng kênh), 11. Operating Margin %, 12. Net Margin %, 13. EBITDA | [`fact_order_economics`](../../../transformation/models/core/marts/sales/fact_order_economics.sql) | None documented |
+| Order-Level Profitability | How much profit remains per order or channel after direct costs? | 9. Order Gross Profit (Lãi gộp đơn hàng), 10. Channel Net Profit (Lãi ròng kênh), 11. Operating Margin %, 12. Net Margin %, 13. EBITDA | [`fact_order_economics`](../../../transformation/models/packs/finance/marts/sales/fact_order_economics.sql) | None documented |
 
 ### Analytical Questions
 
@@ -258,7 +258,7 @@
 
 #### 9. Order Gross Profit (Lãi gộp đơn hàng)
 
-> **dbt Model:** [`fact_order_economics`](../../../transformation/models/core/marts/sales/fact_order_economics.sql)
+> **dbt Model:** [`fact_order_economics`](../../../transformation/models/packs/finance/marts/sales/fact_order_economics.sql)
 
 - **Business Definition:** Lãi gộp = Doanh thu thuần - Giá vốn. Tính per-order, join MISA COGS vào Sapo revenue.
 - **Logic (SQL):**
@@ -276,7 +276,7 @@
 
 #### 10. Channel Net Profit (Lãi ròng kênh)
 
-> **dbt Model:** [`fact_order_economics`](../../../transformation/models/core/marts/sales/fact_order_economics.sql)
+> **dbt Model:** [`fact_order_economics`](../../../transformation/models/packs/finance/marts/sales/fact_order_economics.sql)
 
 - **Business Definition:** Lãi ròng kênh = Gross Profit - Phí sàn (Shopee). Cho kênh non-Shopee thì = Gross Profit.
 - **Logic (SQL):**
@@ -528,7 +528,7 @@
 ## Context: Cost Ledger — Per-Order Costs
 
 > **Description:** Long-format cost ledger — 1 row per (order_id, cost_type). Covers COGS (from MISA), Shopee platform fees, taxes, shipping, and seller discounts (from Sapo). Amounts are always positive (ABS); sign/direction is derived from cost_category. Enables breakdown of "where does money go?" by channel and cost type.
-> **dbt Source:** [`fact_order_costs`](../../../transformation/models/core/marts/sales/fact_order_costs.sql)
+> **dbt Source:** [`fact_order_costs`](../../../transformation/models/packs/finance/marts/sales/fact_order_costs.sql)
 > **Grain:** Per (order_id, cost_type)
 > **cost_category values:** `COGS`, `PLATFORM_FEE`, `TAX`, `SHIPPING`, `DISCOUNT`
 > **cost_type values (subset):** `cogs`, `platform_service`, `platform_payment`, `platform_fixed`, `platform_affiliate`, `platform_piship`, `platform_infra`, `platform_voucher_xtra`, `tax_vat`, `tax_pit`, `shipping_platform`, `discount_seller_voucher`, `discount_bundle`, `discount_seller`, `discount_manual`
@@ -539,7 +539,7 @@
 
 | Category | Foundational Analytical Questions | Related Metrics | Data Ready | Needs Added |
 |----------|-----------------------------------|-----------------|------------|-------------|
-| Cost Ledger — Per-Order Costs | Which cost groups dominate by order, channel, or month? | 1. Total Costs (Tổng chi phí), 2. COGS Ratio — Cost Ledger (Tỷ lệ giá vốn / tổng chi phí), 3. Platform Fees Ratio (Tỷ lệ phí sàn / tổng chi phí), 4. Voucher / Discount Ratio (Tỷ lệ chiết khấu / tổng chi phí), 5. Cost Composition by Month (Cơ cấu chi phí theo tháng), 6. Top Channels by Total Cost (Kênh tốn nhiều chi phí nhất) | [`fact_order_costs`](../../../transformation/models/core/marts/sales/fact_order_costs.sql) | None documented |
+| Cost Ledger — Per-Order Costs | Which cost groups dominate by order, channel, or month? | 1. Total Costs (Tổng chi phí), 2. COGS Ratio — Cost Ledger (Tỷ lệ giá vốn / tổng chi phí), 3. Platform Fees Ratio (Tỷ lệ phí sàn / tổng chi phí), 4. Voucher / Discount Ratio (Tỷ lệ chiết khấu / tổng chi phí), 5. Cost Composition by Month (Cơ cấu chi phí theo tháng), 6. Top Channels by Total Cost (Kênh tốn nhiều chi phí nhất) | [`fact_order_costs`](../../../transformation/models/packs/finance/marts/sales/fact_order_costs.sql) | None documented |
 
 ### Analytical Questions
 
@@ -557,7 +557,7 @@
 
 #### 1. Total Costs (Tổng chi phí)
 
-> **dbt Model:** [`fact_order_costs`](../../../transformation/models/core/marts/sales/fact_order_costs.sql)
+> **dbt Model:** [`fact_order_costs`](../../../transformation/models/packs/finance/marts/sales/fact_order_costs.sql)
 
 - **Business Definition:** Tổng tất cả các loại chi phí phát sinh cho một đơn hàng hoặc một kỳ — bao gồm giá vốn, phí sàn, thuế, vận chuyển và chiết khấu. Đây là "tổng tiền đi ra" của doanh nghiệp.
 - **Logic (SQL):**
@@ -577,7 +577,7 @@
 
 #### 2. COGS Ratio — Cost Ledger (Tỷ lệ giá vốn / tổng chi phí)
 
-> **dbt Model:** [`fact_order_costs`](../../../transformation/models/core/marts/sales/fact_order_costs.sql)
+> **dbt Model:** [`fact_order_costs`](../../../transformation/models/packs/finance/marts/sales/fact_order_costs.sql)
 
 - **Business Definition:** Phần trăm giá vốn hàng bán trong tổng chi phí. Cho biết chi phí sản xuất/mua hàng chiếm bao nhiêu % tổng "tiền ra".
 - **Logic (SQL):**
@@ -599,7 +599,7 @@
 
 #### 3. Platform Fees Ratio (Tỷ lệ phí sàn / tổng chi phí)
 
-> **dbt Model:** [`fact_order_costs`](../../../transformation/models/core/marts/sales/fact_order_costs.sql)
+> **dbt Model:** [`fact_order_costs`](../../../transformation/models/packs/finance/marts/sales/fact_order_costs.sql)
 
 - **Business Definition:** Phần trăm phí nền tảng (Shopee: service, payment, fixed, affiliate, piship, infra, voucher xtra) trong tổng chi phí. Tăng cao cho thấy chi phí bán trên sàn đang bào mòn lợi nhuận.
 - **Logic (SQL):**
@@ -625,7 +625,7 @@
 
 #### 4. Voucher / Discount Ratio (Tỷ lệ chiết khấu / tổng chi phí)
 
-> **dbt Model:** [`fact_order_costs`](../../../transformation/models/core/marts/sales/fact_order_costs.sql)
+> **dbt Model:** [`fact_order_costs`](../../../transformation/models/packs/finance/marts/sales/fact_order_costs.sql)
 
 - **Business Definition:** Phần trăm chi phí chiết khấu (voucher seller, bundle deal, manual discount) trong tổng chi phí. Phản ánh mức độ phụ thuộc vào khuyến mãi để tăng doanh số.
 - **Logic (SQL):**
@@ -647,7 +647,7 @@
 
 #### 5. Cost Composition by Month (Cơ cấu chi phí theo tháng)
 
-> **dbt Model:** [`fact_order_costs`](../../../transformation/models/core/marts/sales/fact_order_costs.sql)
+> **dbt Model:** [`fact_order_costs`](../../../transformation/models/packs/finance/marts/sales/fact_order_costs.sql)
 
 - **Business Definition:** Breakdown chi phí theo từng cost_category (COGS, PLATFORM_FEE, TAX, SHIPPING, DISCOUNT) qua từng tháng. Dùng để vẽ stacked bar chart — thấy ngay chi phí nào đang tăng bất thường.
 - **Logic (SQL):**
@@ -669,7 +669,7 @@
 
 #### 6. Top Channels by Total Cost (Kênh tốn nhiều chi phí nhất)
 
-> **dbt Model:** [`fact_order_costs`](../../../transformation/models/core/marts/sales/fact_order_costs.sql)
+> **dbt Model:** [`fact_order_costs`](../../../transformation/models/packs/finance/marts/sales/fact_order_costs.sql)
 
 - **Business Definition:** Ranking kênh bán hàng theo tổng chi phí, kèm % breakdown từng loại chi phí. Giúp CFO xác định kênh nào "ăn" ngân sách nhiều nhất và theo loại chi phí nào.
 - **Logic (SQL):**
@@ -879,7 +879,7 @@
 ## Context: Channel P&L Waterfall & Loss-Leader Detection
 
 > **Description:** Per-channel P&L combining Sapo revenue, MISA COGS, and Shopee platform fees at order level. Enables waterfall decomposition (Gross Revenue → Discounts → Net Revenue → COGS → Platform Fees → Net Profit) and loss-leader detection. Dashboard: Channel P&L Deep Dive [Cross].
-> **dbt Source:** [`fact_order_economics`](../../../transformation/models/core/marts/sales/fact_order_economics.sql)
+> **dbt Source:** [`fact_order_economics`](../../../transformation/models/packs/finance/marts/sales/fact_order_economics.sql)
 > **Grain:** Per Order (aggregated to channel × period for reporting)
 > **Filters:** `is_sales_channel = true AND status NOT IN ('CANCELLED','Voided') AND has_cogs = true`
 > **Join Keys:** `channel_key` → `dim_channels`; Shopee fees are pre-joined in mart via `order_code`
@@ -888,7 +888,7 @@
 
 | Category | Foundational Analytical Questions | Related Metrics | Data Ready | Needs Added |
 |----------|-----------------------------------|-----------------|------------|-------------|
-| Channel P&L Waterfall & Loss-Leader Detection | Which channels generate net profit and which behave as loss leaders? | CPL1. Channel Net Margin % (Biên lợi nhuận ròng kênh), CPL2. Loss Leader Flag (Cờ kênh lỗ), CPL3. Channel Variance vs Prior Period (Biến động so với kỳ trước), CPL4. Waterfall Components (Thành phần thác nước P&L), CPL5. Channel Scorecard (Bảng điểm kênh), CPL6. Net Margin % Heatmap — Channel × Month | [`fact_order_economics`](../../../transformation/models/core/marts/sales/fact_order_economics.sql) | None documented |
+| Channel P&L Waterfall & Loss-Leader Detection | Which channels generate net profit and which behave as loss leaders? | CPL1. Channel Net Margin % (Biên lợi nhuận ròng kênh), CPL2. Loss Leader Flag (Cờ kênh lỗ), CPL3. Channel Variance vs Prior Period (Biến động so với kỳ trước), CPL4. Waterfall Components (Thành phần thác nước P&L), CPL5. Channel Scorecard (Bảng điểm kênh), CPL6. Net Margin % Heatmap — Channel × Month | [`fact_order_economics`](../../../transformation/models/packs/finance/marts/sales/fact_order_economics.sql) | None documented |
 
 ### Analytical Questions
 
@@ -906,7 +906,7 @@
 
 #### CPL1. Channel Net Margin % (Biên lợi nhuận ròng kênh)
 
-> **dbt Model:** [`fact_order_economics`](../../../transformation/models/core/marts/sales/fact_order_economics.sql)
+> **dbt Model:** [`fact_order_economics`](../../../transformation/models/packs/finance/marts/sales/fact_order_economics.sql)
 
 - **Business Definition:** Tỷ lệ lợi nhuận ròng sau khi trừ COGS và toàn bộ phí platform (Shopee). Đây là chỉ số cuối cùng để phân biệt kênh lãi và kênh lỗ sau chi phí thực tế.
 - **Logic (SQL):**
@@ -937,7 +937,7 @@
 
 #### CPL2. Loss Leader Flag (Cờ kênh lỗ)
 
-> **dbt Model:** [`fact_order_economics`](../../../transformation/models/core/marts/sales/fact_order_economics.sql)
+> **dbt Model:** [`fact_order_economics`](../../../transformation/models/packs/finance/marts/sales/fact_order_economics.sql)
 
 - **Business Definition:** Kênh có `channel_net_profit < 0` sau khi trừ COGS và phí platform — cần điều tra ngay về chiến lược giá và chi phí sàn.
 - **Logic (SQL):**
@@ -961,7 +961,7 @@
 
 #### CPL3. Channel Variance vs Prior Period (Biến động so với kỳ trước)
 
-> **dbt Model:** [`fact_order_economics`](../../../transformation/models/core/marts/sales/fact_order_economics.sql)
+> **dbt Model:** [`fact_order_economics`](../../../transformation/models/packs/finance/marts/sales/fact_order_economics.sql)
 
 - **Business Definition:** So sánh Net Revenue và Net Margin % của kênh giữa kỳ hiện tại và kỳ trước (WoW, MoM, YoY). Phát hiện kênh nào đang suy giảm nhanh.
 - **Logic (SQL):**
@@ -1006,7 +1006,7 @@
 
 #### CPL4. Waterfall Components (Thành phần thác nước P&L)
 
-> **dbt Model:** [`fact_order_economics`](../../../transformation/models/core/marts/sales/fact_order_economics.sql)
+> **dbt Model:** [`fact_order_economics`](../../../transformation/models/packs/finance/marts/sales/fact_order_economics.sql)
 
 - **Business Definition:** Phân tách dòng tiền từ Gross Revenue → Discounts → Net Revenue → COGS → Platform Fees → Net Profit. Mỗi bước là một khoản trừ giúp thấy rõ tiền bị mất ở đâu.
 - **Components:**
@@ -1038,7 +1038,7 @@
 
 #### CPL5. Channel Scorecard (Bảng điểm kênh)
 
-> **dbt Model:** [`fact_order_economics`](../../../transformation/models/core/marts/sales/fact_order_economics.sql)
+> **dbt Model:** [`fact_order_economics`](../../../transformation/models/packs/finance/marts/sales/fact_order_economics.sql)
 
 - **Business Definition:** Một dòng/kênh với đầy đủ: Net Revenue, Gross Margin %, Net Margin %, Order Volume, Platform Fees. Cho phép Finance Director so sánh tất cả kênh trong một màn hình.
 - **Logic (SQL):**
@@ -1065,7 +1065,7 @@
 
 #### CPL6. Net Margin % Heatmap — Channel × Month
 
-> **dbt Model:** [`fact_order_economics`](../../../transformation/models/core/marts/sales/fact_order_economics.sql)
+> **dbt Model:** [`fact_order_economics`](../../../transformation/models/packs/finance/marts/sales/fact_order_economics.sql)
 
 - **Business Definition:** Ma trận kênh × tháng, màu sắc = Net Margin %. Phát hiện kênh nào đang suy giảm margin theo thời gian, hoặc tháng nào bất thường.
 - **Logic (SQL):**
@@ -1298,7 +1298,7 @@
 > - **Sapo↔MISA match proxy:** `has_cogs = TRUE` (order has MISA invoice line joined via `voucher_no = order_code`)
 > - **Sapo↔Shopee match proxy:** `has_platform_fees = TRUE` (order has Shopee payout record)
 > - **Triple match (fully reconciled):** `has_cogs AND has_platform_fees` (Shopee orders only)
-> **dbt Source:** [`fact_order_economics`](../../../transformation/models/core/marts/sales/fact_order_economics.sql)
+> **dbt Source:** [`fact_order_economics`](../../../transformation/models/packs/finance/marts/sales/fact_order_economics.sql)
 > **Grain:** Per Order
 > **Known Limitation:** `has_cogs` coverage ≈ 65% of completed orders in MISA date range — unmatched orders include cancelled/draft + orders before MISA ingestion window.
 > **Caveat:** This is a derived proxy, not a true reconciliation ledger. Build `recon_sapo_orders_daily` + `recon_misa_daily` dbt models for a proper recon pipeline.
@@ -1307,7 +1307,7 @@
 
 | Category | Foundational Analytical Questions | Related Metrics | Data Ready | Needs Added |
 |----------|-----------------------------------|-----------------|------------|-------------|
-| Daily Reconciliation (Sapo ↔ MISA ↔ Shopee) | Do Sapo, MISA, and Shopee reconcile well enough to trust finance reporting? | RC1. MISA Coverage % (Tỷ lệ khớp MISA), RC2. Unmatched Rate — No MISA (Tỷ lệ thiếu MISA invoice), RC3. Shopee Fee Coverage % (Tỷ lệ có dữ liệu phí Shopee), RC4. Recon Status Distribution (Phân loại trạng thái đối soát), RC5. Daily Unmatched Trend (Xu hướng đơn chưa đối soát theo ngày), RC6. Sapo↔Shopee Fee Gap (Đơn Shopee thiếu dữ liệu phí) | [`fact_order_economics`](../../../transformation/models/core/marts/sales/fact_order_economics.sql) | None documented |
+| Daily Reconciliation (Sapo ↔ MISA ↔ Shopee) | Do Sapo, MISA, and Shopee reconcile well enough to trust finance reporting? | RC1. MISA Coverage % (Tỷ lệ khớp MISA), RC2. Unmatched Rate — No MISA (Tỷ lệ thiếu MISA invoice), RC3. Shopee Fee Coverage % (Tỷ lệ có dữ liệu phí Shopee), RC4. Recon Status Distribution (Phân loại trạng thái đối soát), RC5. Daily Unmatched Trend (Xu hướng đơn chưa đối soát theo ngày), RC6. Sapo↔Shopee Fee Gap (Đơn Shopee thiếu dữ liệu phí) | [`fact_order_economics`](../../../transformation/models/packs/finance/marts/sales/fact_order_economics.sql) | None documented |
 
 ### Analytical Questions
 
@@ -1325,7 +1325,7 @@
 
 #### RC1. MISA Coverage % (Tỷ lệ khớp MISA)
 
-> **dbt Model:** [`fact_order_economics`](../../../transformation/models/core/marts/sales/fact_order_economics.sql)
+> **dbt Model:** [`fact_order_economics`](../../../transformation/models/packs/finance/marts/sales/fact_order_economics.sql)
 
 - **Business Definition:** Phần trăm đơn hàng hoàn tất có MISA invoice khớp. Đây là proxy cho "Sapo↔MISA reconciled". Thấp hơn benchmark (≈65%) → cần kiểm tra MISA ingestion.
 - **Logic (SQL):**
@@ -1352,7 +1352,7 @@
 
 #### RC2. Unmatched Rate — No MISA (Tỷ lệ thiếu MISA invoice)
 
-> **dbt Model:** [`fact_order_economics`](../../../transformation/models/core/marts/sales/fact_order_economics.sql)
+> **dbt Model:** [`fact_order_economics`](../../../transformation/models/packs/finance/marts/sales/fact_order_economics.sql)
 
 - **Business Definition:** Phần trăm đơn hàng hoàn tất KHÔNG có MISA invoice. Đây là "unmatched orders" từ góc độ kế toán.
 - **Logic (SQL):**
@@ -1379,7 +1379,7 @@
 
 #### RC3. Shopee Fee Coverage % (Tỷ lệ có dữ liệu phí Shopee)
 
-> **dbt Model:** [`fact_order_economics`](../../../transformation/models/core/marts/sales/fact_order_economics.sql)
+> **dbt Model:** [`fact_order_economics`](../../../transformation/models/packs/finance/marts/sales/fact_order_economics.sql)
 
 - **Business Definition:** Phần trăm đơn hàng Shopee có dữ liệu payout/phí từ Shopee Seller Center. Thấp → thiếu settlement data → không tính được channel_net_profit chính xác.
 - **Logic (SQL):**
@@ -1404,7 +1404,7 @@
 
 #### RC4. Recon Status Distribution (Phân loại trạng thái đối soát)
 
-> **dbt Model:** [`fact_order_economics`](../../../transformation/models/core/marts/sales/fact_order_economics.sql)
+> **dbt Model:** [`fact_order_economics`](../../../transformation/models/packs/finance/marts/sales/fact_order_economics.sql)
 
 - **Business Definition:** Phân nhóm đơn hàng theo trạng thái recon: FULLY_RECONCILED / MISSING_MISA / MISSING_SHOPEE_FEES / UNRECONCILED. Proxy từ `has_cogs` và `has_platform_fees`.
 - **Logic (SQL):**
@@ -1432,7 +1432,7 @@
 
 #### RC5. Daily Unmatched Trend (Xu hướng đơn chưa đối soát theo ngày)
 
-> **dbt Model:** [`fact_order_economics`](../../../transformation/models/core/marts/sales/fact_order_economics.sql)
+> **dbt Model:** [`fact_order_economics`](../../../transformation/models/packs/finance/marts/sales/fact_order_economics.sql)
 
 - **Business Definition:** Tỷ lệ đơn không có MISA invoice theo ngày — 30 ngày gần nhất. Spike đột ngột → lỗi ingestion MISA hoặc Sapo data lag.
 - **Logic (SQL):**
@@ -1461,7 +1461,7 @@
 
 #### RC6. Sapo↔Shopee Fee Gap (Đơn Shopee thiếu dữ liệu phí)
 
-> **dbt Model:** [`fact_order_economics`](../../../transformation/models/core/marts/sales/fact_order_economics.sql)
+> **dbt Model:** [`fact_order_economics`](../../../transformation/models/packs/finance/marts/sales/fact_order_economics.sql)
 
 - **Business Definition:** Đơn Shopee có doanh thu nhưng thiếu `shopee_platform_fees` → channel_net_profit bị overstate. Số này là "fee gap" cho kế toán reconcile.
 - **Logic (SQL):**

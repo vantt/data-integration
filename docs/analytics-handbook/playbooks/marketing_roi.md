@@ -27,7 +27,7 @@
 
 - **Core Models:**
   - [`fact_marketing_spend`](../../../transformation/models/core/marts/sales/fact_marketing_spend.sql) — spend_amount, channel_key, date_key
-  - [`fact_order_economics`](../../../transformation/models/core/marts/sales/fact_order_economics.sql) — net_revenue, gross_profit, channel_key, date_key, status
+  - [`fact_order_economics`](../../../transformation/models/packs/finance/marts/sales/fact_order_economics.sql) — net_revenue, gross_profit, channel_key, date_key, status
 - **Dimensions:** `dim_channels`, `dim_date`
 - **Join key:** `channel_key` (surrogate key shared across both facts)
 

@@ -1,0 +1,32 @@
+version: 2
+
+models:
+
+  - name: src_hug_optin_event
+    description: >
+      Deduped Hug opt-in events extracted from hug_raw/optin_event/ parquet.
+      Grain: 1 row per token (latest event). Nullable: phone, zalo_uid, name.
+      Payload contract may evolve when landing page (L1-landing) is built.
+    columns:
+      - name: entity_id
+        description: "Token value — primary key."
+        tests: [unique, not_null]
+      - name: token
+        tests: [not_null]
+      - name: event_timestamp
+        tests: [not_null]
+
+
+  - name: src_hug_scan
+    description: >
+      Deduped Hug scan events extracted from hug_raw/scan/ parquet.
+      Grain: 1 row per token (latest event). entity_id = token (no numeric id).
+    columns:
+      - name: entity_id
+        description: "Token value — primary key. Hug events are token-keyed, not id-keyed."
+        tests: [unique, not_null]
+      - name: token
+        tests: [not_null]
+      - name: event_timestamp
+        tests: [not_null]
+

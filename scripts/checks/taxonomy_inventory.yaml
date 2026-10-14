@@ -257,7 +257,7 @@ domains:
       kind: expr
       snippet: (customer_group_code LIKE '%TYPE_CROSSBORDER%' OR customer_group_name LIKE '%TYPE_CROSSBORDER%' OR customer_group_code LIKE '%CTN00014%' OR customer_group_name LIKE '%CTN00014%' OR EXISTS (SELECT 1 FROM us_channel_customers uc WHERE uc.customer_key = joined_data.customer_key)) AS is_us_gift_recipient,
       sha256: 28ea72d7e8d0d2d87a2cf50ab4f2a6c821a67c5609493a5ebcbed95af2294a75
-    - file: transformation/models/intermediate/us_shipment/int_us_shipment_line_prices.sql
+    - file: transformation/models/tenants/fine_japan/intermediate/us_shipment/int_us_shipment_line_prices.sql
       line: 25
       alias: us_channel_filter
       kind: expr
@@ -335,7 +335,7 @@ domains:
       alias: discount_type
       kind: case
       sha256: 7ea0802ef42f7945fb4a8808603f6af34dcf27f286e7dc28b3ae8aff0b6cd9d8
-    - file: transformation/models/core/marts/sales/fact_order_costs.sql
+    - file: transformation/models/packs/finance/marts/sales/fact_order_costs.sql
       line: 118
       alias: discount_type
       kind: case
@@ -346,7 +346,7 @@ domains:
       kind: expr
       snippet: MAX_BY(discount_type, amount) AS primary_discount_type
       sha256: 11452389794f3a268681a9c908f37f1d9cc1c031221c5129eab16d3e78e92c00
-    - file: transformation/models/core/marts/sales/fact_order_costs.sql
+    - file: transformation/models/packs/finance/marts/sales/fact_order_costs.sql
       line: 158
       alias: primary_discount_type_per_cost_type
       kind: expr
@@ -377,7 +377,7 @@ domains:
     columns:
     - cost_type
     blocks:
-    - file: transformation/models/core/marts/sales/fact_order_costs.sql
+    - file: transformation/models/packs/finance/marts/sales/fact_order_costs.sql
       line: 109
       alias: cost_type
       kind: case
@@ -483,34 +483,34 @@ domains:
     - outcome_label
     - is_recently_contacted_positively
     blocks:
-    - file: transformation/models/marts/customer/mart_crm_activity_log.sql
+    - file: transformation/models/packs/crm/marts/mart_crm_activity_log.sql
       line: 30
       alias: is_reached
       kind: expr
       snippet: a.contact_outcome IN ('answered', 'replied', 'met') AS is_reached,
       sha256: 0bab23088ca88bbaa487bccb3bf4941899385059c59b252aae8fdf6124a61008
-    - file: transformation/models/marts/customer/mart_crm_activity_log.sql
+    - file: transformation/models/packs/crm/marts/mart_crm_activity_log.sql
       line: 31
       alias: outcome_label
       kind: case
       sha256: 5eec090cb265ee9b3f898fff700b48bf503de7d813d2738d57b1e783eda6e041
-    - file: transformation/models/marts/customer/mart_customer_action_queue.sql
+    - file: transformation/models/packs/sales_playbook/marts/mart_customer_action_queue.sql
       line: 189
       alias: is_recently_contacted_positively
       kind: case
       sha256: 7bf1994938d86868c93ad78e68f7e5e840573d3e515e38c16fc02f30f66141c6
-    - file: transformation/models/marts/customer/mart_customer_sku_action_queue.sql
+    - file: transformation/models/packs/sales_playbook/marts/mart_customer_sku_action_queue.sql
       line: 199
       alias: is_recently_contacted_positively
       kind: case
       sha256: 7bf1994938d86868c93ad78e68f7e5e840573d3e515e38c16fc02f30f66141c6
-    - file: transformation/models/marts/crm/mart_staff_performance_weekly.sql
+    - file: transformation/models/packs/crm/marts/mart_staff_performance_weekly.sql
       line: 34
       alias: contacts_reached
       kind: expr
       snippet: WHERE contact_outcome IN ( 'answered', 'replied', 'met', 'callback', 'refused', 'purchased' )
       sha256: 9b2debf6154919c412a0fa854324dd143c6b9fefbb697a609233cbf45f40b5d9
-    - file: transformation/models/marts/core/intermediate/int_crm_outreach_effort_events.sql
+    - file: transformation/models/packs/crm/marts/intermediate/int_crm_outreach_effort_events.sql
       line: 198
       alias: is_reached_wide
       kind: expr

@@ -123,7 +123,7 @@ Syncs MISA overhead sub-account classification rules (treatment, pool_id, base_m
 
 #### budget_sheet_sync_asset
 
-Daily sync of the Budget Sheet (BUDGET_ITEMS + ALLOCATION_POLICY tabs). Unlike other sheets_* assets, writes directly to dbt seed CSVs (transformation/seeds/seed_cashflow_budget.csv, seed_cash_allocation_policy.csv) instead of the gsheet_raw data lake. Scheduled at 02:30 ICT, 30 minutes before the nightly dbt build so fresh seeds are in place. Validation is strict and fails loud: any bad sheet structure, missing recurring line ref, or ALLOCATION_POLICY gap/overlap aborts the entire sync.
+Daily sync of the Budget Sheet (BUDGET_ITEMS + ALLOCATION_POLICY tabs). Unlike other sheets_* assets, writes directly to dbt seed CSVs (transformation/seeds/tenants/fine_japan/seed_cashflow_budget.csv, seed_cash_allocation_policy.csv) instead of the gsheet_raw data lake. Scheduled at 02:30 ICT, 30 minutes before the nightly dbt build so fresh seeds are in place. Validation is strict and fails loud: any bad sheet structure, missing recurring line ref, or ALLOCATION_POLICY gap/overlap aborts the entire sync.
 
 - **Group**: `sheets_ingestion`
 - **Schedule**: Daily (02:30 ICT)

@@ -68,7 +68,7 @@ CEO chuyen sang tab nay khi muon kiem tra customer health va red flags.
 
 ## Data Lineage
 
-- **Core Models:** [`fact_orders`](../../../transformation/models/core/marts/sales/fact_orders.sql), [`fact_targets`](../../../transformation/models/core/marts/fact_targets.sql), [`fact_order_economics`](../../../transformation/models/core/marts/sales/fact_order_economics.sql)
+- **Core Models:** [`fact_orders`](../../../transformation/models/core/marts/sales/fact_orders.sql), [`fact_targets`](../../../transformation/models/core/marts/fact_targets.sql), [`fact_order_economics`](../../../transformation/models/packs/finance/marts/sales/fact_order_economics.sql)
 - **Dimensions:** `dim_channels`, `dim_customers`
 
 ## How to Read This Dashboard

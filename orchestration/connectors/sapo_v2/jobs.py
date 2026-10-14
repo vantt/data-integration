@@ -1,6 +1,7 @@
 from dagster import AssetSelection, RunRequest, SkipReason, define_asset_job, schedule
 
-from orchestration.assets import crm_sync, dbt, rill, serving
+from orchestration.assets import dbt, rill, serving
+from orchestration.packs.crm import crm_sync
 from orchestration.job_support import SYNC_TAGS, has_active_run, long_dbt_rw_holder
 
 from .assets import (

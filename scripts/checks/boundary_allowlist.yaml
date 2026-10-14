@@ -1,186 +1,162 @@
-description: Known boundary violations. Each needs a reason and a planned exit; check_boundaries.py fails on anything not listed here.
+description: Known boundary violations, generated from the dbt manifest and the orchestration imports (check_boundaries.py --write-allowlist). Each needs a reason and a planned exit; check_boundaries.py
+  fails on anything not listed here and on entries that no longer occur.
 allow:
-- rule: dbt-path
-  subject: dim_action_scenario_registry
-  target: models/marts/customer/dim_action_scenario_registry.sql not under models/tenants/fine_japan/
-  reason: Fine Japan tenant model still in its original layer folder. Exit - move into models/tenants/fine_japan/ with the tenant overlay.
-- rule: dbt-path
-  subject: dim_cash_allocation_policy
-  target: models/marts/finance/dim_cash_allocation_policy.sql not under models/tenants/fine_japan/
-  reason: Fine Japan tenant model still in its original layer folder. Exit - move into models/tenants/fine_japan/ with the tenant overlay.
-- rule: dbt-path
-  subject: fact_cashflow_budget
-  target: models/marts/finance/fact_cashflow_budget.sql not under models/tenants/fine_japan/
-  reason: Fine Japan tenant model still in its original layer folder. Exit - move into models/tenants/fine_japan/ with the tenant overlay.
-- rule: dbt-path
-  subject: fact_us_shipment_economics
-  target: models/marts/sales/fact_us_shipment_economics.sql not under models/tenants/fine_japan/
-  reason: Fine Japan tenant model still in its original layer folder. Exit - move into models/tenants/fine_japan/ with the tenant overlay.
-- rule: dbt-path
-  subject: int_crm_outreach_effort_events
-  target: models/marts/core/intermediate/int_crm_outreach_effort_events.sql not under models/tenants/fine_japan/
-  reason: Fine Japan tenant model still in its original layer folder. Exit - move into models/tenants/fine_japan/ with the tenant overlay.
-- rule: dbt-path
-  subject: int_crm_party_tag_flags
-  target: models/marts/customer/int_crm_party_tag_flags.sql not under models/tenants/fine_japan/
-  reason: Fine Japan tenant model still in its original layer folder. Exit - move into models/tenants/fine_japan/ with the tenant overlay.
-- rule: dbt-path
-  subject: int_order_overhead_allocation
-  target: models/intermediate/overhead/int_order_overhead_allocation.sql not under models/tenants/fine_japan/
-  reason: Fine Japan tenant model still in its original layer folder. Exit - move into models/tenants/fine_japan/ with the tenant overlay.
-- rule: dbt-path
-  subject: int_overhead_pool_monthly
-  target: models/intermediate/overhead/int_overhead_pool_monthly.sql not under models/tenants/fine_japan/
-  reason: Fine Japan tenant model still in its original layer folder. Exit - move into models/tenants/fine_japan/ with the tenant overlay.
-- rule: dbt-path
-  subject: int_us_shipment_line_prices
-  target: models/intermediate/us_shipment/int_us_shipment_line_prices.sql not under models/tenants/fine_japan/
-  reason: Fine Japan tenant model still in its original layer folder. Exit - move into models/tenants/fine_japan/ with the tenant overlay.
-- rule: dbt-path
-  subject: mart_cash_surplus_allocation
-  target: models/marts/finance/mart_cash_surplus_allocation.sql not under models/tenants/fine_japan/
-  reason: Fine Japan tenant model still in its original layer folder. Exit - move into models/tenants/fine_japan/ with the tenant overlay.
-- rule: dbt-path
-  subject: mart_cashflow_budget_vs_actual
-  target: models/marts/finance/mart_cashflow_budget_vs_actual.sql not under models/tenants/fine_japan/
-  reason: Fine Japan tenant model still in its original layer folder. Exit - move into models/tenants/fine_japan/ with the tenant overlay.
-- rule: dbt-path
-  subject: mart_cashflow_forecast
-  target: models/marts/finance/mart_cashflow_forecast.sql not under models/tenants/fine_japan/
-  reason: Fine Japan tenant model still in its original layer folder. Exit - move into models/tenants/fine_japan/ with the tenant overlay.
-- rule: dbt-path
-  subject: mart_cashflow_reserve_status
-  target: models/marts/finance/mart_cashflow_reserve_status.sql not under models/tenants/fine_japan/
-  reason: Fine Japan tenant model still in its original layer folder. Exit - move into models/tenants/fine_japan/ with the tenant overlay.
-- rule: dbt-path
-  subject: mart_cashflow_unmapped_actuals
-  target: models/marts/finance/mart_cashflow_unmapped_actuals.sql not under models/tenants/fine_japan/
-  reason: Fine Japan tenant model still in its original layer folder. Exit - move into models/tenants/fine_japan/ with the tenant overlay.
-- rule: dbt-path
-  subject: mart_crm_activity_log
-  target: models/marts/customer/mart_crm_activity_log.sql not under models/tenants/fine_japan/
-  reason: Fine Japan tenant model still in its original layer folder. Exit - move into models/tenants/fine_japan/ with the tenant overlay.
-- rule: dbt-path
-  subject: mart_crm_outreach_effort_by_action_weekly
-  target: models/marts/crm/mart_crm_outreach_effort_by_action_weekly.sql not under models/tenants/fine_japan/
-  reason: Fine Japan tenant model still in its original layer folder. Exit - move into models/tenants/fine_japan/ with the tenant overlay.
-- rule: dbt-path
-  subject: mart_customer_action_queue
-  target: models/marts/customer/mart_customer_action_queue.sql not under models/tenants/fine_japan/
-  reason: Fine Japan tenant model still in its original layer folder. Exit - move into models/tenants/fine_japan/ with the tenant overlay.
-- rule: dbt-path
-  subject: mart_customer_sku_action_queue
-  target: models/marts/customer/mart_customer_sku_action_queue.sql not under models/tenants/fine_japan/
-  reason: Fine Japan tenant model still in its original layer folder. Exit - move into models/tenants/fine_japan/ with the tenant overlay.
-- rule: dbt-path
-  subject: mart_hug_attribution
-  target: models/marts/core/mart_hug_attribution.sql not under models/tenants/fine_japan/
-  reason: Fine Japan tenant model still in its original layer folder. Exit - move into models/tenants/fine_japan/ with the tenant overlay.
-- rule: dbt-path
-  subject: mart_hug_optin
-  target: models/marts/customer/mart_hug_optin.sql not under models/tenants/fine_japan/
-  reason: Fine Japan tenant model still in its original layer folder. Exit - move into models/tenants/fine_japan/ with the tenant overlay.
-- rule: dbt-path
-  subject: mart_staff_performance_weekly
-  target: models/marts/crm/mart_staff_performance_weekly.sql not under models/tenants/fine_japan/
-  reason: Fine Japan tenant model still in its original layer folder. Exit - move into models/tenants/fine_japan/ with the tenant overlay.
-- rule: dbt-path
-  subject: src_hug_optin_event
-  target: models/staging/src_hug_optin_event.sql not under models/tenants/fine_japan/
-  reason: Fine Japan tenant model still in its original layer folder. Exit - move into models/tenants/fine_japan/ with the tenant overlay.
-- rule: dbt-path
-  subject: src_hug_scan
-  target: models/staging/src_hug_scan.sql not under models/tenants/fine_japan/
-  reason: Fine Japan tenant model still in its original layer folder. Exit - move into models/tenants/fine_japan/ with the tenant overlay.
-- rule: dbt-path
-  subject: stg_crm__activity_log
-  target: models/staging/stg_crm__activity_log.sql not under models/tenants/fine_japan/
-  reason: Fine Japan tenant model still in its original layer folder. Exit - move into models/tenants/fine_japan/ with the tenant overlay.
-- rule: dbt-path
-  subject: stg_crm__app_user
-  target: models/staging/stg_crm__app_user.sql not under models/tenants/fine_japan/
-  reason: Fine Japan tenant model still in its original layer folder. Exit - move into models/tenants/fine_japan/ with the tenant overlay.
-- rule: dbt-path
-  subject: stg_crm__campaign_target
-  target: models/staging/stg_crm__campaign_target.sql not under models/tenants/fine_japan/
-  reason: Fine Japan tenant model still in its original layer folder. Exit - move into models/tenants/fine_japan/ with the tenant overlay.
-- rule: dbt-path
-  subject: stg_crm__customer_profile_custom
-  target: models/staging/stg_crm__customer_profile_custom.sql not under models/tenants/fine_japan/
-  reason: Fine Japan tenant model still in its original layer folder. Exit - move into models/tenants/fine_japan/ with the tenant overlay.
-- rule: dbt-path
-  subject: stg_crm__hug_voucher
-  target: models/staging/stg_crm__hug_voucher.sql not under models/tenants/fine_japan/
-  reason: Fine Japan tenant model still in its original layer folder. Exit - move into models/tenants/fine_japan/ with the tenant overlay.
-- rule: dbt-path
-  subject: stg_crm__last_contact
-  target: models/staging/stg_crm__last_contact.sql not under models/tenants/fine_japan/
-  reason: Fine Japan tenant model still in its original layer folder. Exit - move into models/tenants/fine_japan/ with the tenant overlay.
-- rule: dbt-path
-  subject: stg_crm__note
-  target: models/staging/stg_crm__note.sql not under models/tenants/fine_japan/
-  reason: Fine Japan tenant model still in its original layer folder. Exit - move into models/tenants/fine_japan/ with the tenant overlay.
-- rule: dbt-path
-  subject: stg_crm__party_insight
-  target: models/staging/stg_crm__party_insight.sql not under models/tenants/fine_japan/
-  reason: Fine Japan tenant model still in its original layer folder. Exit - move into models/tenants/fine_japan/ with the tenant overlay.
-- rule: dbt-path
-  subject: stg_crm__party_tag
-  target: models/staging/stg_crm__party_tag.sql not under models/tenants/fine_japan/
-  reason: Fine Japan tenant model still in its original layer folder. Exit - move into models/tenants/fine_japan/ with the tenant overlay.
-- rule: dbt-path
-  subject: stg_crm__task
-  target: models/staging/stg_crm__task.sql not under models/tenants/fine_japan/
-  reason: Fine Japan tenant model still in its original layer folder. Exit - move into models/tenants/fine_japan/ with the tenant overlay.
-- rule: dbt-path
-  subject: stg_hug_optin_event
-  target: models/staging/stg_hug_optin_event.sql not under models/tenants/fine_japan/
-  reason: Fine Japan tenant model still in its original layer folder. Exit - move into models/tenants/fine_japan/ with the tenant overlay.
-- rule: dbt-path
-  subject: stg_hug_scan
-  target: models/staging/stg_hug_scan.sql not under models/tenants/fine_japan/
-  reason: Fine Japan tenant model still in its original layer folder. Exit - move into models/tenants/fine_japan/ with the tenant overlay.
-- rule: dbt-path
-  subject: stg_overhead_account_classification
-  target: models/staging/stg_overhead_account_classification.sql not under models/tenants/fine_japan/
-  reason: Fine Japan tenant model still in its original layer folder. Exit - move into models/tenants/fine_japan/ with the tenant overlay.
-- rule: dbt-path
-  subject: stg_us_shipment_prices
-  target: models/staging/stg_us_shipment_prices.sql not under models/tenants/fine_japan/
-  reason: Fine Japan tenant model still in its original layer folder. Exit - move into models/tenants/fine_japan/ with the tenant overlay.
+- rule: dbt-ref
+  subject: dim_customers
+  target: int_customer_economics [core -> pack:finance]
+  reason: 'Pack hook (core -> finance): dim_customers takes lifetime_gross_profit and lifetime_contribution_margin from int_customer_economics. Exit - read the two columns through pack_ref(''finance'',
+    ...) after Đợt 1 (empty columns when finance is off).'
 - rule: dbt-ref
   subject: dim_sku_alias
   target: int_misa_sales_lines [core -> pack:finance]
   reason: Core SKU cost/alias uses MISA sales lines (accounting source). Exit - expose ledger data through the canonical layer as an optional core input.
 - rule: dbt-ref
   subject: dim_staff
-  target: stg_crm__app_user [core -> tenant:fine_japan]
-  reason: Tenant hook - core logic depends on Fine Japan data (CRM users, overhead allocation, US shipment). Exit - split the FJ part into the tenant overlay.
+  target: stg_crm__app_user [core -> pack:crm]
+  reason: 'Pack hook (core -> crm): dim_staff takes crm_user_id from stg_crm__app_user. Exit - read crm_user_id through pack_ref(''crm'', ...) after Đợt 1.'
 - rule: dbt-ref
   subject: fact_order_costs
-  target: int_order_overhead_allocation [core -> tenant:fine_japan]
-  reason: Tenant hook - core logic depends on Fine Japan data (CRM users, overhead allocation, US shipment). Exit - split the FJ part into the tenant overlay.
+  target: stg_shopee_order_revenue [pack:finance -> connector:shopee]
+  reason: Finance cost ledger mixes in Shopee marketplace fees read straight from the shopee connector (shopee is not in finance's pack_connectors, kept strict on purpose). Exit - move fee legs to pack
+    marketplace and read them from there.
 - rule: dbt-ref
   subject: fact_order_costs
-  target: stg_shopee_order_revenue [core -> connector:shopee]
-  reason: Core order cost/economics mixes in Shopee marketplace fees. Exit - move fee legs to pack marketplace.
-- rule: dbt-ref
-  subject: fact_order_costs
-  target: stg_shopee_order_service_fees [core -> connector:shopee]
-  reason: Core order cost/economics mixes in Shopee marketplace fees. Exit - move fee legs to pack marketplace.
+  target: stg_shopee_order_service_fees [pack:finance -> connector:shopee]
+  reason: Finance cost ledger mixes in Shopee marketplace fees read straight from the shopee connector (shopee is not in finance's pack_connectors, kept strict on purpose). Exit - move fee legs to pack
+    marketplace and read them from there.
 - rule: dbt-ref
   subject: fact_order_economics
-  target: int_order_overhead_allocation [core -> tenant:fine_japan]
-  reason: Tenant hook - core logic depends on Fine Japan data (CRM users, overhead allocation, US shipment). Exit - split the FJ part into the tenant overlay.
+  target: int_shopee_order_fees [pack:finance -> pack:marketplace]
+  reason: 'Pack -> pack (finance -> marketplace), declared: order economics takes Shopee fees from int_shopee_order_fees. Exit - move fee legs to pack marketplace; finance reads them via pack_ref(''marketplace'',
+    ...) after Đợt 1.'
 - rule: dbt-ref
-  subject: fact_order_economics
-  target: int_shopee_order_fees [core -> pack:marketplace]
-  reason: Core order cost/economics mixes in Shopee marketplace fees. Exit - move fee legs to pack marketplace.
+  subject: int_product_velocity_trend
+  target: mart_sku_economics_monthly [core -> pack:finance]
+  reason: 'Pack hook (core -> finance): uses only the sales velocity of mart_sku_economics_monthly. Exit - split mart_sku_economics_monthly into a core SKU sales/velocity part and a finance cost/margin
+    part; margin columns via pack_ref after Đợt 1.'
+- rule: dbt-ref
+  subject: mart_customer_action_queue
+  target: int_crm_party_tag_flags [pack:sales_playbook -> pack:crm]
+  reason: 'Pack -> pack (sales_playbook -> crm), declared: the action queue reads CRM contact state and tag flags. Exit - declare sales_playbook as depending on crm and read via pack_ref(''crm'', ...) after
+    Đợt 1.'
+- rule: dbt-ref
+  subject: mart_customer_action_queue
+  target: stg_crm__last_contact [pack:sales_playbook -> pack:crm]
+  reason: 'Pack -> pack (sales_playbook -> crm), declared: the action queue reads CRM contact state and tag flags. Exit - declare sales_playbook as depending on crm and read via pack_ref(''crm'', ...) after
+    Đợt 1.'
+- rule: dbt-ref
+  subject: mart_customer_sku_action_queue
+  target: stg_crm__last_contact [pack:sales_playbook -> pack:crm]
+  reason: 'Pack -> pack (sales_playbook -> crm), declared: the SKU action queue reads the CRM last contact. Exit - declare sales_playbook as depending on crm and read via pack_ref(''crm'', ...) after Đợt
+    1.'
+- rule: dbt-ref
+  subject: mart_data_quality
+  target: fact_order_economics [core -> pack:finance]
+  reason: Monitoring check inside a core mart reads finance (fact_order_economics). Exit - move the finance checks of mart_data_quality into the finance pack (or monitoring/) after Đợt 1.
 - rule: dbt-ref
   subject: mart_data_quality
   target: fact_us_shipment_economics [core -> tenant:fine_japan]
-  reason: Tenant hook - core logic depends on Fine Japan data (CRM users, overhead allocation, US shipment). Exit - split the FJ part into the tenant overlay.
+  reason: 'Tenant hook (core -> tenant fine_japan): mart_data_quality checks US shipment economics. Exit - move the US shipment check into tenants/fine_japan after Đợt 1.'
 - rule: dbt-ref
-  subject: mart_sku_economics_monthly
-  target: int_misa_sales_lines [core -> pack:finance]
-  reason: Core SKU cost/alias uses MISA sales lines (accounting source). Exit - expose ledger data through the canonical layer as an optional core input.
+  subject: mart_hug_attribution
+  target: fact_order_economics [pack:hug -> pack:finance]
+  reason: 'Pack -> pack (hug -> finance), declared: HUG attribution reports the margin of attributed orders from fact_order_economics. Exit - read via pack_ref(''finance'', ...) after Đợt 1.'
+- rule: dbt-ref
+  subject: mart_inventory_health
+  target: mart_sku_economics_monthly [core -> pack:finance]
+  reason: 'Pack hook (core -> finance): uses only the sales velocity of mart_sku_economics_monthly. Exit - split mart_sku_economics_monthly into a core SKU sales/velocity part and a finance cost/margin
+    part; margin columns via pack_ref after Đợt 1.'
+- rule: dbt-ref
+  subject: mart_product_action_queue
+  target: mart_sku_economics_monthly [core -> pack:finance]
+  reason: 'Pack hook (core -> finance): uses realized_margin_pct, cogs_variance_pct, margin_outlier of mart_sku_economics_monthly. Exit - split mart_sku_economics_monthly into a core SKU sales/velocity
+    part and a finance cost/margin part; margin columns via pack_ref after Đợt 1.'
+- rule: dbt-ref
+  subject: mart_product_health
+  target: mart_sku_economics_monthly [core -> pack:finance]
+  reason: 'Pack hook (core -> finance): uses realized_margin_pct, cogs_variance_pct, margin_outlier of mart_sku_economics_monthly. Exit - split mart_sku_economics_monthly into a core SKU sales/velocity
+    part and a finance cost/margin part; margin columns via pack_ref after Đợt 1.'
+- rule: dbt-source
+  subject: stg_crm__activity_log
+  target: crm_export.crm_activity_log
+  reason: Pack crm reads the CRM export (crm_export, written by its own write-back assets in orchestration/packs/crm/); dbt-source only allows connectors/tenants. Exit - declare pack-owned sources (or a
+    crm connector) after Đợt 1.
+- rule: dbt-source
+  subject: stg_crm__app_user
+  target: crm_export.crm_app_user
+  reason: Pack crm reads the CRM export (crm_export, written by its own write-back assets in orchestration/packs/crm/); dbt-source only allows connectors/tenants. Exit - declare pack-owned sources (or a
+    crm connector) after Đợt 1.
+- rule: dbt-source
+  subject: stg_crm__campaign_target
+  target: crm_export.crm_campaign_target
+  reason: Pack crm reads the CRM export (crm_export, written by its own write-back assets in orchestration/packs/crm/); dbt-source only allows connectors/tenants. Exit - declare pack-owned sources (or a
+    crm connector) after Đợt 1.
+- rule: dbt-source
+  subject: stg_crm__customer_profile_custom
+  target: crm_export.crm_customer_profile_custom
+  reason: Pack crm reads the CRM export (crm_export, written by its own write-back assets in orchestration/packs/crm/); dbt-source only allows connectors/tenants. Exit - declare pack-owned sources (or a
+    crm connector) after Đợt 1.
+- rule: dbt-source
+  subject: stg_crm__hug_voucher
+  target: crm_export.crm_hug_voucher
+  reason: Pack hug reads the CRM export (crm_export, written by the crm pack's write-back assets). Exit - expose CRM export data through a connector-like source module (or declare pack sources) after Đợt
+    1.
+- rule: dbt-source
+  subject: stg_crm__last_contact
+  target: crm_export.crm_last_contact
+  reason: Pack crm reads the CRM export (crm_export, written by its own write-back assets in orchestration/packs/crm/); dbt-source only allows connectors/tenants. Exit - declare pack-owned sources (or a
+    crm connector) after Đợt 1.
+- rule: dbt-source
+  subject: stg_crm__note
+  target: crm_export.crm_note
+  reason: Pack crm reads the CRM export (crm_export, written by its own write-back assets in orchestration/packs/crm/); dbt-source only allows connectors/tenants. Exit - declare pack-owned sources (or a
+    crm connector) after Đợt 1.
+- rule: dbt-source
+  subject: stg_crm__party_insight
+  target: crm_export.crm_party_insight
+  reason: Pack crm reads the CRM export (crm_export, written by its own write-back assets in orchestration/packs/crm/); dbt-source only allows connectors/tenants. Exit - declare pack-owned sources (or a
+    crm connector) after Đợt 1.
+- rule: dbt-source
+  subject: stg_crm__party_tag
+  target: crm_export.crm_party_tag
+  reason: Pack crm reads the CRM export (crm_export, written by its own write-back assets in orchestration/packs/crm/); dbt-source only allows connectors/tenants. Exit - declare pack-owned sources (or a
+    crm connector) after Đợt 1.
+- rule: dbt-source
+  subject: stg_crm__party_tag
+  target: crm_export.crm_tag
+  reason: Pack crm reads the CRM export (crm_export, written by its own write-back assets in orchestration/packs/crm/); dbt-source only allows connectors/tenants. Exit - declare pack-owned sources (or a
+    crm connector) after Đợt 1.
+- rule: dbt-source
+  subject: stg_crm__task
+  target: crm_export.crm_task
+  reason: Pack crm reads the CRM export (crm_export, written by its own write-back assets in orchestration/packs/crm/); dbt-source only allows connectors/tenants. Exit - declare pack-owned sources (or a
+    crm connector) after Đợt 1.
+- rule: dbt-source
+  subject: stg_overhead_account_classification
+  target: gsheet_raw.overhead_account_classification_raw
+  reason: Finance staging reads the gsheet source directly (overhead account classification sheet). Exit - move the staging model to connector gsheet (stg) and let finance read it as a declared connector
+    or via cdm.
+- rule: orch-import
+  subject: orchestration/connectors/misa_amis/jobs.py
+  target: orchestration.packs.crm
+  reason: 'Connector job selects the crm pack''s crm_cache_refresh (refresh the CRM cache after serving). User decision 14/10/2026: keep the import. Exit - after Đợt 1 the crm pack attaches the refresh
+    to the connector jobs itself (or via a kernel hook), so connectors stop importing packs.'
+- rule: orch-import
+  subject: orchestration/connectors/sapo_v2/jobs.py
+  target: orchestration.packs.crm
+  reason: 'Connector job selects the crm pack''s crm_cache_refresh (refresh the CRM cache after serving). User decision 14/10/2026: keep the import. Exit - after Đợt 1 the crm pack attaches the refresh
+    to the connector jobs itself (or via a kernel hook), so connectors stop importing packs.'
+- rule: orch-import
+  subject: orchestration/connectors/sheets/jobs.py
+  target: orchestration.packs.crm
+  reason: 'Connector job selects the crm pack''s crm_cache_refresh (refresh the CRM cache after serving). User decision 14/10/2026: keep the import. Exit - after Đợt 1 the crm pack attaches the refresh
+    to the connector jobs itself (or via a kernel hook), so connectors stop importing packs.'
+- rule: orch-import
+  subject: orchestration/connectors/shopee/jobs.py
+  target: orchestration.packs.crm
+  reason: 'Connector job selects the crm pack''s crm_cache_refresh (refresh the CRM cache after serving). User decision 14/10/2026: keep the import. Exit - after Đợt 1 the crm pack attaches the refresh
+    to the connector jobs itself (or via a kernel hook), so connectors stop importing packs.'
+- rule: orch-import
+  subject: orchestration/packs/sales_playbook/approach_script_generation.py
+  target: orchestration.packs.crm
+  reason: 'Pack -> pack import (sales_playbook -> crm): approach_script_autogen runs after crm_cache_refresh (deps). Exit - declare the pack dependency after Đợt 1 (deps by AssetKey or pack dependency list).'

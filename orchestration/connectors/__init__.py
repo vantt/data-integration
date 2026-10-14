@@ -13,27 +13,24 @@ would make that a cycle.
 """
 from __future__ import annotations
 
-import importlib
-from pathlib import Path
 from types import ModuleType
 
-import yaml
+from orchestration import module_registry
 
-_MODULES_FILE = Path(__file__).resolve().parents[1] / "config" / "modules.yaml"
+# Module attribute so tests can point the loader at another modules.yaml.
+_MODULES_FILE = module_registry.MODULES_FILE
 
 
 def enabled_ids() -> list[str]:
     """Connector ids from modules.yaml, in file order."""
-    with open(_MODULES_FILE) as fh:
-        data = yaml.safe_load(fh) or {}
-    return list(data.get("connectors") or [])
+    return module_registry.enabled_ids("connectors", _MODULES_FILE)
 
 
 def load_enabled(ids: list[str] | None = None) -> list[ModuleType]:
     """Import the enabled connector packages (assets and data, no jobs)."""
-    return [importlib.import_module(f"{__name__}.{i}") for i in (enabled_ids() if ids is None else ids)]
+    return module_registry.import_each(__name__, enabled_ids() if ids is None else ids)
 
 
 def load_enabled_jobs(ids: list[str] | None = None) -> list[ModuleType]:
     """Import `<id>.jobs` (JOBS, SCHEDULES, SENSORS) of the enabled connectors."""
-    return [importlib.import_module(f"{__name__}.{i}.jobs") for i in (enabled_ids() if ids is None else ids)]
+    return module_registry.import_each(__name__, enabled_ids() if ids is None else ids, "jobs")

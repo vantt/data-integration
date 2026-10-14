@@ -157,7 +157,7 @@ def budget_sheet_sync_schedule(context):
 
 **Why 02:30 AM:** 30 minutes before the nightly dbt build (03:00 ICT) so fresh budget seeds (BUDGET_ITEMS + ALLOCATION_POLICY) are in place before `dbt build` runs.
 
-**Note:** Unlike other sheets_* assets, this writes directly to dbt seed CSVs (transformation/seeds/seed_cashflow_budget.csv, seed_cash_allocation_policy.csv) instead of the gsheet_raw data lake. Validation is strict: the entire sync aborts (no seed files touched) if any sheet structure issues, missing recurring line refs, or ALLOCATION_POLICY gaps/overlaps are detected.
+**Note:** Unlike other sheets_* assets, this writes directly to dbt seed CSVs (transformation/seeds/tenants/fine_japan/seed_cashflow_budget.csv, seed_cash_allocation_policy.csv) instead of the gsheet_raw data lake. Validation is strict: the entire sync aborts (no seed files touched) if any sheet structure issues, missing recurring line refs, or ALLOCATION_POLICY gaps/overlaps are detected.
 
 ---
 

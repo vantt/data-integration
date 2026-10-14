@@ -1,0 +1,37 @@
+version: 2
+
+models:
+
+  - name: stg_hug_optin_event
+    description: >
+      Staging view for Hug opt-in events. Timestamps cast to TIMESTAMPTZ (UTC).
+      One row per token (latest opt-in). Read by I2-resolve identity bridge.
+    columns:
+      - name: optin_token
+        description: "Token value (= entity_id from src_hug_optin_event). Primary key."
+        tests: [unique, not_null]
+      - name: token
+        tests: [not_null]
+      - name: opted_in_at
+        description: "Opt-in timestamp from landing page, or ingest time as fallback (TIMESTAMPTZ UTC)."
+      - name: ingested_at
+        description: "Pipeline ingest timestamp (TIMESTAMPTZ UTC)."
+        tests: [not_null]
+
+
+  - name: stg_hug_scan
+    description: >
+      Staging view for Hug scan events. Timestamps cast to TIMESTAMPTZ (UTC).
+      One row per token (latest snapshot). Identity resolution happens downstream.
+    columns:
+      - name: scan_token
+        description: "Token value (= entity_id from src_hug_scan). Primary key."
+        tests: [unique, not_null]
+      - name: token
+        tests: [not_null]
+      - name: scanned_at
+        description: "Edge-recorded scan timestamp (TIMESTAMPTZ UTC). Null if edge clock unavailable."
+      - name: ingested_at
+        description: "Pipeline ingest timestamp (TIMESTAMPTZ UTC)."
+        tests: [not_null]
+

@@ -174,7 +174,7 @@
 
 ## Context: SKU Economics Snapshot
 
-> **dbt Source:** [`mart_sku_economics_monthly`](../../../transformation/models/core/marts/sales/mart_sku_economics_monthly.sql)
+> **dbt Source:** [`mart_sku_economics_monthly`](../../../transformation/models/packs/finance/marts/sales/mart_sku_economics_monthly.sql)
 > **Grain:** `(product_key, snapshot_month)` — one row per SKU per calendar month
 > **Window:** Rolling 24 months (supports YoY)
 > **Refresh:** `dbt build --select +mart_sku_economics_monthly`
@@ -209,7 +209,7 @@ Single source of truth for SKU-level economics. Replaces ad-hoc joins of
 > **dbt Sources:**
 > - [`fact_inventory_snapshot`](../../../transformation/models/core/marts/sales/fact_inventory_snapshot.sql) — grain: (variant_id, location_id, snapshot_date), incremental parquet, retention: forever
 > - [`mart_inventory_health`](../../../transformation/models/core/marts/sales/mart_inventory_health.sql) — derived health flags + days_of_supply + capital-at-risk signals
-> - Velocity sourced from [`mart_sku_economics_monthly`](../../../transformation/models/core/marts/sales/mart_sku_economics_monthly.sql)
+> - Velocity sourced from [`mart_sku_economics_monthly`](../../../transformation/models/packs/finance/marts/sales/mart_sku_economics_monthly.sql)
 
 > **Grain:** (variant_id, location_id, snapshot_date) — one row per SKU per location per day
 

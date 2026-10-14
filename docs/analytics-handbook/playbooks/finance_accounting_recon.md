@@ -10,7 +10,7 @@
 
 ## Data Lineage
 
-- **Primary source:** [`fact_order_economics`](../../../transformation/models/core/marts/sales/fact_order_economics.sql) — per-order join of Sapo revenue, MISA COGS, and Shopee fees
+- **Primary source:** [`fact_order_economics`](../../../transformation/models/packs/finance/marts/sales/fact_order_economics.sql) — per-order join of Sapo revenue, MISA COGS, and Shopee fees
 - **MISA match proxy:** `has_cogs` flag — TRUE when `int_misa_sales_lines.voucher_no` matched `fact_orders.order_code`
 - **Shopee match proxy:** `has_platform_fees` flag — TRUE when `int_shopee_order_fees.order_code` matched
 - **Channels:** [`dim_channels`](../../../transformation/models/core/marts/dim_channels.sql) — for channel name and Shopee identification

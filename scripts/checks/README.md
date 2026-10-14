@@ -55,12 +55,14 @@ python3 scripts/checks/check_boundaries.py --manifest <path/to/manifest.json>
 |---|---|
 | `py-import` | `crm/` or `detailView/` imports `orchestration`, `ingestion` or `transformation`; `ingestion/` imports `orchestration` |
 | `py-scan` | one of those trees is missing (prevents a silent pass inside a container) |
+| `orch-import` | a file under `orchestration/connectors/<c>/` imports `orchestration.packs.*`, or a file under `orchestration/packs/<p>/` imports another pack (`orchestration.packs.<q>`, q ≠ p). The kernel loads packs from `modules.yaml`; `__tests__` and the loaders are not scanned |
 | `dbt-bucket` | a dbt model (enabled or disabled) has no entry in `model_buckets.yaml` |
 | `dbt-path` | a model's file is not under `models/<module folder of its bucket>/` |
-| `dbt-ref` | a model depends on a model its bucket may not read (matrix below) |
+| `dbt-ref` | a model depends on a model its bucket may not read (matrix below). `core` → `pack:*` and `core` → `tenant:*` are never allowed by the matrix: such a hook exists only as an allowlist entry |
 | `dbt-source` | a model outside `connector:*` / `tenant:*` reads a dbt source |
 | `seed-duplicate` | two CSVs under `transformation/seeds/` share a basename (dbt parse would fail and `data_platform` would not start) |
-| `connector-url` | an `http(s)://` literal appears under `orchestration/connectors/**` |
+| `connector-url` | an `http(s)://` URL (any line) or a domain name inside a string literal (e.g. `"fwg.mysapogo.com"`; module paths and file names do not match) appears under `orchestration/connectors/**` |
+| `pack-url` | the same under `orchestration/packs/**`. Tenant values go to `orchestration/tenants/<tenant>/config.py`, read with `orchestration.tenants.setting(name)` |
 
 ```mermaid
 flowchart LR
@@ -80,6 +82,8 @@ flowchart LR
 | `pack:<p>` | `cdm`, `core`, `pack:<p>`, connectors listed in `pack_connectors[<p>]` |
 | `tenant:<t>`, `monitoring` | anything |
 
+Tests (each rule fails on a planted violation): `scripts/tests/test_check_boundaries.py`.
+
 ### Adding a model
 
 1. Put the model in the folder of its module.
@@ -94,4 +98,4 @@ flowchart LR
   longer occurs, so fixed debt must be removed from the file in the same commit.
 - `--write-allowlist` regenerates the file from the current violations and keeps existing
   reasons; new entries get `TODO: reason and exit plan` and must be edited before commit.
-- Current entries: 24 dependency violations (summarized in `docs/architecture/modules.md` §3) and 37 `dbt-path` entries for Fine Japan tenant models not yet moved.
+- Current entries (33, all generated from the manifest and the orchestration imports): 16 `dbt-ref` (pack hooks core → pack, the tenant hook `mart_data_quality` → `fact_us_shipment_economics`, declared pack → pack and pack → connector edges), 12 `dbt-source` (CRM export read by packs `crm`/`hug`, the overhead sheet read by `finance`) and 5 `orch-import` (four connector jobs and `sales_playbook` importing the crm pack). Summary and exits: `docs/architecture/modules.md` §3 and §10. No `dbt-path` entry: every model sits in its module folder.

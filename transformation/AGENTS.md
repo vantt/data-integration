@@ -13,15 +13,18 @@ Models live in `models/<module>/<layer>/` (design: `docs/architecture/modules.md
 | `connectors/<source>/` | `connector:<source>` | its own dbt sources and models |
 | `cdm/` | `cdm` (the `std_*` canonical layer) | connectors |
 | `core/` | `core` | `cdm`, `core` |
-| `packs/<pack>/` | `pack:<pack>` | `cdm`, `core`, its declared connector |
-| `tenants/<tenant>/` | `tenant:<tenant>` | anything |
+| `packs/<pack>/` | `pack:<pack>` | `cdm`, `core`, its declared connector (`crm`, `hug`, `finance`, `sales_playbook`, `marketplace`, `facebook_*`; each has a README) |
+| `tenants/<tenant>/` | `tenant:<tenant>` | anything (`tenants/fine_japan/`: US shipment only) |
+| `monitoring/` | `monitoring` | anything (read only) |
 
 The layer folder (`staging`, `intermediate`, `marts`) decides schema, materialization and tags
 through the layer anchors in `dbt_project.yml`; the module folder never does, so moving a model
 between modules keeps its relation. Every model is listed in `scripts/checks/model_buckets.yaml`
 and `python3 scripts/checks/check_boundaries.py --manifest target/manifest.json` must pass.
-Models of `tenant:fine_japan` still sit in the old top-level `staging/`, `intermediate/`,
-`marts/` folders until the tenant overlay is moved.
+The old top-level `staging/`, `intermediate/`, `marts/` folders are gone; a new model goes into
+a module folder. Logic is product (pack), data and configuration belong to the business
+(tenant): Fine Japan's business seeds live in `seeds/tenants/fine_japan/`. Core reading a pack or
+a tenant is a hook that must be listed in `scripts/checks/boundary_allowlist.yaml`.
 
 ## Classification rules (taxonomy)
 
@@ -30,7 +33,7 @@ Every rule that assigns a business label (`customer_type`, `value_group`, `chann
 real variants exist, exact semantics, and what is still SQL versus data. Read it before changing or
 adding such a rule, and update it in the same change.
 
-- Seeds that classify live in `seeds/taxonomy/`. Python code finds a seed by name with
+- Seeds that classify live in `seeds/taxonomy/`; business data of a tenant in `seeds/tenants/<tenant>/`. Python code finds a seed by name with
   `seed_path("<name>")` from `ingestion/src/utils/seed_paths.py`; never hard-code the folder.
   Seed names stay unique across folders (`check_boundaries.py` rule `seed-duplicate`).
 - `+column_types` for a seed in a subfolder goes under that folder's key in the `seeds:` block of

@@ -84,7 +84,7 @@ Production untouched
 2. **Automated + fail-loud.** The drill runs on **every** backup (chained immediately after it); a failure reds the orchestration run → the failure sensor alerts. Silent backup rot is the zombie-run lesson repeating — never let it be silent.
 
 ### CRM wiring (reference implementation)
-- **Schedule:** `crm_backup_job` (daily 02:00 ICT, `definitions.py`) runs `crm_backup → crm_restore_verify` (deps-chained, both fail-loud).
+- **Schedule:** `crm_backup_job` (daily 02:00 ICT, `orchestration/packs/crm/jobs.py`) runs `crm_backup → crm_restore_verify` (deps-chained, both fail-loud).
 - **Socket isolation:** the drill must spin a container, so the Docker socket is confined to a single-purpose, token-gated, no-route **`crm_drill_runner`** sidecar (`Dockerfile.drillrunner`, `crm/ops/drill_runner_server.py`) — **never** granted to the orchestrator (`data_platform`). (Lesson **L150**: a drill inside a socket-mounted sidecar reaches the ephemeral by network name on a shared network, not via a host-published port.)
 
 ### Property → mechanism summary
@@ -148,6 +148,6 @@ Dagster → `crm_backup_job` (materializes `crm_backup` then `crm_restore_verify
 ---
 
 ## Reference index
-- **CRM code:** `crm/ops/backup_crm.py`, `crm/ops/restore_verify_crm.py`, `crm/ops/drill_runner_server.py`, `Dockerfile.drillrunner`; `orchestration/assets/crm_sync.py` (`crm_backup`, `crm_restore_verify`); `orchestration/definitions.py` (`crm_backup_job`).
+- **CRM code:** `crm/ops/backup_crm.py`, `crm/ops/restore_verify_crm.py`, `crm/ops/drill_runner_server.py`, `Dockerfile.drillrunner`; `orchestration/packs/crm/crm_sync.py` (`crm_backup`, `crm_restore_verify`); `orchestration/packs/crm/jobs.py` (`crm_backup_job`).
 - **Plans:** `plans/260624-2010-crm-backup-checkpoint-restore-verify/` (CRM pilot, done), `plans/260624-2010-warehouse-pipeline-dr-verified-restore/` (warehouse, to implement).
 - **Lessons:** L50 (always-run rotation cleanup), L56/L68 (never raw-copy a live WAL DB), L58 (2× disk pre-flight), L147 (vacuous-probe ⇒ tamper tests), L148 (CRLF in shell scripts), L150 (socket-sidecar reaches siblings by network name) — `.skills/data-pipeline/references/lessons-learned.md`.

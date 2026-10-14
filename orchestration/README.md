@@ -13,18 +13,20 @@ Full documentation is in [docs/](./docs/README.md):
 - [Schedules](./docs/SCHEDULES.md) — Schedule definitions and conflict resolution
 - [Resources](./docs/RESOURCES.md) — Dagster resources
 
-## Layout: kernel and connectors
+## Layout: kernel, connectors, packs, tenant
 
 | Path | Role |
 |---|---|
-| `definitions.py` | Kernel entry point. Merges the kernel assets with every connector listed in `config/modules.yaml`; defines the cross-source jobs (nightly batch, full refresh), health, maintenance and CRM backup jobs and their schedules |
-| `config/modules.yaml` | Enabled connectors, in digest order |
+| `definitions.py` | Kernel entry point. Merges the kernel assets with every connector and pack listed in `config/modules.yaml`; defines the cross-source jobs (nightly batch, full refresh), health and maintenance jobs and their schedules |
+| `config/modules.yaml` | Enabled connectors (in digest order), packs and the tenant; read by `module_registry.py` |
 | `config/ingestion_sla.yaml` | The one SLA file (freshness, trend, cursor thresholds) keyed `<prefix>/<function_name>`; a missing file raises |
 | `connectors/<id>/` | One package per data source: its ingest assets, jobs, schedules, sensors and the data the kernel needs about it. Contract and how to add or drop one: [connectors/README.md](./connectors/README.md) |
+| `packs/<id>/` | Product packs (`crm`, `hug`, `finance`, `sales_playbook`): Dagster code of reusable product logic. `crm` owns the CRM write-back, cache refresh and `crm_backup_job`; `sales_playbook` owns the approach-script autogen; `hug` and `finance` have no Dagster code. Contract: [packs/README.md](./packs/README.md) |
+| `tenants/<id>/config.py` | Configuration of the business this deployment runs for (Fine Japan: [tenants/fine_japan/README.md](./tenants/fine_japan/README.md)), read through `orchestration.tenants.setting(name)`; shared code has no default for these values |
 | `job_support.py` | `SYNC_TAGS`, `has_active_run`, `long_dbt_rw_holder` used by connector schedules |
 | `assets/{dbt,serving,rill,reconciliation,kpi_closure}.py`, `sensors/`, `ops/`, `asset_checks/`, `notifications/` | Kernel, generic for every source. They keep their location on purpose: several compute paths from `__file__` |
 
-The kernel never imports a connector by name; it reads the enabled packages through `orchestration.connectors.load_enabled()`.
+The kernel never imports a connector, pack or tenant by name; it reads the enabled packages through `orchestration.connectors.load_enabled()`, `orchestration.packs.load_enabled()` and `orchestration.tenants.setting()`.
 
 ## Quick Start
 

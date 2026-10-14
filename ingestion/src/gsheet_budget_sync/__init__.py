@@ -14,7 +14,8 @@ and holds the top-level orchestration (fetch_transform_and_save, write_suggestio
   duckdb_actuals.py    serving-DB reads that feed suggestion/ref computation
   sheet_writeback.py   A1-cell helpers + credentialed Sheets API write
 
-Writes 2 dbt seeds (transformation/seeds/): seed_cashflow_budget.csv (long format, 1 row per
+Writes 2 dbt seeds of the tenant (transformation/seeds/tenants/fine_japan/, located by name with
+utils/seed_paths.py): seed_cashflow_budget.csv (long format, 1 row per
 cashflow_line/period_month/direction/item_type/item_label) and seed_cash_allocation_policy.csv
 (1 row per waterfall bucket priority). Only "Budget Tx" columns are read by the default sync
 (never "Gợi ý Tx"); item_type=recurring must match __REF; ANY validation failure aborts the

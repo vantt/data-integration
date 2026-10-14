@@ -601,7 +601,7 @@ Eight columns capture per-customer discount history across 4 business buckets. E
 
 > **Phase 1 Status:** Ready (Implemented 2026-06-13)
 > **dbt Model:** [int_customer_metrics](../../../transformation/models/core/marts/intermediate/int_customer_metrics.sql) (source) & [dim_customers](../../../transformation/models/core/marts/dim_customers.sql) (5 columns)
-> **Also in:** [mart_customer_action_queue](../../../transformation/models/marts/customer/mart_customer_action_queue.sql)
+> **Also in:** [mart_customer_action_queue](../../../transformation/models/packs/sales_playbook/marts/mart_customer_action_queue.sql)
 
 Five columns provide SKU-level purchase preference signals for personalizing CSKH/Sales reorder and cross-sell scripts.
 

@@ -2,7 +2,8 @@ import os
 
 from dagster import AssetSelection, define_asset_job
 
-from orchestration.assets import crm_sync, serving
+from orchestration.assets import serving
+from orchestration.packs.crm import crm_sync
 from orchestration.job_support import FACT_ORDER_RETURNS, SYNC_TAGS
 from orchestration.sensors.file_drop_sensors import make_file_drop_sensor
 

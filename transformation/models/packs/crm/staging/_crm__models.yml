@@ -1,0 +1,37 @@
+version: 2
+
+models:
+
+  - name: stg_crm__customer_profile_custom
+    description: "Custom profile fields (1 row per party)."
+    columns:
+      - name: party_id
+        tests: [unique, not_null]
+
+
+  - name: stg_crm__note
+    description: "CRM notes (team-visible, non-deleted)."
+    columns:
+      - name: note_id
+        tests: [unique, not_null]
+      - name: party_id
+        tests: [not_null]
+
+
+  - name: stg_crm__party_insight
+    description: "Rep-curated insights (active rows)."
+    columns:
+      - name: insight_id
+        tests: [unique, not_null]
+      - name: party_id
+        tests: [not_null]
+
+
+  - name: stg_crm__party_tag
+    description: "Party-tag assignments enriched with tag taxonomy."
+    columns:
+      - name: party_id
+        tests: [not_null]
+      - name: tag_id
+        tests: [not_null]
+

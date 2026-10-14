@@ -23,7 +23,7 @@ CRM_EXPORT = Path(DATA_LAKE_ROOT) / "crm_export"
 
 
 # Minimal column schemas matching the CRM export queries.
-# NOTE: keep in sync with export_query columns in orchestration/assets/crm_writeback_assets.py
+# NOTE: keep in sync with export_query columns in orchestration/packs/crm/crm_writeback_assets.py
 # (CRM_WRITEBACK_TABLES) — a column added there but not here reproduces the exact bug this
 # script exists to prevent (dbt "column not found" on every realtime/incremental tick until
 # the nightly crm_writeback job first runs for that table).

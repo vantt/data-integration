@@ -24,7 +24,7 @@ trong `seed_action_scenario_registry` (không theo khách). Đọc/viết `crm_a
 ## Data
 
 Nguồn danh mục: `cache.wh_action_scenario_registry` (13 dòng, sync từ
-`transformation/seeds/seed_action_scenario_registry.csv` qua Phase 01-02). Grouped theo
+`transformation/seeds/tenants/fine_japan/seed_action_scenario_registry.csv` qua Phase 01-02). Grouped theo
 `scenario_group`. Mỗi dòng join với `crm_action_dismissal` theo `(action_type, source_mart)`
 cho party hiện tại.
 

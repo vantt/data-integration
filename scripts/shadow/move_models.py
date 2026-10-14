@@ -7,12 +7,16 @@ marts) is the model's current top folder and is kept, because dbt_project.yml co
 schema, materialization and tags per layer. So a move changes the file path and fqn only:
 relation, schema and tags stay identical (verified by scripts/shadow/gate.sh).
 
+A model already in a module folder (models/<module>/<layer>/...) whose bucket changed moves to
+models/<new module>/<layer>/... with the rest of its path kept (e.g. core/marts/sales/x.sql ->
+packs/finance/marts/sales/x.sql).
+
 For each moved model the script:
   - `git mv`s the .sql file,
   - cuts the model's block out of its properties YAML (text based, comments preserved) and
     appends it to `_<module>__models.yml` in the new directory,
-and moves each connector's dbt source block from models/sources.yml to
-models/connectors/<connector>/staging/_sources.yml.
+and moves each dbt source block of a moved bucket (SOURCE_OWNER) from models/sources.yml to
+models/<module>/staging/_sources.yml; models/sources.yml is removed once empty.
 """
 from __future__ import annotations
 
@@ -29,7 +33,12 @@ import yaml
 
 ROOT = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 TRANSFORMATION = os.path.join(ROOT, "transformation")
-SOURCE_CONNECTOR = {"sapo_v2_raw": "sapo_v2", "gsheet_raw": "gsheet", "shopee_raw": "shopee", "misa_raw": "misa"}
+# dbt source -> bucket that owns it (the module whose staging models read it)
+SOURCE_OWNER = {
+    "sapo_v2_raw": "connector:sapo_v2", "gsheet_raw": "connector:gsheet", "shopee_raw": "connector:shopee",
+    "misa_raw": "connector:misa", "hug_raw": "connector:hug", "crm_export": "pack:crm",
+}
+MODULE_ROOTS = {"core": 1, "cdm": 1, "monitoring": 1, "connectors": 2, "packs": 2, "tenants": 2}
 STAGING_SUBFOLDERS_TO_DROP = {"standard", "facebook_ads", "facebook_messenger"}
 
 
@@ -41,11 +50,17 @@ def module_dir(bucket: str) -> str | None:
 
 
 def target_path(path: str, bucket: str) -> str:
-    """models/<layer>/<rest...> -> models/<module>/<layer>/<rest...>"""
+    """models/<layer>/<rest...> or models/<old module>/<layer>/<rest...> -> models/<module>/<layer>/<rest...>"""
     parts = path.split("/")
     assert parts[0] == "models", path
-    layer, rest = parts[1], parts[2:]
     mod = module_dir(bucket)
+    depth = MODULE_ROOTS.get(parts[1])
+    if depth and mod is not None:                # already in a module folder: swap the module only
+        layer_and_rest = parts[1 + depth:]
+        if layer_and_rest and layer_and_rest[0] in ("staging", "intermediate", "marts"):
+            return "/".join(["models", *mod.split("/"), *layer_and_rest])
+        return path
+    layer, rest = parts[1], parts[2:]
     if mod is None or layer not in ("staging", "intermediate", "marts"):
         return path
     if layer == "staging" and len(rest) > 1 and rest[0] in STAGING_SUBFOLDERS_TO_DROP:
@@ -163,33 +178,41 @@ def main() -> int:
         if args.dry_run:
             continue
         remaining = [line for b in blocks.values() for line in b]
-        if remaining or [l for l in tail if l.strip()]:
+        # the head may hold other top-level keys (e.g. a `seeds:` block before `models:`)
+        head_content = [l for l in head if l.strip() and not l.lstrip().startswith("#")
+                        and not l.startswith(("version:", "models:"))]
+        if remaining or head_content or [l for l in tail if l.strip()]:
             with open(yml, "w") as fh:
                 fh.writelines(head + remaining + tail)
         else:
             subprocess.run(["git", "rm", "-q", yml], cwd=ROOT, check=True)
             print(f"rm {yml_rel} (empty)")
 
-    # dbt sources owned by moved connectors
-    moved_connectors = {b.split(":")[1] for b in buckets.values()
-                        if b.startswith("connector:") and any(fnmatch.fnmatch(b, pat) for pat in patterns)}
+    # dbt sources owned by moved buckets
     src_yml = os.path.join(TRANSFORMATION, "models", "sources.yml")
-    if os.path.exists(src_yml) and moved_connectors:
+    owners = {s: b for s, b in SOURCE_OWNER.items() if any(fnmatch.fnmatch(b, pat) for pat in patterns)}
+    if os.path.exists(src_yml) and owners:
         text = open(src_yml).read().replace("\nsources:\n", "\nmodels:\n", 1)  # reuse block splitter
         head, blocks, tail = split_models_blocks(text)
-        for source, conn in SOURCE_CONNECTOR.items():
-            if conn in moved_connectors and source in blocks:
-                target = os.path.join(TRANSFORMATION, "models", "connectors", conn, "staging", "_sources.yml")
+        for source, bucket in owners.items():
+            if source in blocks:
+                target = os.path.join(TRANSFORMATION, "models", *module_dir(bucket).split("/"), "staging", "_sources.yml")
                 print(f"source {source} -> {os.path.relpath(target, ROOT)}")
                 if not args.dry_run:
+                    if os.path.exists(target):
+                        sys.exit(f"{os.path.relpath(target, ROOT)} already exists; merge the {source} block by hand")
                     os.makedirs(os.path.dirname(target), exist_ok=True)
                     with open(target, "w") as fh:
                         fh.write("version: 2\n\nsources:\n")
                         fh.writelines(blocks.pop(source))
         if not args.dry_run:
             remaining = [line for b in blocks.values() for line in b]
-            with open(src_yml, "w") as fh:
-                fh.write("".join(head).replace("\nmodels:\n", "\nsources:\n", 1) + "".join(remaining + tail))
+            if remaining or [l for l in tail if l.strip()]:
+                with open(src_yml, "w") as fh:
+                    fh.write("".join(head).replace("\nmodels:\n", "\nsources:\n", 1) + "".join(remaining + tail))
+            else:
+                subprocess.run(["git", "rm", "-q", src_yml], cwd=ROOT, check=True)
+                print("rm models/sources.yml (empty)")
     print(f"{len(moves)} model(s) {'would move' if args.dry_run else 'moved'}")
     return 0
 

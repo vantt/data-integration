@@ -1,0 +1,30 @@
+version: 2
+
+seeds:
+  - name: seed_action_scenario_registry
+    description: >
+      Enable/disable switch for action_type output, per (action_type, mart) — lets
+      a scenario be toggled off at the output layer without an SQL branching change.
+      Missing registry row defaults to enabled (COALESCE(reg.enabled, TRUE) = TRUE)
+      so a mart-name typo or unregistered action_type never silently drops existing
+      output. `enabled` is explicitly typed boolean in dbt_project.yml (DuckDB seed
+      inference otherwise loads it as VARCHAR, breaking the COALESCE comparison).
+      Consumed by mart_customer_sku_action_queue and mart_customer_action_queue.
+    columns:
+      - name: action_type
+        data_type: varchar
+        tests: [not_null]
+      - name: mart
+        data_type: varchar
+        description: "Consuming mart name — 'mart_customer_sku_action_queue' or 'mart_customer_action_queue'."
+        tests: [not_null]
+      - name: enabled
+        data_type: boolean
+        tests: [not_null]
+      - name: scenario_group
+        data_type: varchar
+      - name: description_vi
+        data_type: varchar
+    tests:
+      - dbt_utils.unique_combination_of_columns:
+          combination_of_columns: [action_type, mart]

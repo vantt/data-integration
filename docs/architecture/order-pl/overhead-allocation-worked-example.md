@@ -176,4 +176,4 @@ Channel net profit   4.161.775,63 ₫
 | net_cost từng tài khoản | `std_misa_account_ledger` ← `misa_raw/account_ledger` (03/2026) |
 | account → pool, base, treatment | bảng phân loại gsheet `overhead_account_classification` |
 
-*Công thức tham chiếu: `transformation/models/intermediate/overhead/int_order_overhead_allocation.sql` (nhánh ACTUAL) + `int_overhead_pool_monthly.sql` (định nghĩa pool).*
+*Công thức tham chiếu: `transformation/models/packs/finance/intermediate/overhead/int_order_overhead_allocation.sql` (nhánh ACTUAL) + `int_overhead_pool_monthly.sql` (định nghĩa pool).*

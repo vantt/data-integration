@@ -38,9 +38,12 @@ seeds:
           channel_code: varchar
           channel_name: varchar
           channel_group: varchar
-    seed_action_scenario_registry:
-      +column_types:
-        enabled: boolean
+    # Business data of the Fine Japan tenant for the packs (seeds/tenants/fine_japan/).
+    tenants:
+      fine_japan:
+        seed_action_scenario_registry:
+          +column_types:
+            enabled: boolean
 # Dispatch configuration
 dispatch:
   - macro_namespace: dbt
@@ -58,42 +61,33 @@ models:
 
     # Layer configs. Schema, materialization and selection tags depend on the LAYER
     # (staging / intermediate / marts), never on the module folder, so moving a model
-    # between modules keeps its relation. Each module below reuses these via YAML anchors.
-    # Layout: models/<module>/<layer>/... (docs/architecture/modules.md).
-    staging: &layer_staging
-      +schema: staging
-      +materialized: view
-      +tags: ["otp"]
-
-    intermediate: &layer_intermediate
-      +materialized: external
-      +options:
-        format: "parquet"
-      shopee:
-        +tags: ["int", "shopee"]
-      misa:
-        +tags: ["int", "misa"]
-      us_shipment:
-        +tags: ["int", "us_shipment"]
-
-    marts: &layer_marts
-      +schema: marts
-      +materialized: external
-      +options:
-        format: "parquet"
-      +tags: ["olap"]
-      +on_schema_change: sync_all_columns
-
+    # between modules keeps its relation. Each layer is defined once as a YAML anchor
+    # (&layer_staging, &layer_intermediate, &layer_marts) where it is first used and every
+    # other module reuses it. Layout: models/<module>/<layer>/... (docs/architecture/modules.md).
     # Modules (bucket of every model: scripts/checks/model_buckets.yaml)
     connectors:
       sapo_v2:
-        staging: *layer_staging
-        intermediate: *layer_intermediate
+        staging: &layer_staging
+          +schema: staging
+          +materialized: view
+          +tags: ["otp"]
+        intermediate: &layer_intermediate
+          +materialized: external
+          +options:
+            format: "parquet"
+          shopee:
+            +tags: ["int", "shopee"]
+          misa:
+            +tags: ["int", "misa"]
+          us_shipment:
+            +tags: ["int", "us_shipment"]
       shopee:
         staging: *layer_staging
       misa:
         staging: *layer_staging
       gsheet:
+        staging: *layer_staging
+      hug:
         staging: *layer_staging
       facebook_ads:
         staging: *layer_staging
@@ -103,16 +97,36 @@ models:
       staging: *layer_staging
     core:
       intermediate: *layer_intermediate
-      marts: *layer_marts
+      marts: &layer_marts
+        +schema: marts
+        +materialized: external
+        +options:
+          format: "parquet"
+        +tags: ["olap"]
+        +on_schema_change: sync_all_columns
     packs:
       finance:
+        staging: *layer_staging
         intermediate: *layer_intermediate
         marts: *layer_marts
       marketplace:
         intermediate: *layer_intermediate
+      crm:
+        staging: *layer_staging
+        marts: *layer_marts
+      hug:
+        staging: *layer_staging
+        marts: *layer_marts
+      sales_playbook:
+        marts: *layer_marts
       facebook_ads:
         marts: *layer_marts
       facebook_messenger:
+        marts: *layer_marts
+    tenants:
+      fine_japan:
+        staging: *layer_staging
+        intermediate: *layer_intermediate
         marts: *layer_marts
 
 vars:

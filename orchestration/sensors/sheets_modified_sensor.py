@@ -27,7 +27,6 @@ from __future__ import annotations
 
 import hashlib
 import json
-import os
 from typing import Optional
 
 import requests
@@ -39,32 +38,25 @@ from dagster import (
     sensor,
 )
 
-# Public CSV export URLs — mirrored from ingestion/.dlt/config.toml
-# Kept here (not re-read from dlt config) so the sensor has no hard dep on
-# dlt's config resolution path. If URLs change, update both places.
-_DEFAULT_TARGETS_URL = (
-    "https://docs.google.com/spreadsheets/d/"
-    "1ZHt2iAD88OGgSRopVOkqEgusja-JpP4XqtiH4anhax4/export?format=csv"
-)
-_DEFAULT_MARKETING_URL = (
-    "https://docs.google.com/spreadsheets/d/"
-    "1wQpT4lCZWrPE7fnbRNTKiNDRFzVT2u_WhN-9uY9u3lc/export?format=csv"
-)
-_DEFAULT_US_PRICES_URL = (
-    "https://docs.google.com/spreadsheets/d/"
-    "1PWPQzzML_-i9yUrjGyhUcW0ABkrGEtXE2k49EaW4gwc/export?format=csv&gid=304875363"
-)
+from orchestration.tenants import setting
 
-SHEET_URLS = {
-    "targets": os.environ.get("SHEETS_SENSOR_TARGETS_URL", _DEFAULT_TARGETS_URL),
-    "marketing_spend": os.environ.get(
-        "SHEETS_SENSOR_MARKETING_URL", _DEFAULT_MARKETING_URL
-    ),
+# Public CSV export URLs of the tracked sheets are tenant values (Fine Japan:
+# orchestration/tenants/fine_japan/config.py; the ingestion readers keep their own copy). The
+# env var of the same name overrides; with neither, the tick fails with TenantConfigError
+# instead of polling another business's sheet. Read per tick so a missing value fails this
+# sensor, not the whole code location.
+SHEET_URL_SETTINGS = {
+    "targets": "SHEETS_SENSOR_TARGETS_URL",
+    "marketing_spend": "SHEETS_SENSOR_MARKETING_URL",
     # US Shipment price changes are infrequent but high-impact; detect immediately.
-    "us_shipment_prices": os.environ.get(
-        "SHEETS_SENSOR_US_SHIPMENT_PRICES_URL", _DEFAULT_US_PRICES_URL
-    ),
+    "us_shipment_prices": "SHEETS_SENSOR_US_SHIPMENT_PRICES_URL",
 }
+
+
+def sheet_urls() -> dict[str, str]:
+    """{sheet name: CSV export URL}; raises TenantConfigError when a URL is not configured."""
+    return {name: setting(key) for name, key in SHEET_URL_SETTINGS.items()}
+
 
 # HTTP timeout per sheet fetch. Sheets are tiny but the Google edge can
 # occasionally be slow; keep this short so a stuck tick never blocks the
@@ -118,7 +110,7 @@ def ingest_sheets_modified_sensor(context: SensorEvaluationContext):
     current: dict[str, str] = {}
     errors: list[str] = []
 
-    for name, url in SHEET_URLS.items():
+    for name, url in sheet_urls().items():
         digest = _fetch_sheet_hash(url)
         if digest is None:
             errors.append(name)

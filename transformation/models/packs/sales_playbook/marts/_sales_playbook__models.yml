@@ -1,0 +1,200 @@
+version: 2
+
+models:
+  # Customer — opportunity taxonomy passthrough
+  - name: dim_action_scenario_registry
+    description: >
+      Passthrough of seed_action_scenario_registry into the serving layer — the CRM app's
+      reverse-ETL cannot see dbt seeds directly (seeds never produce a rolling/ parquet
+      folder), so this leaf model exposes the same (action_type, mart) taxonomy + Vietnamese
+      labels for the Customer 360 "Cài đặt gợi ý" suppression panel. No filtering, no
+      renaming — seed stays the single source of truth.
+    columns:
+      - name: action_type
+        data_type: varchar
+        tests: [not_null]
+      - name: mart
+        data_type: varchar
+        description: "'mart_customer_sku_action_queue' or 'mart_customer_action_queue'."
+        tests:
+          - not_null
+          - accepted_values:
+              arguments:
+                values: ['mart_customer_sku_action_queue', 'mart_customer_action_queue']
+      - name: enabled
+        data_type: boolean
+        tests: [not_null]
+      - name: scenario_group
+        data_type: varchar
+      - name: description_vi
+        data_type: varchar
+    tests:
+      - dbt_utils.unique_combination_of_columns:
+          combination_of_columns: [action_type, mart]
+
+
+  - name: mart_customer_action_queue
+    description: >
+      Actionable outreach queue: one row per RETAIL customer needing outreach.
+      action_type drives the detailView Actions tab and CS/Sales daily workflow.
+      Excludes BRONZE-tier and margin-negative customers by design.
+    columns:
+      - name: customer_key
+        data_type: varchar
+        tests: [not_null]
+      - name: customer_id
+        data_type: varchar
+      - name: customer_code
+        data_type: varchar
+      - name: full_name
+        data_type: varchar
+      - name: phone
+        data_type: varchar
+      - name: email
+        data_type: varchar
+      - name: value_group
+        data_type: varchar
+      - name: customer_status
+        data_type: varchar
+      - name: next_purchase_signal
+        data_type: varchar
+      - name: discount_sensitivity
+        data_type: varchar
+      - name: lifetime_value
+        data_type: bigint
+      - name: order_count
+        data_type: integer
+      - name: avg_order_spend
+        data_type: bigint
+      - name: avg_days_between_orders
+        data_type: double
+      - name: cancel_rate
+        data_type: double
+      - name: recency_days
+        data_type: integer
+      - name: last_order_date
+        data_type: date
+      - name: predicted_next_purchase_date
+        data_type: date
+      - name: channel_preference
+        data_type: varchar
+      - name: product_affinity
+        data_type: varchar
+      - name: last_purchased_product
+        data_type: varchar
+      - name: last_purchased_sku
+        data_type: varchar
+      - name: top_affinity_product
+        data_type: varchar
+      - name: top_affinity_sku
+        data_type: varchar
+      - name: second_affinity_product
+        data_type: varchar
+      - name: payment_behavior
+        data_type: varchar
+      - name: is_contactable
+        data_type: boolean
+        description: >
+          Passthrough from mart_customer_tier.is_contactable (dim_customers.is_contactable
+          is the canonical source) — stricter than a bare phone-presence check, excludes
+          masked/obfuscated marketplace-relay phones.
+      - name: strategic_tier
+        data_type: varchar
+        description: "Passthrough from mart_customer_tier.strategic_tier — enrichment column, available as a future branching predicate."
+      - name: lifetime_contribution_margin
+        data_type: bigint
+      - name: is_margin_negative
+        data_type: boolean
+      - name: action_type
+        data_type: varchar
+        tests: [not_null]
+      - name: has_manual_risk_flag
+        data_type: boolean
+        description: >
+          TRUE if customer has a human-assigned (source='crm_user') risk tag,
+          regardless of which action_type won the CASE (e.g. still TRUE for a
+          VIP customer whose action_type is CALL_NOW/WIN_BACK, not just
+          MANUAL_RISK_REVIEW). Prevents the risk signal from being silently
+          dropped when a higher-priority VIP branch wins the CASE.
+      - name: risk_tag_labels
+        data_type: varchar
+        description: "Comma-concatenated display labels of the customer's risk tags. NULL when has_manual_risk_flag is FALSE."
+      - name: priority_rank
+        data_type: integer
+        tests: [not_null]
+      - name: action_rationale
+        data_type: varchar
+      - name: value_at_stake
+        data_type: bigint
+      - name: queue_generated_at
+        data_type: timestamp with time zone
+      - name: last_contacted_at
+        data_type: timestamp with time zone
+      - name: last_contact_result
+        data_type: varchar
+      - name: last_contact_channel
+        data_type: varchar
+      - name: is_recently_contacted_positively
+        data_type: boolean
+
+
+  - name: mart_customer_sku_action_queue
+    description: >
+      Product-aware outreach queue. Grain: (customer_key, sku) — one row per customer
+      per core SKU needing action today. One customer can have multiple rows (one per SKU).
+      Companion to mart_customer_action_queue (customer-level behavioral signals).
+      5 action types for supply_stream='purchased': USAGE_FOLLOWUP (D5-9), PROGRESS_CHECK (D12-16),
+      REORDER_OVERDUE (>7d past depletion), REORDER_NUDGE (D-7 to D0), REORDER_PREEMPT (within lead days).
+      Priority ranks integrate with the customer-level queue: 2=OVERDUE, 3=NUDGE, 5=PREEMPT,
+      6=PROGRESS_CHECK, 7=USAGE_FOLLOWUP (GIFT_TO_PURCHASE falls to the default rank 9).
+      GIFT_TO_PURCHASE (supply_stream='gift_only', Phase 4) ships enabled=false in
+      seed_action_scenario_registry — computed but suppressed pending timing-rule review.
+    columns:
+      - name: customer_key
+        data_type: varchar
+        tests: [not_null]
+      - name: customer_id
+        data_type: integer
+      - name: sku
+        data_type: varchar
+        tests: [not_null]
+      - name: product_group
+        data_type: varchar
+      - name: product_display_name
+        data_type: varchar
+      - name: last_purchase_date
+        data_type: date
+      - name: last_order_qty
+        data_type: integer
+      - name: effective_supply_days
+        data_type: integer
+      - name: estimated_depletion_date
+        data_type: date
+      - name: days_until_depletion
+        data_type: integer
+      - name: days_since_order
+        data_type: integer
+      - name: is_contactable
+        data_type: boolean
+        description: >
+          Passthrough from mart_customer_tier.is_contactable (dim_customers.is_contactable
+          is the canonical source) — stricter than a bare phone-presence check, excludes
+          masked/obfuscated marketplace-relay phones.
+      - name: strategic_tier
+        data_type: varchar
+        description: "Passthrough from mart_customer_tier.strategic_tier — enrichment column, available as a future branching predicate."
+      - name: action_type
+        data_type: varchar
+        tests:
+          - not_null
+          - accepted_values:
+              arguments:
+                values: ['USAGE_FOLLOWUP', 'PROGRESS_CHECK', 'REORDER_OVERDUE', 'REORDER_NUDGE', 'REORDER_PREEMPT', 'GIFT_TO_PURCHASE']
+      - name: priority_rank
+        data_type: integer
+        tests: [not_null]
+      - name: action_rationale
+        data_type: varchar
+      - name: queue_generated_at
+        data_type: timestamp with time zone
+

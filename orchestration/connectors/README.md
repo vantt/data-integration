@@ -2,7 +2,7 @@
 
 One package per data source under `orchestration/connectors/<id>/`. The kernel (`definitions.py`, `ops/`, `sensors/`, `asset_checks/`, `assets/dbt.py`) knows connectors only through the packages listed in [`../config/modules.yaml`](../config/modules.yaml). Architecture and write authority: [docs/architecture/modules.md §4–§5](../../docs/architecture/modules.md).
 
-Enabled today: `sapo_v2`, `shopee`, `misa_amis`, `sheets`, `hug` (`hug` moves to the Fine Japan tenant overlay later). Facebook ingestion has no Dagster asset yet and is noted as dormant in `modules.yaml`.
+Enabled today: `sapo_v2`, `shopee`, `misa_amis`, `sheets`, `hug` (`hug` feeds the `hug` pack). Facebook ingestion has no Dagster asset yet and is noted as dormant in `modules.yaml`. Packs (`orchestration/packs/`, [README](../packs/README.md)) and the tenant (`orchestration/tenants/`) are listed in the same file and loaded the same way (`orchestration/module_registry.py`).
 
 ## Contract
 
@@ -36,8 +36,9 @@ Jobs that span sources (`pipeline_batch_nightly_job`, `pipeline_batch_fullrefres
 
 - Names are the identity of live state: asset keys, asset check keys, job, schedule and sensor names, cron, timezone and default status must not change when code moves. Schedule on/off state in `dagster_home` is keyed by code location, repository and name.
 - Connectors import from the kernel (`orchestration.assets.utils`, `orchestration.ops.*`, `orchestration.job_support`, `orchestration.sensors.file_drop_sensors`), never the reverse except through `load_enabled()`.
+- Connectors do not import packs (`check_boundaries.py`, rule `orch-import`). Known exception, allowlisted per file until after Đợt 1: the jobs of `sapo_v2`, `shopee`, `misa_amis` and `sheets` select `crm_cache_refresh` from `orchestration.packs.crm`, so the crm pack must stay enabled while those connectors are.
 - Paths come from `DLT_DIR` (`orchestration/assets/utils.py`), not from `__file__`, so a package can move without breaking ingestion script imports.
-- No hard-coded `http(s)://` URL in this tree (`scripts/checks/check_boundaries.py`, rule `connector-url`); tenant values live in the tenant config.
+- No hard-coded `http(s)://` URL, and no domain name in a string literal, in this tree (`scripts/checks/check_boundaries.py`, rule `connector-url`); tenant values live in `orchestration/tenants/<tenant>/config.py` and are read with `orchestration.tenants.setting(name)`, which fails closed when the value is missing (the `sheets` connector's `ingest_sheets_modified_sensor` reads its sheet URLs this way).
 - One SLA file: `config/ingestion_sla.yaml`.
 
 ## Add a connector

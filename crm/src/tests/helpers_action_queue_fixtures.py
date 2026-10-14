@@ -16,7 +16,7 @@ from adapters.outbound.sqlite.action_state_repository import SQLiteActionStateRe
 from adapters.outbound.sqlite.action_catalog_repository import SQLiteActionCatalogRepository
 from adapters.outbound.sqlite.cache_repository import SQLiteCacheRepository
 
-# Mirrors transformation/seeds/seed_action_scenario_registry.csv (13 rows) — kept in sync
+# Mirrors transformation/seeds/tenants/fine_japan/seed_action_scenario_registry.csv (13 rows) — kept in sync
 # manually; Phase 02's success criterion (7 customer / 6 sku, GIFT_TO_PURCHASE disabled)
 # is the fixture-drift guard.
 _REGISTRY_ROWS = [

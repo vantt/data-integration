@@ -185,7 +185,7 @@ ingest_sheets_sync_job = define_asset_job(
 
 ### budget_sheet_sync_job
 
-**Purpose:** Daily sync of the Budget Sheet (BUDGET_ITEMS + ALLOCATION_POLICY tabs) into dbt seed CSVs. Scheduled 30 minutes before nightly dbt build so seeds are fresh at build time. Writes directly to transformation/seeds/ (not the gsheet_raw data lake). Validation is strict: fails loud on any sheet structure issues, missing recurring refs, or ALLOCATION_POLICY gaps/overlaps.
+**Purpose:** Daily sync of the Budget Sheet (BUDGET_ITEMS + ALLOCATION_POLICY tabs) into dbt seed CSVs. Scheduled 30 minutes before nightly dbt build so seeds are fresh at build time. Writes directly to transformation/seeds/tenants/fine_japan/ (located by name with seed_paths.py; not the gsheet_raw data lake). Validation is strict: fails loud on any sheet structure issues, missing recurring refs, or ALLOCATION_POLICY gaps/overlaps.
 
 ```python
 budget_sheet_sync_job = define_asset_job(

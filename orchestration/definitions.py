@@ -11,7 +11,6 @@ from datetime import datetime, timezone, timedelta
 from dagster import (
     Definitions,
     load_assets_from_modules,
-    ScheduleDefinition,
     define_asset_job,
     AssetSelection,
     schedule,
@@ -28,8 +27,9 @@ from orchestration.asset_checks import ALL_CHECKS
 from orchestration.asset_checks.reconciliation_checks import RECON_CHECKS
 from orchestration.asset_checks.kpi_closure_checks import KPI_CHECKS
 from dagster_dbt import DbtCliResource
-from orchestration.assets import dbt, serving, rill, reconciliation, kpi_closure, crm_sync, crm_writeback_assets, approach_script_generation
+from orchestration.assets import dbt, serving, rill, reconciliation, kpi_closure
 from orchestration.connectors import load_enabled, load_enabled_jobs
+from orchestration import packs as pack_registry
 from orchestration.job_support import (
     ACTIVE_STATUSES as _ACTIVE_STATUSES,
     SYNC_TAGS,
@@ -47,13 +47,19 @@ from orchestration.sensors.health_db_watchdog_sensor import health_db_watchdog_s
 # (docker-compose.yml command: `python scripts/ensure_dbt_directories.py && ...`).
 # Don't call it from here: definitions.py is re-imported on every gRPC code
 # server spawn (e.g. each `dagster job launch`), which would add noise.
-kernel_assets = load_assets_from_modules([dbt, serving, rill, reconciliation, kpi_closure, crm_sync, crm_writeback_assets, approach_script_generation])
+kernel_assets = load_assets_from_modules([dbt, serving, rill, reconciliation, kpi_closure])
 
-# Connectors enabled in orchestration/config/modules.yaml contribute their own assets,
-# jobs, schedules and sensors.
+# Connectors and packs enabled in orchestration/config/modules.yaml contribute their own
+# assets, jobs, schedules and sensors.
 connectors = load_enabled()
 connector_jobs = load_enabled_jobs()
-all_assets = [*kernel_assets, *(a for c in connectors for a in c.ASSETS)]
+packs = pack_registry.load_enabled()
+pack_jobs = pack_registry.load_enabled_jobs()
+all_assets = [
+    *kernel_assets,
+    *(a for c in connectors for a in c.ASSETS),
+    *(a for p in packs for a in p.ASSETS),
+]
 
 # ------------------------------------------------------------------------------
 # ASSET SELECTIONS
@@ -81,17 +87,17 @@ all_dbt_assets = AssetSelection.assets(dbt.sapo_dbt_assets)
 # JOBS
 # ------------------------------------------------------------------------------
 
-# Cross-source jobs: they select ingest assets from every enabled connector.
+# Cross-source jobs: they select ingest assets from every enabled connector and the nightly
+# assets of every enabled pack (crm: CRM write-back exports + cache refresh; sales_playbook:
+# approach-script autogen).
 # 3. Nightly Reconciliation Job (Batch — incremental from last cursor)
 _nightly_batch_selection = (
     AssetSelection.assets(*(a for c in connectors for a in c.NIGHTLY_ASSETS)) |
-    AssetSelection.groups("crm_writeback") |
+    AssetSelection.assets(*(a for p in packs for a in p.NIGHTLY_ASSETS)) |
     all_dbt_assets |
     AssetSelection.assets(serving.build_serving_db) |
     AssetSelection.assets(serving.build_standalone_export) |
-    AssetSelection.assets(rill.build_rill_publish) |
-    AssetSelection.assets(crm_sync.crm_cache_refresh) |
-    AssetSelection.assets(approach_script_generation.approach_script_autogen)
+    AssetSelection.assets(rill.build_rill_publish)
 )
 
 pipeline_batch_nightly_job = define_asset_job(
@@ -130,6 +136,7 @@ pipeline_batch_fullrefresh_job = define_asset_job(
 # (concurrency_group == "dbt_rw") — eliminates the drift risk of a manual list.
 _ALL_SYNC_JOBS = [
     *(j for c in connector_jobs for j in c.JOBS),
+    *(j for p in pack_jobs for j in p.JOBS),
     pipeline_batch_nightly_job,
     pipeline_batch_fullrefresh_job,
 ]
@@ -367,23 +374,6 @@ dbt_exe = shutil.which("dbt")
 if not dbt_exe:
     dbt_exe = os.path.join(os.path.dirname(os.path.dirname(__file__)), "ingestion", "venv", "Scripts", "dbt.exe")
 
-# Daily CRM backup + restore-verify drill — independent of the warehouse (no dbt_rw lock).
-# crm_backup triggers /admin/backup (verified SQLite snapshot → crm_backups volume); then
-# crm_restore_verify (deps=[crm_backup]) POSTs the crm_drill_runner sidecar to boot an
-# ephemeral CRM from that backup and prove it's restorable. Both fail loudly so
-# health_alert_failure_sensor alerts on a failed backup OR a non-restorable one — a backup
-# isn't trusted until proven recoverable.
-crm_backup_job = define_asset_job(
-    name="crm_backup_job",
-    selection=AssetSelection.assets(crm_sync.crm_backup, crm_sync.crm_restore_verify),
-)
-crm_backup_schedule = ScheduleDefinition(
-    name="crm_backup_schedule",
-    job=crm_backup_job,
-    cron_schedule="0 2 * * *",  # 02:00 ICT daily (outside the 03:00-06:00 maintenance window)
-    default_status=DefaultScheduleStatus.RUNNING,  # auto-enable (schedules in defs are off by default — L49)
-)
-
 defs = Definitions(
     assets=all_assets,
     # Jobs must be listed explicitly so sensors can reference them by name.
@@ -405,7 +395,8 @@ defs = Definitions(
         # maintain_*
         maintain_backup_platform_job,
         maintain_cleanup_job,
-        crm_backup_job,
+        # per pack (crm: crm_backup_job)
+        *(j for p in pack_jobs for j in p.JOBS),
     ],
     schedules=[
         # ingest_* (per connector; add assets to a connector's jobs, not new schedules here)
@@ -420,7 +411,8 @@ defs = Definitions(
         # maintain_*
         maintain_cleanup_schedule,
         maintain_backup_fallback_schedule,
-        crm_backup_schedule,
+        # per pack (crm: crm_backup_schedule)
+        *(sch for p in pack_jobs for sch in p.SCHEDULES),
     ],
     sensors=[
         # ingest_* (per connector)
@@ -432,6 +424,8 @@ defs = Definitions(
         health_db_watchdog_sensor,
         # maintain_*
         trigger_backup_after_purge,
+        # per pack
+        *(sen for p in pack_jobs for sen in p.SENSORS),
     ],
     resources={
         "dbt": DbtCliResource(

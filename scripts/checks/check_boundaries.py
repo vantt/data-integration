@@ -9,14 +9,20 @@ Rules (design: docs/architecture/modules.md §2b, §3 and §12):
 
   py-import       crm/ and detailView/ must not import orchestration, ingestion or
                   transformation; ingestion/ must not import orchestration.
+  orch-import     orchestration/connectors/<c>/ must not import orchestration.packs; a pack
+                  (orchestration/packs/<p>/) must not import another pack. Packs are loaded by
+                  the kernel from modules.yaml; a known coupling is allowlisted per file.
   dbt-bucket      every dbt model (enabled or disabled) has a bucket in model_buckets.yaml.
   dbt-path        a model's file lives under models/<module folder of its bucket>/.
-  dbt-ref         a model may only depend on models allowed by the bucket matrix below.
+  dbt-ref         a model may only depend on models allowed by the bucket matrix below
+                  (core -> packs and core -> tenants are hooks: allowlist only).
   dbt-source      only connector:* and tenant:* models read dbt sources.
   seed-duplicate  no two seed CSVs under transformation/seeds/ share a basename (dbt would
                   fail to parse and the container would not start).
-  connector-url   no hard-coded http(s) URL in orchestration/connectors/** (tenant values
-                  belong in tenant config).
+  connector-url   no hard-coded http(s) URL in orchestration/connectors/**, and no domain
+                  name in a string literal there (tenant values belong in tenant config:
+                  orchestration/tenants/<t>/config.py).
+  pack-url        the same for orchestration/packs/**.
 
 Matrix (row = model's bucket, may depend on):
   connector:<x>   connector:<x>, seeds
@@ -53,6 +59,10 @@ PY_RULES = [
     ("ingestion", {"orchestration"}),
 ]
 URL_RE = re.compile(r"https?://[^\s'\"]+")
+# A host name with a public suffix inside a string literal ("docs.google.com", "x.mysapo.net").
+# Module paths ("orchestration.packs.crm") and file names ("seed.csv") do not match.
+DOMAIN_RE = re.compile(r"\b(?:[a-z0-9-]+\.)+(?:com|net|org|vn|io|dev|app|cloud|co|xyz|site)\b(?![.\w])", re.I)
+ORCH_TREES = (("connectors", "connector-url"), ("packs", "pack-url"))
 
 
 # ------------------------------------------------------------------ python imports
@@ -85,6 +95,52 @@ def python_violations() -> list[tuple[str, str, str]]:
                     for name in names:
                         if name.split(".")[0] in forbidden:
                             out.append(("py-import", rel, name))
+    return out
+
+
+def _imported_modules(tree: ast.AST) -> list[str]:
+    """Absolute module names imported by a file; `from a.b import c` yields `a.b.c` too."""
+    out = []
+    for node in ast.walk(tree):
+        if isinstance(node, ast.Import):
+            out += [a.name for a in node.names]
+        elif isinstance(node, ast.ImportFrom) and node.level == 0 and node.module:
+            out.append(node.module)
+            out += [f"{node.module}.{a.name}" for a in node.names]
+    return out
+
+
+def orchestration_violations() -> list[tuple[str, str, str]]:
+    """Connector packages must not import packs; a pack must not import another pack."""
+    out = []
+    for kind in ("connectors", "packs"):
+        base = os.path.join(ROOT, "orchestration", kind)
+        if not os.path.isdir(base):
+            continue
+        for dirpath, dirnames, files in os.walk(base):
+            dirnames[:] = [d for d in dirnames if d not in {"__pycache__", "__tests__"}]
+            rel_dir = os.path.relpath(dirpath, base)
+            if rel_dir == ".":
+                continue                          # the loader (__init__.py) itself
+            own = rel_dir.split(os.sep)[0]
+            for f in files:
+                if not f.endswith(".py"):
+                    continue
+                path = os.path.join(dirpath, f)
+                rel = os.path.relpath(path, ROOT)
+                try:
+                    tree = ast.parse(open(path, encoding="utf-8").read(), filename=rel)
+                except SyntaxError:
+                    continue
+                targets = set()
+                for name in _imported_modules(tree):
+                    parts = name.split(".")
+                    if parts[:2] != ["orchestration", "packs"] or len(parts) < 3:
+                        continue
+                    if kind == "packs" and parts[2] == own:
+                        continue
+                    targets.add(".".join(parts[:3]))
+                out += [("orch-import", rel, t) for t in sorted(targets)]
     return out
 
 
@@ -152,16 +208,34 @@ def seed_violations() -> list[tuple[str, str, str]]:
     return [("seed-duplicate", f, ", ".join(sorted(p))) for f, p in sorted(seen.items()) if len(p) > 1]
 
 
+def _string_literals(source: str) -> list[tuple[int, str]]:
+    try:
+        tree = ast.parse(source)
+    except SyntaxError:
+        return []
+    return [(n.lineno, n.value) for n in ast.walk(tree) if isinstance(n, ast.Constant) and isinstance(n.value, str)]
+
+
 def url_violations() -> list[tuple[str, str, str]]:
+    """http(s) URLs anywhere and domain names in string literals under connectors/ and packs/."""
     out = []
-    base = os.path.join(ROOT, "orchestration", "connectors")
-    for dirpath, _, files in os.walk(base):
-        for f in files:
-            if f.endswith(".py"):
+    for tree_name, rule in ORCH_TREES:
+        base = os.path.join(ROOT, "orchestration", tree_name)
+        for dirpath, dirnames, files in os.walk(base):
+            dirnames[:] = [d for d in dirnames if d != "__pycache__"]
+            for f in files:
+                if not f.endswith(".py"):
+                    continue
                 path = os.path.join(dirpath, f)
-                for i, line in enumerate(open(path, encoding="utf-8"), 1):
-                    for url in URL_RE.findall(line):
-                        out.append(("connector-url", f"{os.path.relpath(path, ROOT)}:{i}", url))
+                rel = os.path.relpath(path, ROOT)
+                source = open(path, encoding="utf-8").read()
+                found = set()
+                for i, line in enumerate(source.splitlines(), 1):
+                    found |= {(i, url) for url in URL_RE.findall(line)}
+                for lineno, value in _string_literals(source):
+                    if not URL_RE.search(value):
+                        found |= {(lineno, d) for d in DOMAIN_RE.findall(value)}
+                out += [(rule, f"{rel}:{i}", v) for i, v in sorted(found)]
     return out
 
 
@@ -174,7 +248,8 @@ def main() -> int:
 
     spec = yaml.safe_load(open(BUCKETS_FILE))
     manifest = json.load(open(args.manifest))
-    found = python_violations() + dbt_violations(manifest, spec) + seed_violations() + url_violations()
+    found = (python_violations() + orchestration_violations() + dbt_violations(manifest, spec)
+             + seed_violations() + url_violations())
     found_keys = {(r, s, t) for r, s, t in found}
 
     allow = yaml.safe_load(open(ALLOWLIST_FILE)) if os.path.exists(ALLOWLIST_FILE) else {}
@@ -183,8 +258,10 @@ def main() -> int:
 
     if args.write_allowlist:
         doc = {
-            "description": "Known boundary violations. Each needs a reason and a planned exit; "
-            "check_boundaries.py fails on anything not listed here.",
+            "description": "Known boundary violations, generated from the dbt manifest and the "
+            "orchestration imports (check_boundaries.py --write-allowlist). Each needs a reason and a "
+            "planned exit; check_boundaries.py fails on anything not listed here and on entries that "
+            "no longer occur.",
             "allow": [
                 {"rule": r, "subject": s, "target": t,
                  "reason": allowed.get((r, s, t), "TODO: reason and exit plan")}

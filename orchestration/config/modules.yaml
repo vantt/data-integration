@@ -1,8 +1,10 @@
-# Connectors loaded by orchestration/definitions.py, in this order (the order is the
-# row order of the morning digest). Remove an id to drop that connector's assets, jobs,
-# schedules, sensors, asset checks and digest rows; nothing else needs editing.
+# Modules loaded by orchestration/definitions.py (loaders: orchestration/module_registry.py).
 # Restart the Dagster code server after changing this file.
 #
+# connectors: one package per data source under orchestration/connectors/<id>/, in this
+# order (the order is the row order of the morning digest). Remove an id to drop that
+# connector's assets, jobs, schedules, sensors, asset checks and digest rows; nothing else
+# needs editing.
 # facebook_ads / facebook_messenger: ingestion scripts exist but there is no Dagster
 # asset yet (dormant) — add a package under orchestration/connectors/ and list it here
 # once there is one.
@@ -12,3 +14,19 @@ connectors:
   - misa_amis
   - sheets
   - hug
+
+# packs: reusable product logic under orchestration/packs/<id>/ (dbt side:
+# transformation/models/packs/<id>/). Packs without Dagster code (hug, finance) export empty
+# lists. Turning a pack off is not supported yet: connector jobs still select the crm pack's
+# crm_cache_refresh and core dbt models still read pack models (hooks in
+# scripts/checks/boundary_allowlist.yaml); the pack_ref switch comes after Đợt 1.
+packs:
+  - crm
+  - hug
+  - finance
+  - sales_playbook
+
+# tenants: the business this deployment runs for. Its configuration
+# (orchestration/tenants/<id>/config.py) is read through orchestration.tenants.setting().
+tenants:
+  - fine_japan

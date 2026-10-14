@@ -698,7 +698,7 @@ Không có khối SQL: luật là dữ liệu (seed), xem ô "Đã là dữ li�
 |---|---|---|---|
 | `models/core/marts/dim_customers.sql:32` | `us_channel_customers` | biểu thức | `c35a15945492eb7b` |
 | `models/core/marts/dim_customers.sql:330` | `is_us_gift_recipient` | biểu thức | `28ea72d7e8d0d2d8` |
-| `models/intermediate/us_shipment/int_us_shipment_line_prices.sql:25` | `us_channel_filter` | biểu thức | `ede2b4d67d93ea04` |
+| `models/tenants/fine_japan/intermediate/us_shipment/int_us_shipment_line_prices.sql:25` | `us_channel_filter` | biểu thức | `ede2b4d67d93ea04` |
 
 #### `benchmark_status`
 
@@ -811,12 +811,12 @@ Không có khối SQL: luật là dữ liệu (seed), xem ô "Đã là dữ li�
 
 | Vị trí (file:dòng, gốc `transformation/`) | Khối | Loại | sha256 (16 ký tự đầu) |
 |---|---|---|---|
-| `models/marts/customer/mart_crm_activity_log.sql:30` | `is_reached` | biểu thức | `0bab23088ca88bba` |
-| `models/marts/customer/mart_crm_activity_log.sql:31` | `outcome_label` | CASE | `5eec090cb265ee9b` |
-| `models/marts/customer/mart_customer_action_queue.sql:189` | `is_recently_contacted_positively` | CASE | `7bf1994938d86868` |
-| `models/marts/customer/mart_customer_sku_action_queue.sql:199` | `is_recently_contacted_positively` | CASE | `7bf1994938d86868` |
-| `models/marts/crm/mart_staff_performance_weekly.sql:34` | `contacts_reached` | biểu thức | `9b2debf6154919c4` |
-| `models/marts/core/intermediate/int_crm_outreach_effort_events.sql:198` | `is_reached_wide` | biểu thức | `6fd5089ee6e46c7a` |
+| `models/packs/crm/marts/mart_crm_activity_log.sql:30` | `is_reached` | biểu thức | `0bab23088ca88bba` |
+| `models/packs/crm/marts/mart_crm_activity_log.sql:31` | `outcome_label` | CASE | `5eec090cb265ee9b` |
+| `models/packs/sales_playbook/marts/mart_customer_action_queue.sql:189` | `is_recently_contacted_positively` | CASE | `7bf1994938d86868` |
+| `models/packs/sales_playbook/marts/mart_customer_sku_action_queue.sql:199` | `is_recently_contacted_positively` | CASE | `7bf1994938d86868` |
+| `models/packs/crm/marts/mart_staff_performance_weekly.sql:34` | `contacts_reached` | biểu thức | `9b2debf6154919c4` |
+| `models/packs/crm/marts/intermediate/int_crm_outreach_effort_events.sql:198` | `is_reached_wide` | biểu thức | `6fd5089ee6e46c7a` |
 
 #### `deadstock_route_channel`
 
@@ -863,9 +863,9 @@ Không có khối SQL: luật là dữ liệu (seed), xem ô "Đã là dữ li�
 | Vị trí (file:dòng, gốc `transformation/`) | Khối | Loại | sha256 (16 ký tự đầu) |
 |---|---|---|---|
 | `models/core/marts/sales/fact_orders.sql:47` | `discount_type` | CASE | `7ea0802ef42f7945` |
-| `models/core/marts/sales/fact_order_costs.sql:118` | `discount_type` | CASE | `7ea0802ef42f7945` |
+| `models/packs/finance/marts/sales/fact_order_costs.sql:118` | `discount_type` | CASE | `7ea0802ef42f7945` |
 | `models/core/marts/sales/fact_orders.sql:78` | `primary_discount_type` | biểu thức | `11452389794f3a26` |
-| `models/core/marts/sales/fact_order_costs.sql:158` | `primary_discount_type_per_cost_type` | biểu thức | `da99a902bbba789e` |
+| `models/packs/finance/marts/sales/fact_order_costs.sql:158` | `primary_discount_type_per_cost_type` | biểu thức | `da99a902bbba789e` |
 
 #### `discount_group`
 
@@ -911,7 +911,7 @@ Không có khối SQL: luật là dữ liệu (seed), xem ô "Đã là dữ li�
 
 | Vị trí (file:dòng, gốc `transformation/`) | Khối | Loại | sha256 (16 ký tự đầu) |
 |---|---|---|---|
-| `models/core/marts/sales/fact_order_costs.sql:109` | `cost_type` | CASE | `8f5ce62438716f33` |
+| `models/packs/finance/marts/sales/fact_order_costs.sql:109` | `cost_type` | CASE | `8f5ce62438716f33` |
 
 #### `promo_dependency`
 
@@ -1032,7 +1032,7 @@ Không có khối SQL: luật là dữ liệu (seed), xem ô "Đã là dữ li�
 - **Subject:** product (variant)
 - **Biến thể:** 1 (cộng bảng gán tay `seed_sku_alias_manual` cho ngoại lệ)
 - **Dạng luật:** Ánh xạ theo tiền tố + gán tay
-- **Đã là dữ liệu hay còn trong SQL:** **Lai**: `dim_sku_alias.sql` L68 (SQL) và `seeds/seed_sku_alias_manual.csv` (dữ liệu, seed của tenant, chưa dời).
+- **Đã là dữ liệu hay còn trong SQL:** **Lai**: `dim_sku_alias.sql` L68 (SQL) và `seeds/tenants/fine_japan/seed_sku_alias_manual.csv` (dữ liệu, seed của tenant Fine Japan).
 - **Đặc trưng cần dùng:** `sku` của biến thể đóng gói, `packsize_root_sku`/`base_sku` của biến thể gốc.
 - **Ngữ nghĩa nguyên văn:** Nếu cả `sku` của gói và SKU gốc đều bắt đầu `VTS` (`LIKE 'VTS%'`) thì mã nối MISA = `'VCS' || SUBSTRING(base, 4)`; ngược lại giữ nguyên mã gốc. `VTS` và `VCS` là tiền tố mã sản phẩm của Fine Japan (hàng khác hệ thống mã giữa Sapo và MISA).
 - **Thuộc tính bộ máy (đề xuất):** `cardinality=single`, `hit_policy=FIRST (gán tay thắng)`, `stickiness=manual_wins (qua `seed_sku_alias_manual`)`, `time_semantics=current`, `versioning=restate`
@@ -1197,7 +1197,7 @@ Tám seed phân loại nằm ở `transformation/seeds/taxonomy/` (tên seed gi�
 | `ref_tag_categories` | 61 | `int_order_tags` | | | `order_tag` |
 | `ref_gl_accounts` | 53 | `dim_gl_account` (chỉ bổ sung tên tài khoản) | | | `gl_cashflow_line` |
 
-Các seed của tenant **không dời** trong phase này và vẫn nằm phẳng ở `transformation/seeds/`: `seed_action_scenario_registry`, `seed_cash_allocation_policy`, `seed_cashflow_budget`, `seed_channel_targets`, `seed_sku_alias_manual`, `seed_sku_regimen_config`. Hai seed ngân sách (`seed_cashflow_budget`, `seed_cash_allocation_policy`) được job Google Sheet ghi lúc 02:30 qua `ingestion/src/gsheet_budget_sync` (Dagster asset `orchestration/connectors/sheets/assets.py: budget_sheet_sync_asset`), cũng đã chuyển sang `seed_path`. **Chưa có** chỗ nào ghi tự động vào seed phân loại (chỉ `sync_seeds.py` chạy tay).
+Các seed dữ liệu doanh nghiệp của tenant Fine Japan nằm ở `transformation/seeds/tenants/fine_japan/` (dời ở bước tenant overlay; tên seed và cấu hình không đổi): `seed_action_scenario_registry`, `seed_cash_allocation_policy`, `seed_cashflow_budget`, `seed_channel_targets`, `seed_sku_alias_manual`, `seed_sku_regimen_config`. Model đọc: `dim_action_scenario_registry`, `mart_customer_action_queue`, `mart_customer_sku_action_queue` (pack `sales_playbook`); `fact_cashflow_budget`, `dim_cash_allocation_policy` (pack `finance`); `dim_channel_targets`, `dim_sku_alias`, `int_customer_sku_supply_tracking` (lõi). Hai seed ngân sách (`seed_cashflow_budget`, `seed_cash_allocation_policy`) được job Google Sheet ghi lúc 02:30 qua `ingestion/src/gsheet_budget_sync` (Dagster asset `orchestration/connectors/sheets/assets.py: budget_sheet_sync_asset`), cũng đã chuyển sang `seed_path`. **Chưa có** chỗ nào ghi tự động vào seed phân loại (chỉ `sync_seeds.py` chạy tay).
 
 ## Known divergences
 
@@ -1223,7 +1223,7 @@ Chỉ ghi, **không sửa số** trong phase này. Mọi thống nhất đều l
 
 | Literal | Ý nghĩa | Vị trí |
 |---|---|---|
-| `CTN00014` | Mã nhóm cũ của khách nhận hàng hộ | `dim_customers.sql` L226, L331; `fact_orders.sql` L115; `int_customer_benchmarks.sql` L52 |
+| `CTN00014` | Mã nhóm cũ của khách nhận hàng hộ | `dim_customers.sql` L226, L331; `fact_orders.sql` L115; `int_customer_benchmarks.sql` L52. Ở `dim_customers` đây là **logic hook** của tenant (cùng tín hiệu kênh `US`): không phải cạnh `ref` nên không có trong `boundary_allowlist.yaml`; ghi ở `docs/architecture/modules.md` mục 10 |
 | `KY_GUI` | Nhóm Ký gửi (PARTNER); `_` là wildcard | `dim_customers.sql` L219; `fact_orders.sql` L112; `int_customer_benchmarks.sql` L49 |
 | `%WHOLESALE%`, `TYPE_PARTNER`, `TYPE_STAFF`, `TYPE_KOL`, `TYPE_CROSSBORDER` | Mã nhóm khách của Sapo (kể cả nhóm cũ BANBUON tên `WHOLESALE`) | ba khối `customer_type`; `is_us_gift_recipient` |
 | Kênh `'US'` | Nguồn Sapo giao hàng hộ từ Mỹ | `dim_customers.sql` L35; `int_us_shipment_line_prices.sql` L25 |
