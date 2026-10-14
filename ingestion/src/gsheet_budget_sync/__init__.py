@@ -26,7 +26,7 @@ Environment:
     plans/260709-1415-budget-account-level-remap/phase-03) — the default sync now also reads
     dim_gl_account (via serving/olap.duckdb) to validate/derive account_code on recurring rows,
     not just --write-suggestions (which reads fact_cash_movement / mart_cashflow_reserve_status).
-  SOURCES__SPREADSHEET_URL__BUDGET   Google Sheet URL (optional, has a working default)
+  SOURCES__SPREADSHEET_URL__BUDGET   Google Sheet URL (required, no default)
   GOOGLE_SHEETS_SERVICE_ACCOUNT_KEY_PATH   Shared GCP service-account JSON key path (Editor
     access on this sheet specifically) — required ONLY by --write-suggestions (not --dry-run).
     See plans/260707-1201-google-sheets-service-account/phase-01-service-account-setup.md.
@@ -38,7 +38,7 @@ import pandas as pd
 from ingestion.src.utils.seed_paths import seed_path
 
 from .fetch import (  # noqa: F401 — re-exported for `sync.X` compatibility
-    SHEET_URL, SEEDS_DIR, GID_BUDGET_ITEMS, GID_ALLOCATION_POLICY, GID_REF,
+    sheet_url, SEEDS_DIR, GID_BUDGET_ITEMS, GID_ALLOCATION_POLICY, GID_REF,
     ValidationError, _fetch_tab_csv, load_ref_lines, _current_month_start,
 )
 from .budget_transform import (  # noqa: F401
@@ -72,9 +72,10 @@ def _serving_db_path() -> str:
 def fetch_transform_and_save(dry_run: bool = False) -> int:
     print("Starting Budget Sheet Sync (gsheet_budget_sync)...")
 
-    budget_raw = _fetch_tab_csv(SHEET_URL, GID_BUDGET_ITEMS, "BUDGET_ITEMS")
-    policy_raw = _fetch_tab_csv(SHEET_URL, GID_ALLOCATION_POLICY, "ALLOCATION_POLICY")
-    ref_raw = _fetch_tab_csv(SHEET_URL, GID_REF, "__REF")
+    url = sheet_url()
+    budget_raw = _fetch_tab_csv(url, GID_BUDGET_ITEMS, "BUDGET_ITEMS")
+    policy_raw = _fetch_tab_csv(url, GID_ALLOCATION_POLICY, "ALLOCATION_POLICY")
+    ref_raw = _fetch_tab_csv(url, GID_REF, "__REF")
 
     ref_lines = load_ref_lines(ref_raw)
     if not ref_lines:
@@ -150,8 +151,9 @@ def write_suggestions_to_sheet(target_month: str = None, dry_run: bool = True) -
     target_month = target_month or next_month_start()
     print(f"Computing suggestions for target month {target_month}...")
 
-    budget_raw = _fetch_tab_csv(SHEET_URL, GID_BUDGET_ITEMS, "BUDGET_ITEMS")
-    ref_raw = _fetch_tab_csv(SHEET_URL, GID_REF, "__REF")
+    url = sheet_url()
+    budget_raw = _fetch_tab_csv(url, GID_BUDGET_ITEMS, "BUDGET_ITEMS")
+    ref_raw = _fetch_tab_csv(url, GID_REF, "__REF")
     ref_lines = load_ref_lines(ref_raw)
 
     months, items, warnings = parse_budget_matrix(budget_raw)

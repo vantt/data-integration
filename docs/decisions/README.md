@@ -26,6 +26,12 @@ Thư mục này ghi nhận các quyết định kiến trúc quan trọng của 
 
 ### Development Practices
 - [ADR-013: Explicit > Implicit, Golden Sample heuristic](./013-development-heuristics.md)
+- [ADR-014: source_system = combined `{system}_{version}` identifier](./014-source-system-combined-identifier.md)
+
+### Module Architecture
+- [ADR-015: Ranh giới module (bucket, ma trận phụ thuộc, kernel, connector, tenant, cưỡng chế)](./015-module-boundaries.md)
+- [ADR-016: Taxonomy module Đợt 1: đặc tả + dời seed, không tách macro](./016-taxonomy-module.md)
+- [ADR-017: Pack và tenant: logic là pack, dữ liệu/cấu hình là tenant](./017-packs-and-tenants.md)
 
 ## Quy ước
 

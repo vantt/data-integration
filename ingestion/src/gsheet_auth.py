@@ -12,6 +12,42 @@ import pandas as pd
 
 GOOGLE_SHEETS_SERVICE_ACCOUNT_KEY_PATH_ENV = "GOOGLE_SHEETS_SERVICE_ACCOUNT_KEY_PATH"
 
+# Every Google Sheet the platform reads is configured by one environment variable,
+# SOURCES__SPREADSHEET_URL__<NAME> (.env.docker in the container, .env.local on the host;
+# names listed in .env.docker.example). The URLs are business (tenant) data, so the code
+# carries no default: a missing variable is an error at the point of use, never a silent
+# fallback to another business's sheet.
+SPREADSHEET_URL_ENV_PREFIX = "SOURCES__SPREADSHEET_URL__"
+SPREADSHEET_NAMES = (
+    "TARGETS",
+    "MARKETING_SPEND",
+    "US_SHIPMENT_PRICES",
+    "TEAM_CONFIG",
+    "OVERHEAD_CLASSIFICATION",
+    "BUDGET",
+)
+
+
+class SpreadsheetUrlNotConfigured(RuntimeError):
+    """SOURCES__SPREADSHEET_URL__<NAME> is unset or empty."""
+
+
+def spreadsheet_url(name: str) -> str:
+    """URL of the Google Sheet `name` (one of SPREADSHEET_NAMES) from its env variable.
+
+    Called when a sheet is about to be read, not at import, so a missing variable fails only
+    the run that needs it (Dagster definitions still load)."""
+    if name not in SPREADSHEET_NAMES:
+        raise ValueError(f"unknown spreadsheet {name!r}; expected one of {SPREADSHEET_NAMES}")
+    env = SPREADSHEET_URL_ENV_PREFIX + name
+    value = os.environ.get(env, "").strip()
+    if not value:
+        raise SpreadsheetUrlNotConfigured(
+            f"{env} is not set: set it to the Google Sheet URL in .env.docker (container) or "
+            f".env.local (host); the variable names are listed in .env.docker.example"
+        )
+    return value
+
 
 def get_gspread_client():
     """Authenticated gspread client. Raises RuntimeError with setup instructions if

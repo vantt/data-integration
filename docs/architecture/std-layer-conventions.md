@@ -22,6 +22,8 @@ A `std_<entity>` is a thin `view` over its `stg_<source>_<entity>` source: selec
 ### R3 — Versioning suffix
 The source **version is a `_v<N>` suffix** on src/stg models (`src_sapo_orders_v2`, `stg_sapo_orders_v2`; later `_v3`). The `std_<entity>` model is **version-agnostic — never carries a suffix**; it UNIONs the versions and is the stable contract every downstream model reads. (See `naming-conventions.md` §7.)
 
+*Current state (reviewed 2026-10-14):* the existing v2 models carry the version inside the source identifier instead (`src_sapo_v2_<entity>`, `stg_sapo_v2_<entity>` in `models/connectors/sapo_v2/staging/`, matching `source_system = 'sapo_v2'` of ADR-014). They were not renamed: relation names are a public contract. Decide the naming of v3 models before adding them.
+
 ### R4 — std contract = the v3 interface
 Each `std_<entity>` exposes a fixed column set = the **interface** that a future `stg_<source>_v3_<entity>` must satisfy. Document the column list in a header comment (`-- STD CONTRACT v2 … interface for v3 …`). When adding v3, map v3's structure to the SAME columns; `source_system` discriminates (`'sapo_v2'`/`'sapo_v3'`).
 
@@ -36,13 +38,13 @@ Any change to a std model or a repointed consumer must pass, in order:
 **Create the std model FIRST, then repoint consumers** (a mid-edit auto-run is then safe — consumers still ref stg). Each step = one git commit (revertible).
 
 ### R7 — Never move physical raw / dlt state
-To version the raw layer, rename only the **dbt source alias** in `sources.yml` (`sapo_raw` → `sapo_v2_raw`) while keeping `external_location` pointed at the physical `…/sapo_raw/{name}/…` folder. **Do NOT** move/rename the physical folder, change dlt `dataset_name`, or touch `sapo_raw/_dlt_pipeline_state`. The raw holds irreplaceable history (Sapo truncates `history_log`; 2021–2025 exists only as the ingested parquet/Delta) — a state reset risks unrecoverable re-ingestion. v3 gets its OWN new raw dataset (`sapo_v3_raw`), no collision.
+To version the raw layer, rename only the **dbt source alias** in the connector's `_sources.yml` (`models/connectors/sapo_v2/staging/_sources.yml`; `sapo_raw` → `sapo_v2_raw`) while keeping `external_location` pointed at the physical `…/sapo_raw/{name}/…` folder. **Do NOT** move/rename the physical folder, change dlt `dataset_name`, or touch `sapo_raw/_dlt_pipeline_state`. The raw holds irreplaceable history (Sapo truncates `history_log`; 2021–2025 exists only as the ingested parquet/Delta) — a state reset risks unrecoverable re-ingestion. v3 gets its OWN new raw dataset (`sapo_v3_raw`), no collision.
 
 ### R8 — Scheduling reality (this daemon)
 `dagster schedule stop/start -f <file>` via CLI is **ineffective** here (ephemeral code-location origin ≠ daemon's), so you cannot pause the pipeline that way and `schedule list` shows a misleading `[STOPPED]`. The realtime job keeps firing every 3 min. To truly pause, use the Dagster UI. Otherwise accept that a mid-edit auto-run may transiently FAIL and self-heal, and rely on R6's fresh-run + checksum gate.
 
 ### R9 — Module dependency matrix and the std gate
-The gate is enforced by `scripts/checks/check_boundaries.py` (rule `dbt-ref`), not only by review: `core/` may `ref` only `cdm/`, `core/` and seeds, so a core model can never read a connector model (`stg_*`, `src_*` or a connector `int_*`). A connector that needs to reach core exposes the data through a `std_*` view in `models/cdm/staging/` (full matrix: [modules.md §3](modules.md)). A new `std_*` also needs an entry in `scripts/checks/model_buckets.yaml` (bucket `cdm`). Core models that read a std view keep an **explicit column list**, so `source_system` never leaks into a public table.
+The gate is enforced by `scripts/checks/check_boundaries.py` (rule `dbt-ref`), not only by review: `core/` may `ref` only `cdm/`, `core/` and shared seeds (not tenant seeds: rule `dbt-seed`), so a core model can never read a connector model (`stg_*`, `src_*` or a connector `int_*`). Packs read connectors through `cdm/` too, except the connectors declared in `pack_connectors` of `model_buckets.yaml`. Run `scripts/checks/run-all.sh` before committing. A connector that needs to reach core exposes the data through a `std_*` view in `models/cdm/staging/` (full matrix: [modules.md §3](modules.md)). A new `std_*` also needs an entry in `scripts/checks/model_buckets.yaml` (bucket `cdm`). Core models that read a std view keep an **explicit column list**, so `source_system` never leaks into a public table.
 
 Std views added for the core gate (all pass-through, `source_system` last, no `source_version`):
 
@@ -58,7 +60,7 @@ Every `std_*` added for the core gate carries the generic test `std_column_contr
 
 ## Checklist — adding or changing a Sapo entity
 - [ ] Does it feed a dim/fact/int? → it needs a `std_<entity>` (R1).
-- [ ] std = faithful pass-through, all columns, + source_system/source_version (R2), no version suffix (R3).
+- [ ] std = faithful pass-through, all columns, + `source_system` and no `source_version` (R2), no version suffix (R3).
 - [ ] Header documents the column contract (R4).
 - [ ] No new std for a consumer-less stg (R5).
 - [ ] Capture baseline → create std → repoint → fresh green run + checksum identical → commit (R6).

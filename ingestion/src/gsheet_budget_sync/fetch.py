@@ -13,7 +13,7 @@ Tabs (single spreadsheet, 3 gids):
                                       col A = direction, populated from dim_gl_account
 
 Environment:
-  SOURCES__SPREADSHEET_URL__BUDGET   Google Sheet URL (optional, has a working default)
+  SOURCES__SPREADSHEET_URL__BUDGET   Google Sheet URL (required, no default; read by sheet_url())
   GOOGLE_SHEETS_SERVICE_ACCOUNT_KEY_PATH   Shared GCP service-account JSON key path — see
     plans/260707-1201-google-sheets-service-account/phase-01-service-account-setup.md.
 """
@@ -49,10 +49,12 @@ _load_dotenv_local()
 # Seed base directory; individual seeds are located with seed_path(name, SEEDS_DIR).
 SEEDS_DIR = str(_SEEDS_DIR)
 
-_DEFAULT_SHEET_URL = (
-    "https://docs.google.com/spreadsheets/d/15hba6bzrTRXUDXBeUg5_DhefrETX9kLGG8SnPJZzTfA/edit"
-)
-SHEET_URL = os.environ.get("SOURCES__SPREADSHEET_URL__BUDGET", _DEFAULT_SHEET_URL)
+
+def sheet_url() -> str:
+    """Budget sheet URL from SOURCES__SPREADSHEET_URL__BUDGET, resolved per call (no default:
+    a missing variable raises gsheet_auth.SpreadsheetUrlNotConfigured when the sheet is used)."""
+    return gsheet_auth.spreadsheet_url("BUDGET")
+
 
 # gids — 3 tabs in the one spreadsheet (see module docstring)
 GID_BUDGET_ITEMS = "0"

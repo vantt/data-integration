@@ -9,7 +9,7 @@ used by every other gsheet_*.py reader, just with Editor (not Viewer) share on t
 """
 from ingestion.src import gsheet_auth
 
-from .fetch import GID_BUDGET_ITEMS, GID_REF, SHEET_URL, _fmt_num
+from .fetch import GID_BUDGET_ITEMS, GID_REF, _fmt_num, sheet_url
 from .suggestions import _assert_gio_column
 
 # Generous fixed upper bound for the __REF clear range (phase-02) — the dropdown list is
@@ -48,7 +48,7 @@ def _write_cells_via_sheets_api(writes: list):
         _assert_gio_column(w["col"])
 
     gc = gsheet_auth.get_gspread_client()
-    sh = gc.open_by_url(SHEET_URL)
+    sh = gc.open_by_url(sheet_url())
     ws = sh.get_worksheet_by_id(int(GID_BUDGET_ITEMS))
 
     cell_updates = [
@@ -73,7 +73,7 @@ def _write_ref_accounts(rows: list):
     at-worst-stale, never empty.
     """
     gc = gsheet_auth.get_gspread_client()
-    sh = gc.open_by_url(SHEET_URL)
+    sh = gc.open_by_url(sheet_url())
     ws = sh.get_worksheet_by_id(int(GID_REF))
 
     if rows:

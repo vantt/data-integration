@@ -14,7 +14,7 @@ snapshot. The sheet is the live master — no incremental partitioning needed.
 
 Environment:
   DBT_DATA_LAKE_PATH                                    Path to data lake (required)
-  SOURCES__SPREADSHEET_URL__OVERHEAD_CLASSIFICATION     Google Sheet URL (optional, has default)
+  SOURCES__SPREADSHEET_URL__OVERHEAD_CLASSIFICATION     Google Sheet URL (required, no default)
 """
 import sys
 import os
@@ -49,14 +49,8 @@ if not DATA_LAKE_PATH:
         "Set via .env.docker (container) or .env.local (host)."
     )
 
-_DEFAULT_SHEET_URL = (
-    "https://docs.google.com/spreadsheets/d/"
-    "1fwdyzIdyXRkFva7FHgxwCPiQOY8s3m4MDATMsGY0YKM/edit?gid=0"
-)
-SHEET_URL = os.environ.get(
-    "SOURCES__SPREADSHEET_URL__OVERHEAD_CLASSIFICATION",
-    _DEFAULT_SHEET_URL,
-)
+# Sheet URL: env SOURCES__SPREADSHEET_URL__OVERHEAD_CLASSIFICATION, resolved when the sheet is read.
+SHEET_NAME = "OVERHEAD_CLASSIFICATION"
 
 # Tab identifier for the classification tab
 _SHEET_GID = "0"
@@ -184,8 +178,9 @@ def fetch_and_save_overhead_classification():
     """Main ingestion function for Overhead Account Classification sheet."""
     print("Starting Overhead Account Classification Ingestion (gsheet_overhead_classification)...")
 
-    print(f"Fetching via Sheets API (gid={_SHEET_GID}): {SHEET_URL}")
-    raw = gsheet_auth.fetch_tab_as_dataframe(SHEET_URL, gid=_SHEET_GID)
+    sheet_url = gsheet_auth.spreadsheet_url(SHEET_NAME)
+    print(f"Fetching via Sheets API (gid={_SHEET_GID}): {sheet_url}")
+    raw = gsheet_auth.fetch_tab_as_dataframe(sheet_url, gid=_SHEET_GID)
     raw.columns = raw.iloc[0]
     df = raw[1:].reset_index(drop=True)
     print(f"Downloaded {len(df)} rows.")

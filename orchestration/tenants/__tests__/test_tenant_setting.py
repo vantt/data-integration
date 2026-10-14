@@ -5,16 +5,14 @@ import pytest
 import yaml
 
 from orchestration import tenants
-from orchestration.sensors import sheets_modified_sensor
 from orchestration.tenants.fine_japan import config as fine_japan
 
-SHEET_KEYS = ("SHEETS_SENSOR_TARGETS_URL", "SHEETS_SENSOR_MARKETING_URL", "SHEETS_SENSOR_US_SHIPMENT_PRICES_URL")
 CRM_KEYS = ("CRM_REFRESH_URL", "CRM_BACKUP_URL", "CRM_DRILL_URL", "APPROACH_SCRIPT_LOAD_URL")
 
 
 @pytest.fixture
 def no_env(monkeypatch):
-    for key in (*SHEET_KEYS, *CRM_KEYS):
+    for key in CRM_KEYS:
         monkeypatch.delenv(key, raising=False)
 
 
@@ -33,29 +31,30 @@ def test_fine_japan_is_the_enabled_tenant():
 
 def test_value_comes_from_tenant_config(no_env):
     assert tenants.setting("CRM_REFRESH_URL") == "http://crm:8090/admin/refresh"
-    assert sheets_modified_sensor.sheet_urls() == {
-        "targets": fine_japan.SHEETS_SENSOR_TARGETS_URL,
-        "marketing_spend": fine_japan.SHEETS_SENSOR_MARKETING_URL,
-        "us_shipment_prices": fine_japan.SHEETS_SENSOR_US_SHIPMENT_PRICES_URL,
-    }
+    assert tenants.setting("APPROACH_SCRIPT_LOAD_URL") == fine_japan.APPROACH_SCRIPT_LOAD_URL
 
 
 def test_env_var_overrides_even_when_empty(no_env, monkeypatch):
-    monkeypatch.setenv("SHEETS_SENSOR_TARGETS_URL", "https://example.invalid/sheet.csv")
+    monkeypatch.setenv("CRM_REFRESH_URL", "http://example.invalid/refresh")
     monkeypatch.setenv("CRM_BACKUP_URL", "")
-    assert sheets_modified_sensor.sheet_urls()["targets"] == "https://example.invalid/sheet.csv"
+    assert tenants.setting("CRM_REFRESH_URL") == "http://example.invalid/refresh"
     assert tenants.setting("CRM_BACKUP_URL") == ""
 
 
 def test_missing_value_fails_closed(no_env, monkeypatch):
-    monkeypatch.delattr(fine_japan, "SHEETS_SENSOR_MARKETING_URL")
-    with pytest.raises(tenants.TenantConfigError, match="SHEETS_SENSOR_MARKETING_URL"):
-        sheets_modified_sensor.sheet_urls()
+    monkeypatch.delattr(fine_japan, "CRM_DRILL_URL")
+    with pytest.raises(tenants.TenantConfigError, match="CRM_DRILL_URL"):
+        tenants.setting("CRM_DRILL_URL")
+
+
+def test_sheet_urls_are_not_tenant_settings(no_env):
+    """Each Google Sheet URL is declared once, in SOURCES__SPREADSHEET_URL__<NAME>."""
+    assert not [name for name in vars(fine_japan) if "SHEET" in name]
 
 
 def test_no_enabled_tenant_fails_closed(no_env, enabled_tenants):
     enabled_tenants([])
-    for key in (*SHEET_KEYS, *CRM_KEYS):
+    for key in CRM_KEYS:
         with pytest.raises(tenants.TenantConfigError, match="enabled: none"):
             tenants.setting(key)
 

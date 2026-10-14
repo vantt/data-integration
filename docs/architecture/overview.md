@@ -103,7 +103,7 @@ The Data Integration Pipeline is a modern data lakehouse built to sync and analy
 ┌─────────────────────────────────────────────────────────────────────────────┐
 │ HOP 3: RAW STORAGE (Parquet Files)                                          │
 │                                                                             │
-│  data_lake/sapo_raw/{entity}/ingest_method={X}/year={Y}/month={M}/*.parquet │
+│  data_lake/<source>_raw/{entity}/ingest_method={X}/year={Y}/month={M}/      │
 │                                                                             │
 │  Partitions:                                                                │
 │  ├── ingest_method=batch_sync/    (Daily snapshots)                         │
@@ -125,10 +125,11 @@ The Data Integration Pipeline is a modern data lakehouse built to sync and analy
 ┌─────────────────────────────────────────────────────────────────────────────┐
 │ HOP 5: STAGING LAYER (dbt)                                                  │
 │                                                                             │
-│  models/staging/                                                            │
-│  ├── src_sapo_*_v2.sql   (INCREMENTAL: JSON extract + tech/biz dedup)       │
-│  ├── stg_sapo_*_v2.sql   (VIEW: enrichment joins + unnest)                  │
-│  └── std_*.sql        (VIEW: business normalization)                        │
+│  models/connectors/<source>/staging/          (module: connector)           │
+│  ├── src_sapo_v2_*.sql   (INCREMENTAL: JSON extract + tech/biz dedup)       │
+│  └── stg_sapo_v2_*.sql   (VIEW: enrichment joins + unnest)                  │
+│  models/cdm/staging/                           (module: cdm)                │
+│  └── std_*.sql           (VIEW: canonical pass-through + source_system)     │
 │                                                                             │
 │  Key: src_ extracts + deduplicates, outputs flat data (no payload).         │
 │  stg_ and std_ work with lightweight flat columns only.                     │
@@ -138,10 +139,12 @@ The Data Integration Pipeline is a modern data lakehouse built to sync and analy
 ┌─────────────────────────────────────────────────────────────────────────────┐
 │ HOP 6: TRANSFORMATION LAYER (dbt)                                           │
 │                                                                             │
-│  models/intermediate/  (Business logic, joins)                              │
-│  models/marts/                                                              │
-│  ├── core/            (Dimensions: dim_customers, dim_products, etc.)       │
-│  └── sales/           (Facts: fact_orders, fact_sales)                      │
+│  models/core/{intermediate,marts}/   (module: core — revenue, customers,    │
+│                                       products, inventory: dim_*, fact_*)   │
+│  models/packs/<pack>/                (finance, crm, hug, sales_playbook,    │
+│                                       marketplace, facebook_*)              │
+│  models/tenants/fine_japan/          (US shipment only)                     │
+│  models/monitoring/                  (data quality, reads every module)     │
 │                                                                             │
 │  Output: Export to Parquet (Rolling Snapshots)                              │
 │  data_lake/export/marts/rolling/{table}_{timestamp}.parquet                 │
@@ -152,7 +155,7 @@ The Data Integration Pipeline is a modern data lakehouse built to sync and analy
 │ HOP 7: SERVING LAYER                                                        │
 │                                                                             │
 │  data_lake/serving/olap.duckdb                                              │
-│  - Rolling Self-Refresh Views pointing to latest Parquet snapshots                         │
+│  - Rolling Self-Refresh Views pointing to latest Parquet snapshots          │
 │  - Zero-downtime updates (immutable files)                                  │
 │                                                                             │
 │  Metabase (Docker)                                                          │
@@ -160,6 +163,36 @@ The Data Integration Pipeline is a modern data lakehouse built to sync and analy
 │  - Dashboards for sales, customers, operations                              │
 └─────────────────────────────────────────────────────────────────────────────┘
 ```
+
+### Modules in the 7 hops
+
+The same pipeline is cut vertically into modules with enforced boundaries (design:
+[modules.md](./modules.md); decisions: [ADR-015](../decisions/015-module-boundaries.md),
+[ADR-016](../decisions/016-taxonomy-module.md), [ADR-017](../decisions/017-packs-and-tenants.md)).
+
+| Hop | Module | Code |
+|-----|--------|------|
+| 1–3 (source, collection, raw) | **Connector** `<id>`: one per source (`sapo_v2`, `shopee`, `misa_amis`, `sheets`, `hug`) | `ingestion/`, `orchestration/connectors/<id>/`; writes only `data_lake/<source>_raw/` |
+| 5 (`src_*`, `stg_*`) | **Connector** (dbt side) | `transformation/models/connectors/<source>/` |
+| 5 (`std_*`) | **CDM**, the canonical layer: the only door from connectors to core | `transformation/models/cdm/` |
+| 6 | **Core**: revenue, customers, products, inventory | `transformation/models/core/` |
+| 6 | **Packs**: reusable product logic (finance = cost and profit, crm, hug, sales_playbook, marketplace, facebook_*) | `transformation/models/packs/<id>/`, `orchestration/packs/<id>/` |
+| 6 | **Tenant** Fine Japan: its data and configuration, US shipment models | `transformation/models/tenants/fine_japan/`, `transformation/seeds/tenants/fine_japan/`, `orchestration/tenants/fine_japan/`, `SOURCES__SPREADSHEET_URL__*` env |
+| 4–7 (all) | **Kernel**: Dagster definitions, sensors, asset checks, ops, dbt runner, serving builder | `orchestration/` top level; modules enabled in `orchestration/config/modules.yaml` |
+
+```mermaid
+flowchart LR
+    CONN["connectors/&lt;source&gt;<br/>hops 1–3, src_/stg_"] --> CDM["cdm/<br/>std_*"]
+    CDM --> CORE["core/<br/>dim_*, fact_*"]
+    CDM & CORE --> PACK["packs/&lt;id&gt;"]
+    CORE & PACK --> TEN["tenants/fine_japan"]
+    CORE & PACK & TEN --> SERV["serving/olap.duckdb (hop 7)"]
+    TAX["seeds/taxonomy"] -.-> CORE & PACK
+    TS["seeds/tenants/fine_japan"] -.-> PACK
+```
+
+`scripts/checks/check_boundaries.py` enforces the arrows (core never reads a connector, a pack or a
+tenant except through an allowlisted hook); `scripts/checks/run-all.sh` runs it before every commit.
 
 ### Component Interaction
 
@@ -213,7 +246,7 @@ The Data Integration Pipeline is a modern data lakehouse built to sync and analy
 - `.dlt/secrets.toml` - API credentials
 - `.dlt/config.toml` - Pipeline settings
 
-[Detailed docs →](../ingestion/docs/README.md)
+[Detailed docs →](../../ingestion/docs/README.md)
 
 ---
 
@@ -227,18 +260,21 @@ The Data Integration Pipeline is a modern data lakehouse built to sync and analy
 
 | Layer | Path | Materialization | Purpose |
 |-------|------|-----------------|---------|
-| Sources | `staging/src_*.sql` | **Incremental** | JSON extraction + dedup + accumulation |
-| Staging | `staging/stg_*.sql` | View | Enrichment, unnest |
-| Standard | `staging/std_*.sql` | View | Business normalization |
-| Intermediate | `intermediate/*.sql` | Incremental/Ephemeral | Cross-entity metrics |
-| Marts | `marts/**/*.sql` | External (Parquet) | Dimensional model |
+| Sources | `connectors/<source>/staging/src_*.sql` | **Incremental** | JSON extraction + dedup + accumulation |
+| Staging | `connectors/<source>/staging/stg_*.sql` | View | Enrichment, unnest |
+| Standard | `cdm/staging/std_*.sql` | View | Canonical pass-through + `source_system` |
+| Intermediate | `<module>/intermediate/*.sql` | External/Incremental | Cross-entity metrics |
+| Marts | `<module>/marts/**/*.sql` (`core`, `packs/<id>`, `tenants/<id>`) | External (Parquet) | Dimensional model |
+
+Paths are under `transformation/models/`. The layer folder decides schema and materialization, the
+module folder decides ownership ([modules.md §2b](./modules.md#2b-bố-cục-thư-mục-dbt-)).
 
 **Key Concepts:**
 - **2-Level Dedup in src_**: Tech dedup (entity_id) + biz dedup (order_id) in INCREMENTAL src_ model. Payload discarded after JSON extraction → OOM-safe.
 - **Rolling Snapshots**: Zero-downtime serving updates
 - **Kimball Star Schema**: Dimensional modeling for analytics
 
-[Detailed docs →](../transformation/docs/README.md)
+[Detailed docs →](../../transformation/docs/README.md)
 
 ---
 
@@ -260,7 +296,11 @@ The Data Integration Pipeline is a modern data lakehouse built to sync and analy
 - `sapo_ingestion` - All dlt ingestion assets
 - `serving_layer` - DuckDB serving database
 
-[Detailed docs →](../orchestration/docs/README.md)
+**Layout:** kernel files at the top of `orchestration/`; one package per source under
+`connectors/<id>/`, product packs under `packs/<id>/`, tenant configuration under `tenants/<id>/`,
+all enabled in `config/modules.yaml` ([orchestration/README.md](../../orchestration/README.md)).
+
+[Detailed docs →](../../orchestration/docs/README.md)
 
 ---
 
@@ -300,7 +340,7 @@ Sapo Platform
 └─────────────────────────────────┘
 ```
 
-[Detailed docs →](../webhook_receiver/docs/README.md)
+[Detailed docs →](../../webhook_receiver/docs/README.md)
 
 ---
 
@@ -514,6 +554,7 @@ Internet
 ## Related Documents
 
 - [Data Flow](./data-flow.md) - Detailed pipeline flow
+- [Modules](./modules.md) - Module boundaries, write authority, enforcement
 - [Data Dictionary](./data-dictionary.md) - Schema reference
 - [Deployment](../operations/deployment.md) - Setup guide
 - [Component Documentation](#core-components) - Links above

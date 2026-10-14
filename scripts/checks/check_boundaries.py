@@ -17,6 +17,10 @@ Rules (design: docs/architecture/modules.md §2b, §3 and §12):
   dbt-ref         a model may only depend on models allowed by the bucket matrix below
                   (core -> packs and core -> tenants are hooks: allowlist only).
   dbt-source      only connector:* and tenant:* models read dbt sources.
+  dbt-seed        a tenant seed (transformation/seeds/tenants/<t>/) is business data: only
+                  packs, monitoring and tenant:<t> itself may ref it; core, cdm and connectors
+                  may not (exit: an empty seed with the same columns in core, overridden by the
+                  tenant, together with pack_ref after Đợt 1).
   seed-duplicate  no two seed CSVs under transformation/seeds/ share a basename (dbt would
                   fail to parse and the container would not start).
   connector-url   no hard-coded http(s) URL in orchestration/connectors/**, and no domain
@@ -168,6 +172,15 @@ def _module_dir(bucket: str) -> str | None:
     return {"connector": f"connectors/{name}", "pack": f"packs/{name}", "tenant": f"tenants/{name}"}.get(kind)
 
 
+TENANT_SEED_RE = re.compile(r"^seeds/tenants/([^/]+)/")
+
+
+def _seed_reader_allowed(src_bucket: str, tenant: str) -> bool:
+    """Packs consume tenant data by design; core, cdm and connectors must not depend on it."""
+    return (src_bucket.startswith("pack:") or src_bucket == "monitoring"
+            or src_bucket == f"tenant:{tenant}")
+
+
 def dbt_violations(manifest: dict, spec: dict) -> list[tuple[str, str, str]]:
     buckets: dict = spec["buckets"]
     pack_connectors = spec.get("pack_connectors", {})
@@ -176,6 +189,12 @@ def dbt_violations(manifest: dict, spec: dict) -> list[tuple[str, str, str]]:
     for uid, versions in manifest.get("disabled", {}).items():
         nodes.setdefault(uid, versions[0])
     models = {uid: n for uid, n in nodes.items() if n["resource_type"] == "model"}
+    tenant_seeds = {}                                   # seed unique_id -> tenant id
+    for uid, n in nodes.items():
+        if n["resource_type"] == "seed":
+            m = TENANT_SEED_RE.match(n.get("original_file_path", ""))
+            if m:
+                tenant_seeds[uid] = m.group(1)
     for uid, n in sorted(models.items()):
         name = n["name"]
         if name not in buckets:
@@ -195,6 +214,8 @@ def dbt_violations(manifest: dict, spec: dict) -> list[tuple[str, str, str]]:
                 dst_b = buckets.get(dep_name)
                 if dst_b and not _allowed(src_b, dst_b, pack_connectors):
                     out.append(("dbt-ref", name, f"{dep_name} [{src_b} -> {dst_b}]"))
+            elif dep in tenant_seeds and not _seed_reader_allowed(src_b, tenant_seeds[dep]):
+                out.append(("dbt-seed", name, f"{dep_name} [{src_b} -> tenant:{tenant_seeds[dep]}]"))
     return out
 
 

@@ -165,3 +165,57 @@ def test_pack_url_and_domain_rule(tmp_path, monkeypatch):
     assert ("pack-url", "orchestration/packs/crm/hosts.py:1", "fine-japan.mysapo.net") in found
     assert ("connector-url", "orchestration/connectors/sapo_v2/c.py:1", "finejapan.vn") in found
     assert not [f for f in found if f[1].endswith("hosts.py:2") or f[1].endswith("hosts.py:3")]
+
+
+def _seed(name, path):
+    return {"resource_type": "seed", "name": name, "original_file_path": path}
+
+
+def test_core_may_not_read_a_tenant_seed():
+    manifest = {"nodes": {
+        "seed.p.seed_targets": _seed("seed_targets", "seeds/tenants/fine_japan/seed_targets.csv"),
+        "seed.p.ref_brands": _seed("ref_brands", "seeds/taxonomy/ref_brands.csv"),
+        "model.p.dim_t": _model("dim_t", ["seed.p.seed_targets", "seed.p.ref_brands"], "models/core/marts/dim_t.sql"),
+        "model.p.std_t": _model("std_t", ["seed.p.seed_targets"], "models/cdm/staging/std_t.sql"),
+        "model.p.stg_t": _model("stg_t", ["seed.p.seed_targets"], "models/connectors/gsheet/staging/stg_t.sql"),
+    }, "disabled": {}}
+    spec = {"buckets": {"dim_t": "core", "std_t": "cdm", "stg_t": "connector:gsheet"}, "pack_connectors": {}}
+    found = [f for f in cb.dbt_violations(manifest, spec) if f[0] == "dbt-seed"]
+    assert sorted(found) == [
+        ("dbt-seed", "dim_t", "seed_targets [core -> tenant:fine_japan]"),
+        ("dbt-seed", "std_t", "seed_targets [cdm -> tenant:fine_japan]"),
+        ("dbt-seed", "stg_t", "seed_targets [connector:gsheet -> tenant:fine_japan]"),
+    ]  # taxonomy seeds stay readable by everyone
+
+
+def test_packs_monitoring_and_the_own_tenant_may_read_tenant_seeds():
+    manifest = {"nodes": {
+        "seed.p.seed_budget": _seed("seed_budget", "seeds/tenants/fine_japan/seed_budget.csv"),
+        "model.p.fact_b": _model("fact_b", ["seed.p.seed_budget"], "models/packs/finance/marts/fact_b.sql"),
+        "model.p.mart_dq": _model("mart_dq", ["seed.p.seed_budget"], "models/monitoring/mart_dq.sql"),
+        "model.p.fact_us": _model("fact_us", ["seed.p.seed_budget"], "models/tenants/fine_japan/marts/fact_us.sql"),
+        "model.p.fact_other": _model("fact_other", ["seed.p.seed_budget"], "models/tenants/acme/marts/fact_other.sql"),
+    }, "disabled": {}}
+    spec = {"buckets": {"fact_b": "pack:finance", "mart_dq": "monitoring", "fact_us": "tenant:fine_japan",
+                        "fact_other": "tenant:acme"}, "pack_connectors": {}}
+    found = [f for f in cb.dbt_violations(manifest, spec) if f[0] == "dbt-seed"]
+    assert found == [("dbt-seed", "fact_other", "seed_budget [tenant:acme -> tenant:fine_japan]")]
+
+
+def test_planted_tenant_seed_read_fails_the_check(tmp_path, monkeypatch, capsys):
+    """End to end: a new core -> tenant seed edge not in the allowlist makes main() exit 1."""
+    manifest = {"nodes": {
+        "seed.p.seed_x": _seed("seed_x", "seeds/tenants/fine_japan/seed_x.csv"),
+        "model.p.dim_x": _model("dim_x", ["seed.p.seed_x"], "models/core/marts/dim_x.sql"),
+    }, "disabled": {}}
+    (tmp_path / "manifest.json").write_text(__import__("json").dumps(manifest))
+    (tmp_path / "buckets.yaml").write_text("buckets:\n  dim_x: core\npack_connectors: {}\n")
+    (tmp_path / "allow.yaml").write_text("allow: []\n")
+    for top in ("crm", "detailView", "ingestion"):
+        (tmp_path / top).mkdir()
+    monkeypatch.setattr(cb, "ROOT", str(tmp_path))
+    monkeypatch.setattr(cb, "BUCKETS_FILE", str(tmp_path / "buckets.yaml"))
+    monkeypatch.setattr(cb, "ALLOWLIST_FILE", str(tmp_path / "allow.yaml"))
+    monkeypatch.setattr(sys, "argv", ["check_boundaries.py", "--manifest", str(tmp_path / "manifest.json")])
+    assert cb.main() == 1
+    assert "VIOLATION [dbt-seed] dim_x -> seed_x [core -> tenant:fine_japan]" in capsys.readouterr().out

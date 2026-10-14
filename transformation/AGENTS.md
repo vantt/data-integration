@@ -26,6 +26,17 @@ a module folder. Logic is product (pack), data and configuration belong to the b
 (tenant): Fine Japan's business seeds live in `seeds/tenants/fine_japan/`. Core reading a pack or
 a tenant is a hook that must be listed in `scripts/checks/boundary_allowlist.yaml`.
 
+Seeds: every module may read `seeds/taxonomy/`. A tenant seed (`seeds/tenants/<tenant>/`) may be
+read by packs, `monitoring` and that tenant only; core, `cdm` and connectors may not (rule
+`dbt-seed`). Three core models still read Fine Japan seeds and are allowlisted with their exit
+(an empty seed with the same columns in core, overridden by the tenant, with `pack_ref` after
+Đợt 1): `dim_channel_targets` (`seed_channel_targets`), `dim_sku_alias` (`seed_sku_alias_manual`),
+`int_customer_sku_supply_tracking` (`seed_sku_regimen_config`). Do not add a fourth.
+
+Before committing, run `scripts/checks/run-all.sh` (dbt parse, boundaries, Dagster definitions,
+pytest). Decisions behind this layout: `docs/decisions/015-module-boundaries.md`,
+`016-taxonomy-module.md`, `017-packs-and-tenants.md`.
+
 ## Classification rules (taxonomy)
 
 Every rule that assigns a business label (`customer_type`, `value_group`, `channel_category`,

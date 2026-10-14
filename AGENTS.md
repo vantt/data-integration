@@ -24,7 +24,7 @@ Comprehensive documentation is available following a **progressive disclosure** 
 
 | Group | Documents |
 | ----- | --------- |
-| **Architecture** | `architecture/overview.md`, `architecture/data-flow.md`, `architecture/data-dictionary.md` |
+| **Architecture** | `architecture/overview.md`, `architecture/modules.md` (module boundaries), `architecture/data-flow.md`, `architecture/data-dictionary.md` |
 | **Operations** | `operations/deployment.md`, `operations/operations.md`, `operations/troubleshooting.md`, `operations/migration.md` |
 | **Development** | `development/contributing.md`, `development/glossary.md` |
 | **Context** | `context/sapo-platform.md`, `context/sales-segmentation-guide.md`, `context/marketing-spend-setup.md` |
@@ -61,13 +61,50 @@ See `docs/ANALYTICS_2SKILL_SPEC.md` for full specification.
 
 | Path | Description |
 | ---- | ----------- |
-| `/docs/decisions/` | 13 ADRs covering pipeline design, concurrency, analytics patterns, technology choices |
+| `/docs/decisions/` | 17 ADRs covering pipeline design, concurrency, analytics patterns, technology choices, module boundaries (015), taxonomy module (016), packs and tenants (017) |
 
 ---
 
 ## Multi-Project Repository Structure
 
 **CRITICAL:** this folder is a monorepo containing THREE main independent functional areas with specific sub-projects:
+
+### Module architecture (applies across the sub-projects below)
+
+The data platform (`ingestion/`, `orchestration/`, `transformation/`) is split into modules with
+enforced boundaries. Design: [docs/architecture/modules.md](docs/architecture/modules.md); decisions:
+[ADR-015](docs/decisions/015-module-boundaries.md), [ADR-016](docs/decisions/016-taxonomy-module.md),
+[ADR-017](docs/decisions/017-packs-and-tenants.md).
+
+| Module | dbt (`transformation/models/`) | Orchestration (`orchestration/`) | Role |
+| --- | --- | --- | --- |
+| **Kernel** | — | `definitions.py`, `module_registry.py`, `sensors/`, `ops/`, `asset_checks/`, `assets/{dbt,serving,rill}.py` | Shared runtime; loads modules from `orchestration/config/modules.yaml`, never imports them by name |
+| **Connectors** | `connectors/<source>/` (`src_*`, `stg_*`) | `connectors/<id>/` | Fetch one source into `data_lake/<source>_raw/` |
+| **CDM** | `cdm/` (`std_*`) | — | Canonical layer: the only door from connectors to core |
+| **Core** | `core/` | — | Revenue, customers, products, inventory (public tables) |
+| **Packs** | `packs/<id>/` (finance, crm, hug, sales_playbook, marketplace, facebook_*) | `packs/<id>/` (crm, sales_playbook; hug, finance empty) | Reusable product logic |
+| **Tenant** | `tenants/fine_japan/` (US shipment only), `seeds/tenants/fine_japan/` | `tenants/fine_japan/config.py` | Business data and configuration of Fine Japan |
+| **Taxonomy** | `seeds/taxonomy/`, spec `transformation/docs/TAXONOMY.md` | — | Classification seeds and spec |
+
+Rules that matter when editing: every dbt model has a bucket in `scripts/checks/model_buckets.yaml`
+and lives in that module's folder; core reads only `cdm/`, `core/` and shared seeds; tenant values
+(URLs, domains) never go into connector or pack code; Google Sheet URLs come only from
+`SOURCES__SPREADSHEET_URL__<NAME>` (no default in code). A crossing that cannot be avoided yet is an
+entry with a reason and an exit in `scripts/checks/boundary_allowlist.yaml`.
+
+### Pre-commit checks (MANDATORY)
+
+Before every commit that touches `ingestion/`, `orchestration/`, `transformation/` or `scripts/`, run
+from the worktree you commit from:
+
+```bash
+scripts/checks/run-all.sh
+```
+
+It runs `dbt parse`, `scripts/checks/check_boundaries.py`, `dagster definitions validate` and pytest
+(`ingestion/tests orchestration scripts/tests`) and must end with `RUN-ALL: PASS`. Details:
+[scripts/checks/README.md](scripts/checks/README.md#run-allsh-mandatory-before-every-commit). Changes that move
+models or edit SQL additionally need the shadow gate (`scripts/shadow/gate.sh M|S`) before deploy.
 
 ### 1. Ingestion Pipelines (`data-integration2/ingestion`)
 
@@ -95,14 +132,14 @@ See `docs/ANALYTICS_2SKILL_SPEC.md` for full specification.
 
 - **Purpose:** Manage schedules, sensors, and pipeline coordination.
 - **Tech:** Dagster.
-- **Context:** Python-based assets, jobs, and sensors.
+- **Context:** Python-based assets, jobs, and sensors. Kernel files stay at the top level; each source is a package under `connectors/<id>/`, product logic under `packs/<id>/`, tenant configuration under `tenants/<id>/`, all enabled in `config/modules.yaml` (see `orchestration/README.md`).
 - **Dependencies:** `dagster`, `dagster-duckdb` (managed via root python environment or venv).
 
 ### 5. Transformation (`data-integration2/transformation`)
 
 - **Purpose:** Clean, enrich, and model data (Hops 4-6) using ELT pattern.
 - **Tech:** dbt (Data Build Tool), DuckDB.
-- **Context:** SQL models (`.sql`) and YAML configurations.
+- **Context:** SQL models (`.sql`) and YAML configurations, laid out as `models/<module>/<layer>/` (`connectors`, `cdm`, `core`, `packs`, `tenants`, `monitoring`); seeds in `seeds/taxonomy/` and `seeds/tenants/<tenant>/`. Rules: `transformation/AGENTS.md`.
 - **Dependencies:** `dbt-duckdb`.
 
 ### 6. Detail View App (`data-integration2/detailView`)
@@ -169,6 +206,9 @@ See `docs/ANALYTICS_2SKILL_SPEC.md` for full specification.
   - Path: `./scripts/provisioning`
   - Generator: `generate_serving_db.py`
 - **Orchestrator**: Dagster (`./orchestration`)
+  - Modules enabled in `./orchestration/config/modules.yaml` (connectors, packs, tenants); loaders in `./orchestration/module_registry.py`
+- **Module boundaries**: `./scripts/checks/check_boundaries.py` (data: `model_buckets.yaml`, `boundary_allowlist.yaml`); design `./docs/architecture/modules.md`
+- **Pre-commit**: `./scripts/checks/run-all.sh` (dbt parse + boundaries + Dagster definitions + pytest)
 
 ## Operation Interface
 

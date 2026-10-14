@@ -9,13 +9,15 @@
 | Hạng mục | Trạng thái |
 |---|---|
 | Bucket của mọi dbt model (182 model: 172 đang bật, 10 đang tắt) | ✅ Khai báo trong `scripts/checks/model_buckets.yaml` |
-| Ma trận phụ thuộc, import chéo (kể cả connector → pack và pack → pack trong orchestration), seed trùng tên, URL/domain cứng trong connector và pack | ✅ Cưỡng chế bằng `scripts/checks/check_boundaries.py` (mục 3, mục 12) |
-| Vi phạm đã biết | 33, sinh từ manifest và import orchestration: 16 cạnh `ref` (pack hook, tenant hook, pack → pack, pack → connector), 12 pack đọc source, 5 import connector/pack → pack; ghi trong `scripts/checks/boundary_allowlist.yaml` kèm lý do và hướng thoát (mục 3, 10) |
+| Ma trận phụ thuộc, lõi đọc seed tenant, import chéo (kể cả connector → pack và pack → pack trong orchestration), seed trùng tên, URL/domain cứng trong connector và pack | ✅ Cưỡng chế bằng `scripts/checks/check_boundaries.py` (mục 3, mục 12) |
+| Vi phạm đã biết | 36, sinh từ manifest và import orchestration: 16 cạnh `ref` (pack hook, tenant hook, pack → pack, pack → connector), 3 lõi đọc seed tenant, 12 pack đọc source, 5 import connector/pack → pack; ghi trong `scripts/checks/boundary_allowlist.yaml` kèm lý do và hướng thoát (mục 3, 10) |
+| Kiểm tra trước commit bằng một lệnh | ✅ `scripts/checks/run-all.sh`: `dbt parse`, `check_boundaries.py`, `dagster definitions validate`, pytest (bắt buộc, ghi trong `AGENTS.md`) |
+| Quyết định kiến trúc | ✅ [ADR-015](../decisions/015-module-boundaries.md) (ranh giới module), [ADR-016](../decisions/016-taxonomy-module.md) (taxonomy), [ADR-017](../decisions/017-packs-and-tenants.md) (pack và tenant) |
 | Thư mục dbt theo module `models/<module>/<layer>/` | ✅ Mọi model nằm trong module (connectors, cdm, core, packs, tenants) hoặc `monitoring/`; thư mục cũ `staging/`, `intermediate/`, `marts/` và `models/sources.yml` đã bỏ |
 | Connector package cho orchestration (`orchestration/connectors/<id>/`, bật/tắt qua `config/modules.yaml`) | ✅ 5 connector: `sapo_v2`, `shopee`, `misa_amis`, `sheets`, `hug` (mục 4, 5) |
 | Pack sản phẩm (`models/packs/<id>/`, `orchestration/packs/<id>/`, khai báo trong `config/modules.yaml`) | ✅ `crm`, `hug`, `finance`, `sales_playbook` (thử nghiệm) cùng `marketplace`, `facebook_*` (chỉ dbt) (mục 8); ⏳ bật/tắt pack (`pack_ref`) sau Đợt 1 |
 | Taxonomy: đặc tả, seed phân loại, `seed_paths.py`, check kiểm kê | ✅ `transformation/docs/TAXONOMY.md`, `transformation/seeds/taxonomy/` (8 seed), `ingestion/src/utils/seed_paths.py`, `scripts/checks/check_taxonomy_inventory.py` (mục 9) |
-| Tenant overlay Fine Japan | ✅ Tối thiểu: US shipment (dbt), `seeds/tenants/fine_japan/`, `orchestration/tenants/fine_japan/config.py` (mục 10) |
+| Tenant overlay Fine Japan | ✅ Tối thiểu: US shipment (dbt), `seeds/tenants/fine_japan/`, `orchestration/tenants/fine_japan/config.py` (endpoint CRM); 6 URL Google Sheet chỉ ở biến môi trường `SOURCES__SPREADSHEET_URL__*`, không còn URL mặc định trong code (mục 10) |
 | Bộ máy phân loại (luật thành dữ liệu) | ⏳ Plan riêng sau Đợt 1 (mục 9) |
 
 Các mục dưới đây mô tả trạng thái đích; chỗ nào đã khớp code được đánh dấu ✅.
@@ -24,16 +26,17 @@ Các mục dưới đây mô tả trạng thái đích; chỗ nào đã khớp c
 
 1. [Bản đồ tổng thể](#1-bản-đồ-tổng-thể)
 2. [Quyền ghi theo vùng lưu trữ](#2-quyền-ghi-theo-vùng-lưu-trữ)
-3. [Ma trận phụ thuộc giữa các module dbt](#3-ma-trận-phụ-thuộc-giữa-các-module-dbt)
-4. [Kernel](#4-kernel)
-5. [Connectors](#5-connectors)
+   - [2b. Bố cục thư mục dbt](#2b-bố-cục-thư-mục-dbt-)
+3. [Ma trận phụ thuộc giữa các module dbt](#3-ma-trận-phụ-thuộc-giữa-các-module-dbt-)
+4. [Kernel](#4-kernel-)
+5. [Connectors](#5-connectors-)
 6. [CDM (canonical layer)](#6-cdm-canonical-layer)
 7. [Core](#7-core)
-8. [Packs](#8-packs)
+8. [Packs](#8-packs-)
 9. [Taxonomy module](#9-taxonomy-module)
-10. [Tenant overlay Fine Japan](#10-tenant-overlay-fine-japan)
+10. [Tenant overlay Fine Japan](#10-tenant-overlay-fine-japan-)
 11. [Serving và người tiêu thụ](#11-serving-và-người-tiêu-thụ)
-12. [Ranh giới Python và container](#12-ranh-giới-python-và-container)
+12. [Ranh giới Python và container](#12-ranh-giới-python-và-container-)
 
 ---
 
@@ -72,7 +75,8 @@ flowchart TB
     subgraph FJ["Tenant overlay Fine Japan"]
         FJD["tenants/fine_japan (dbt)<br/>US shipment"]
         FJS["seeds/tenants/fine_japan"]
-        FJO["orchestration/tenants/fine_japan<br/>config.py: URL Sheet, endpoint CRM"]
+        FJO["orchestration/tenants/fine_japan<br/>config.py: endpoint CRM"]
+        FJE["env SOURCES__SPREADSHEET_URL__*<br/>(6 URL Google Sheet)"]
     end
     subgraph SRV["Serving"]
         OLAP[(serving/olap.duckdb)]
@@ -100,6 +104,7 @@ flowchart TB
     OLAP --> MB & EV & RL & CRMAPP & DV
     K -. "điều phối, giám sát" .-> CONN & DBT & PKO & OLAP
     FJO -. "setting()" .-> K & PKO
+    FJE -. "spreadsheet_url()" .-> C4 & K
     PO <-->|"HTTP crm:8090, SQLite export"| CRMAPP
 ```
 
@@ -154,7 +159,7 @@ flowchart LR
 | `serving/olap.duckdb` | Kernel (`refresh_rolling.py`, `bootstrap_serving_views.py`) | Metabase, Evidence, CRM, detailView (read-only) | Mọi consumer ghi |
 | `monitoring_db` (health DB) | Kernel ops/sensors | Kernel asset checks, digest | Connector ghi trực tiếp (đi qua ops chung) |
 | `transformation/seeds/taxonomy/*.csv` | Taxonomy module; writer Python đi qua `seed_paths.py` ✅ | dbt seed | Ghi theo đường dẫn cứng (đường dẫn seed phải do `seed_path(name)` tra) |
-| `transformation/seeds/tenants/fine_japan/*.csv` ✅ | Tenant FJ (dữ liệu doanh nghiệp). Writer Python duy nhất: connector `sheets` (`budget_sheet_sync_asset`, hai seed ngân sách, qua `seed_path`); seed khác sửa tay | dbt seed (pack `sales_playbook`, `finance`; lõi `dim_channel_targets`, `dim_sku_alias`, `int_customer_sku_supply_tracking`) | Ghi theo đường dẫn cứng |
+| `transformation/seeds/tenants/fine_japan/*.csv` ✅ | Tenant FJ (dữ liệu doanh nghiệp). Writer Python duy nhất: connector `sheets` (`budget_sheet_sync_asset`, hai seed ngân sách, qua `seed_path`); seed khác sửa tay | dbt seed: pack `sales_playbook`, `finance` (đúng thiết kế); lõi `dim_channel_targets`, `dim_sku_alias`, `int_customer_sku_supply_tracking` (3 mục allowlist của luật `dbt-seed`) | Ghi theo đường dẫn cứng; lõi, cdm, connector đọc thêm seed tenant (luật `dbt-seed`) |
 
 ### Vùng shadow (công cụ refactor, không phải prod)
 
@@ -216,7 +221,8 @@ flowchart TB
     CONN -. "chỉ connector pack khai báo<br/>marketplace→shopee, finance→misa, hug→hug,<br/>facebook_*→facebook_*" .-> PACK
     CDM & CORE & PACK & CONN --> TEN["tenants/fine_japan"]
     TAX["seeds/taxonomy"] --> CORE & PACK & TEN
-    TS["seeds/tenants/fine_japan"] --> CORE & PACK
+    TS["seeds/tenants/fine_japan"] --> PACK
+    TS -. "⚠ dbt-seed (allowlist)" .-> CORE
     ALL["mọi module"] --> MON["monitoring/ (chỉ đọc)"]
 
     CORE -. "❌ cấm: core → connectors" .-x CONN
@@ -227,14 +233,14 @@ flowchart TB
 
 | Từ \ Tới | connectors | cdm | core | packs | tenants | seeds |
 |---|---|---|---|---|---|---|
-| **connectors/<x>** | chỉ `<x>` | ❌ | ❌ | ❌ | ❌ | ✅ |
-| **cdm** | ✅ | ✅ | ❌ | ❌ | ❌ | ✅ |
-| **core** | ❌ | ✅ | ✅ | ⚠ pack hook | ⚠ tenant hook | ✅ |
+| **connectors/<x>** | chỉ `<x>` | ❌ | ❌ | ❌ | ❌ | ✅ (seed tenant: ❌) |
+| **cdm** | ✅ | ✅ | ❌ | ❌ | ❌ | ✅ (seed tenant: ❌) |
+| **core** | ❌ | ✅ | ✅ | ⚠ pack hook | ⚠ tenant hook | ✅ (seed tenant: ⚠) |
 | **packs/<p>** | connector khai báo (khác: ⚠) | ✅ | ✅ | chỉ `<p>` (khác: ⚠ khai báo) | ❌ | ✅ |
 | **tenants/<t>** | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ |
 | **monitoring** | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ |
 
-⚠ = chỉ được qua một mục trong `scripts/checks/boundary_allowlist.yaml` kèm lý do và hướng thoát; ma trận không bao giờ cho phép core → packs hay core → tenants. `check_boundaries.py` fail khi có cạnh mới ngoài ma trận, và cả khi một mục allowlist không còn xảy ra (để allowlist không phình). Allowlist được **sinh từ manifest** (`depends_on` của mọi model, kể cả model tắt) và từ import Python của `orchestration/connectors/**`, `orchestration/packs/**` (`--write-allowlist`), không viết tay. Đọc source dbt chỉ dành cho connector và tenant (luật `dbt-source`).
+⚠ = chỉ được qua một mục trong `scripts/checks/boundary_allowlist.yaml` kèm lý do và hướng thoát; ma trận không bao giờ cho phép core → packs hay core → tenants. `check_boundaries.py` fail khi có cạnh mới ngoài ma trận, và cả khi một mục allowlist không còn xảy ra (để allowlist không phình). Allowlist được **sinh từ manifest** (`depends_on` của mọi model, kể cả model tắt) và từ import Python của `orchestration/connectors/**`, `orchestration/packs/**` (`--write-allowlist`), không viết tay. Đọc source dbt chỉ dành cho connector và tenant (luật `dbt-source`). Cột seeds: seed dùng chung (`seeds/taxonomy/`, ...) ai cũng đọc; seed tenant (`seeds/tenants/<t>/`) chỉ pack, `monitoring` và chính tenant `<t>` được đọc (luật `dbt-seed`).
 
 Số model theo bucket (`model_buckets.yaml`, 182 model gồm 10 đang tắt):
 
@@ -250,12 +256,13 @@ Số model theo bucket (`model_buckets.yaml`, 182 model gồm 10 đang tắt):
 | tenant:fine_japan | 3 | pack:facebook_ads (tắt), pack:facebook_messenger (tắt) | 2 + 2 |
 | monitoring | 1 | | |
 
-Vi phạm đã biết (33, đúng bằng allowlist):
+Vi phạm đã biết (36, đúng bằng allowlist):
 
 | Nhóm | Số | Cạnh | Hướng thoát |
 |---|---|---|---|
 | Pack hook (core → pack) | 8 | `dim_customers` → `int_customer_economics` (`lifetime_gross_profit`, `lifetime_contribution_margin`); `dim_staff` → `stg_crm__app_user` (`crm_user_id`); `int_product_velocity_trend`, `mart_inventory_health` → `mart_sku_economics_monthly` (chỉ tốc độ bán); `mart_product_health`, `mart_product_action_queue` → `mart_sku_economics_monthly` (`realized_margin_pct`, `cogs_variance_pct`, `margin_outlier`); `mart_data_quality` → `fact_order_economics` (kiểm tra chất lượng); `dim_sku_alias` → `int_misa_sales_lines` (có từ trước) | `pack_ref` sau Đợt 1; tách `mart_sku_economics_monthly` thành phần doanh số/tốc độ bán (lõi) và phần chi phí/biên (finance) |
 | Tenant hook (core → tenant) | 1 | `mart_data_quality` → `fact_us_shipment_economics` | Dời check US vào `tenants/fine_japan` |
+| Lõi đọc seed tenant (`dbt-seed`) | 3 | `dim_channel_targets` → `seed_channel_targets`; `int_customer_sku_supply_tracking` → `seed_sku_regimen_config`; `dim_sku_alias` → `seed_sku_alias_manual` | Sau Đợt 1, cùng `pack_ref`: lõi có seed mặc định rỗng đúng cột, tenant ghi đè |
 | Pack → pack (khai báo) | 5 | `mart_hug_attribution` (hug) → `fact_order_economics` (finance); `fact_order_economics` (finance) → `int_shopee_order_fees` (marketplace); `mart_customer_action_queue` → `stg_crm__last_contact`, `int_crm_party_tag_flags`; `mart_customer_sku_action_queue` → `stg_crm__last_contact` (sales_playbook → crm) | Khai báo phụ thuộc pack + `pack_ref` sau Đợt 1 |
 | Pack → connector ngoài `pack_connectors` | 2 | `fact_order_costs` → `stg_shopee_order_revenue`, `stg_shopee_order_service_fees` | Chuyển phần phí sàn sang `pack:marketplace`. Chọn allowlist thay vì thêm `shopee` vào `pack_connectors` của finance để luật vẫn chặt |
 | Pack đọc source | 12 | 11 mục từ 10 model `stg_crm__*` (gồm `stg_crm__hug_voucher` của hug; `stg_crm__party_tag` đọc hai bảng) → `crm_export.*`; `stg_overhead_account_classification` → `gsheet_raw.overhead_account_classification_raw` | Khai báo source thuộc pack (hoặc connector crm); dời staging overhead sang connector gsheet |
@@ -302,7 +309,8 @@ flowchart TB
 | `run_pipeline(...)` (dlt) | Connector sapo_v2, hug |
 | `get_data_lake_path()`, partition writer | Connector shopee, misa_amis |
 | `seed_path(name)` | Taxonomy writers, budget sync |
-| `setting(name)` (`orchestration/tenants/__init__.py`): env cùng tên, nếu không có thì `tenants/<tenant>/config.py`; thiếu thì `TenantConfigError` | `sensors/sheets_modified_sensor.py`, pack `crm`, pack `sales_playbook` |
+| `spreadsheet_url(name)` (`ingestion/src/gsheet_auth.py`): URL Google Sheet từ env `SOURCES__SPREADSHEET_URL__<NAME>`, không có mặc định; thiếu hoặc rỗng thì `SpreadsheetUrlNotConfigured` nêu tên biến, lúc dùng (không phải lúc import) | 5 reader `ingestion/src/gsheet_*.py`, `gsheet_budget_sync`, `sensors/sheets_modified_sensor.py` |
+| `setting(name)` (`orchestration/tenants/__init__.py`): env cùng tên, nếu không có thì `tenants/<tenant>/config.py`; thiếu thì `TenantConfigError` | Pack `crm`, pack `sales_playbook` |
 | `send_lark_card(...)` | Sensors, ops |
 | SLA (`ingestion_sla.yaml`, khoá `<prefix>/<function_name>`; thiếu file thì `sla_loader` raise) | Asset checks |
 
@@ -310,7 +318,7 @@ flowchart TB
 
 Job chéo nguồn nằm trong `definitions.py`: `pipeline_batch_nightly_job` và `pipeline_batch_fullrefresh_job` chọn `NIGHTLY_ASSETS` của mọi connector đang bật cùng toàn bộ dbt và serving.
 
-`sensors/sheets_modified_sensor.py` nằm ở kernel và được connector `sheets` khai báo trong `SENSORS`. URL Google Sheet của nó là tenant setting (`orchestration/tenants/fine_japan/config.py`), đọc mỗi tick; thiếu thì tick lỗi `TenantConfigError` (fail closed), code location vẫn chạy.
+`sensors/sheets_modified_sensor.py` nằm ở kernel và được connector `sheets` khai báo trong `SENSORS`. Nó theo dõi ba sheet `TARGETS`, `MARKETING_SPEND`, `US_SHIPMENT_PRICES` qua **cùng biến môi trường với reader** (`spreadsheet_url(name)`), tự đổi link sheet thành link CSV export (`/export?format=csv`, thêm `gid` cho tab giá US), đọc mỗi tick; thiếu biến thì tick lỗi `SpreadsheetUrlNotConfigured` (fail closed), code location vẫn chạy. Mỗi URL khai báo một nơi (env); bản sao `SHEETS_SENSOR_*_URL` trong tenant config đã bỏ.
 
 Job của pack (`crm_backup_job`, `crm_backup_schedule`) không còn khai báo trong `definitions.py`: chúng đến từ `orchestration/packs/<id>/jobs.py` (mục 8).
 
@@ -372,7 +380,7 @@ Bỏ một connector khỏi `modules.yaml` chỉ làm mất asset, job, schedule
 | `sapo_v2` | 7 `run_sapo_v2_*.py`, `src/sapo/` (batch, history log, webhook consumer từ D1) | `sapo_v2_raw/` | `src_sapo_v2_*` (11, incremental), `stg_sapo_v2_*` (16) | `std_orders`, `std_order_items`, `std_customers`, `std_products`, `std_variants`, … |
 | `shopee` | `run-shopee-income-file-drop.py`, `src/shopee/` | `shopee_raw/` | `src_shopee_*`, `stg_shopee_*` | (đi thẳng `packs/marketplace`) |
 | `misa_amis` | 6 `run-misa-*.py`, `src/misa_amis/` | `misa_raw/` | `src_misa_*`, `stg_misa_sales_lines` | `std_misa_sales_lines`, `std_misa_account_ledger` |
-| `sheets` | `src/gsheet_*.py` | `gsheet_raw/` | `stg_targets`, `stg_marketing_spend`, `stg_teams`, `stg_team_members` | `std_targets`, `std_marketing_spend`, `std_teams`, `std_team_members` |
+| `sheets` | `src/gsheet_*.py` (URL từ env `SOURCES__SPREADSHEET_URL__<NAME>`, không mặc định) | `gsheet_raw/` | `stg_targets`, `stg_marketing_spend`, `stg_teams`, `stg_team_members` | `std_targets`, `std_marketing_spend`, `std_teams`, `std_team_members` |
 | `hug` | `run_hug_webhook_consumer.py` (poll Cloudflare D1) | `hug_raw/` | `src_hug_scan`, `src_hug_optin_event` (incremental) | (đi thẳng `packs/hug`) |
 | `facebook_*` | `run_facebook_*_batch.py` (chưa có asset, dormant) | `facebook_ads`, `raw_messenger_data` | `stg_fb_*` | (đi thẳng `packs/facebook_*`) |
 
@@ -452,7 +460,7 @@ flowchart TB
 ```
 
 - **Lõi giữ doanh thu**; giá vốn, chi phí và lợi nhuận ở pack `finance` (mục 8). Chỉ có lõi thì xem doanh thu, bật finance thì xem thêm lợi nhuận.
-- Core chỉ đọc `cdm/`, `core/` và seeds (kể cả `seeds/taxonomy` và ba seed của tenant: `seed_channel_targets`, `seed_sku_alias_manual`, `seed_sku_regimen_config`). Các luật phân loại còn viết trong SQL của core được kiểm kê ở `transformation/docs/TAXONOMY.md`.
+- Core chỉ đọc `cdm/`, `core/` và seed dùng chung (`seeds/taxonomy`). Ba seed của tenant mà core còn đọc (`seed_channel_targets`, `seed_sku_alias_manual`, `seed_sku_regimen_config`) là vi phạm luật `dbt-seed` được allowlist, lối ra cùng `pack_ref` (mục 3). Các luật phân loại còn viết trong SQL của core được kiểm kê ở `transformation/docs/TAXONOMY.md`.
 - Mọi tên model ở đây là **public** (76 serving view, Rill, CRM, detailView): không đổi tên khi refactor module.
 - Nợ còn lại: xem bảng vi phạm đã biết ở mục 3.
 
@@ -549,11 +557,14 @@ flowchart TB
     subgraph FJ["Tenant overlay Fine Japan"]
         US["transformation/models/tenants/fine_japan/<br/>stg_us_shipment_prices, int_us_shipment_line_prices,<br/>fact_us_shipment_economics"]
         FJSEED["transformation/seeds/tenants/fine_japan/<br/>seed_cashflow_budget, seed_cash_allocation_policy,<br/>seed_channel_targets, seed_sku_regimen_config,<br/>seed_sku_alias_manual, seed_action_scenario_registry"]
-        CFG["orchestration/tenants/fine_japan/config.py<br/>URL Google Sheet (sensor), endpoint CRM"]
+        CFG["orchestration/tenants/fine_japan/config.py<br/>endpoint CRM"]
+        ENV["env SOURCES__SPREADSHEET_URL__*<br/>6 URL Google Sheet"]
     end
     CORE["core/"] --> US
-    FJSEED --> FIN["packs/finance"] & SP["packs/sales_playbook"] & CORE
-    CFG -. "setting()" .-> SEN["sensors/sheets_modified_sensor"] & PCRM["orchestration/packs/crm, sales_playbook"]
+    FJSEED --> FIN["packs/finance"] & SP["packs/sales_playbook"]
+    FJSEED -. "⚠ dbt-seed (3 mục allowlist)" .-> CORE
+    CFG -. "setting()" .-> PCRM["orchestration/packs/crm, sales_playbook"]
+    ENV -. "spreadsheet_url()" .-> RD["ingestion/src/gsheet_*.py"] & SEN["sensors/sheets_modified_sensor"]
     CORE -. "⚠ tenant hook: mart_data_quality" .-> US
     CORE -. "⚠ logic hook: dim_customers CROSSBORDER" .-> FJLOGIC["mã nhóm + kênh US<br/>(SQL, không phải ref)"]
     TOML["ingestion/.dlt/config.toml<br/>domain Sapo, login_url, worker URL"] -. "cấu hình FJ, giữ chỗ cũ" .-> CONN["connectors sapo_v2, hug"]
@@ -563,7 +574,8 @@ flowchart TB
 |---|---|---|
 | US shipment (3 model, tag `us_shipment` giữ nguyên nhờ thư mục `intermediate/us_shipment/`) | `transformation/models/tenants/fine_japan/` | [dbt](../../transformation/models/tenants/fine_japan/README.md) |
 | 6 seed dữ liệu doanh nghiệp (Python ghi qua `seed_path`) | `transformation/seeds/tenants/fine_japan/` | như trên |
-| Cấu hình đọc qua `orchestration.tenants.setting(name)` (env cùng tên ghi đè; thiếu thì `TenantConfigError`) | `orchestration/tenants/fine_japan/config.py`; bật bằng `tenants: [fine_japan]` trong `config/modules.yaml` | [orchestration](../../orchestration/tenants/fine_japan/README.md) |
+| Cấu hình đọc qua `orchestration.tenants.setting(name)` (env cùng tên ghi đè; thiếu thì `TenantConfigError`): endpoint CRM | `orchestration/tenants/fine_japan/config.py`; bật bằng `tenants: [fine_japan]` trong `config/modules.yaml` | [orchestration](../../orchestration/tenants/fine_japan/README.md) |
+| 6 URL Google Sheet (`TARGETS`, `MARKETING_SPEND`, `US_SHIPMENT_PRICES`, `TEAM_CONFIG`, `OVERHEAD_CLASSIFICATION`, `BUDGET`), chỉ khai báo một nơi | Biến môi trường `SOURCES__SPREADSHEET_URL__<NAME>` (`.env.docker`; tên ở `.env.docker.example`); code không có mặc định, ingestion không import `orchestration.tenants` | như trên |
 | Domain Sapo, `login_url`, worker URL (giữ chỗ cũ, user quyết định 14/10) | `ingestion/.dlt/config.toml` | như trên |
 
 ### Hook (sinh từ manifest)
@@ -573,6 +585,7 @@ Danh sách đầy đủ là `scripts/checks/boundary_allowlist.yaml`, sinh từ 
 | Loại | Cạnh | Hướng xử lý (sau Đợt 1) |
 |---|---|---|
 | Tenant hook (core → tenant) | `mart_data_quality` → `fact_us_shipment_economics` | Dời check US vào tenant |
+| Lõi đọc seed tenant (`dbt-seed`) | `dim_channel_targets`, `int_customer_sku_supply_tracking`, `dim_sku_alias` → ba seed Fine Japan | Seed mặc định rỗng đúng cột ở lõi, tenant ghi đè, cùng `pack_ref` |
 | Pack hook (core → pack) | `dim_customers` → `int_customer_economics`; `dim_staff` → `stg_crm__app_user`; `int_product_velocity_trend`, `mart_inventory_health`, `mart_product_health`, `mart_product_action_queue` → `mart_sku_economics_monthly`; `mart_data_quality` → `fact_order_economics`; `dim_sku_alias` → `int_misa_sales_lines` | `pack_ref`; tách `mart_sku_economics_monthly` |
 | Pack → pack (khai báo) | `mart_hug_attribution` → `fact_order_economics`; `fact_order_economics` → `int_shopee_order_fees`; `sales_playbook` → `crm` (3 cạnh) | `pack_ref` |
 
@@ -639,7 +652,9 @@ flowchart TB
 | Quy tắc | Cưỡng chế |
 |---|---|
 | `crm/`, `detailView/` không import `orchestration`, `ingestion`, `transformation` | `check_boundaries.py` (ast) |
-| `ingestion/` không import `orchestration` | `check_boundaries.py` |
+| `ingestion/` không import `orchestration` (kể cả `orchestration.tenants`: URL Google Sheet đọc từ env `SOURCES__SPREADSHEET_URL__*`) | `check_boundaries.py` |
+| Lõi, cdm, connector không đọc seed tenant (luật `dbt-seed`, 3 mục allowlist) | `check_boundaries.py` (manifest) |
+| Mọi luật trên chạy trước mỗi commit | `scripts/checks/run-all.sh` (cùng `dbt parse`, `dagster definitions validate`, pytest) |
 | `orchestration/connectors/**` và `orchestration/packs/**` không chứa URL/domain cứng (luật `connector-url`, `pack-url`); giá trị tenant đọc qua `orchestration.tenants.setting()` | `check_boundaries.py` |
 | Connector không import pack; pack không import pack khác (luật `orch-import`, 5 mục allowlist) | `check_boundaries.py` (ast) |
 | Giao tiếp CRM ↔ orchestration chỉ qua HTTP và file export | Review + quy tắc import |

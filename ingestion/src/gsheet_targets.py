@@ -36,10 +36,8 @@ if not DATA_LAKE_PATH:
         "Set via .env.docker (container) or .env.local (host)."
     )
 
-SHEET_URL = os.environ.get(
-    "SOURCES__SPREADSHEET_URL__TARGETS",
-    "https://docs.google.com/spreadsheets/d/1ZHt2iAD88OGgSRopVOkqEgusja-JpP4XqtiH4anhax4/edit?usp=sharing"
-)
+# Sheet URL: env SOURCES__SPREADSHEET_URL__TARGETS, resolved when the sheet is read.
+SHEET_NAME = "TARGETS"
 
 # --- Validation rules ---
 VALID_CYCLE_TYPES = {"daily", "weekly", "monthly", "quarterly", "yearly"}
@@ -173,9 +171,10 @@ def _print_validation_report(issues, total_rows, valid_count):
 def fetch_and_save_targets():
     print(f"Starting Target Ingestion (gsheet_targets)...")
 
-    print(f"Fetching via Sheets API (gid=0): {SHEET_URL}")
+    sheet_url = gsheet_auth.spreadsheet_url(SHEET_NAME)
+    print(f"Fetching via Sheets API (gid=0): {sheet_url}")
     try:
-        raw = gsheet_auth.fetch_tab_as_dataframe(SHEET_URL, gid="0")
+        raw = gsheet_auth.fetch_tab_as_dataframe(sheet_url, gid="0")
         raw.columns = raw.iloc[0]
         df = raw[1:].reset_index(drop=True)
         print(f"Downloaded {len(df)} rows.")

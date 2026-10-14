@@ -39,14 +39,14 @@ if not DATA_LAKE_PATH:
         "Set via .env.docker (container) or .env.local (host)."
     )
 
-# Replace with actual Marketing Spend Sheet URL
-# Should be set in .dlt/secrets.toml or .env.local as SOURCES__SPREADSHEET_URL__MARKETING_SPEND
-SHEET_URL = os.environ.get("SOURCES__SPREADSHEET_URL__MARKETING_SPEND", "https://docs.google.com/spreadsheets/d/1wQpT4lCZWrPE7fnbRNTKiNDRFzVT2u_WhN-9uY9u3lc/edit?usp=sharing") 
+# Sheet URL: env SOURCES__SPREADSHEET_URL__MARKETING_SPEND, resolved when the sheet is read.
+SHEET_NAME = "MARKETING_SPEND"
 
 def fetch_and_save_marketing_spend():
     print(f"Starting Marketing Spend Ingestion...")
 
-    print(f"Fetching via Sheets API (gid=0): {SHEET_URL}")
+    sheet_url = gsheet_auth.spreadsheet_url(SHEET_NAME)
+    print(f"Fetching via Sheets API (gid=0): {sheet_url}")
 
     # --- MAPPING LOGIC START ---
     def load_csv_as_df(seed_name):
@@ -96,7 +96,7 @@ def fetch_and_save_marketing_spend():
     # --- MAPPING LOGIC END ---
 
     try:
-        raw = gsheet_auth.fetch_tab_as_dataframe(SHEET_URL, gid="0")
+        raw = gsheet_auth.fetch_tab_as_dataframe(sheet_url, gid="0")
         raw.columns = raw.iloc[0]
         df = raw[1:].reset_index(drop=True)
         print(f"Fetched {len(df)} rows from Google Sheet.")

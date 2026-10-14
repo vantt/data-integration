@@ -10,7 +10,7 @@ Writes to:
 
 Environment:
 - DBT_DATA_LAKE_PATH: Path to data lake (required; can be set via .env.local for local dev)
-- SOURCES__SPREADSHEET_URL__TEAM_CONFIG: Google Sheet URL
+- SOURCES__SPREADSHEET_URL__TEAM_CONFIG: Google Sheet URL (required, no default)
 """
 import sys
 import os
@@ -49,10 +49,8 @@ if not DATA_LAKE_PATH:
         "Set via .env.docker (container) or .env.local (host)."
     )
 
-SHEET_URL = os.environ.get(
-    "SOURCES__SPREADSHEET_URL__TEAM_CONFIG",
-    "https://docs.google.com/spreadsheets/d/1bKZSbKX-ngkzum_OQXCaUbVzGFo3a-1B40EN_c2wN7Y/edit?usp=sharing"
-)
+# Sheet URL: env SOURCES__SPREADSHEET_URL__TEAM_CONFIG, resolved when the sheet is read.
+SHEET_NAME = "TEAM_CONFIG"
 
 # --- Validation rules ---
 VALID_REVENUE_TYPES = {"member", "platform", "channel_name"}
@@ -237,9 +235,10 @@ def fetch_and_save_team_config():
     sheet_name_teams = os.environ.get("TEAM_CONFIG_SHEET_TEAMS", "teams")
     sheet_name_members = os.environ.get("TEAM_CONFIG_SHEET_MEMBERS", "team_members")
 
+    sheet_url = gsheet_auth.spreadsheet_url(SHEET_NAME)
     try:
-        print(f"Fetching via Sheets API (all tabs): {SHEET_URL}")
-        sheets = gsheet_auth.fetch_workbook_tabs(SHEET_URL)
+        print(f"Fetching via Sheets API (all tabs): {sheet_url}")
+        sheets = gsheet_auth.fetch_workbook_tabs(sheet_url)
         print(f"Found sheets: {list(sheets.keys())}")
 
         # 1. Validate TEAMS tab

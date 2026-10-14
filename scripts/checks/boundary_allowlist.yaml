@@ -76,6 +76,21 @@ allow:
   target: mart_sku_economics_monthly [core -> pack:finance]
   reason: 'Pack hook (core -> finance): uses realized_margin_pct, cogs_variance_pct, margin_outlier of mart_sku_economics_monthly. Exit - split mart_sku_economics_monthly into a core SKU sales/velocity
     part and a finance cost/margin part; margin columns via pack_ref after Đợt 1.'
+- rule: dbt-seed
+  subject: dim_channel_targets
+  target: seed_channel_targets [core -> tenant:fine_japan]
+  reason: 'Core reads tenant data (core -> tenant:fine_japan seed): dim_channel_targets is built from the hand-maintained Fine Japan channel budget seed_channel_targets. Exit - after Đợt 1 core ships an
+    empty seed with the same columns and the tenant overrides it (with pack_ref).'
+- rule: dbt-seed
+  subject: dim_sku_alias
+  target: seed_sku_alias_manual [core -> tenant:fine_japan]
+  reason: 'Core reads tenant data (core -> tenant:fine_japan seed): dim_sku_alias unions ~10 hand-audited Fine Japan MISA/Sapo SKU overrides from seed_sku_alias_manual. Exit - after Đợt 1 core ships an
+    empty seed with the same columns and the tenant overrides it (with pack_ref).'
+- rule: dbt-seed
+  subject: int_customer_sku_supply_tracking
+  target: seed_sku_regimen_config [core -> tenant:fine_japan]
+  reason: 'Core reads tenant data (core -> tenant:fine_japan seed): supply tracking uses the Fine Japan per-SKU regimen (supply days, buffer, reminder lead) from seed_sku_regimen_config. Exit - after Đợt
+    1 core ships an empty seed with the same columns and the tenant overrides it (with pack_ref).'
 - rule: dbt-source
   subject: stg_crm__activity_log
   target: crm_export.crm_activity_log

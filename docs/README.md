@@ -24,6 +24,7 @@ This documentation follows a **progressive disclosure** model. Start with Level 
 | [Data Dictionary](./architecture/data-dictionary.md) | Column reference, entities, business metrics | 30 min |
 | [Modules](./architecture/modules.md) | Module boundaries: who writes what, allowed dependencies, enforcement | 20 min |
 | [Canonical Layer](./architecture/canonical-layer.md) | Why core reads only std_* views, how pass-through and column tests work | 20 min |
+| [Taxonomy Engine](./architecture/taxonomy-engine.md) | Design of the classification engine (plan after Đợt 1); today's rules are specified in `transformation/docs/TAXONOMY.md` | 20 min |
 
 ### Level 3: Operate (2-3 hours)
 
@@ -55,8 +56,9 @@ Find any topic in one lookup:
 | [Data Flow](./architecture/data-flow.md) | Pipeline flow from source to serving |
 | [Data Model](./architecture/data-model.md) | Table inventory, grains, keys, relationships, planned models |
 | [Data Dictionary](./architecture/data-dictionary.md) | Entity schemas, column definitions, field meanings |
-| [Modules](./architecture/modules.md) | Module authority and boundaries (connectors, cdm, core, packs, tenants) |
+| [Modules](./architecture/modules.md) | Module authority and boundaries (connectors, cdm, core, packs, tenants); checks: `scripts/checks/run-all.sh` |
 | [Canonical Layer](./architecture/canonical-layer.md) | The std_* contract between connectors and core |
+| [Taxonomy Engine](./architecture/taxonomy-engine.md) | Classification engine design (not implemented yet) |
 | [Source Entities](./architecture/source-entities/index.md) | Raw source payloads, ingestion envelope, source-level schemas |
 | [Glossary](./development/glossary.md) | Terms, naming conventions |
 
@@ -104,6 +106,10 @@ For a new datasource that is needed by a metric but not yet implemented in dbt, 
 | [ADR-011](./decisions/011-dashboard-archetypes.md) | Dashboard archetypes (Pulse/Cockpit/Exploratory) |
 | [ADR-012](./decisions/012-technology-stack.md) | Technology stack choices |
 | [ADR-013](./decisions/013-development-heuristics.md) | Explicit > Implicit, Golden Sample |
+| [ADR-014](./decisions/014-source-system-combined-identifier.md) | `source_system` = combined `{system}_{version}` |
+| [ADR-015](./decisions/015-module-boundaries.md) | Module boundaries: buckets, dependency matrix, kernel, connectors, tenant, enforcement |
+| [ADR-016](./decisions/016-taxonomy-module.md) | Taxonomy module in Đợt 1: spec + seed move, no macro split |
+| [ADR-017](./decisions/017-packs-and-tenants.md) | Packs and tenants: logic is a pack, data/config is the tenant |
 
 ### Operations
 

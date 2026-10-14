@@ -27,7 +27,9 @@ from __future__ import annotations
 
 import hashlib
 import json
+import re
 from typing import Optional
+from urllib.parse import urlsplit, urlunsplit
 
 import requests
 from dagster import (
@@ -38,24 +40,43 @@ from dagster import (
     sensor,
 )
 
-from orchestration.tenants import setting
+from ingestion.src.gsheet_auth import spreadsheet_url
 
-# Public CSV export URLs of the tracked sheets are tenant values (Fine Japan:
-# orchestration/tenants/fine_japan/config.py; the ingestion readers keep their own copy). The
-# env var of the same name overrides; with neither, the tick fails with TenantConfigError
-# instead of polling another business's sheet. Read per tick so a missing value fails this
-# sensor, not the whole code location.
-SHEET_URL_SETTINGS = {
-    "targets": "SHEETS_SENSOR_TARGETS_URL",
-    "marketing_spend": "SHEETS_SENSOR_MARKETING_URL",
+# Tracked sheets: {cursor name: (SOURCES__SPREADSHEET_URL__<NAME>, tab gid or None)}. The URL
+# comes from the same env variable the ingestion reader uses (ingestion/src/gsheet_*.py), so
+# each sheet URL is declared in one place. A tab gid polls that tab; None polls the first tab.
+# The URL is read per tick: a missing variable fails this sensor's tick with
+# SpreadsheetUrlNotConfigured, not the whole code location.
+TRACKED_SHEETS = {
+    "targets": ("TARGETS", None),
+    "marketing_spend": ("MARKETING_SPEND", None),
     # US Shipment price changes are infrequent but high-impact; detect immediately.
-    "us_shipment_prices": "SHEETS_SENSOR_US_SHIPMENT_PRICES_URL",
+    # gid = the price list tab read by ingestion/src/gsheet_us_shipment_prices.py (_SHEET_GID).
+    "us_shipment_prices": ("US_SHIPMENT_PRICES", "304875363"),
 }
+
+_SHEET_PATH_RE = re.compile(r"^(/spreadsheets/d/[A-Za-z0-9_-]+)")
+
+
+def csv_export_url(sheet_url: str, gid: str | None) -> str:
+    """Public CSV export URL of one tab of the Google Sheet at `sheet_url` (edit/share link).
+
+    `https://<host>/spreadsheets/d/<id>/edit?...` -> `https://<host>/spreadsheets/d/<id>/export?format=csv[&gid=<gid>]`.
+    Query and fragment of the input (usp=sharing, gid=...) are ignored: the tab is `gid`."""
+    parts = urlsplit(sheet_url)
+    match = _SHEET_PATH_RE.match(parts.path)
+    if not (parts.scheme and parts.netloc and match):
+        raise ValueError(f"not a Google Sheet URL (expected .../spreadsheets/d/<id>/...): {sheet_url!r}")
+    query = "format=csv" + (f"&gid={gid}" if gid else "")
+    return urlunsplit((parts.scheme, parts.netloc, f"{match.group(1)}/export", query, ""))
 
 
 def sheet_urls() -> dict[str, str]:
-    """{sheet name: CSV export URL}; raises TenantConfigError when a URL is not configured."""
-    return {name: setting(key) for name, key in SHEET_URL_SETTINGS.items()}
+    """{sheet name: CSV export URL}; raises SpreadsheetUrlNotConfigured when a variable is missing."""
+    return {
+        name: csv_export_url(spreadsheet_url(env_name), gid)
+        for name, (env_name, gid) in TRACKED_SHEETS.items()
+    }
 
 
 # HTTP timeout per sheet fetch. Sheets are tiny but the Google edge can

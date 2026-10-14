@@ -23,6 +23,15 @@ sys.path.insert(0, os.path.join(os.path.dirname(__file__), "..", "src"))
 import gsheet_budget_sync as sync  # noqa: E402
 from ingestion.src import gsheet_auth  # noqa: E402 — dotted, matches sync's own import (module identity for monkeypatch)
 
+BUDGET_URL_ENV = "SOURCES__SPREADSHEET_URL__BUDGET"
+
+
+@pytest.fixture(autouse=True)
+def _budget_sheet_url(monkeypatch):
+    """The budget sheet URL has no default in code; every test gets a dummy one unless it
+    removes it to test the missing-variable error."""
+    monkeypatch.setenv(BUDGET_URL_ENV, "https://example.invalid/spreadsheets/d/budget/edit")
+
 
 # ---------------------------------------------------------------------------
 # Helpers
@@ -769,3 +778,44 @@ def test_write_cells_via_sheets_api_requires_key_file_to_exist(monkeypatch, tmp_
     monkeypatch.setenv(gsheet_auth.GOOGLE_SHEETS_SERVICE_ACCOUNT_KEY_PATH_ENV, str(missing_key))
     with pytest.raises(RuntimeError, match="không tồn tại"):
         sync._write_cells_via_sheets_api([{"sheet_row": 4, "col": 7, "value": 1, "cashflow_line": "x", "item_type": "recurring"}])
+
+
+# --- budget sheet URL (SOURCES__SPREADSHEET_URL__BUDGET, no default in code) ---
+
+def test_sheet_url_comes_from_env():
+    assert sync.sheet_url() == "https://example.invalid/spreadsheets/d/budget/edit"
+
+
+def test_sync_without_sheet_url_fails_before_fetching(monkeypatch):
+    monkeypatch.delenv(BUDGET_URL_ENV)
+    fetched = []
+    monkeypatch.setattr(sync, "_fetch_tab_csv", lambda *a: fetched.append(a))
+    with pytest.raises(gsheet_auth.SpreadsheetUrlNotConfigured, match=BUDGET_URL_ENV):
+        sync.fetch_transform_and_save(dry_run=True)
+    with pytest.raises(gsheet_auth.SpreadsheetUrlNotConfigured, match=BUDGET_URL_ENV):
+        sync.write_suggestions_to_sheet(target_month="2026-08-01", dry_run=True)
+    assert fetched == []
+
+
+def test_sync_reads_every_tab_from_the_configured_sheet(monkeypatch):
+    urls = []
+
+    def _fake_fetch(url, gid, tab_name):
+        urls.append(url)
+        raise sync.ValidationError("stop after fetch")
+
+    monkeypatch.setattr(sync, "_fetch_tab_csv", _fake_fetch)
+    with pytest.raises(sync.ValidationError):
+        sync.fetch_transform_and_save(dry_run=True)
+    assert urls == ["https://example.invalid/spreadsheets/d/budget/edit"]
+
+
+def test_sheet_writeback_without_sheet_url_names_the_variable(monkeypatch):
+    class _Client:
+        def open_by_url(self, url):
+            raise AssertionError("must not open a sheet without a configured URL")
+
+    monkeypatch.delenv(BUDGET_URL_ENV)
+    monkeypatch.setattr(gsheet_auth, "get_gspread_client", lambda: _Client())
+    with pytest.raises(gsheet_auth.SpreadsheetUrlNotConfigured, match=BUDGET_URL_ENV):
+        sync._write_ref_accounts([("Thu", "111  Tiền mặt")])
