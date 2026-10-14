@@ -335,7 +335,7 @@ Các lệnh có trong [scripts/shadow/README.md § One-time setup](../../scripts
 | Sự kiện | Việc cần làm |
 |---|---|
 | Sang ngày mới | Không cần làm gì: gate tự build lại lake-A, golden và inventory baseline (mục 5.2) |
-| `main` có commit mới (vd. vừa deploy một phase, hoặc có fix khác) | `git -C /home/vantt/app/fg-dw-baseline checkout --detach main`, rebase nhánh lên `main`, rồi xoá `lake-A/_shadow_meta/build_start` hoặc đợi sang ngày để gate tự build lại; hoặc build tay lake-A, capture golden, export lại `dbt-main.json` và `dagster-main.json`, xoá `lake-AF` |
+| Một phase vừa được chấp nhận (commit trên nhánh), hoặc `main` có commit mới | Baseline luôn là **commit được chấp nhận gần nhất**, không nhất thiết là `main`: nếu baseline cũ hơn, gate của phase sau thấy cả thay đổi của phase trước (đã gặp 14/10/2026). `git -C /home/vantt/app/fg-dw-baseline checkout --detach <commit chấp nhận gần nhất>`, rồi build lại lake-A bằng tay (`clone-lake.sh lake-A`, `build-lake.sh <baseline> lake-A`), capture golden, export lại `dbt-main.json` và `dagster-main.json` từ worktree baseline, xoá `lake-AF` |
 | Muốn dữ liệu mới hơn | `prepare-shadow.sh` với hai backup mới hơn, rồi làm như dòng trên |
 | Thêm bảng public mới | Chạy lại `golden_snapshot.py init` (giữ nguyên `volatile_columns`), rồi build hai lần (lake-A, lake-A2) để kiểm tra bảng mới có cột volatile không |
 | Đổi image prod (rebuild `data_platform`) | Chạy lại `prepare-shadow.sh` để lấy extensions/phụ thuộc khớp image mới |
