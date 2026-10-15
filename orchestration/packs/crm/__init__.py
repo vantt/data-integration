@@ -17,6 +17,10 @@ ASSETS = [
     *_WRITEBACK_ASSETS,
 ]
 
+# Run after build_serving_db by every connector sync job that rebuilds serving
+# (job_support.after_serving_selection()): the CRM app re-reads the refreshed serving views.
+AFTER_SERVING_ASSETS = [crm_sync.crm_cache_refresh]
+
 # Run by pipeline_batch_nightly_job / pipeline_batch_fullrefresh_job: export CRM tables before
 # dbt, refresh the CRM cache after serving.
 NIGHTLY_ASSETS = [*_WRITEBACK_ASSETS, crm_sync.crm_cache_refresh]

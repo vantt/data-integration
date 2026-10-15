@@ -3,8 +3,7 @@ import os
 from dagster import AssetSelection, RunRequest, SkipReason, define_asset_job, schedule
 
 from orchestration.assets import serving
-from orchestration.packs.crm import crm_sync
-from orchestration.job_support import FACT_ORDER_RETURNS, SYNC_TAGS, has_active_run
+from orchestration.job_support import FACT_ORDER_RETURNS, SYNC_TAGS, after_serving_selection, has_active_run
 from orchestration.sensors.file_drop_sensors import make_file_drop_sensor
 
 from .assets import (
@@ -39,7 +38,7 @@ ingest_filedrop_misa_job = define_asset_job(
         | _misa_source.downstream()
         | FACT_ORDER_RETURNS
         | AssetSelection.assets(serving.build_serving_db)
-        | AssetSelection.assets(crm_sync.crm_cache_refresh)
+        | after_serving_selection()
     ),
     tags=SYNC_TAGS,
 )
@@ -54,7 +53,7 @@ ingest_filedrop_misa_account_ledger_job = define_asset_job(
         _misa_account_ledger_source
         | _misa_account_ledger_source.downstream()
         | AssetSelection.assets(serving.build_serving_db)
-        | AssetSelection.assets(crm_sync.crm_cache_refresh)
+        | after_serving_selection()
     ),
     tags=SYNC_TAGS,
 )

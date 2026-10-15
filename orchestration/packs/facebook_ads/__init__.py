@@ -3,3 +3,4 @@ are disabled in their own config until the facebook_ads connector has a Dagster 
 modules.yaml so the enabled packs match the dbt side."""
 ASSETS = []
 NIGHTLY_ASSETS = []
+AFTER_SERVING_ASSETS = []

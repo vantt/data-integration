@@ -4,3 +4,4 @@ facebook_messenger connector has a Dagster asset. Listed in modules.yaml so the 
 match the dbt side."""
 ASSETS = []
 NIGHTLY_ASSETS = []
+AFTER_SERVING_ASSETS = []

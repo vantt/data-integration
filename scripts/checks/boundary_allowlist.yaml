@@ -100,26 +100,6 @@ allow:
   reason: Finance staging reads the gsheet source directly (overhead account classification sheet). Exit - move the staging model to connector gsheet (stg) and let finance read it as a declared connector
     or via cdm.
 - rule: orch-import
-  subject: orchestration/connectors/misa_amis/jobs.py
-  target: orchestration.packs.crm
-  reason: 'Connector job selects the crm pack''s crm_cache_refresh (refresh the CRM cache after serving). User decision 14/10/2026: keep the import. Exit - after Đợt 1 the crm pack attaches the refresh
-    to the connector jobs itself (or via a kernel hook), so connectors stop importing packs.'
-- rule: orch-import
-  subject: orchestration/connectors/sapo_v2/jobs.py
-  target: orchestration.packs.crm
-  reason: 'Connector job selects the crm pack''s crm_cache_refresh (refresh the CRM cache after serving). User decision 14/10/2026: keep the import. Exit - after Đợt 1 the crm pack attaches the refresh
-    to the connector jobs itself (or via a kernel hook), so connectors stop importing packs.'
-- rule: orch-import
-  subject: orchestration/connectors/sheets/jobs.py
-  target: orchestration.packs.crm
-  reason: 'Connector job selects the crm pack''s crm_cache_refresh (refresh the CRM cache after serving). User decision 14/10/2026: keep the import. Exit - after Đợt 1 the crm pack attaches the refresh
-    to the connector jobs itself (or via a kernel hook), so connectors stop importing packs.'
-- rule: orch-import
-  subject: orchestration/connectors/shopee/jobs.py
-  target: orchestration.packs.crm
-  reason: 'Connector job selects the crm pack''s crm_cache_refresh (refresh the CRM cache after serving). User decision 14/10/2026: keep the import. Exit - after Đợt 1 the crm pack attaches the refresh
-    to the connector jobs itself (or via a kernel hook), so connectors stop importing packs.'
-- rule: orch-import
   subject: orchestration/packs/sales_playbook/approach_script_generation.py
   target: orchestration.packs.crm
   reason: 'Pack -> pack import (sales_playbook -> crm): approach_script_autogen runs after crm_cache_refresh (deps). Exit - declare the pack dependency after Đợt 1 (deps by AssetKey or pack dependency list).'

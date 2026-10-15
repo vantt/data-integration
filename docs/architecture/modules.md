@@ -10,13 +10,13 @@
 |---|---|
 | Bucket của mọi dbt model (183 model: 173 đang bật, 10 đang tắt) | ✅ Khai báo trong `scripts/checks/model_buckets.yaml` |
 | Ma trận phụ thuộc, lõi đọc seed tenant, import chéo (kể cả connector → pack và pack → pack trong orchestration), seed trùng tên, URL/domain cứng trong connector và pack | ✅ Cưỡng chế bằng `scripts/checks/check_boundaries.py` (mục 3, mục 12) |
-| Vi phạm đã biết | 25, sinh từ manifest và import orchestration: 8 cạnh `ref` (tenant hook, pack → pack, pack → connector; không còn pack hook), 0 lõi đọc seed tenant (qua `tenant_ref`), 12 pack đọc source, 5 import connector/pack → pack; ghi trong `scripts/checks/boundary_allowlist.yaml` kèm lý do và hướng thoát (mục 3, 10) |
+| Vi phạm đã biết | 21, sinh từ manifest và import orchestration: 8 cạnh `ref` (tenant hook, pack → pack, pack → connector; không còn pack hook), 0 lõi đọc seed tenant (qua `tenant_ref`), 12 pack đọc source, 1 import pack → pack (`sales_playbook` → `crm`); ghi trong `scripts/checks/boundary_allowlist.yaml` kèm lý do và hướng thoát (mục 3, 10) |
 | Kiểm tra trước commit bằng một lệnh | ✅ `scripts/checks/run-all.sh`: `dbt parse`, `check_boundaries.py`, `dagster definitions validate`, pytest (bắt buộc, ghi trong `AGENTS.md`) |
 | Quyết định kiến trúc | ✅ [ADR-015](../decisions/015-module-boundaries.md) (ranh giới module), [ADR-016](../decisions/016-taxonomy-module.md) (taxonomy), [ADR-017](../decisions/017-packs-and-tenants.md) (pack và tenant) |
 | Thư mục dbt theo module `models/<module>/<layer>/` | ✅ Mọi model nằm trong module (connectors, cdm, core, packs, tenants) hoặc `monitoring/`; thư mục cũ `staging/`, `intermediate/`, `marts/` và `models/sources.yml` đã bỏ |
 | Connector package cho orchestration (`orchestration/connectors/<id>/`, bật/tắt qua `config/modules.yaml`) | ✅ 5 connector: `sapo_v2`, `shopee`, `misa_amis`, `sheets`, `hug` (mục 4, 5) |
 | Pack sản phẩm (`models/packs/<id>/`, `orchestration/packs/<id>/`, khai báo trong `config/modules.yaml`) | ✅ 7 pack: `crm`, `hug`, `finance`, `sales_playbook` (thử nghiệm), `marketplace`, `facebook_ads`, `facebook_messenger` (mục 8) |
-| Công tắc pack (`enabled_packs`, `+enabled` theo thư mục, `pack_enabled`/`pack_ref`, hợp đồng cột `pack_contracts()`, rule `module-config`) | ✅ Lõi đọc pack chỉ qua `pack_ref` (5 hợp đồng, mục 8.1) và seed tenant chỉ qua `tenant_ref` (3 seed mặc định, mục 10); dbt build xanh với mọi pack tắt và không tenant (profile "lõi trần", bước 6b của gate); ⏳ trên prod còn job connector chọn `crm_cache_refresh` (phase 6 của plan `261014-2225-pack-mechanism`) |
+| Công tắc pack (`enabled_packs`, `+enabled` theo thư mục, `pack_enabled`/`pack_ref`, hợp đồng cột `pack_contracts()`, rule `module-config`) | ✅ Lõi đọc pack chỉ qua `pack_ref` (5 hợp đồng, mục 8.1) và seed tenant chỉ qua `tenant_ref` (3 seed mặc định, mục 10); dbt build xanh với mọi pack tắt và không tenant (profile "lõi trần", bước 6b của gate); job connector không import pack: `crm_cache_refresh` vào job qua `AFTER_SERVING_ASSETS` của pack `crm` (mục 4) |
 | Taxonomy: đặc tả, seed phân loại, `seed_paths.py`, check kiểm kê | ✅ `transformation/docs/TAXONOMY.md`, `transformation/seeds/taxonomy/` (8 seed), `ingestion/src/utils/seed_paths.py`, `scripts/checks/check_taxonomy_inventory.py` (mục 9) |
 | Tenant overlay Fine Japan | ✅ Tối thiểu: US shipment (dbt), `seeds/tenants/fine_japan/`, `orchestration/tenants/fine_japan/config.py` (endpoint CRM); 6 URL Google Sheet chỉ ở biến môi trường `SOURCES__SPREADSHEET_URL__*`, không còn URL mặc định trong code (mục 10) |
 | Bộ máy phân loại (luật thành dữ liệu) | ⏳ Plan riêng sau Đợt 1 (mục 9) |
@@ -258,7 +258,7 @@ Số model theo bucket (`model_buckets.yaml`, 183 model gồm 10 đang tắt):
 | tenant:fine_japan | 3 | pack:facebook_ads (tắt), pack:facebook_messenger (tắt) | 2 + 2 |
 | monitoring | 1 | | |
 
-Vi phạm đã biết (25, đúng bằng allowlist):
+Vi phạm đã biết (21, đúng bằng allowlist):
 
 | Nhóm | Số | Cạnh | Hướng thoát |
 |---|---|---|---|
@@ -268,7 +268,7 @@ Vi phạm đã biết (25, đúng bằng allowlist):
 | Pack → pack (khai báo) | 5 | `mart_hug_attribution` (hug) → `fact_order_economics` (finance); `fact_order_economics` (finance) → `int_shopee_order_fees` (marketplace); `mart_customer_action_queue` → `stg_crm__last_contact`, `int_crm_party_tag_flags`; `mart_customer_sku_action_queue` → `stg_crm__last_contact` (sales_playbook → crm) | Khai báo phụ thuộc pack + `pack_ref` sau Đợt 1 |
 | Pack → connector ngoài `pack_connectors` | 2 | `fact_order_costs` → `stg_shopee_order_revenue`, `stg_shopee_order_service_fees` | Chuyển phần phí sàn sang `pack:marketplace`. Chọn allowlist thay vì thêm `shopee` vào `pack_connectors` của finance để luật vẫn chặt |
 | Pack đọc source | 12 | 11 mục từ 10 model `stg_crm__*` (gồm `stg_crm__hug_voucher` của hug; `stg_crm__party_tag` đọc hai bảng) → `crm_export.*`; `stg_overhead_account_classification` → `gsheet_raw.overhead_account_classification_raw` | Khai báo source thuộc pack (hoặc connector crm); dời staging overhead sang connector gsheet |
-| Import orchestration (`orch-import`) | 5 | Job của `sapo_v2`, `shopee`, `misa_amis`, `sheets` import `crm_cache_refresh` từ `orchestration.packs.crm` (user giữ import, 14/10); `sales_playbook` → `crm` (deps `crm_cache_refresh`) | Sau Đợt 1: pack crm tự gắn refresh vào job connector; khai báo phụ thuộc pack |
+| Import orchestration (`orch-import`) | 1 | `sales_playbook` → `crm` (deps `crm_cache_refresh`). Bốn import connector → `orchestration.packs.crm` đã đóng 15/10/2026: job connector chọn `crm_cache_refresh` qua `job_support.after_serving_selection()` (mục 4) | Khai báo phụ thuộc pack → pack |
 
 **Đã đóng (core đọc thẳng staging của connector, 15 cạnh):** core chỉ đọc `cdm/` qua 10 view `std_*` mới (mục 6). Đường đi trước → sau: `dim_customer_{addresses,contacts,notes,tags}` ← `stg_sapo_v2_customer_*` → `std_customer_*`; `fact_order_transitions` ← `int_order_snapshots_ranked` → `std_order_events` và `stg_sapo_v2_orders` → `std_orders`; `int_order_tags` ← `src_sapo_v2_orders` → `std_order_tags`; `dim_teams`, `fact_orders`, `fact_sales` ← `stg_teams`/`stg_team_members` → `std_teams`/`std_team_members`; `fact_targets` → `std_targets`; `fact_marketing_spend` → `std_marketing_spend`. `dim_gl_account` đã nằm ở `packs/finance` từ trước.
 
@@ -288,7 +288,7 @@ flowchart TB
         DEF["orchestration/definitions.py<br/>ghép kernel + connector + pack từ modules.yaml<br/>job chéo nguồn: nightly, full refresh<br/>health, maintain"]
         REG["orchestration/module_registry.py<br/>connectors/, packs/: enabled_ids(), load_enabled(), load_enabled_jobs()<br/>tenants/: setting(name)"]
         CFG["orchestration/config/<br/>modules.yaml, ingestion_sla.yaml"]
-        JS["orchestration/job_support.py<br/>SYNC_TAGS, has_active_run, long_dbt_rw_holder"]
+        JS["orchestration/job_support.py<br/>SYNC_TAGS, has_active_run, long_dbt_rw_holder,<br/>after_serving_selection()"]
         DBTA["assets/dbt.py<br/>@dbt_assets, SapoDbtTranslator (ghép DBT_SOURCE_KEYS)<br/>tạo thư mục rolling theo manifest"]
         SERV["assets/serving.py, rill.py<br/>scripts/provisioning/*"]
         CHK["asset_checks/<br/>freshness, row_trend, cursor, reconciliation,<br/>kpi_closure, sla_loader, health_db"]
@@ -308,6 +308,7 @@ flowchart TB
 |---|---|
 | `SYNC_TAGS` (`job_support.py`) và `duckdb_lock` (khoá ghi DuckDB) | Mọi job ghi warehouse |
 | `has_active_run`, `long_dbt_rw_holder` (`job_support.py`) | Schedule của connector (bỏ tick khi run trước còn chạy hoặc nightly đang giữ `dbt_rw`) |
+| `after_serving_selection()` (`job_support.py`): hợp `AFTER_SERVING_ASSETS` của các pack đang bật (đọc `modules.yaml` qua `orchestration.packs.load_enabled()`, import pack trong thân hàm để không vòng import) | Job đồng bộ của connector có `build_serving_db` (6 job của `sapo_v2`, `shopee`, `misa_amis`, `sheets`): đuôi sau serving, hôm nay là `crm_cache_refresh` của pack `crm`; rỗng khi không pack nào khai báo |
 | `make_file_drop_sensor(...)` (`sensors/file_drop_sensors.py`) | Connector shopee, misa_amis (sensor theo dõi thư mục thả file .xlsx) |
 | `load_dlt_configuration`, `DLT_DIR` (`assets/utils.py`) | Mọi `assets.py` của connector: đường dẫn script ingestion lấy từ `DLT_DIR`, không tính theo `__file__` nên package dời được |
 | `run_pipeline(...)` (dlt) | Connector sapo_v2, hug |
@@ -325,6 +326,17 @@ Job chéo nguồn nằm trong `definitions.py`: `pipeline_batch_nightly_job` và
 `sensors/sheets_modified_sensor.py` nằm ở kernel và được connector `sheets` khai báo trong `SENSORS`. Nó theo dõi ba sheet `TARGETS`, `MARKETING_SPEND`, `US_SHIPMENT_PRICES` qua **cùng biến môi trường với reader** (`spreadsheet_url(name)`), tự đổi link sheet thành link CSV export (`/export?format=csv`, thêm `gid` cho tab giá US), đọc mỗi tick; thiếu biến thì tick lỗi `SpreadsheetUrlNotConfigured` (fail closed), code location vẫn chạy. Mỗi URL khai báo một nơi (env); bản sao `SHEETS_SENSOR_*_URL` trong tenant config đã bỏ.
 
 Job của pack (`crm_backup_job`, `crm_backup_schedule`) không còn khai báo trong `definitions.py`: chúng đến từ `orchestration/packs/<id>/jobs.py` (mục 8).
+
+**Asset của pack chạy sau serving trong job connector (đảo chiều 15/10/2026).** Trước đây job của 4 connector import `crm_sync` từ `orchestration.packs.crm` để chọn `crm_cache_refresh`, nên không tắt được pack `crm`. Nay pack khai báo `AFTER_SERVING_ASSETS`, kernel gộp qua `after_serving_selection()`, connector chỉ gọi hàm kernel:
+
+```mermaid
+flowchart LR
+    PCRM["packs/crm<br/>AFTER_SERVING_ASSETS = [crm_cache_refresh]"] -- "load_enabled()" --> JS2["job_support.after_serving_selection()"]
+    POTH["6 pack khác<br/>AFTER_SERVING_ASSETS = []"] -- "load_enabled()" --> JS2
+    JS2 --> CJ["jobs.py của sapo_v2, shopee, misa_amis, sheets<br/>... | build_serving_db | after_serving_selection()"]
+```
+
+Tắt pack `crm` thì 6 job đó kết thúc ở serving (đã kiểm: nạp `orchestration/definitions.py` với `packs:` bỏ `crm`, `sales_playbook` thành công, không job nào chọn `crm_cache_refresh`; test `orchestration/connectors/__tests__/test_after_serving.py`). Với Fine Japan, inventory Dagster (asset, check, selection từng job, schedule, sensor) giống hệt trước.
 
 ## 5. Connectors ✅
 
@@ -356,6 +368,8 @@ flowchart LR
 ```
 
 `jobs.py` tách khỏi `__init__.py` để tránh vòng import: `assets/dbt.py` đọc `DBT_SOURCE_KEYS` từ package, còn job cần `dbt.sapo_dbt_assets`.
+
+Job đồng bộ của connector có `build_serving_db` gắn đuôi `| after_serving_selection()` (kernel, `job_support.py`) để chạy các asset sau serving mà pack đang bật khai báo (mục 4). Connector **không import pack** (luật `orch-import`, không còn mục allowlist nào cho connector).
 
 | Export | Kiểu | Kernel dùng ở đâu |
 |---|---|---|
@@ -585,8 +599,8 @@ Giá trị khi tắt pack: mục 7.
 
 **Tắt một pack (khi các hook đã chuyển sang `pack_ref`).** Bỏ id khỏi `packs:` trong `modules.yaml`, chạy `check_boundaries.py` và dán khối nó in vào `dbt_project.yml` (`vars.enabled_packs` và danh sách mặc định của mọi `+enabled`), chạy `scripts/checks/run-all.sh`, rồi khởi động lại code server Dagster. Trạng thái 14/10/2026 (build thử bằng `scripts/shadow/build-profile.sh <worktree> '<vars>'`):
 
-- `{enabled_packs: [hug, finance, marketplace, facebook_ads, facebook_messenger]}` (tắt `crm` và `sales_playbook`, pack phụ thuộc nó): dbt build xanh; so với Fine Japan chỉ khác `dim_staff.crm_user_id` (NULL) và vắng 7 bảng của hai pack. Trên prod còn phải làm phase 6 (job connector chọn `crm_cache_refresh`) trước khi tắt `crm` thật.
-- `{enabled_packs: [], tenant: ""}` (**lõi trần**, bước 6b của `scripts/shadow/gate.sh`): dbt build xanh (143 model và seed `success`, 347 test `pass`; `int_product_velocity_trend` 18, `mart_product_health` 99, `mart_product_action_queue` 14, `mart_inventory_health` 2 052 dòng, bằng Fine Japan). Khác với Fine Japan: 30 bảng public của pack vắng; `dim_customers` (10 cột lấy từ finance NULL), `mart_customer_tier.lifetime_contribution_margin`, `dim_staff.crm_user_id`, `dim_sku_alias` (174 → 120 dòng: chỉ còn alias `AUTO_PACKSIZE`, mất alias tự động VTS → VCS và alias tay), `dim_products` (`misa_join_key`, `misa_qty_multiplier`), `mart_data_quality` (3 cột), `mart_product_health`, `mart_product_action_queue` (cột biên, `health_class`), `mart_deadstock_target_queue` (249 → 208 dòng theo `health_class`), `dim_channel_targets` (rỗng), `int_customer_sku_supply_tracking` (6 815 → 0 dòng). Danh sách dự kiến dùng để duyệt: `scripts/shadow/README.md` mục "Bare-core profile". Trên prod còn job connector chọn `crm_cache_refresh` (phase 6).
+- `{enabled_packs: [hug, finance, marketplace, facebook_ads, facebook_messenger]}` (tắt `crm` và `sales_playbook`, pack phụ thuộc nó): dbt build xanh; so với Fine Japan chỉ khác `dim_staff.crm_user_id` (NULL) và vắng 7 bảng của hai pack. Orchestration cũng nạp được khi tắt hai pack này: job connector không còn chọn `crm_cache_refresh` (mục 4).
+- `{enabled_packs: [], tenant: ""}` (**lõi trần**, bước 6b của `scripts/shadow/gate.sh`): dbt build xanh (143 model và seed `success`, 347 test `pass`; `int_product_velocity_trend` 18, `mart_product_health` 99, `mart_product_action_queue` 14, `mart_inventory_health` 2 052 dòng, bằng Fine Japan). Khác với Fine Japan: 30 bảng public của pack vắng; `dim_customers` (10 cột lấy từ finance NULL), `mart_customer_tier.lifetime_contribution_margin`, `dim_staff.crm_user_id`, `dim_sku_alias` (174 → 120 dòng: chỉ còn alias `AUTO_PACKSIZE`, mất alias tự động VTS → VCS và alias tay), `dim_products` (`misa_join_key`, `misa_qty_multiplier`), `mart_data_quality` (3 cột), `mart_product_health`, `mart_product_action_queue` (cột biên, `health_class`), `mart_deadstock_target_queue` (249 → 208 dòng theo `health_class`), `dim_channel_targets` (rỗng), `int_customer_sku_supply_tracking` (6 815 → 0 dòng). Danh sách dự kiến dùng để duyệt: `scripts/shadow/README.md` mục "Bare-core profile". Orchestration không còn phụ thuộc pack `crm` (mục 4).
 
 ## 9. Taxonomy module
 
@@ -758,5 +772,5 @@ flowchart TB
 | Lõi đọc seed tenant chỉ qua `tenant_ref`; cdm, connector không đọc seed tenant (luật `dbt-seed`); seed mặc định có đủ cột, có kiểu và khớp seed tenant (luật `tenant-seed-contract`) | `check_boundaries.py` (manifest, file CSV, `dbt_project.yml`) |
 | Mọi luật trên chạy trước mỗi commit | `scripts/checks/run-all.sh` (cùng `dbt parse`, `dagster definitions validate`, pytest) |
 | `orchestration/connectors/**` và `orchestration/packs/**` không chứa URL/domain cứng (luật `connector-url`, `pack-url`); giá trị tenant đọc qua `orchestration.tenants.setting()` | `check_boundaries.py` |
-| Connector không import pack; pack không import pack khác (luật `orch-import`, 5 mục allowlist) | `check_boundaries.py` (ast) |
+| Connector không import pack; pack không import pack khác (luật `orch-import`, 1 mục allowlist: `sales_playbook` → `crm`) | `check_boundaries.py` (ast) |
 | Giao tiếp CRM ↔ orchestration chỉ qua HTTP và file export | Review + quy tắc import |

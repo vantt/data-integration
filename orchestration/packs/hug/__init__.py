@@ -3,3 +3,4 @@
 inside the kernel's dbt assets. Listed in modules.yaml so the enabled packs match the dbt side."""
 ASSETS = []
 NIGHTLY_ASSETS = []
+AFTER_SERVING_ASSETS = []

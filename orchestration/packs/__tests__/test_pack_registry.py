@@ -6,7 +6,7 @@ import yaml
 
 from orchestration import packs
 
-PACKAGE_EXPORTS = ("ASSETS", "NIGHTLY_ASSETS")
+PACKAGE_EXPORTS = ("ASSETS", "NIGHTLY_ASSETS", "AFTER_SERVING_ASSETS")
 JOBS_EXPORTS = ("JOBS", "SCHEDULES", "SENSORS")
 
 
@@ -49,6 +49,7 @@ def test_every_enabled_pack_honours_the_contract():
         for name in JOBS_EXPORTS:
             assert isinstance(getattr(jobs, name), list), f"{jobs.__name__} lacks {name}"
         assert set(map(id, pkg.NIGHTLY_ASSETS)) <= set(map(id, pkg.ASSETS))
+        assert set(map(id, pkg.AFTER_SERVING_ASSETS)) <= set(map(id, pkg.ASSETS))
 
 
 def test_crm_pack_keeps_its_asset_and_job_names():
@@ -59,11 +60,12 @@ def test_crm_pack_keeps_its_asset_and_job_names():
     jobs = packs.load_enabled_jobs(["crm"])[0]
     assert [j.name for j in jobs.JOBS] == ["crm_backup_job"]
     assert [s.name for s in jobs.SCHEDULES] == ["crm_backup_schedule"]
+    assert [a.key.to_user_string() for a in crm.AFTER_SERVING_ASSETS] == ["crm_cache_refresh"]
 
 
 def test_packs_without_dagster_code_export_empty_lists():
     """marketplace and facebook_* exist so modules.yaml lists every dbt pack folder."""
     ids = ["marketplace", "facebook_ads", "facebook_messenger"]
     for pkg, jobs in zip(packs.load_enabled(ids), packs.load_enabled_jobs(ids)):
-        assert pkg.ASSETS == [] and pkg.NIGHTLY_ASSETS == []
+        assert pkg.ASSETS == [] and pkg.NIGHTLY_ASSETS == [] and pkg.AFTER_SERVING_ASSETS == []
         assert jobs.JOBS == [] and jobs.SCHEDULES == [] and jobs.SENSORS == []

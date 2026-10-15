@@ -1,8 +1,7 @@
 from dagster import AssetSelection, RunRequest, SkipReason, define_asset_job, schedule
 
 from orchestration.assets import rill, serving
-from orchestration.packs.crm import crm_sync
-from orchestration.job_support import SYNC_TAGS, has_active_run
+from orchestration.job_support import SYNC_TAGS, after_serving_selection, has_active_run
 from orchestration.sensors.sheets_modified_sensor import ingest_sheets_modified_sensor
 
 from .assets import (
@@ -38,7 +37,7 @@ ingest_sheets_sync_job = define_asset_job(
         | _sheets_sources.downstream()
         | AssetSelection.assets(serving.build_serving_db)
         | AssetSelection.assets(rill.build_rill_publish)
-        | AssetSelection.assets(crm_sync.crm_cache_refresh)
+        | after_serving_selection()
     ),
     tags=SYNC_TAGS,
 )

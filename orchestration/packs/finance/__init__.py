@@ -3,3 +3,4 @@ run inside the kernel's dbt assets; the budget sheet sync that writes its tenant
 of the `sheets` connector. Listed in modules.yaml so the enabled packs match the dbt side."""
 ASSETS = []
 NIGHTLY_ASSETS = []
+AFTER_SERVING_ASSETS = []

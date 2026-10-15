@@ -1,7 +1,8 @@
 """Helpers shared by kernel and connector job/schedule definitions.
 
 Connector packages import from here instead of from definitions.py, which in turn
-imports the connectors.
+imports the connectors. A connector never imports a pack: assets that packs want to run after
+the serving layer in every connector sync job come in through after_serving_selection().
 """
 from __future__ import annotations
 
@@ -16,6 +17,20 @@ SYNC_TAGS = {"concurrency_group": "dbt_rw"}
 # fact_order_economics (which is) depends on it — without it, the first file-drop run
 # on a fresh deploy fails because the parquet does not yet exist.
 FACT_ORDER_RETURNS = AssetSelection.assets(AssetKey(["marts", "fact_order_returns"]))
+
+def after_serving_selection() -> AssetSelection:
+    """Assets the enabled packs run after build_serving_db in connector sync jobs.
+
+    Union of `AFTER_SERVING_ASSETS` of the packs listed in orchestration/config/modules.yaml
+    (e.g. the crm pack's crm_cache_refresh). Empty when no enabled pack exports any, so a
+    connector job then ends at serving. Order inside a job comes from asset dependencies, not
+    from this selection.
+    """
+    # Imported here, not at module level: packs import this kernel module.
+    from orchestration import packs
+
+    return AssetSelection.assets(*(a for p in packs.load_enabled() for a in p.AFTER_SERVING_ASSETS))
+
 
 # Active states: anything that hasn't terminated. NOT_STARTED is included
 # to catch runs that were created but haven't been picked up yet.

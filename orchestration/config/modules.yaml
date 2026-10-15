@@ -20,9 +20,11 @@ connectors:
 # facebook_*) export empty lists. This list must equal `vars.enabled_packs` and the default list
 # of every `+enabled` under `models: sapo_warehouse: packs:` in transformation/dbt_project.yml
 # (check_boundaries.py rule `module-config` fails and prints the block to paste). A pack missing
-# here is not built by dbt and its Dagster package is not loaded. Turning a pack off is not
-# complete yet: core still refs pack models directly until the hooks move to pack_ref, and
-# connector jobs still select the crm pack's crm_cache_refresh (docs/architecture/modules.md §8).
+# here is not built by dbt and its Dagster package is not loaded: core reads packs only through
+# pack_ref, and connector jobs run the packs' AFTER_SERVING_ASSETS (crm: crm_cache_refresh)
+# through job_support.after_serving_selection() (docs/architecture/modules.md §4, §8.1). A pack
+# that another enabled pack depends on (sales_playbook -> crm, hug -> finance,
+# finance -> marketplace) must stay enabled with it.
 packs:
   - crm
   - hug

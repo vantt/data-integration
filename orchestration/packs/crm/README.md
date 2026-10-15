@@ -13,7 +13,7 @@ Phần Dagster của pack CRM: đưa dữ liệu qua lại giữa warehouse và 
 | `crm_backup`, `crm_restore_verify` (group `ops_maintenance`) | `crm_sync.py` | POST `/admin/backup` rồi gọi sidecar `crm_drill_runner` để khôi phục thử; lỗi làm đỏ run |
 | `crm_backup_job`, `crm_backup_schedule` (02:00 ICT, bật sẵn) | `jobs.py` | Chạy hai asset backup, không giữ khoá `dbt_rw` |
 
-`NIGHTLY_ASSETS` = 11 export + `crm_cache_refresh`: job nightly/full refresh chọn chúng qua kernel. Bốn connector (`sapo_v2`, `shopee`, `misa_amis`, `sheets`) cũng import `crm_cache_refresh` để chọn trong job của mình (allowlist `orch-import`, sửa sau Đợt 1).
+`NIGHTLY_ASSETS` = 11 export + `crm_cache_refresh`: job nightly/full refresh chọn chúng qua kernel. `AFTER_SERVING_ASSETS` = `crm_cache_refresh`: 6 job đồng bộ của connector `sapo_v2`, `shopee`, `misa_amis`, `sheets` chạy nó sau `build_serving_db` qua `orchestration.job_support.after_serving_selection()`; connector không import pack này. Tắt pack `crm` (bỏ khỏi `packs:` trong `orchestration/config/modules.yaml`, cùng `sales_playbook` đang phụ thuộc nó) thì các job đó kết thúc ở serving.
 
 ## Cấu hình
 

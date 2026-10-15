@@ -1,8 +1,7 @@
 from dagster import AssetSelection, RunRequest, SkipReason, define_asset_job, schedule
 
 from orchestration.assets import dbt, rill, serving
-from orchestration.packs.crm import crm_sync
-from orchestration.job_support import SYNC_TAGS, has_active_run, long_dbt_rw_holder
+from orchestration.job_support import SYNC_TAGS, after_serving_selection, has_active_run, long_dbt_rw_holder
 
 from .assets import (
     ingest_sapo_v2_history_log_asset,
@@ -15,14 +14,14 @@ all_dbt_assets = AssetSelection.assets(dbt.sapo_dbt_assets)
 # 1. Realtime Job (Webhook)
 pipeline_sapo_v2_realtime_job = define_asset_job(
     name="pipeline_sapo_v2_realtime_job",
-    selection=AssetSelection.assets(ingest_sapo_v2_webhook_consumer_asset) | all_dbt_assets | AssetSelection.assets(serving.build_serving_db) | AssetSelection.assets(rill.build_rill_publish) | AssetSelection.assets(crm_sync.crm_cache_refresh),
+    selection=AssetSelection.assets(ingest_sapo_v2_webhook_consumer_asset) | all_dbt_assets | AssetSelection.assets(serving.build_serving_db) | AssetSelection.assets(rill.build_rill_publish) | after_serving_selection(),
     tags=SYNC_TAGS,
 )
 
 # 2. Incremental Job (History Log)
 pipeline_sapo_v2_incremental_job = define_asset_job(
     name="pipeline_sapo_v2_incremental_job",
-    selection=AssetSelection.assets(ingest_sapo_v2_history_log_asset) | all_dbt_assets | AssetSelection.assets(serving.build_serving_db) | AssetSelection.assets(rill.build_rill_publish) | AssetSelection.assets(crm_sync.crm_cache_refresh),
+    selection=AssetSelection.assets(ingest_sapo_v2_history_log_asset) | all_dbt_assets | AssetSelection.assets(serving.build_serving_db) | AssetSelection.assets(rill.build_rill_publish) | after_serving_selection(),
     tags={**SYNC_TAGS, "dagster/max_retries": "0"},
 )
 
