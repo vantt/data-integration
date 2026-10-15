@@ -112,7 +112,16 @@ adding such a rule, and update it in the same change.
   condition; rows sharing a `rule_id` are ANDed. Domains and feature columns are declared in
   `vars.taxonomy` of `dbt_project.yml` (read at compile time). After editing rules or the registry
   run `python3 scripts/checks/check_taxonomy_rules.py` (exit 1 on any invalid rule; also run by the
-  pytest step of `scripts/checks/run-all.sh` and the shadow gate).
+  pytest step of `scripts/checks/run-all.sh` and the shadow gate). A tenant rule's `label` is a
+  tenant label (declared in `taxonomy_label`); a product rule's `label` is a canonical code of
+  `taxonomy_canonical` (its own `_std`).
+- Changing a rule seed **changes numbers** (restate: the new rule applies to every period). It needs
+  an S gate (`--allow-code-change`, golden differences listed), explicit user approval, and the
+  deploy procedure "Classification rule changes (restate)" in `docs/operations/deployment.md`, which
+  fully refreshes `lbl_<domain>+` (incremental models keep old labels otherwise). Keep the unit-test
+  fixture copy of the seed byte-identical (`scripts/tests/test_taxonomy_fixtures.py`).
+- dbt unit tests do not run in prod (`DBT_EXCLUDE_RESOURCE_TYPES=unit_test` on `data_platform`);
+  they run in `scripts/checks/run-all.sh` and the shadow gate.
 
 ## Core Mandates
 

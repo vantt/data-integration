@@ -83,7 +83,7 @@ column semantics: [docs/architecture/taxonomy-engine.md §4b](../../docs/archite
 It reads `vars.taxonomy` and `vars.tenant` from `transformation/dbt_project.yml`, the product
 layer `seeds/taxonomy/taxonomy_rule_product.csv`, the tenant layer
 `seeds/tenants/<tenant>/taxonomy_rule_tenant.csv` (no tenant: `seeds/defaults/taxonomy_rule_tenant__default.csv`)
-and the label sets in the matching `taxonomy_label`. Stdlib + PyYAML, no dbt and no data.
+the label sets in the matching `taxonomy_label` and the canonical codes in `seeds/taxonomy/taxonomy_canonical.csv`. Stdlib + PyYAML, no dbt and no data.
 
 | Error | Example |
 |---|---|
@@ -93,7 +93,7 @@ and the label sets in the matching `taxonomy_label`. Stdlib + PyYAML, no dbt and
 | `op` not allowed for the feature type (`like`/`starts_with`/`contains`/`regex` on strings, `between` on numbers and dates, `has` on lists, `is_null` on any) or unknown | `between` on a varchar |
 | `value` not castable to the feature type (each `\|` item for `in`/`not_in`), empty value, invalid regex, `value_to` outside `between`, `is_null` value other than empty/`true`/`false` | `eq abc` on a double |
 | `between` without either bound, or `value >= value_to` | both cells empty |
-| `label` empty or not in `taxonomy_label` for the domain's `label_set` | a label not anchored yet |
+| `label` empty; a tenant rule's label not in `taxonomy_label` for the domain's `label_set`; a product rule's label not a code of `taxonomy_canonical` for the `label_set` (product rules assign canonical codes; `UNMAPPED`/`UNKNOWN` are reserved to the engine) | a label not anchored yet; `RETAIL` in the product layer |
 | Rows of one `rule_id` disagree on `domain`, `priority`, `label` or `enabled`; `priority` not an integer; `enabled` not `true`/`false`; empty `rule_id`/`domain`; an unconditional row (no `feature`) mixed with conditions | two priorities for one rule |
 | Two effective `rule_id`s share `(domain, layer, priority)` in a FIRST/UNIQUE domain (disabled rules do not count) | order would depend on `rule_id` |
 | An unconditional rule in a COLLECT domain | it would label every subject |

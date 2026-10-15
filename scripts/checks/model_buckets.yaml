@@ -160,10 +160,11 @@ buckets:
   mart_product_action_queue: core
   mart_product_health: core
   mart_retention_waterfall_monthly: core
-  # --- monitoring (6)
+  # --- monitoring (7)
   entity_labels: monitoring
   mart_capabilities: monitoring
   monitor_taxonomy_parity: monitoring
+  monitor_taxonomy_parity_daily: monitoring
   monitor_taxonomy_parity_log: monitoring
   monitor_taxonomy_unmapped: monitoring
   monitor_uncategorized_tags: monitoring

@@ -127,7 +127,7 @@ compare with lake-A. Only the build result decides the step; the printed differe
 reviewed by hand against this list. A table outside it must be explained before the phase is
 accepted.
 
-Expected differences (`{enabled_packs: [], tenant: ""}`, Fine Japan data, 15/10/2026 with the classification engine pilot and its monitors, `taxonomy_engine_customer_type` off; 164 models and seeds built, 404 tests pass, 9 warn; the engine selftest models and the Fine Japan pilot unit tests are disabled in this profile):
+Expected differences (`{enabled_packs: [], tenant: ""}`, Fine Japan data, 15/10/2026 with the classification engine pilot and its monitors, `taxonomy_engine_customer_type` off; 165 models and seeds built, 404 tests pass, 9 warn; the engine selftest models and the Fine Japan pilot unit tests are disabled in this profile):
 
 | Table | Expected difference | Why |
 |---|---|---|

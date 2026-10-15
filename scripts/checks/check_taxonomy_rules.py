@@ -9,6 +9,12 @@ Reads, from the repository:
   seeds/tenants/<tenant>/taxonomy_rule_tenant.csv            tenant layer (vars.tenant set)
   seeds/defaults/taxonomy_rule_tenant__default.csv           tenant layer when vars.tenant is ""
   seeds/tenants/<tenant>/taxonomy_label.csv                  label sets (or defaults/taxonomy_label__default.csv)
+  seeds/taxonomy/taxonomy_canonical.csv                      canonical codes per domain
+
+A tenant rule's label is a tenant label: it must be in taxonomy_label for the domain's label_set.
+A product rule's label is a canonical code: it must be a code of taxonomy_canonical whose domain is
+the label_set (its *_std is the code itself), other than UNMAPPED and UNKNOWN, which only the engine
+assigns. Tenants override product rules with their own labels.
 
 One CSV row is one condition. Rows sharing a rule_id inside a layer form one rule (conditions
 joined by AND). A rule whose rows all have enabled=false and no label is a *disable marker*: it
@@ -19,7 +25,7 @@ Errors (exit 1): wrong header; registry inconsistent; domain not in the registry
 domain (its rules live in unit tests); feature not
 declared for the domain; operator not allowed for the feature type; value not castable to the
 feature type; between without either bound; label not in the domain's label set; rule attributes
-differing between the rows of one rule_id; two rule_ids with the same (domain, layer, priority) in
+differing between the rows of one rule_id; a product-rule label that is not a canonical code; two rule_ids with the same (domain, layer, priority) in
 a FIRST/UNIQUE domain; an unconditional rule in a COLLECT domain; a disable marker pointing to a
 rule_id defined in no layer.
 """
@@ -39,6 +45,7 @@ import yaml
 REPO = Path(__file__).resolve().parents[2]
 COLUMNS = ["rule_id", "domain", "priority", "label", "feature", "op", "value", "value_to", "enabled", "note"]
 LAYERS = ("tenant", "product")  # evaluation order: tenant layer first
+ENGINE_RESERVED = {"UNMAPPED", "UNKNOWN"}  # assigned by the engine itself, never by a rule
 HIT_POLICIES = {"FIRST", "UNIQUE", "COLLECT"}
 CARDINALITIES = {"single", "multi"}
 
@@ -137,6 +144,7 @@ class Inputs:
     tenant: str
     rule_files: dict[str, Path]                 # layer -> csv
     label_file: Path
+    canonical_file: Path
     default_rule_file: Path | None = None       # header-only default, checked when a tenant is set
     errors: list[str] = field(default_factory=list)
 
@@ -165,6 +173,7 @@ def load_inputs(repo: Path) -> Inputs:
         tenant=tenant,
         rule_files={"product": seeds / "taxonomy" / "taxonomy_rule_product.csv", "tenant": tenant_rules},
         label_file=labels,
+        canonical_file=seeds / "taxonomy" / "taxonomy_canonical.csv",
         default_rule_file=default_rules if tenant else None,
     )
 
@@ -214,7 +223,27 @@ def read_labels(path: Path, display: str, errors: list[str]) -> dict[str, set[st
     return out
 
 
-def check_registry(registry: dict, label_sets: dict[str, set[str]]) -> tuple[list[str], dict[str, dict[str, str]]]:
+def read_canonical(path: Path, display: str, errors: list[str]) -> dict[str, set[str]]:
+    """Canonical domain -> codes a product rule may assign (UNMAPPED and UNKNOWN excluded)."""
+    if not path.is_file():
+        errors.append(f"{display}: file not found")
+        return {}
+    out: dict[str, set[str]] = {}
+    with path.open(encoding="utf-8", newline="") as fh:
+        reader = csv.DictReader(fh)
+        missing = {"domain", "code"} - set(reader.fieldnames or [])
+        if missing:
+            errors.append(f"{display}: missing columns {sorted(missing)}")
+            return {}
+        for rec in reader:
+            code = (rec["code"] or "").strip()
+            if code and code not in ENGINE_RESERVED:
+                out.setdefault((rec["domain"] or "").strip(), set()).add(code)
+    return out
+
+
+def check_registry(registry: dict, label_sets: dict[str, set[str]],
+                   canonical: dict[str, set[str]] | None = None) -> tuple[list[str], dict[str, dict[str, str]]]:
     """Validate vars.taxonomy. Returns (errors, domain -> {feature column: duckdb type})."""
     errors: list[str] = []
     features = registry.get("features")
@@ -284,9 +313,12 @@ def check_registry(registry: dict, label_sets: dict[str, set[str]]) -> tuple[lis
             if col not in cols:
                 errors.append(f"{where}: required_features {col!r} is not a feature of the domain")
         # Selftest domains take their labels from unit test fixtures, not from taxonomy_label.
+        # A flag may name a tenant label or a canonical code (the label of a product rule).
+        allowed_flags = label_sets.get(label_set, set()) | (canonical or {}).get(label_set, set())
         for lab in spec.get("matched_flags") or []:
-            if label_set and not spec.get("selftest") and lab not in label_sets.get(label_set, set()):
-                errors.append(f"{where}: matched_flags {lab!r} not in label set {label_set!r}")
+            if label_set and not spec.get("selftest") and lab not in allowed_flags:
+                errors.append(f"{where}: matched_flags {lab!r} neither in label set {label_set!r} "
+                              "nor a canonical code of it")
         survey = spec.get("survey")
         if survey is not None:
             if not isinstance(survey, dict):
@@ -358,7 +390,7 @@ def _bool(raw: str) -> bool | None:
 
 
 def check_rules(rows: list[Row], registry: dict, domain_columns: dict[str, dict[str, str]],
-                label_sets: dict[str, set[str]]) -> list[str]:
+                label_sets: dict[str, set[str]], canonical: dict[str, set[str]] | None = None) -> list[str]:
     errors: list[str] = []
     domains = registry.get("domains") or {}
 
@@ -413,7 +445,12 @@ def check_rules(rows: list[Row], registry: dict, domain_columns: dict[str, dict[
         if not isinstance(spec, dict):
             continue  # domain error already reported
         label_set = spec.get("label_set")
-        if attrs["label"] and label_set and attrs["label"] not in label_sets.get(label_set, set()):
+        if attrs["label"] and label_set and layer == "product":
+            if attrs["label"] not in (canonical or {}).get(label_set, set()):
+                errors.append(f"{first.where}: rule {rid!r}: product rule label {attrs['label']!r} is not a "
+                              f"canonical code of {label_set!r} in taxonomy_canonical (UNMAPPED/UNKNOWN excluded); "
+                              "product rules assign canonical codes, tenants override with their own labels")
+        elif attrs["label"] and label_set and attrs["label"] not in label_sets.get(label_set, set()):
             errors.append(f"{first.where}: rule {rid!r}: label {attrs['label']!r} not in taxonomy_label "
                           f"for label_set {label_set!r}")
         if unconditional and spec.get("hit_policy") == "COLLECT":
@@ -479,7 +516,8 @@ def validate(repo: Path) -> tuple[list[str], str]:
         return [str(e)], ""
     errors: list[str] = []
     label_sets = read_labels(inp.label_file, _rel(repo, inp.label_file), errors)
-    reg_errors, domain_columns = check_registry(inp.registry, label_sets)
+    canonical = read_canonical(inp.canonical_file, _rel(repo, inp.canonical_file), errors)
+    reg_errors, domain_columns = check_registry(inp.registry, label_sets, canonical)
     errors += reg_errors
     rows: list[Row] = []
     for layer in LAYERS:
@@ -489,7 +527,7 @@ def validate(repo: Path) -> tuple[list[str], str]:
         display = _rel(repo, inp.default_rule_file)
         if read_rules(inp.default_rule_file, "tenant", display, errors):
             errors.append(f"{display}: a core default seed has a header only (no rows)")
-    errors += check_rules(rows, inp.registry, domain_columns, label_sets)
+    errors += check_rules(rows, inp.registry, domain_columns, label_sets, canonical)
     n_rules = len({(r.layer, r.get("rule_id")) for r in rows})
     summary = (f"{n_rules} rule(s) in {len(rows)} row(s), {len(domain_columns)} domain(s), "
                f"tenant {inp.tenant or '(none)'}")

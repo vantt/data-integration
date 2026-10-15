@@ -11,7 +11,8 @@
 5. [Verification](#verification)
 6. [Production Checklist](#production-checklist)
 7. [Refactor deploys (shadow-verified)](#refactor-deploys-shadow-verified)
-8. [Metabase: backup and restore](#metabase-backup-and-restore)
+8. [Classification rule changes (restate)](#classification-rule-changes-restate)
+9. [Metabase: backup and restore](#metabase-backup-and-restore)
 
 ---
 
@@ -709,6 +710,15 @@ the container runs lets a run start on half-applied files, so the container is s
    ```bash
    docker compose start data_platform
    ```
+   If the deployed range changes the `data_platform` service in `docker-compose.yml`
+   (`environment`, `volumes`, `command`, limits), `start` would reuse the old container
+   definition: recreate it instead, which also runs the start command:
+   ```bash
+   docker compose up -d data_platform
+   ```
+   Check with `git diff "$(cat /tmp/deploy-rollback-sha)" "$(cat /tmp/deploy-branch-sha)" -- docker-compose.yml`.
+   Example: the classification engine deploy adds `DBT_EXCLUDE_RESOURCE_TYPES=unit_test` (dbt unit
+   tests never run in prod builds; they run in `scripts/checks/run-all.sh` and the shadow gate).
 6. Verify:
    ```bash
    python3 scripts/checks/instigator_state.py capture --out /tmp/instigators-after.json
@@ -728,7 +738,7 @@ docker compose stop data_platform
 cd /home/vantt/app/fg-dataware-house
 git status --short          # commit live seed CSV changes first, as in deploy step 3
 git revert --no-edit "$(cat /tmp/deploy-rollback-sha)".."$(cat /tmp/deploy-branch-sha)"
-docker compose start data_platform
+docker compose start data_platform   # `docker compose up -d data_platform` if docker-compose.yml was reverted
 ```
 
 The range covers only the deployed branch commits, so seed content committed after the
@@ -736,6 +746,58 @@ deploy is kept. Avoid `git reset --hard`, which would discard it.
 
 Each phase file of the refactor plan lists the relations or seeds a rollback leaves behind
 (for example new `std_*` views) and how to drop them. Do not hot-fix on the prod checkout.
+
+## Classification rule changes (restate)
+
+A classification rule of the engine is a row of `transformation/seeds/taxonomy/taxonomy_rule_product.csv`
+(product layer) or `transformation/seeds/tenants/<tenant>/taxonomy_rule_tenant.csv` (tenant layer),
+see [taxonomy-engine.md §4b](../architecture/taxonomy-engine.md#4b-hiện-thực-mvp). Changing,
+adding, disabling or reordering a rule **changes numbers**: the new rule applies to every period
+(restate). `table`/`external` models recompute on every build, but incremental models that store
+a label or read a labelled model (`int_customer_entry_attributes` only adds new customers and
+filters `customer_type = 'RETAIL'`; `int_customer_metrics` and `int_customer_discount_metrics` read
+`fact_orders`) keep old values until they are fully refreshed. So every rule change goes through
+this procedure; there is no other route to prod.
+
+1. Edit the seed on a branch (and its unit-test fixture copy, e.g.
+   `transformation/tests/fixtures/taxonomy_rule_tenant_customer_type.csv`, checked by
+   `scripts/tests/test_taxonomy_fixtures.py`). Run `python3 scripts/checks/check_taxonomy_rules.py`
+   and `scripts/checks/run-all.sh`.
+2. Shadow: `scripts/shadow/gate.sh S --allow-code-change`. The golden **will** report differences
+   (a change of numbers): list the changed tables, columns and keys (`golden_snapshot.py keyed-diff`),
+   and `monitor_taxonomy_unmapped` before and after. The S gate's full-refresh step already
+   exercises the incremental branches.
+3. The user approves the list of changes (rule: no change of numbers without explicit approval).
+   Before the first rule change, answer which Fine Japan reports were used to settle bonuses: a
+   restate rewrites past periods.
+4. Deploy steps 1–4 of "Refactor deploys" (snapshot instigators, stop `data_platform`, commit live
+   seeds, fast-forward).
+5. While `data_platform` is stopped (no DuckDB lock), fully refresh everything downstream of each
+   changed domain in a one-off container of the same service (same image, mounts, environment):
+   ```bash
+   cd /home/vantt/app/fg-dataware-house
+   docker compose run --rm --no-deps data_platform sh -c \
+     "dbt build --project-dir /app/transformation --profiles-dir /app/transformation \
+        --select lbl_customer_type+ lbl_customer_type__group_blob+ --full-refresh"
+   ```
+   Select `lbl_<domain>+` for every domain whose rows changed (both `customer_type` domains share
+   the Fine Japan tenant seed). Only when the marts read the engine
+   (`taxonomy_engine_customer_type: true`) does `lbl_<domain>+` contain marts and incremental
+   models; with the variable off it holds only the `lbl_*` models and the monitors.
+   `monitor_taxonomy_parity_log` is `full_refresh=false` and keeps its history. dbt unit tests do not
+   run here (`DBT_EXCLUDE_RESOURCE_TYPES=unit_test` in the service).
+6. Start (`docker compose start data_platform`), then verify as in "Refactor deploys" steps 6–7.
+   Record the new `ruleset_version` of the domain (`monitor_taxonomy_parity_daily`, or
+   `lbl_<domain>.ruleset_version`).
+7. Never in the 02:30–04:00 window. Budget about twice the shadow full-refresh time for step 5.
+
+Rehearsed on the shadow on 15/10/2026 with the variable on and a throwaway rule change (KOL rule
+matching `%TYPE_RETAIL%`): after a normal build, 4 043 of the 4 222 rows of
+`int_customer_entry_attributes` belonged to customers no longer RETAIL; after step 5's command
+(`dbt build --select lbl_customer_type+ --full-refresh`, run with the prod image) the table had 179
+rows, 0 stale, and was identical to a reference where that table was dropped and rebuilt
+(`int_customer_entry_attributes` 179/179 and `lbl_customer_type` 7 738/7 738 rows, 0 difference);
+the parity log kept its rows. The `docker compose run` wrapper itself was not run against prod.
 
 ---
 

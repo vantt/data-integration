@@ -945,9 +945,68 @@ unit_tests:
     rows:
     - s_key: k1
       selftest_first: B
-      selftest_first_std: STD_B
+      selftest_first_std: B
       rule_id: p2
       matched__a: false
+      source_layer: product
+- name: taxonomy_engine_product_rule_label_is_canonical
+  description: A product-layer rule assigns a canonical code, which is its own label_std (no taxonomy_label lookup);
+    a tenant-layer rule's label is anchored through taxonomy_label.
+  model: lbl_selftest_first
+  given:
+  - input: ref('feat_taxonomy_selftest')
+    format: sql
+    rows: |
+      select CAST('k1' AS VARCHAR) as s_key, CAST('x' AS VARCHAR) as s_text, CAST('r' AS VARCHAR) as s_text2, CAST(NULL AS DOUBLE) as s_num, CAST(NULL AS VARCHAR[]) as s_list
+      union all
+      select CAST('k2' AS VARCHAR) as s_key, CAST('y' AS VARCHAR) as s_text, CAST('r' AS VARCHAR) as s_text2, CAST(NULL AS DOUBLE) as s_num, CAST(NULL AS VARCHAR[]) as s_list
+  - input: ref('taxonomy_rule_tenant')
+    rows:
+    - rule_id: t1
+      domain: selftest_first
+      priority: 10
+      label: A
+      feature: s_text
+      op: eq
+      value: x
+      value_to: null
+      enabled: true
+  - input: ref('taxonomy_rule_product')
+    rows:
+    - rule_id: p1
+      domain: selftest_first
+      priority: 10
+      label: CONSUMER
+      feature: null
+      op: null
+      value: null
+      value_to: null
+      enabled: true
+  - input: ref('taxonomy_label')
+    rows:
+    - domain: selftest
+      label: A
+      label_std: STD_A
+      note: null
+    - domain: selftest
+      label: B
+      label_std: STD_B
+      note: null
+    - domain: selftest
+      label: C
+      label_std: STD_C
+      note: null
+  expect:
+    rows:
+    - s_key: k1
+      selftest_first: A
+      selftest_first_std: STD_A
+      rule_id: t1
+      source_layer: tenant
+    - s_key: k2
+      selftest_first: CONSUMER
+      selftest_first_std: CONSUMER
+      rule_id: p1
       source_layer: product
 - name: taxonomy_engine_unconditional_rule_is_the_default
   description: A rule without condition matches every subject and serves as the default after the other rules.

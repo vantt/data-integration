@@ -21,6 +21,11 @@ services:
       - BACKUP_ROOT=/app/var/backups  # must match volume mount below
       - RECON_LIVE_API=1              # enable live Sapo API calls for recon + KPI
       - KPI_CLOSURE_ENABLED=1         # enable Phase 5 revenue invariant check
+      # dbt unit tests (e.g. the classification engine's, transformation/models/**/_*.yml) never
+      # run in prod builds: they test code, not data, and run in scripts/checks/run-all.sh and the
+      # shadow gate instead (run-shadow.sh passes its own env list, so it does not inherit this).
+      # Data tests still run. Changing this block needs `docker compose up -d data_platform`.
+      - DBT_EXCLUDE_RESOURCE_TYPES=unit_test
     networks:
       - caddy_net
     volumes:

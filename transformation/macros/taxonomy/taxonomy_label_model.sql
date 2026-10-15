@@ -20,12 +20,15 @@
      row per matched label, rule_id of the first matching rule of that label.
   6. A NULL required feature gives UNKNOWN without evaluating rules; no match gives UNMAPPED
      (rule_id NULL). Both are their own <label>_std.
+     A product-layer rule assigns a canonical code (taxonomy_canonical), its own <label>_std;
+     a tenant-layer rule assigns a tenant label, anchored through taxonomy_label.
   7. matched__<x> per label of matched_flags: TRUE if a rule of label x is TRUE, else NULL if
      one is NULL, else FALSE, whatever the priority; NULL for an UNKNOWN subject.
   8. Columns: <key>, <label column>, <label column>_std, rule_id, source_layer,
      ruleset_version, matched__*, n_hits (UNIQUE only). The label column is the domain name
      before '__'; <label column>_std comes from `labels` (taxonomy_label) for the label_set, and
-     is UNMAPPED for a label not anchored there.
+     is UNMAPPED for a tenant label not anchored there (a product-rule label is
+     already canonical and is its own <label>_std).
 #}
 {% macro taxonomy_label_model(domain, tenant_rules, labels) %}
 {%- set d = taxonomy_domain(domain) -%}
@@ -120,7 +123,10 @@ resolved AS (
 ),
 anchored AS (
     SELECT r.*,
-        IF(r.label_value IN ('UNMAPPED', 'UNKNOWN'), r.label_value, COALESCE(l.label_std, 'UNMAPPED')) AS label_std_value
+        CASE WHEN r.label_value IN ('UNMAPPED', 'UNKNOWN') THEN r.label_value
+             -- a product rule assigns a canonical code: it is its own canonical code
+             WHEN r.source_layer = 'product' THEN r.label_value
+             ELSE COALESCE(l.label_std, 'UNMAPPED') END AS label_std_value
     FROM resolved r
     LEFT JOIN (
         SELECT label, label_std

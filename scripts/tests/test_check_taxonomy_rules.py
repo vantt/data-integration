@@ -50,7 +50,10 @@ REGISTRY = {
     },
 }
 LABELS = [("customer_type", "RETAIL"), ("customer_type", "WHOLESALE"), ("customer_type", "CROSSBORDER"),
-          ("customer_tag", "VIP")]
+          ("customer_type", "DAI_LY"), ("customer_tag", "VIP")]
+# canonical codes (taxonomy_canonical): product rules may assign these, except UNMAPPED / UNKNOWN
+CANONICAL = [("customer_type", c) for c in ("CONSUMER", "RETAIL", "WHOLESALE", "CROSSBORDER", "OTHER",
+                                             "UNMAPPED", "UNKNOWN")]
 
 
 def rule(rule_id, domain="customer_type", priority="10", label="WHOLESALE", feature="group_code",
@@ -81,6 +84,9 @@ def make_repo(root: Path, product: list[dict] | None = None, tenant: list[dict] 
         _csv(seeds / "tenants" / tenant_id / "taxonomy_rule_tenant.csv", ctr.COLUMNS, tenant or [])
         _csv(seeds / "tenants" / tenant_id / "taxonomy_label.csv", label_cols,
              [dict(domain=d, label=l, label_std="X", note="") for d, l in LABELS])
+    _csv(seeds / "taxonomy" / "taxonomy_canonical.csv", ["domain", "code", "parent_code", "name_vi", "name_en", "is_reserved"],
+         [dict(domain=d, code=c, parent_code="", name_vi=c, name_en=c, is_reserved=str(c in ("UNMAPPED", "UNKNOWN", "OTHER")).lower())
+          for d, c in CANONICAL])
     return root
 
 
@@ -202,6 +208,34 @@ def test_invalid_rule_is_rejected(tmp_path, layer, rows, expected):
     repo = make_repo(tmp_path, rows if layer == "product" else [], rows if layer == "tenant" else [])
     errs = errors_of(repo)
     assert any(expected in e for e in errs), errs
+
+
+def test_product_rule_assigns_a_canonical_code(tmp_path):
+    product = [rule("p1", domain="customer_band", label="CONSUMER", feature="order_count", op="eq", value="1"),
+               rule("p2", domain="customer_band", priority="20", label="OTHER", feature="order_count", op="eq", value="2")]
+    assert errors_of(make_repo(tmp_path, product, [])) == []
+
+
+@pytest.mark.parametrize("label,why", [("DAI_LY", "tenant label, not a canonical code"),
+                                       ("UNMAPPED", "reserved to the engine"), ("UNKNOWN", "reserved to the engine"),
+                                       ("NOPE", "unknown")])
+def test_product_rule_label_must_be_a_canonical_code(tmp_path, label, why):
+    product = [rule("p1", domain="customer_band", label=label, feature="order_count", op="eq", value="1")]
+    errs = errors_of(make_repo(tmp_path, product, []))
+    assert any("product rule label" in e and "is not a canonical code of 'customer_type'" in e for e in errs), (why, errs)
+
+
+def test_tenant_rule_label_must_be_a_tenant_label(tmp_path):
+    # CONSUMER is a canonical code but not a label of the tenant's taxonomy_label
+    errs = errors_of(make_repo(tmp_path, [], [rule("t1", label="CONSUMER")]))
+    assert any("label 'CONSUMER' not in taxonomy_label" in e for e in errs), errs
+
+
+def test_matched_flag_may_be_a_canonical_code(tmp_path):
+    import copy
+    reg = copy.deepcopy(REGISTRY)
+    reg["domains"]["customer_type"]["matched_flags"] = ["CONSUMER"]
+    assert errors_of(make_repo(tmp_path, registry=reg)) == []
 
 
 def test_disable_row_with_wrong_domain(tmp_path):

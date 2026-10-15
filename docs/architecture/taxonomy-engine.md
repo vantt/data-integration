@@ -212,7 +212,7 @@ Ba seed cùng một schema (một dòng là một điều kiện); mọi cột k
 | `rule_id` | varchar | Khoá luật. Nhiều dòng cùng `rule_id` trong một lớp là các điều kiện nối bằng AND; `domain`, `priority`, `label`, `enabled` phải giống nhau giữa các dòng đó. Một `rule_id` chỉ được định nghĩa ở một lớp |
 | `domain` | varchar | Domain trong registry |
 | `priority` | integer | Số nhỏ xét trước, trong cùng lớp |
-| `label` | varchar | Nhãn riêng của doanh nghiệp, phải có trong `taxonomy_label` với `domain` = `label_set` của domain |
+| `label` | varchar | Lớp doanh nghiệp: nhãn riêng của doanh nghiệp, phải có trong `taxonomy_label` với `domain` = `label_set` của domain. Lớp sản phẩm: **mã chuẩn** của `taxonomy_canonical` với `domain` = `label_set` (trừ `UNMAPPED`, `UNKNOWN` do bộ máy tự gán), user chốt 15/10/2026; doanh nghiệp ghi đè bằng nhãn riêng của mình (tắt luật sản phẩm hoặc đặt luật riêng xét trước) |
 | `feature` | varchar | Cột đặc trưng của domain. **Trống** = luật không điều kiện (luôn đúng), dùng làm mặc định (vd. `RETAIL` của Fine Japan); khi đó luật chỉ có đúng dòng này |
 | `op` | varchar | Toán tử, bảng dưới |
 | `value`, `value_to` | varchar | Toán hạng, ép về kiểu của đặc trưng. `in`/`not_in` tách bằng `\|`. `value_to` chỉ dùng cho `between` |
@@ -279,7 +279,7 @@ Model truyền hai seed tenant vào macro để chính SQL của model gọi `te
 4. Thứ tự và hit policy: như mục trên.
 5. **Mã dành riêng:** một đặc trưng trong `required_features` là NULL thì nhãn `UNKNOWN`, không xét luật nào (kể cả luật không điều kiện); không luật nào khớp thì `UNMAPPED`, `rule_id` NULL. `<nhãn>_std` của hai mã này là chính nó.
 6. **Cờ khớp:** mỗi nhãn `X` trong `matched_flags` cho cột `matched__<x>` (chữ thường, ký tự khác chữ/số thành `_`): `TRUE` nếu có luật nhãn `X` khớp, ngược lại `NULL` nếu có luật nhãn `X` cho `NULL`, ngược lại `FALSE`; không phụ thuộc thứ tự ưu tiên (phép OR của `is_us_gift_recipient`). Đối tượng `UNKNOWN` có cờ NULL.
-7. **Cột đầu ra** của `lbl_<domain>`: `<key>`, `<nhãn>` (cột mang tên domain trước `__`, ví dụ `customer_type__group_blob` → `customer_type`), `<nhãn>_std` (join `taxonomy_label` với `domain` = `label_set`; nhãn không neo thì `UNMAPPED`), `rule_id`, `source_layer` (`tenant`/`product`), `ruleset_version`, các `matched__*`, `n_hits` (chỉ UNIQUE). Tên `<nhãn>_std` (không phải `label_std`) giữ hợp đồng của các `lbl_<domain>` đã có (`customer_type_std`, TAXONOMY.md mục 5b); `entity_labels` đổi tên thành `label_std`.
+7. **Cột đầu ra** của `lbl_<domain>`: `<key>`, `<nhãn>` (cột mang tên domain trước `__`, ví dụ `customer_type__group_blob` → `customer_type`), `<nhãn>_std` (luật lớp doanh nghiệp: join `taxonomy_label` với `domain` = `label_set`, nhãn không neo thì `UNMAPPED`; luật lớp sản phẩm: nhãn đã là mã chuẩn nên `<nhãn>_std` = chính nó, không tra `taxonomy_label`), `rule_id`, `source_layer` (`tenant`/`product`), `ruleset_version`, các `matched__*`, `n_hits` (chỉ UNIQUE). Tên `<nhãn>_std` (không phải `label_std`) giữ hợp đồng của các `lbl_<domain>` đã có (`customer_type_std`, TAXONOMY.md mục 5b); `entity_labels` đổi tên thành `label_std`.
 8. **`ruleset_version`:** `md5` của mọi dòng luật của domain ở cả hai lớp (gồm dòng tắt; các cột `source_layer, rule_id, priority, label, feature, op, value, value_to, enabled`, bỏ `note`), sắp theo nội dung; một giá trị cho cả domain, đổi khi bất kỳ dòng luật nào của domain đổi. Đây là tín hiệu để restate (full-refresh các model incremental phía sau).
 
 Đặc trưng danh sách của model đặc trưng **không phải model đầu tiên** được đọc là `[]` khi đối tượng không có dòng ở model đó (`LEFT JOIN` hụt): "không có dòng" nghĩa là "danh sách rỗng", như `EXISTS` mà nó thay; nhờ vậy `has` cho FALSE chứ không NULL.
@@ -322,7 +322,7 @@ Hai nhánh viết bằng `{% if var('taxonomy_engine_customer_type') %} ... {% e
 
 Chạy gate với biến bật: tạo một worktree tạm từ nhánh (không commit), đổi mặc định thành `true` trong `dbt_project.yml` của worktree đó, rồi `BRANCH_DIR=<worktree tạm> scripts/shadow/gate.sh S --allow-new --allow-code-change`; xoá worktree tạm sau gate. Golden phải 0 khác biệt.
 
-**Chưa giải quyết (trước khi biến mặc định `true`):** không có tenant thì không có luật `customer_type` nào, mọi khách là `UNMAPPED` thay vì `RETAIL` mà đường SQL cũ có sẵn trong `ELSE` của lõi; `int_customer_benchmarks` không xếp hạng ai và test mức error `assert_int_customer_benchmarks_rankable_count_sane` fail, nên profile lõi trần (gate bước 6b) không build được khi biến bật (đã thấy trên shadow 15/10/2026; Fine Japan không bị ảnh hưởng). Cần quyết định: luật mặc định ở lớp sản phẩm (cùng câu hỏi nhãn của luật lớp sản phẩm), hay chỉ dùng bộ máy khi có tenant, hay cách khác.
+**Chưa giải quyết (trước khi biến mặc định `true`):** không có tenant thì không có luật `customer_type` nào, mọi khách là `UNMAPPED` thay vì `RETAIL` mà đường SQL cũ có sẵn trong `ELSE` của lõi; `int_customer_benchmarks` không xếp hạng ai và test mức error `assert_int_customer_benchmarks_rankable_count_sane` fail, nên profile lõi trần (gate bước 6b) không build được khi biến bật (đã thấy trên shadow 15/10/2026; Fine Japan không bị ảnh hưởng). Cần quyết định: luật mặc định ở lớp sản phẩm, hay chỉ dùng bộ máy khi có tenant, hay cách khác. Từ 15/10/2026 luật lớp sản phẩm gán mã chuẩn (mục "Bảng luật"), nên một luật mặc định sản phẩm (ví dụ `customer_type` → `CONSUMER`) là cách làm được về kỹ thuật; nhưng nó đổi nhãn khi không có tenant (`CONSUMER` thay vì `RETAIL`), và chưa có luật sản phẩm nào được thêm.
 
 ### Giám sát (`models/monitoring/`, bucket `monitoring`, không model lõi/pack nào đọc)
 
@@ -330,15 +330,16 @@ Chạy gate với biến bật: tạo một worktree tạm từ nhánh (không c
 |---|---|
 | `monitor_taxonomy_parity` (view) | Mỗi khách một dòng mỗi domain: nhãn và cờ của bộ máy, nhãn và cờ của **bản sao nguyên văn** ba khối cũ (`customer_type` và `is_us_gift_recipient` của `dim_customers`, `customer_type` của `fact_orders`), `is_label_diff`, `is_flag_diff`, `is_diff` (`IS DISTINCT FROM`), `is_legacy_else`, `is_engine_default`. Bản sao giữ đúng tên CTE và cột của file gốc nên hai khối `CASE` có cùng sha256 với khối gốc trong `taxonomy_inventory.yaml` (bản sao biểu thức là một dòng `expr` riêng); khối gốc đổi thì inventory cảnh báo. Test `NOT is_diff` mức warn. Vẫn đối chiếu được sau khi mart chuyển sang bộ máy |
 | `monitor_taxonomy_parity_log` (incremental, `full_refresh=false`) | Mỗi lần chạy thêm một dòng mỗi domain: `run_at`, `run_date` (giờ Việt Nam), `domain`, `ruleset_version`, `n_entities`, `n_label_diff`, `n_flag_diff`, `n_legacy_else`, `n_engine_default`, `n_unmapped`, `n_unknown`. Mọi `dbt build` chọn nó đều thêm dòng (cả job chạy mỗi vài phút), nên đọc một dòng mỗi `run_date` và domain (ví dụ lần chạy cuối của đêm) |
+| `monitor_taxonomy_parity_daily` (view) | Một dòng mỗi đêm (`run_date`, giờ Việt Nam) và domain trên `monitor_taxonomy_parity_log`: số lần chạy, `max_label_diff`, `max_flag_diff`, số `ruleset_version` trong ngày, bộ đếm của lần chạy cuối, `is_pass` (mọi lần chạy trong ngày 0 khác biệt và một bộ luật). Bảng để đếm các đêm chạy song song trên prod |
 | `monitor_taxonomy_unmapped` (view) | Với mỗi domain có `survey`: giá trị thô của `survey.features` (JSON) của các khách không luật riêng nào phân loại (`UNMAPPED`, `UNKNOWN`, hoặc luật không điều kiện), số khách, tổng `order_count`, `revenue` từ `survey.metrics_model`, sắp theo doanh thu giảm dần. Sinh bằng macro `taxonomy_unmapped_survey` |
 
 Trên shadow 15/10/2026: `monitor_taxonomy_parity` 0 dòng `is_diff` cho cả hai domain (7 738 khách); số khách rơi vào `ELSE` của SQL cũ bằng số khách khớp luật mặc định (6 029 với `customer_type`, 6 394 với biến thể blob), 0 `UNMAPPED`/`UNKNOWN` (điều kiện dừng số 6 không chạm); ba model build tổng khoảng 0,1 giây.
 
 ### Selftest của bộ máy
 
-Ba domain selftest trong registry (`selftest: true`) trên model đặc trưng `feat_taxonomy_selftest` (rỗng, một cột mỗi họ kiểu: `s_text`, `s_text2`, `s_num`, `s_list`): `selftest_first` (FIRST, `required_features: [s_text2]`, `matched_flags: [A]`), `selftest_unique`, `selftest_collect`. Bốn model ở `models/core/intermediate/taxonomy/selftest/` có `config(enabled=var('taxonomy_selftest'))`: biến mặc định `false` nên build thật không tạo bảng nào và dbt cũng tắt unit test của chúng (không tốn gì trên prod). Validator không cho luật trong seed trỏ tới domain selftest (luật của chúng nằm trong fixture).
+Ba domain selftest trong registry (`selftest: true`) trên model đặc trưng `feat_taxonomy_selftest` (rỗng, một cột mỗi họ kiểu: `s_text`, `s_text2`, `s_num`, `s_list`): `selftest_first` (FIRST, `required_features: [s_text2]`, `matched_flags: [A]`), `selftest_unique`, `selftest_collect`. Bốn model ở `models/core/intermediate/taxonomy/selftest/` có `config(enabled=var('taxonomy_selftest'))`: biến mặc định `false` nên build thật không tạo bảng nào và dbt cũng tắt unit test của chúng (không tốn gì trên prod). Validator không cho luật trong seed trỏ tới domain selftest (luật của chúng nằm trong fixture). Trên prod unit test không chạy (mục "Unit test không chạy trên prod").
 
-24 unit test ở `_taxonomy_selftest.yml` (mỗi toán tử với khớp/không khớp/NULL, `like` với `_` và hoa thường, `TRUE AND NULL` rơi xuống luật sau, thứ tự lớp rồi `priority`, dòng tắt, luật mặc định, `UNMAPPED`, `UNKNOWN`, nhãn chưa neo, cờ khớp ba giá trị, UNIQUE `n_hits`, COLLECT, `ruleset_version` đổi khi một `priority` đổi). Chạy:
+25 unit test ở `_taxonomy_selftest.yml` (mỗi toán tử với khớp/không khớp/NULL, `like` với `_` và hoa thường, `TRUE AND NULL` rơi xuống luật sau, thứ tự lớp rồi `priority`, dòng tắt, luật lớp sản phẩm gán mã chuẩn là `<nhãn>_std` của chính nó, luật mặc định, `UNMAPPED`, `UNKNOWN`, nhãn chưa neo, cờ khớp ba giá trị, UNIQUE `n_hits`, COLLECT, `ruleset_version` đổi khi một `priority` đổi). Chạy:
 
 ```bash
 scripts/checks/run-all.sh      # bước 5, trên lake trống
@@ -346,11 +347,25 @@ scripts/checks/run-all.sh      # bước 5, trên lake trống
 dbt build --select +tag:taxonomy_selftest --indirect-selection cautious --vars '{taxonomy_selftest: true}'
 ```
 
-Đo trên shadow 15/10/2026: 24 unit test tổng 2,4 giây (khoảng 0,1 giây mỗi test), cả lệnh khoảng 8 giây gồm nạp ba seed.
+Đo trên shadow 15/10/2026 (khi có 24 unit test): tổng 2,4 giây (khoảng 0,1 giây mỗi test), cả lệnh khoảng 8 giây gồm nạp ba seed.
+
+### Restate khi đổi luật
+
+MVP chỉ có chế độ **restate**: luật hiện hành áp cho mọi kỳ. Model `table`/`external`/`view` (`lbl_*`, `dim_customers`, `fact_orders`, `int_customer_benchmarks`, mart) tính lại mỗi lần build. Model **incremental** phía sau một domain thì không: `int_customer_entry_attributes` chỉ thêm khách mới (lọc `customer_type = 'RETAIL'` của `dim_customers`), `int_customer_metrics` và `int_customer_discount_metrics` đọc `fact_orders` (phía sau `lbl_customer_type__group_blob`). Vì vậy mỗi lần đổi luật phải full-refresh mọi model phía sau domain (`dbt build --select lbl_<domain>+ --full-refresh`) trong lúc `data_platform` dừng; quy trình bắt buộc: [deployment.md "Classification rule changes (restate)"](../operations/deployment.md#classification-rule-changes-restate).
+
+- **Tín hiệu:** `ruleset_version` của domain (md5 mọi dòng luật) đổi khi bất kỳ dòng luật nào đổi; ghi trong mỗi `lbl_<domain>` và trong `monitor_taxonomy_parity_daily`. Chưa có gì tự kích full-refresh khi nó đổi: đó là việc của quy trình.
+- **Phạm vi:** chỉ khi mart đọc bộ máy (`taxonomy_engine_customer_type: true`) thì `lbl_<domain>+` mới chứa mart và model incremental; khi biến tắt, `lbl_<domain>+` chỉ có `lbl_*` và các monitor.
+- **Lịch sử đối chiếu giữ nguyên:** `monitor_taxonomy_parity_log` là `full_refresh=false`.
+- **Diễn tập trên shadow (15/10/2026, biến bật, một thay đổi luật thử):** build thường để lại 4 043 / 4 222 dòng cũ của khách không còn RETAIL trong `int_customer_entry_attributes`; sau `dbt build --select lbl_customer_type+ --full-refresh` bảng còn 179 dòng, 0 dòng cũ, trùng hoàn toàn với bản dựng lại từ đầu.
+- **Giới hạn:** không có `freeze_after_close` (kỳ đã chốt cũng đổi số), không ảnh chụp tháng. Phải biết báo cáo nào của Fine Japan đã dùng chốt thưởng trước lần đổi luật đầu tiên.
+
+### Unit test không chạy trên prod
+
+User chốt 15/10/2026: dbt unit test (selftest và unit test pilot) **không chạy trong build prod**. Service `data_platform` trong `docker-compose.yml` đặt `DBT_EXCLUDE_RESOURCE_TYPES=unit_test`; dbt (và dagster-dbt, gọi `dbt build` như tiến trình con kế thừa môi trường) bỏ qua unit test, test dữ liệu vẫn chạy. Đã kiểm trên shadow: `dbt build --select lbl_customer_type lbl_customer_type__group_blob` 38 node (20 unit test) không có biến, 18 node (0 unit test, 16 test dữ liệu) có biến; `dagster asset materialize --select marts/lbl_customer_type` 13 unit test + 8 test dữ liệu không có biến, 0 + 8 có biến. Unit test chạy ở `scripts/checks/run-all.sh` (bước 4–5) và shadow gate: `run-shadow.sh` truyền danh sách biến môi trường riêng nên không kế thừa biến này (kiểm: `run-all.sh` chạy với biến đặt sẵn trên host vẫn chạy đủ 25 unit test selftest). Đổi khối `environment` cần `docker compose up -d data_platform` khi deploy (runbook bước 5).
 
 ### Kiểm tra luật trước khi nạp
 
-`python3 scripts/checks/check_taxonomy_rules.py` (stdlib + PyYAML) đọc registry, `vars.tenant`, hai lớp luật của tenant đang bật (không có tenant thì bản mặc định) và `taxonomy_label` tương ứng; thoát 1 và in từng lỗi `file:dòng` khi luật sai (danh sách lỗi: [scripts/checks/README.md](../../scripts/checks/README.md#check_taxonomy_rulespy)). Test `scripts/tests/test_check_taxonomy_rules.py` chạy cả validator trên seed đã commit, nên `scripts/checks/run-all.sh` (bước pytest) và shadow gate (bước pytest) đều chặn luật sai. Test `not_null` mức `warn` trên seed chỉ là lưới phụ khi nạp.
+`python3 scripts/checks/check_taxonomy_rules.py` (stdlib + PyYAML) đọc registry, `vars.tenant`, hai lớp luật của tenant đang bật (không có tenant thì bản mặc định), `taxonomy_label` tương ứng (nhãn luật lớp doanh nghiệp) và `taxonomy_canonical` (nhãn luật lớp sản phẩm phải là mã chuẩn); thoát 1 và in từng lỗi `file:dòng` khi luật sai (danh sách lỗi: [scripts/checks/README.md](../../scripts/checks/README.md#check_taxonomy_rulespy)). Test `scripts/tests/test_check_taxonomy_rules.py` chạy cả validator trên seed đã commit, nên `scripts/checks/run-all.sh` (bước pytest) và shadow gate (bước pytest) đều chặn luật sai. Test `not_null` mức `warn` trên seed chỉ là lưới phụ khi nạp.
 
 **Seed luật và image.** Khi prod chạy từ image cố định (Đợt 2), thư mục seed của tenant (gồm `taxonomy_rule_tenant.csv`) phải mount từ ngoài image, nếu không đổi luật phải build lại image.
 

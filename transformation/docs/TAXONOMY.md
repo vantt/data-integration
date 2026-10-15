@@ -1305,9 +1305,9 @@ Mặc định của thiết kế là **restate** (áp luật hiện hành cho m�
 
 | Model | Materialization | Nhãn lưu | Khi đổi luật |
 |---|---|---|---|
-| `int_customer_metrics` | incremental (`unique_key = customer_key`; tính lại khách có đơn đổi trong 3 ngày) | `channel_preference`, `product_affinity`, `payment_behavior`, `acquisition_source` | `--full-refresh` |
-| `int_customer_entry_attributes` | incremental, chỉ thêm khách mới (bất biến) | `basket_size`, `entry_value_band` | `--full-refresh` |
-| `int_customer_discount_metrics` | incremental | tỷ lệ giảm giá cuối/lớn nhất theo 4 nhóm (đọc `primary_discount_type`) | `--full-refresh` |
+| `int_customer_metrics` | incremental (`unique_key = customer_key`; tính lại khách có đơn đổi trong 3 ngày) | `channel_preference`, `product_affinity`, `payment_behavior`, `acquisition_source` | `--full-refresh`; khi mart đọc bộ máy, nằm sau `lbl_customer_type__group_blob` (qua `fact_orders`): đổi luật domain đó thì theo quy trình [restate](../../docs/operations/deployment.md#classification-rule-changes-restate) |
+| `int_customer_entry_attributes` | incremental, chỉ thêm khách mới (bất biến); lọc `dim_customers.customer_type = 'RETAIL'` | `basket_size`, `entry_value_band` | `--full-refresh` theo quy trình [đổi luật phân loại (restate)](../../docs/operations/deployment.md#classification-rule-changes-restate): `dbt build --select lbl_customer_type+ --full-refresh` khi `data_platform` dừng. Diễn tập shadow 15/10/2026: không full-refresh thì giữ 4 043 dòng của khách đã không còn RETAIL |
+| `int_customer_discount_metrics` | incremental | tỷ lệ giảm giá cuối/lớn nhất theo 4 nhóm (đọc `primary_discount_type`) | `--full-refresh`; cũng nằm sau `lbl_customer_type__group_blob` khi mart đọc bộ máy (quy trình restate) |
 | `dim_customers_base` | incremental | không lưu nhãn phân loại (chỉ blob/mã nhóm thô) | không cần |
 | `dim_customers` | `external`; file có nhánh `is_incremental()` nhưng materialization `external` nên **nhánh không chạy** | toàn bộ nhãn khách tính lại mỗi lần build | không cần |
 | Model còn lại (`fact_*`, `dim_*`, `mart_*`) | `external` (ghi lại toàn bộ), `table` hoặc `view` | tính lại mỗi lần build | không cần |

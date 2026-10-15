@@ -131,6 +131,33 @@ models:
       - name: n_unmapped
       - name: n_unknown
 
+  - name: monitor_taxonomy_parity_daily
+    description: >
+      One row per night (run_date, Asia/Ho_Chi_Minh) and domain over monitor_taxonomy_parity_log.
+      is_pass: every run of the day had n_label_diff = 0 and n_flag_diff = 0 and one ruleset_version;
+      the counters are those of the day's last run. Read this, not the log, to count the nights of
+      the prod parallel run.
+    columns:
+      - name: run_date
+      - name: domain
+      - name: n_runs
+        description: "Runs of the day (every dbt build that selects the log appends one)."
+      - name: first_run_at
+      - name: last_run_at
+      - name: max_label_diff
+      - name: max_flag_diff
+      - name: n_ruleset_versions
+        description: "Distinct rule sets seen during the day (1 when no rule changed)."
+      - name: ruleset_version
+        description: "Rule set of the last run."
+      - name: n_entities
+      - name: n_legacy_else
+      - name: n_engine_default
+      - name: n_unmapped
+      - name: n_unknown
+      - name: is_pass
+        description: "The night counts toward the consecutive nights without difference."
+
   - name: monitor_taxonomy_unmapped
     description: >
       For every classification engine domain with a survey: raw values of the survey features of
