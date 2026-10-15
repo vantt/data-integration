@@ -76,7 +76,7 @@ models:
       - name: cogs_amount
         description: "Giá vốn hàng bán (primary: Sapo-MAC moving-avg cost; fallback: MISA TK632). NULL nếu không có dữ liệu COGS."
       - name: has_cogs
-        description: "true nếu đơn có dữ liệu COGS (sapo_mac, misa, or both). Alias: cogs_source IS NOT NULL AND cogs_source != 'none'."
+        description: "true nếu đơn có dữ liệu COGS (sapo_mac, misa, or both). Alias: cogs_source IS NOT NULL AND cogs_source != 'none'. Cờ độ phủ giá vốn: mọi cột lãi/biên (gross_*, channel_net_*, fully_loaded_*) NULL khi FALSE. Độ phủ báo cáo = COUNT(*) FILTER (WHERE has_cogs) / COUNT(*) trên cùng tập đơn với chỉ tiêu lãi (hoặc theo net_revenue)."
       - name: cogs_source
         description: "COGS data source: 'sapo_mac' (Sapo-MAC only) | 'misa' (MISA-632 only) | 'both' (both systems) | 'none' (no COGS). Drives recon panel in detailView."
         tests:
@@ -85,6 +85,13 @@ models:
                 values: ['sapo_mac', 'misa', 'both', 'none']
               config:
                 where: "cogs_source IS NOT NULL"
+      - name: cogs_coverage_status
+        description: "Độ phủ giá vốn của đơn: 'covered' = có dòng giá vốn, tổng khác 0; 'zero_cost' = có dòng giá vốn nhưng tổng bằng 0 (cogs_amount NULL, has_cogs TRUE, lãi = net_revenue, vd. Sapo chưa có giá vốn bình quân lúc xuất kho); 'missing' = không có dòng giá vốn (has_cogs FALSE, mọi cột lãi/biên NULL)."
+        tests:
+          - not_null
+          - accepted_values:
+              arguments:
+                values: ['covered', 'zero_cost', 'missing']
       - name: gross_profit
         description: "Lãi gộp = net_revenue - COGS. NULL khi không có COGS (has_cogs=FALSE) — luôn filter WHERE has_cogs trước khi SUM để tránh thổi phồng margin."
       - name: gross_margin_pct
@@ -102,19 +109,19 @@ models:
       - name: has_platform_fees
         description: "true nếu đơn có dữ liệu phí platform (hiện tại: Shopee; mở rộng khi thêm Lazada/TikTok)"
       - name: channel_net_profit
-        description: "Lãi ròng kênh = net_revenue - COGS - all Shopee fees"
+        description: "Lãi ròng kênh = net_revenue - COGS - all Shopee fees. NULL khi không có COGS (has_cogs=FALSE): thiếu giá vốn không phải giá vốn 0. SUM bỏ qua NULL, nên đi kèm độ phủ (has_cogs)."
       - name: channel_net_margin_pct
-        description: "Biên lãi ròng kênh = channel_net_profit / net_revenue"
+        description: "Biên lãi ròng kênh = channel_net_profit / net_revenue. NULL khi net_revenue = 0 hoặc không có COGS (has_cogs=FALSE)."
       - name: allocated_overhead
         description: "Tier-3 G&A overhead allocated to this order proportionally by gross_profit share (from int_order_overhead_allocation). NULL when no overhead pool exists for the period."
       - name: is_overhead_estimated
         description: "TRUE if the overhead pool used a budgeted rate (MISA month not yet closed); FALSE when actual MISA data was available."
       - name: fully_loaded_net_profit
-        description: "Lãi ròng đầy đủ = channel_net_profit - promo_goods_cost - allocated_overhead. NULL when allocated_overhead is NULL (overhead pool not yet available for the period)."
+        description: "Lãi ròng đầy đủ = channel_net_profit - allocated_overhead (promo_goods_cost không bị trừ riêng: docs/architecture/order-pl/promo-count-once-reconciliation.md). NULL when allocated_overhead is NULL (overhead pool not yet available for the period) or has_cogs is FALSE."
       - name: fully_loaded_margin_pct
-        description: "Biên lãi ròng đầy đủ = fully_loaded_net_profit / net_revenue. NULL when net_revenue = 0 or allocated_overhead is NULL."
+        description: "Biên lãi ròng đầy đủ = fully_loaded_net_profit / net_revenue. NULL when net_revenue = 0, allocated_overhead is NULL or has_cogs is FALSE."
       - name: promo_goods_cost
-        description: "Chi phí hàng khuyến mãi/quà tặng (revenue=0 lines) định giá theo Sapo-MAC. Marketing cost — KHÔNG phải COGS; không trừ vào gross_profit nhưng trừ vào fully_loaded_net_profit."
+        description: "Chi phí hàng khuyến mãi/quà tặng (revenue=0 lines) định giá theo Sapo-MAC. Nhãn phân bổ (\"trong đó hàng khuyến mãi\"), không phải khoản trừ riêng: không cột lãi nào trừ thêm cột này (docs/architecture/order-pl/promo-count-once-reconciliation.md)."
       - name: cod_amount
         description: "Giá trị COD thu hộ từ người mua (từ đơn giao hàng đầu tiên)"
       - name: carrier_id
@@ -227,3 +234,44 @@ models:
       - name: top_channel_revenue_pct
         description: "Percentage of this SKU's revenue that came from the top channel."
 
+
+unit_tests:
+  - name: fact_order_economics_missing_cogs_is_not_zero_cost
+    description: >
+      An order without COGS rows has NULL profit and margin columns (never its full revenue as
+      profit); cost rows summing to 0 are 'zero_cost'; a covered Shopee order nets COGS, fees,
+      taxes and overhead.
+    model: fact_order_economics
+    config:
+      enabled: "{{ 'finance' in var('enabled_packs') and 'marketplace' in var('enabled_packs') }}"
+    given:
+      - input: ref('fact_orders')
+        rows:
+          - {order_id: o_missing, order_code: C_MISSING, status: COMPLETED, gross_revenue: 1000000, discount_amount: 0, net_revenue: 1000000, is_active_order: true}
+          - {order_id: o_zero, order_code: C_ZERO, status: COMPLETED, gross_revenue: 500000, discount_amount: 0, net_revenue: 500000, is_active_order: true}
+          - {order_id: o_covered, order_code: C_COVERED, status: COMPLETED, gross_revenue: 1000000, discount_amount: 0, net_revenue: 1000000, is_active_order: true}
+      - input: ref('int_order_cogs_reconciled')
+        rows:
+          - {order_code: C_ZERO, sku: S1, cogs_goods_sapo: 0}
+          - {order_code: C_COVERED, sku: S1, cogs_goods_sapo: 600000}
+      - input: ref('int_shopee_order_fees')
+        rows:
+          - {order_code: C_COVERED, total_platform_fees: -50000, infrastructure_fee: -10000, voucher_xtra_fee: -5000, total_taxes: -15000}
+      - input: ref('std_fulfillments')
+        format: sql
+        rows: select cast(null as varchar) as order_id, cast(null as decimal(18,2)) as cod_amount, cast(null as varchar) as carrier_id, cast(null as timestamptz) as created_at where false
+      - input: ref('fact_order_returns')
+        format: sql
+        rows: select cast(null as varchar) as order_code, cast(null as decimal(18,2)) as refund_amount where false
+      - input: ref('int_order_promo_goods_cost')
+        format: sql
+        rows: select cast(null as varchar) as order_code, cast(null as double) as promo_goods_cost_amount where false
+      - input: ref('int_order_overhead_allocation')
+        rows:
+          - {order_code: C_MISSING, allocated_amount: 100000, is_overhead_estimated: false}
+          - {order_code: C_COVERED, allocated_amount: 100000, is_overhead_estimated: false}
+    expect:
+      rows:
+        - {order_id: o_missing, has_cogs: false, cogs_coverage_status: missing, gross_profit: null, channel_net_profit: null, channel_net_margin_pct: null, fully_loaded_net_profit: null, fully_loaded_margin_pct: null}
+        - {order_id: o_zero, has_cogs: true, cogs_coverage_status: zero_cost, gross_profit: 500000, channel_net_profit: 500000, channel_net_margin_pct: 1.0, fully_loaded_net_profit: null, fully_loaded_margin_pct: null}
+        - {order_id: o_covered, has_cogs: true, cogs_coverage_status: covered, gross_profit: 400000, channel_net_profit: 320000, channel_net_margin_pct: 0.32, fully_loaded_net_profit: 220000, fully_loaded_margin_pct: 0.22}

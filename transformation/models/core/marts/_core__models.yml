@@ -181,7 +181,7 @@ models:
       - name: lifetime_contribution_margin
         description: "Lifetime contribution margin = SUM(channel_net_profit) over has_cogs active orders (gross_profit − direct channel fees; EXCLUDES overhead). VND, 0 if no margin data. Use this — not fully-loaded — for customer-level margin: overhead is 98% revenue-weighted and penalizes large orders. NULL khi tắt pack finance."
       - name: avg_order_contribution_margin_pct
-        description: "Avg per-order contribution margin % (channel_net_profit / net_revenue). NULL for customers with no active orders. NULL khi tắt pack finance."
+        description: "Avg per-order contribution margin % (channel_net_profit / net_revenue) over active orders with COGS (has_cogs); orders without COGS have NULL channel_net_profit and are skipped. NULL for customers with no active has_cogs order with net_revenue > 0. NULL khi tắt pack finance."
       - name: margin_cogs_coverage_pct
         description: "Share of active orders with COGS data. Caveat metric for margin reliability. NULL for customers with no active orders. NULL khi tắt pack finance."
       - name: is_margin_negative

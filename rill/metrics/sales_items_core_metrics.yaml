@@ -56,13 +56,13 @@ dimensions:
   # Scope flags for filtering (see report_segmentation.md)
   - name: scope_sales
     column: scope_sales
-    description: "Layer 1 Executive [All]: is_sales_channel AND not cancelled"
+    description: "Layer 1 Executive [All]: fact_orders.scope_sales AND is_active_order (sales channel, not cancelled/draft)"
   - name: scope_retail
     column: scope_retail
-    description: "Layer 2 Retail [Retail]: scope_sales AND customer_type=RETAIL"
+    description: "Layer 2 Retail [Retail]: fact_orders.scope_retail AND is_active_order (RETAIL customer, not on a B2B channel)"
   - name: scope_b2b
     column: scope_b2b
-    description: "Layer 2 B2B [B2B]: scope_sales AND customer_type IN (WHOLESALE, PARTNER)"
+    description: "Layer 2 B2B [B2B]: fact_orders.scope_b2b AND is_active_order (WHOLESALE/PARTNER customer or B2B channel)"
 
 measures:
   # Core product metrics (domains/sales.md#9-top-selling-products)
@@ -101,7 +101,7 @@ measures:
   # Scope-filtered metrics for quick access
   - name: sales_quantity
     display_name: Sales Quantity [All]
-    description: "Layer 1 Executive scope — excludes internal/cancelled"
+    description: "Layer 1 Executive scope — excludes internal/cancelled/draft"
     expression: sum(quantity) filter (where scope_sales)
   - name: sales_item_revenue
     display_name: Sales Item Revenue [All]

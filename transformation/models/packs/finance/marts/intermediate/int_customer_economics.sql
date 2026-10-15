@@ -40,7 +40,8 @@ customer_economics AS (
         -- Excludes allocated_overhead → pure contribution margin per business decision
         SUM(oe.channel_net_profit) FILTER (WHERE oe.has_cogs)::BIGINT   AS lifetime_contribution_margin,
 
-        -- Per-order contribution margin % averaged across active orders
+        -- Per-order contribution margin % averaged across active has_cogs orders
+        -- (channel_net_profit is NULL without COGS, so AVG skips those orders)
         -- NULLIF guards against net_revenue=0 (fully-discounted/gift orders)
         AVG(
             oe.channel_net_profit / NULLIF(oe.net_revenue, 0)

@@ -37,11 +37,13 @@ SELECT
     s.distributed_discount_amount,
     COALESCE(s.discount_amount, 0) + COALESCE(s.distributed_discount_amount, 0) AS total_discount_amount,
     s.weight_grams,
-    -- Scope flags for 3-layer architecture (see report_segmentation.md)
-    COALESCE(c.is_sales_channel, false) AND os.status_code NOT IN ('CANCELLED', 'Voided') AS scope_sales,
-    COALESCE(c.is_sales_channel, false) AND os.status_code NOT IN ('CANCELLED', 'Voided') AND COALESCE(cu.customer_type, 'RETAIL') = 'RETAIL' AS scope_retail,
-    COALESCE(c.is_sales_channel, false) AND os.status_code NOT IN ('CANCELLED', 'Voided') AND COALESCE(cu.customer_type, 'RETAIL') IN ('WHOLESALE', 'PARTNER') AS scope_b2b
+    -- Scope flags for the 3-layer architecture (see report_segmentation.md): the order's mart
+    -- scope_* gated by is_active_order (fact_sales carries no scope), never re-derived here.
+    COALESCE(o.scope_sales AND o.is_active_order, false) AS scope_sales,
+    COALESCE(o.scope_retail AND o.is_active_order, false) AS scope_retail,
+    COALESCE(o.scope_b2b AND o.is_active_order, false) AS scope_b2b
 FROM src_fact_sales s
+LEFT JOIN src_fact_orders o ON s.order_id = o.order_id
 LEFT JOIN src_dim_products p ON s.product_key = p.product_key
 LEFT JOIN src_dim_channels c ON s.channel_key = c.channel_key
 LEFT JOIN src_dim_branch_location b ON s.branch_location_key = b.branch_location_key

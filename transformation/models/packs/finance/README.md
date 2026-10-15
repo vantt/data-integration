@@ -27,6 +27,10 @@ Toàn bộ **chi phí và lợi nhuận**: giá vốn (đối chiếu Sapo và M
 
 Mart dùng ở Metabase (`docs/analytics-handbook/domains/finance.md`, blueprint `finance_cashflow_budget.md`) và app CRM (`fact_order_costs`, `fact_order_economics`, `int_order_cogs_reconciled`, `int_order_promo_goods_cost` ở tab tài chính của đơn). Tên relation không đổi khi dời vào pack.
 
+## Quy tắc giá vốn thiếu
+
+Thiếu giá vốn không phải giá vốn 0. Trong `fact_order_economics`, mọi cột lãi/biên (`gross_profit`, `gross_margin_pct`, `channel_net_profit`, `channel_net_margin_pct`, `fully_loaded_net_profit`, `fully_loaded_margin_pct`) là NULL khi `has_cogs` FALSE, nên `SUM()` bỏ qua đơn đó thay vì tính cả doanh thu thành lãi. Chỉ tiêu lãi/biên phải đi kèm độ phủ giá vốn: tỷ lệ đơn (hoặc tỷ lệ `net_revenue`) có `has_cogs` trên cùng tập đơn. `cogs_coverage_status` tách thêm trường hợp `zero_cost`: đơn có dòng giá vốn nhưng tổng bằng 0 (`has_cogs` TRUE, lãi = doanh thu), để đo và lọc riêng.
+
 ## Cấu hình
 
 - Biến dbt `cogs_primary_source` (`sapo_mac` mặc định, hoặc `misa`): nguồn giá vốn chính của `int_order_cogs_reconciled`.

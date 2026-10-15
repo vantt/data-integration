@@ -42,6 +42,14 @@ WITH base AS (
         o.total_collected,
         o.first_shipped_at,
         o.time_to_complete_hours AS hours_to_complete,
+        -- Scope flags for the 3-layer architecture (see report_segmentation.md): the mart's scope_*
+        -- (status-independent) gated by its is_active_order, as docs/analytics-handbook/semantic/segments.md
+        -- prescribes for revenue, so the scope measures exclude cancelled and draft orders. Never
+        -- re-derived here: Rill counts the same orders as Metabase and the marts.
+        o.is_active_order,
+        COALESCE(o.scope_sales AND o.is_active_order, false) AS scope_sales,
+        COALESCE(o.scope_retail AND o.is_active_order, false) AS scope_retail,
+        COALESCE(o.scope_b2b AND o.is_active_order, false) AS scope_b2b,
         CASE
             WHEN o.first_shipped_at IS NULL THEN NULL
             ELSE date_diff('hour', o.ordered_at, o.first_shipped_at)
@@ -73,14 +81,7 @@ flags AS (
         CASE
             WHEN status = 'OPEN' THEN date_diff('hour', ordered_at, current_timestamp) > 48
             ELSE false
-        END AS pending_gt_48h_flag,
-        -- Scope flags for 3-layer architecture (see report_segmentation.md)
-        -- Layer 1: Executive [All] - all sales channels
-        is_sales_channel AND status NOT IN ('CANCELLED', 'Voided') AS scope_sales,
-        -- Layer 2: Retail Operations [Retail]
-        is_sales_channel AND status NOT IN ('CANCELLED', 'Voided') AND customer_type = 'RETAIL' AS scope_retail,
-        -- Layer 2: B2B Operations [B2B]
-        is_sales_channel AND status NOT IN ('CANCELLED', 'Voided') AND customer_type IN ('WHOLESALE', 'PARTNER') AS scope_b2b
+        END AS pending_gt_48h_flag
     FROM base
 )
 SELECT

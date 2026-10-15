@@ -46,15 +46,17 @@ Dagster publishes these files into `/app/data_lake/export/rill/current/`:
 
 Metrics follow the analytics-handbook 3-layer architecture:
 
+The Rill flags are the mart's `fact_orders.scope_*` columns gated by `fact_orders.is_active_order` (not cancelled, not draft), the combination the segment rules prescribe for revenue. The models never re-derive them, so Rill counts the same orders as Metabase; `sales_items_enriched` takes the flags of the line's order.
+
 | Layer | Scope Flag | Filter | Audience |
 |-------|------------|--------|----------|
-| Executive [All] | `scope_sales` | `is_sales_channel AND not cancelled` | CEO, Directors |
-| Retail [Retail] | `scope_retail` | + `customer_type='RETAIL'` | Sales, Marketing |
-| B2B [B2B] | `scope_b2b` | + `customer_type IN (WHOLESALE, PARTNER)` | B2B Sales |
+| Executive [All] | `scope_sales` | `fact_orders.scope_sales AND is_active_order` | CEO, Directors |
+| Retail [Retail] | `scope_retail` | `fact_orders.scope_retail AND is_active_order` (RETAIL customer, not on a B2B channel) | Sales, Marketing |
+| B2B [B2B] | `scope_b2b` | `fact_orders.scope_b2b AND is_active_order` (WHOLESALE/PARTNER customer or B2B channel) | B2B Sales |
 
 Pre-filtered measures available: `sales_revenue`, `retail_revenue`, `b2b_revenue`.
 
-See [Report Segmentation Guide](../docs/analytics-handbook/guides/report_segmentation.md) for details.
+See [Report Segmentation Guide](../docs/analytics-handbook/guides/report_segmentation.md) and [segments.md](../docs/analytics-handbook/semantic/segments.md) for details.
 
 ## Initial Assets
 

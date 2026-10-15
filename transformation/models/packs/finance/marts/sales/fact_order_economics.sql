@@ -9,6 +9,9 @@
 -- Phase-05: COGS sourced from int_order_cogs_reconciled (Sapo-MAC moving-avg cost; MISA TK632 fallback).
 -- Shopee fees joined via order_code.
 -- Returns are reference columns only — not restated into channel_net_profit (recognized at return date).
+-- Missing COGS is never zero cost: every profit/margin column is NULL when has_cogs is FALSE, so an
+-- order without cost data cannot show its full revenue as profit. Sum them as-is (NULLs drop out) and
+-- report the coverage next to them (share of orders, or of net_revenue, with has_cogs).
 
 WITH orders AS (
     SELECT
@@ -126,6 +129,14 @@ SELECT
     m.cogs_sku_count,
     m.cogs_source IS NOT NULL AND m.cogs_source != 'none' AS has_cogs,
     m.cogs_source,
+    -- COGS coverage of the order: 'covered' = cost rows with a non-zero total; 'zero_cost' = cost rows
+    -- found but their total is 0 (cogs_amount NULL, has_cogs TRUE, profit = net_revenue; e.g. Sapo had no
+    -- moving-average cost when the goods shipped); 'missing' = no cost row (has_cogs FALSE, profit NULL).
+    CASE
+        WHEN m.cogs_source IS NULL OR m.cogs_source = 'none' THEN 'missing'
+        WHEN NULLIF(m.cogs_amount, 0) IS NULL                 THEN 'zero_cost'
+        ELSE 'covered'
+    END AS cogs_coverage_status,
 
     -- Promo goods cost (revenue=0 gift lines; marketing cost, NOT COGS — phase-03)
     pg.promo_goods_cost,
@@ -165,20 +176,23 @@ SELECT
     sf.order_code IS NOT NULL AS has_platform_fees,
 
     -- Channel Net Profit = Net Revenue - COGS - |Shopee fees| - |Shopee taxes|
-    -- For non-Shopee orders: same as gross_profit.
-    -- MAINTENANCE NOTE: this formula is repeated verbatim in channel_net_margin_pct below.
-    -- If adding a new fee column (e.g. Lazada), update BOTH occurrences.
-    o.net_revenue
-        - COALESCE(m.cogs_amount, 0)
-        + COALESCE(sf.total_platform_fees, 0)   -- negative values from Shopee
-        + COALESCE(sf.infrastructure_fee, 0)
-        + COALESCE(sf.voucher_xtra_fee, 0)
-        + COALESCE(sf.shopee_taxes, 0)
-        AS channel_net_profit,
+    -- For non-Shopee orders: same as gross_profit. NULL when has_cogs is FALSE (like gross_profit).
+    -- MAINTENANCE NOTE: this formula is repeated verbatim in channel_net_margin_pct and the two
+    -- fully_loaded_* columns below. If adding a new fee column (e.g. Lazada), update ALL occurrences.
+    CASE
+        WHEN m.cogs_source IS NULL OR m.cogs_source = 'none' THEN NULL
+        ELSE o.net_revenue
+            - COALESCE(m.cogs_amount, 0)
+            + COALESCE(sf.total_platform_fees, 0)   -- negative values from Shopee
+            + COALESCE(sf.infrastructure_fee, 0)
+            + COALESCE(sf.voucher_xtra_fee, 0)
+            + COALESCE(sf.shopee_taxes, 0)
+    END AS channel_net_profit,
 
     -- Channel Net Margin % (same formula as channel_net_profit above — see maintenance note)
     CASE
         WHEN o.net_revenue = 0 THEN NULL
+        WHEN m.cogs_source IS NULL OR m.cogs_source = 'none' THEN NULL
         ELSE (
             o.net_revenue
             - COALESCE(m.cogs_amount, 0)
@@ -193,6 +207,7 @@ SELECT
     oh.allocated_overhead,
     COALESCE(oh.is_overhead_estimated, FALSE) AS is_overhead_estimated,
     CASE
+        WHEN m.cogs_source IS NULL OR m.cogs_source = 'none' THEN NULL
         WHEN oh.allocated_overhead IS NOT NULL
         THEN o.net_revenue
                 - COALESCE(m.cogs_amount, 0)
@@ -205,6 +220,7 @@ SELECT
     END AS fully_loaded_net_profit,
     CASE
         WHEN o.net_revenue = 0 OR oh.allocated_overhead IS NULL THEN NULL
+        WHEN m.cogs_source IS NULL OR m.cogs_source = 'none' THEN NULL
         ELSE (
             o.net_revenue
             - COALESCE(m.cogs_amount, 0)

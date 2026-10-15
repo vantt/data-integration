@@ -23,7 +23,8 @@ models:
         description: >
           Contribution margin of the redeemed order = fact_order_economics.channel_net_profit
           (net_revenue − COGS − channel fees; EXCLUDES overhead). Warehouse-canonical margin
-          definition, same VAT-excluded base as redemption_revenue_vnd. NULL when not redeemed.
+          definition, same VAT-excluded base as redemption_revenue_vnd. NULL when not redeemed or when
+          the redeemed order has no COGS (has_cogs FALSE: missing cost is not zero cost).
       - name: issued_date
         description: "Voucher issue date (ICT calendar date)."
       - name: redeemed_date

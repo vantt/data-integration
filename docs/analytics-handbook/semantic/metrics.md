@@ -571,7 +571,7 @@ FROM fact_order_economics  -- missing WHERE has_cogs = true
 > **Type:** Metric | **Domain:** [Finance](../domains/finance.md) | **Unit:** VND
 > **Status:** `active` | **Scope:** has_cogs = true | **Grain:** per order | **Since:** 2022-01-01
 
-**Definition:** Channel net profit = gross_profit − Shopee platform fees. Non-Shopee orders: channel_net_profit = gross_profit (no platform fee).
+**Definition:** Channel net profit = gross_profit − Shopee platform fees. Non-Shopee orders: channel_net_profit = gross_profit (no platform fee). NULL when the order has no COGS (`has_cogs = false`): missing cost is never treated as zero cost, so `SUM()` skips those orders; report the COGS coverage (share of orders or of net revenue with `has_cogs`) next to it.
 
 **Real question:** "Lợi nhuận sau khi trừ phí sàn là bao nhiêu?"
 
@@ -584,7 +584,7 @@ SUM(channel_net_profit)
 
 **Intent:** Measures profit after paying the sales platform. Second step in P&L ladder.
 
-**Use in SQL:** `SUM(channel_net_profit) FILTER (WHERE has_cogs = true)`
+**Use in SQL:** `SUM(channel_net_profit) FILTER (WHERE has_cogs = true)` (the filter is now redundant for the sum, but keep it so the revenue denominator of a margin uses the same orders)
 
 #### 🎯 When to Use
 Use when comparing Shopee vs direct channel profitability. Shopee fees are already embedded as negative values in mart — no manual subtraction needed.
@@ -651,7 +651,8 @@ Use for channel profitability benchmarking. Pair with `shopee_platform_fee_rate`
 
 #### ❌ Anti-patterns
 ```sql
--- ❌ No has_cogs filter → unmatched 0-profit orders deflate margin
+-- ❌ No has_cogs filter → the denominator counts revenue of orders without COGS
+-- (their channel_net_profit is NULL), so the margin is deflated
 SELECT SUM(channel_net_profit) / NULLIF(SUM(net_revenue), 0)
 FROM fact_order_economics  -- missing WHERE has_cogs = true
 ```
@@ -666,7 +667,7 @@ FROM fact_order_economics  -- missing WHERE has_cogs = true
 > **Type:** Metric | **Domain:** [Finance](../domains/finance.md) | **Unit:** VND
 > **Status:** `active` | **Scope:** allocated_overhead IS NOT NULL | **Grain:** per order | **Since:** 2022-01-01
 
-**Definition:** Fully-loaded net profit = channel_net_profit − overhead allocation. Tier-3 reporting only.
+**Definition:** Fully-loaded net profit = channel_net_profit − overhead allocation. Tier-3 reporting only. NULL when the order has no COGS (`has_cogs = false`) or no overhead allocation.
 
 **Real question:** "Lợi nhuận thực sau khi phân bổ đầy đủ chi phí overhead là bao nhiêu?"
 
