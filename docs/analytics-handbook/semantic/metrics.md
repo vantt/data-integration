@@ -2,6 +2,8 @@
 
 Standard aggregate formulas — computed from mart columns, not redefined in blueprints.
 
+> **Moving to the metric registry.** Some definitions below give different numbers from Rill and from the SQL of the running Metabase blueprints. Three-source comparison with measured samples: `plans/261014-2225-report-productization/definitions-comparison.md`; each divergence is a separate decision awaiting the user in `definition-decisions.md` in the same folder. The registry in `analytics/registry/` is becoming the canonical source: metrics already in it are listed in [metric-registry.md](metric-registry.md) (generated; Vietnamese–English labels in [glossary.md](glossary.md)), and for those the registry wins over this file. This file will itself be generated once every metric is in the registry; until then the definitions here are unchanged.
+
 > **Canonical source:** this file
 > **WHY reference:** [Revenue Terminology](../guides/revenue_terminology.md), [Sales Domain](../domains/sales.md)
 > **Implementation:** `fact_orders` columns + Rill `rill/metrics/orders_core_metrics.yaml`

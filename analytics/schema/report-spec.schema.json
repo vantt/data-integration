@@ -1,0 +1,644 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "analytics/schema/report-spec.schema.json",
+  "title": "Report spec v2 (engine-agnostic)",
+  "description": "One report per file (analytics/specs/<spec_id>.yml). Format owned by .skills/analytics-design (template: templates/report_spec_v2_template.yml).",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "spec_id",
+    "spec_version",
+    "title",
+    "question",
+    "cadence",
+    "period_mode",
+    "as_of",
+    "tabs"
+  ],
+  "properties": {
+    "spec_id": {
+      "$ref": "#/$defs/ident"
+    },
+    "spec_version": {
+      "const": 2
+    },
+    "title": {
+      "$ref": "#/$defs/text_vi"
+    },
+    "question": {
+      "type": "string",
+      "minLength": 1
+    },
+    "cadence": {
+      "enum": [
+        "daily",
+        "weekly",
+        "monthly"
+      ]
+    },
+    "period_mode": {
+      "enum": [
+        "to_date",
+        "closed"
+      ],
+      "description": "to_date: current period up to as_of; closed: last complete period"
+    },
+    "as_of": {
+      "const": "yesterday",
+      "description": "data is complete up to the end of yesterday (tenant time zone)"
+    },
+    "grid_columns": {
+      "type": "integer",
+      "minimum": 1,
+      "description": "width of the layout grid used by position/size"
+    },
+    "baseline": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "kind",
+        "source",
+        "verified_against_live"
+      ],
+      "description": "what the report was written from and is compared against",
+      "properties": {
+        "kind": {
+          "enum": [
+            "metabase_blueprint",
+            "metabase_live",
+            "none"
+          ]
+        },
+        "source": {
+          "type": "string"
+        },
+        "verified_against_live": {
+          "type": "boolean",
+          "description": "true once a read-only capture of the running dashboard matched the source"
+        },
+        "note": {
+          "type": "string"
+        }
+      }
+    },
+    "tabs": {
+      "type": "array",
+      "minItems": 1,
+      "items": {
+        "$ref": "#/$defs/tab"
+      }
+    }
+  },
+  "$defs": {
+    "ident": {
+      "type": "string",
+      "pattern": "^[a-z][a-z0-9_]*$"
+    },
+    "text_vi": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "vi"
+      ],
+      "properties": {
+        "vi": {
+          "type": "string",
+          "minLength": 1
+        },
+        "en": {
+          "type": "string",
+          "minLength": 1
+        }
+      }
+    },
+    "window": {
+      "type": "string",
+      "pattern": "^(wtd|prev_week_full|prev_wtd_same_span|mtd|mtd_before_as_of|prev_week_start_to_date|month_full|prev_month_full|last_[1-9][0-9]{0,2}_days)$"
+    },
+    "tab": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "tab_id",
+        "title",
+        "blocks"
+      ],
+      "properties": {
+        "tab_id": {
+          "$ref": "#/$defs/ident"
+        },
+        "title": {
+          "$ref": "#/$defs/text_vi"
+        },
+        "baseline_name": {
+          "type": "string"
+        },
+        "blocks": {
+          "type": "array",
+          "minItems": 1,
+          "items": {
+            "$ref": "#/$defs/block"
+          }
+        }
+      }
+    },
+    "block": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "block_id",
+        "time_axis",
+        "cards"
+      ],
+      "properties": {
+        "block_id": {
+          "$ref": "#/$defs/ident"
+        },
+        "title": {
+          "$ref": "#/$defs/text_vi"
+        },
+        "time_axis": {
+          "enum": [
+            "order_date",
+            "return_date",
+            "settlement_date"
+          ],
+          "description": "shown next to the block title"
+        },
+        "cards": {
+          "type": "array",
+          "minItems": 1,
+          "items": {
+            "$ref": "#/$defs/card"
+          }
+        }
+      }
+    },
+    "band": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "max",
+        "label",
+        "tone"
+      ],
+      "properties": {
+        "max": {
+          "type": "number"
+        },
+        "label": {
+          "type": "string"
+        },
+        "tone": {
+          "enum": [
+            "good",
+            "warning",
+            "bad",
+            "neutral"
+          ]
+        }
+      }
+    },
+    "output": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "name",
+        "type"
+      ],
+      "properties": {
+        "name": {
+          "$ref": "#/$defs/ident"
+        },
+        "type": {
+          "enum": [
+            "string",
+            "integer",
+            "number",
+            "currency",
+            "percent",
+            "date",
+            "timestamp",
+            "boolean"
+          ]
+        },
+        "label": {
+          "type": "string"
+        },
+        "hidden": {
+          "type": "boolean"
+        },
+        "link": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "param"
+          ],
+          "properties": {
+            "param": {
+              "$ref": "#/$defs/ident",
+              "description": "tenant_params entry with a {column} template"
+            }
+          }
+        }
+      }
+    },
+    "card": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "card_id",
+        "kind",
+        "title"
+      ],
+      "properties": {
+        "card_id": {
+          "$ref": "#/$defs/ident",
+          "description": "identity of the card in every engine; never reuse"
+        },
+        "kind": {
+          "enum": [
+            "kpi_compare",
+            "trend",
+            "breakdown",
+            "breakdown_compare",
+            "derived",
+            "table",
+            "inline_sql",
+            "meta_period",
+            "meta_freshness",
+            "text"
+          ]
+        },
+        "title": {
+          "$ref": "#/$defs/text_vi"
+        },
+        "baseline_name": {
+          "type": "string",
+          "description": "question name in the baseline, to pair cards when comparing numbers"
+        },
+        "baseline_columns": {
+          "type": "object",
+          "description": "card output -> baseline column",
+          "propertyNames": {
+            "type": "string"
+          },
+          "additionalProperties": {
+            "type": "string"
+          }
+        },
+        "metric_ref": {
+          "oneOf": [
+            {
+              "$ref": "#/$defs/ident"
+            },
+            {
+              "type": "array",
+              "minItems": 1,
+              "uniqueItems": true,
+              "items": {
+                "$ref": "#/$defs/ident"
+              }
+            }
+          ]
+        },
+        "dimensions": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "pattern": "^[a-z][a-z0-9_]*\\.[a-z][a-z0-9_]*$"
+          },
+          "description": "<semantic model>.<dimension>"
+        },
+        "grain": {
+          "enum": [
+            "day",
+            "week",
+            "month"
+          ],
+          "description": "time bucket of a trend card"
+        },
+        "window": {
+          "$ref": "#/$defs/window"
+        },
+        "comparison": {
+          "enum": [
+            "prev_week_full",
+            "prev_wtd_same_span",
+            "prev_month",
+            "same_period_last_year",
+            "target"
+          ]
+        },
+        "pct_change_of": {
+          "$ref": "#/$defs/ident",
+          "description": "metric whose change vs the comparison is added as a column"
+        },
+        "goal": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "param"
+          ],
+          "properties": {
+            "param": {
+              "$ref": "#/$defs/ident",
+              "description": "tenant_params entry"
+            }
+          }
+        },
+        "bands": {
+          "type": "array",
+          "minItems": 1,
+          "items": {
+            "$ref": "#/$defs/band"
+          },
+          "description": "ascending upper bounds"
+        },
+        "sort": {
+          "enum": [
+            "value_desc",
+            "value_asc",
+            "dimension_asc",
+            "time_asc",
+            "time_desc"
+          ]
+        },
+        "limit": {
+          "type": "integer",
+          "minimum": 1
+        },
+        "decimals": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 4,
+          "description": "display rounding"
+        },
+        "time_axis": {
+          "enum": [
+            "order_date",
+            "return_date",
+            "settlement_date"
+          ],
+          "description": "overrides the block axis for this card (shown on the card)"
+        },
+        "inline_sql": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "sql",
+            "outputs",
+            "reason",
+            "cost_sensitive"
+          ],
+          "properties": {
+            "sql": {
+              "type": "string",
+              "minLength": 1,
+              "description": "DuckDB SQL; placeholders {{as_of}}, {{window_start}}, {{window_end}}, {{tz}}"
+            },
+            "outputs": {
+              "type": "array",
+              "minItems": 1,
+              "items": {
+                "$ref": "#/$defs/output"
+              }
+            },
+            "reason": {
+              "type": "string",
+              "minLength": 1,
+              "description": "why the registry cannot express this card"
+            },
+            "cost_sensitive": {
+              "type": "boolean",
+              "description": "reads cost, margin or profit (the registry cannot infer it from SQL)"
+            }
+          }
+        },
+        "text": {
+          "type": "string"
+        },
+        "viz": {
+          "enum": [
+            "single-value",
+            "single-value-with-trend",
+            "progress-toward-goal",
+            "gauge",
+            "line-chart",
+            "multi-line-chart",
+            "area-chart",
+            "stacked-area",
+            "vertical-bar",
+            "horizontal-bar",
+            "stacked-bar",
+            "grouped-bar",
+            "stacked-bar-time",
+            "combo-chart",
+            "donut",
+            "funnel",
+            "waterfall",
+            "data-table",
+            "data-table-formatted",
+            "pivot-table",
+            "scatter-plot",
+            "geographic-map",
+            "heatmap",
+            "sparkline",
+            "text-annotation"
+          ]
+        },
+        "size": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "w",
+            "h"
+          ],
+          "properties": {
+            "w": {
+              "type": "integer",
+              "minimum": 1
+            },
+            "h": {
+              "type": "integer",
+              "minimum": 1
+            }
+          }
+        },
+        "position": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "row",
+            "col"
+          ],
+          "properties": {
+            "row": {
+              "type": "integer",
+              "minimum": 0
+            },
+            "col": {
+              "type": "integer",
+              "minimum": 0
+            }
+          }
+        },
+        "required": {
+          "type": "boolean",
+          "description": "the report is meaningless without this card; a cost-sensitive required card blocks the report in areas without cost access"
+        }
+      },
+      "allOf": [
+        {
+          "if": {
+            "properties": {
+              "kind": {
+                "enum": [
+                  "kpi_compare",
+                  "trend",
+                  "breakdown",
+                  "breakdown_compare",
+                  "derived",
+                  "table"
+                ]
+              }
+            }
+          },
+          "then": {
+            "required": [
+              "metric_ref",
+              "window",
+              "viz"
+            ],
+            "properties": {
+              "inline_sql": false,
+              "text": false
+            }
+          }
+        },
+        {
+          "if": {
+            "properties": {
+              "kind": {
+                "const": "inline_sql"
+              }
+            }
+          },
+          "then": {
+            "required": [
+              "inline_sql",
+              "window",
+              "viz"
+            ],
+            "properties": {
+              "metric_ref": false,
+              "dimensions": false
+            }
+          }
+        },
+        {
+          "if": {
+            "properties": {
+              "kind": {
+                "enum": [
+                  "trend"
+                ]
+              }
+            }
+          },
+          "then": {
+            "required": [
+              "grain"
+            ]
+          }
+        },
+        {
+          "if": {
+            "properties": {
+              "kind": {
+                "enum": [
+                  "breakdown",
+                  "breakdown_compare"
+                ]
+              }
+            }
+          },
+          "then": {
+            "required": [
+              "dimensions"
+            ]
+          }
+        },
+        {
+          "if": {
+            "properties": {
+              "kind": {
+                "enum": [
+                  "breakdown_compare"
+                ]
+              }
+            }
+          },
+          "then": {
+            "required": [
+              "comparison"
+            ]
+          }
+        },
+        {
+          "if": {
+            "properties": {
+              "kind": {
+                "const": "text"
+              }
+            }
+          },
+          "then": {
+            "required": [
+              "text"
+            ],
+            "properties": {
+              "metric_ref": false,
+              "inline_sql": false
+            }
+          }
+        },
+        {
+          "if": {
+            "properties": {
+              "kind": {
+                "enum": [
+                  "meta_period",
+                  "meta_freshness"
+                ]
+              }
+            }
+          },
+          "then": {
+            "properties": {
+              "metric_ref": false,
+              "inline_sql": false
+            }
+          }
+        },
+        {
+          "if": {
+            "required": [
+              "goal"
+            ]
+          },
+          "then": {
+            "properties": {
+              "comparison": {
+                "const": "target"
+              }
+            },
+            "required": [
+              "comparison"
+            ]
+          }
+        }
+      ]
+    }
+  }
+}

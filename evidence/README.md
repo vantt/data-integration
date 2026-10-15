@@ -7,6 +7,47 @@ Pages live in `pages/`, SQL sources in `sources/datalake/`, and the image is def
 `evidence build`, then serves the static build. `docker compose restart evidence` rebuilds the
 site from the current serving database; it does not reinstall packages.
 
+## Areas and generated pages
+
+Product reports are not written by hand. `python3 -m analytics render evidence --tenant fine_japan`
+generates one Evidence project per **permission area** (`access.areas` in
+`tenants/<t>/analytics/profile.yml`) under `areas/<area>/`:
+
+| File | Content |
+|---|---|
+| `areas/<area>/evidence.config.yaml` | `deployment.basePath: /<area>`: the area is served under its own path, so a login per path covers its pages **and** its data files |
+| `areas/<area>/sources/datalake/connection.yaml` | DuckDB source `datalake`; the builder copies `data_lake/serving/olap.duckdb` next to it as `olap-serving.duckdb` |
+| `areas/<area>/sources/datalake/<report>__<card>.sql` | Compiled SQL of one card, `as_of` = yesterday in the tenant time zone at build time; the extract holds only the card's result |
+| `areas/<area>/sources/datalake/<report>__meta.sql` | `as_of`, period bounds, last order time, cost coverage (header and meta cards) |
+| `areas/<area>/pages/index.md`, `pages/<report>/index.md` | Pages that read only those extracts; footer "Doanh thu được tính thế nào" generated from the profile and registry |
+
+Every generated file starts with a GENERATED banner (pages and SQL carry a hash of the inputs). Do not
+edit them; `python3 -m analytics render evidence --check` (and `pytest analytics/tests`) fails when they
+drift from the spec, registry or profile. A card that shows cost, margin or profit is not rendered (and
+its SQL not written) in an area with `can_view_cost: false`; the page shows "Cần quyền xem chi phí".
+
+The hand-written pages in `pages/` (`index`, `ceo-weekly-pulse`, `finance-cashflow`, `theme-mvp`) form the
+`legacy` area: unchanged, still built by the container command below until the scheduled builder
+(next step of the report plan) replaces it. Nothing serves `areas/` yet.
+
+## Spike results (14/10/2026, test container, Evidence 40.1.8)
+
+Run per "Upgrading deliberately" step 3: current image under the name `evidence-spike`, port 3106,
+default bridge network (not `caddy_net`), copies of `pages/` and `sources/`, `data_lake` read-only;
+removed afterwards.
+
+| # | Question | Result |
+|---|---|---|
+| S1 | Build under a sub-path | ✅ `deployment.basePath` exists in 40.1.8 (`@evidence-dev/sdk` config schema, used as SvelteKit `paths.base`). Built with `/dieu-hanh`: HTML, `_app` assets, links and the runtime fetches of `/data/…` and `/api/…` are all prefixed. Served by Caddy (`root /srv`, `try_files {path} {path}.html {path}/index.html`, `file_server`): `/dieu-hanh/`, `/dieu-hanh/ceo_weekly_pulse`, `/dieu-hanh/data/manifest.json` return 200 |
+| S2 | Where the extracts live | Under the build root of the area only: `data/datalake/<query>/<hash>/<query>.parquet`, `data/manifest.json`, `api/prerendered_queries/*.arrow`. Nothing outside the area directory, so a path-based login covers the data |
+| S3 | Build from another directory sharing `node_modules` | ✅ project dir with `pages/`, `sources/`, `evidence.config.yaml`, a copy of `package.json` and a symlink `node_modules → /app/node_modules`; `npx evidence sources && npx evidence build` |
+| S4 | Time and memory | Area `dieu-hanh` (CEO Weekly Pulse): sources 9 s, build 44 s, 25 extracts = **12.6 KB** (legacy build: 9 whole-table extracts ≈ 1.1 MB, `fact_orders` and `dim_customers` included). Peak memory of `evidence build` ≈ 3.5–3.7 GiB for both legacy and the small area (the Vite build, not the data): with `--memory 2g` and no swap the build is **OOM-killed** (2/2 legacy, 1/1 area) |
+| S5 | Future of Evidence | npm `@evidence-dev/evidence` latest = 40.1.8 (published 2026-02-06), no release since; `@evidence-dev/duckdb` 2.0.1 same day; docs still document a local DuckDB file source. Whether a newer Evidence product reads a local DuckDB file could not be verified. Decision: stay on the pinned 40.1.8 until there is a reason to move; spec v2 is engine-independent, so a new engine needs only a new renderer |
+
+Consequences for the scheduled builder: build each area sequentially with a timeout; give the build
+≥ 4 GiB (or verify swap); `npx serve` used by the current container command is not in the locked
+`node_modules` (it is fetched at start), so serving should move to Caddy `file_server`.
+
 ## Why the versions are pinned
 
 `package.json` pins exact versions and `package-lock.json` locks the whole dependency tree

@@ -9,7 +9,9 @@ description: Analyst brain — NGHĨ, ĐỊNH NGHĨA, và THIẾT KẾ analytics
 > Đây là "analyst brain" — sở hữu và tạo ra toàn bộ analytics artifacts trừ blueprints.
 > Blueprints thuộc về `.skills/metabase-automation/` (engineer brain).
 
-> **Multi-tool architecture**: Blueprint path dùng subfolder theo tool — `blueprints/metabase/` cho Metabase, `blueprints/evidence/` cho Evidence.dev (khi có). Mỗi playbook khai báo `**Tool:**` field để xác định tool target. Mapping: 1 playbook → 1 blueprint → 1 tool. Plan `260528-1325-tool-agnostic-design-spec` đã defer — architecture hiện tại là Workflow C (no design-spec intermediate layer).
+> **Multi-tool architecture**: Blueprint path dùng subfolder theo tool — `blueprints/metabase/` cho Metabase, `blueprints/evidence/` cho Evidence.dev (khi có). Mỗi playbook khai báo `**Tool:**` field để xác định tool target. Mapping: 1 playbook → 1 blueprint → 1 tool.
+
+> **Report sản phẩm (từ 14/10/2026): spec v2 là lớp bắt buộc.** Report thuộc catalog sản phẩm (`analytics/catalog/catalog.yml`) được viết thành **spec v2** (`analytics/specs/<report_id>.yml`, schema `analytics/schema/report-spec.schema.json`, template `templates/report_spec_v2_template.yml`); renderer sinh trang Evidence hoặc dashboard Metabase từ spec, không viết blueprint tay. Skill này sở hữu **định dạng** spec (hướng dẫn, template); file schema nằm cùng validator trong `analytics/schema/`. Ở Phase 4–5, card **chọn metric id từ registry** (`analytics/registry/`, danh sách: `docs/analytics-handbook/semantic/metric-registry.md`) thay vì viết SQL; chỉ khi registry không biểu diễn được mới dùng `inline_sql` (bắt buộc khai báo `outputs` và `reason`, bị đếm là "không chuẩn"). Blueprint viết tay (Workflow C) chỉ còn cho dashboard legacy chưa chuyển. Plan `260528-1325-tool-agnostic-design-spec` đã superseded bởi plan `261014-2225-report-productization`.
 
 ## Overview
 
@@ -41,7 +43,8 @@ Skill này **KHÔNG BIẾT** gì về Metabase, Superset, Looker, hay bất kỳ
 | `templates/domain_template.md` | Tạo mới domain file |
 | `templates/playbook_template.md` | Tạo mới playbook file |
 | `templates/guide_template.md` | Tạo mới guide file |
-| `templates/design_spec_template.md` | Tạo mới Design Spec (contract giữa 2 skills) |
+| `templates/design_spec_template.md` | Tạo mới Design Spec (contract giữa 2 skills) — dashboard legacy |
+| `templates/report_spec_v2_template.yml` | Tạo mới report sản phẩm (spec v2, engine-agnostic, card tham chiếu metric id) |
 
 Khi tạo domain file mới, template phải giữ nguyên block định nghĩa sau ngay dưới H1 title:
 
@@ -161,7 +164,7 @@ Dùng decision tree trong `VISUALIZATION_VOCABULARY.md`. Anti-pattern check bắ
 - 6d: **Action Map** — điền bảng Action Map cho mỗi card có signal quan trọng (xem `templates/design_spec_template.md`)
 - 6e: **Dashboard Finish Checklist** — chạy full checklist trong `VISUAL_LANGUAGE.md` Section 10 trước khi finalize
 
-**Output**: Design Spec → lưu tại `docs/analytics-handbook/designs/<name>.md`, giữ nguyên block định nghĩa Design Spec ngay dưới `## Design Spec: ...` title.
+**Output**: Design Spec → lưu tại `docs/analytics-handbook/designs/<name>.md`, giữ nguyên block định nghĩa Design Spec ngay dưới `## Design Spec: ...` title. Với report sản phẩm: spec v2 → `analytics/specs/<report_id>.yml` + một mục trong `analytics/catalog/catalog.yml`, rồi chạy `python3 scripts/checks/check_analytics_registry.py` (kiểm metric id, chiều, trục thời gian, `card_id` duy nhất, tỉ lệ `inline_sql`).
 
 ## Fast-Track Rules
 

@@ -1,0 +1,14 @@
+id: order_returns
+model: fact_order_returns
+relation: main_marts.fact_order_returns
+description: Một dòng cho một phiếu hoàn Sapo; ghi nhận theo ngày hoàn, không sửa lại kỳ của đơn gốc.
+grain: [return_id]
+time_dimensions:
+  - {name: returned_at, column: returned_at, type: timestamptz, axis: return_date, default: true}
+joins:
+  - {model: channels, from: channel_key, to: channel_key, relationship: many_to_one}
+measures:
+  - {name: returns, column: return_id, agg: count_distinct}
+  - {name: refund_amount, column: refund_amount, agg: sum}
+gates:
+  return_completed: {column: return_status, op: eq, value: returned, description: "Phiếu hoàn đã hoàn tất"}

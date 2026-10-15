@@ -11,7 +11,7 @@
 | Bucket của mọi dbt model (201 model: 187 đang bật, 14 đang tắt) | ✅ Khai báo trong `scripts/checks/model_buckets.yaml` |
 | Ma trận phụ thuộc, lõi đọc seed tenant, import chéo (kể cả connector → pack và pack → pack trong orchestration), seed trùng tên, URL/domain cứng trong connector và pack | ✅ Cưỡng chế bằng `scripts/checks/check_boundaries.py` (mục 3, mục 12) |
 | Vi phạm đã biết | 21, sinh từ manifest và import orchestration: 8 cạnh `ref` (tenant hook, pack → pack, pack → connector; không còn pack hook), 0 lõi đọc seed tenant (qua `tenant_ref`), 12 pack đọc source, 1 import pack → pack (`sales_playbook` → `crm`); ghi trong `scripts/checks/boundary_allowlist.yaml` kèm lý do và hướng thoát (mục 3, 10) |
-| Kiểm tra trước commit bằng một lệnh | ✅ `scripts/checks/run-all.sh`: `dbt parse`, `check_boundaries.py`, `dagster definitions validate`, pytest (bắt buộc, ghi trong `AGENTS.md`) |
+| Kiểm tra trước commit bằng một lệnh | ✅ `scripts/checks/run-all.sh`: `dbt parse`, `check_boundaries.py`, `dagster definitions validate`, pytest, selftest bộ máy phân loại, validator registry chỉ tiêu + pytest `analytics/` (bắt buộc, ghi trong `AGENTS.md`) |
 | Quyết định kiến trúc | ✅ [ADR-015](../decisions/015-module-boundaries.md) (ranh giới module), [ADR-016](../decisions/016-taxonomy-module.md) (taxonomy), [ADR-017](../decisions/017-packs-and-tenants.md) (pack và tenant), [ADR-018](../decisions/018-pack-switch-and-core-plug-points.md) (bật/tắt pack, điểm cắm lõi ↔ pack/tenant) |
 | Thư mục dbt theo module `models/<module>/<layer>/` | ✅ Mọi model nằm trong module (connectors, cdm, core, packs, tenants) hoặc `monitoring/`; thư mục cũ `staging/`, `intermediate/`, `marts/` và `models/sources.yml` đã bỏ |
 | Connector package cho orchestration (`orchestration/connectors/<id>/`, bật/tắt qua `config/modules.yaml`) | ✅ 5 connector: `sapo_v2`, `shopee`, `misa_amis`, `sheets`, `hug` (mục 4, 5) |
@@ -22,6 +22,7 @@
 | Tenant overlay Fine Japan | ✅ Tối thiểu: US shipment (dbt), `seeds/tenants/fine_japan/`, `orchestration/tenants/fine_japan/config.py` (endpoint CRM); 6 URL Google Sheet chỉ ở biến môi trường `SOURCES__SPREADSHEET_URL__*`, không còn URL mặc định trong code (mục 10) |
 | Khả năng của connector (khai báo / cần / quan sát được) | ✅ Seed `seeds/capabilities/` (`connector_capabilities`, `capability_catalog`), biến `enabled_connectors`, model `monitoring/mart_capabilities` (bảng trong warehouse, chưa lên serving) (mục 5.1, 11b) |
 | Bộ máy phân loại (luật thành dữ liệu) | ⏳ Plan riêng sau Đợt 1 (mục 9) |
+| Analytics (report): registry chỉ tiêu, spec, renderer | ⏳ Plan `261014-2225-report-productization`: ✅ bảng so sánh định nghĩa nhóm Weekly Pulse; ✅ registry tối thiểu (25 chỉ tiêu Weekly Pulse), compiler, validator; ✅ spec v2 + catalog (1 report: CEO Weekly Pulse); ✅ renderer Evidence (khu vực `dieu-hanh`, chưa phục vụ); ⏳ build theo lịch, đăng nhập (mục 13) |
 
 Các mục dưới đây mô tả trạng thái đích; chỗ nào đã khớp code được đánh dấu ✅.
 
@@ -41,6 +42,7 @@ Các mục dưới đây mô tả trạng thái đích; chỗ nào đã khớp c
 10. [Tenant overlay Fine Japan](#10-tenant-overlay-fine-japan-)
 11. [Serving và người tiêu thụ](#11-serving-và-người-tiêu-thụ)
 12. [Ranh giới Python và container](#12-ranh-giới-python-và-container-)
+13. [Analytics (report)](#13-analytics-report)
 
 ---
 
@@ -816,10 +818,49 @@ flowchart TB
 
 | Quy tắc | Cưỡng chế |
 |---|---|
-| `crm/`, `detailView/` không import `orchestration`, `ingestion`, `transformation` | `check_boundaries.py` (ast) |
+| `crm/`, `detailView/`, `analytics/` không import `orchestration`, `ingestion`, `transformation` | `check_boundaries.py` (ast) |
 | `ingestion/` không import `orchestration` (kể cả `orchestration.tenants`: URL Google Sheet đọc từ env `SOURCES__SPREADSHEET_URL__*`) | `check_boundaries.py` |
 | Lõi đọc seed tenant chỉ qua `tenant_ref`; cdm, connector không đọc seed tenant (luật `dbt-seed`); seed mặc định có đủ cột, có kiểu và khớp seed tenant (luật `tenant-seed-contract`) | `check_boundaries.py` (manifest, file CSV, `dbt_project.yml`) |
 | Mọi luật trên chạy trước mỗi commit | `scripts/checks/run-all.sh` (cùng `dbt parse`, `dagster definitions validate`, pytest) |
 | `orchestration/connectors/**` và `orchestration/packs/**` không chứa URL/domain cứng (luật `connector-url`, `pack-url`); giá trị tenant đọc qua `orchestration.tenants.setting()` | `check_boundaries.py` |
 | Connector không import pack; pack không import pack khác (luật `orch-import`, 1 mục allowlist: `sales_playbook` → `crm`) | `check_boundaries.py` (ast) |
 | Giao tiếp CRM ↔ orchestration chỉ qua HTTP và file export | Review + quy tắc import |
+
+## 13. Analytics (report)
+
+> Plan: `plans/261014-2225-report-productization/`; thiết kế: `plans/261013-1751-modularize-data-platform-suite/report-product-design.md` (v2). Mục này cập nhật cùng commit với từng phase của plan.
+
+**Mục đích.** Đóng gói report thành sản phẩm: một **registry chỉ tiêu** máy đọc được làm nguồn định nghĩa duy nhất, một catalog report, spec report không phụ thuộc công cụ (spec v2), và các renderer sinh trang Evidence (report định kỳ) hoặc dashboard Metabase (report tương tác) từ cùng spec. Cài được bộ report chuẩn cho khách mới, làm được report riêng cho từng khách bằng cùng đường.
+
+**Ranh giới.**
+
+| Vùng | Vai trò | Ai ghi | Ai đọc |
+|---|---|---|---|
+| Mart dbt (`fact_*`, `dim_*` trong serving) | Định nghĩa thật của dữ liệu; giữ dữ liệu thô (mốc ngày, tiền tách cột, cờ) | dbt | registry, renderer (chỉ đọc, qua `serving/olap.duckdb`) |
+| `analytics/` (module code mới) | Registry, schema, compiler metric → SQL DuckDB, renderer | plan report | `scripts/checks/`, Dagster (job report), Evidence/Metabase qua file sinh ra |
+| Hồ sơ khách (`tenants/<t>/analytics/`) | Tham số doanh thu ghi tường minh, phân đoạn, khu vực quyền | cấu hình khách | compiler, renderer (qua tham số `--profile`) |
+| `docs/analytics-handbook/` | Tài liệu người đọc; blueprint Metabase hiện tại là mốc so số | analyst | người, skill |
+
+`analytics/` không import `orchestration`, `transformation`, `ingestion` (luật `py-import` của `check_boundaries.py`); không ghi vào serving hay `data_lake`. Hồ sơ khách chỉ được đọc qua tham số `--tenant`/`--profile`. Registry không thay thế dbt: window, lịch sử, phân bổ chi phí, ghép hai fact khác grain vẫn làm trong dbt.
+
+**Thư mục và quyền (đã có).**
+
+| Đường dẫn | Nội dung | Ai ghi | Ai đọc |
+|---|---|---|---|
+| `analytics/registry/semantic/*.yml` | Lớp ngữ nghĩa: 6 mart (`fact_orders`, `fact_order_economics`, `fact_order_returns`, `fact_targets`, `dim_customers`, `dim_channels`) | người, qua review | compiler, validator, renderer docs |
+| `analytics/registry/metrics/*.yml` | Lớp chỉ tiêu: 25 chỉ tiêu của CEO Weekly Pulse (`sales`, `customers`, `finance`) | người, qua review | như trên |
+| `analytics/schema/*.schema.json` | JSON Schema 2020-12 (lớp ngữ nghĩa, chỉ tiêu, hồ sơ khách) | người | validator, test |
+| `analytics/compiler/` | Nạp, kiểm, biên dịch chỉ tiêu × cửa sổ → SQL DuckDB (giới hạn cứng: `analytics/README.md`) | code | CLI `python3 -m analytics`, renderer, (sau) job Dagster |
+| `analytics/specs/<report_id>.yml`, `analytics/catalog/catalog.yml` | Spec v2 (định dạng do `.skills/analytics-design` sở hữu) và catalog report; hiện có `ceo_weekly_pulse` (`EXE-W`, `engine: evidence`, khu vực `dieu-hanh`, `status: pilot`) | người, qua review | validator, renderer |
+| `tenants/fine_japan/analytics/profile.yml` | Múi giờ, tham số doanh thu ghi tường minh, ràng buộc phân đoạn `in_sales_scope`, `tenant_params` (mục tiêu GMV tháng, mẫu link trang chi tiết đơn) | người | compiler (qua `--tenant`), renderer |
+| `docs/analytics-handbook/semantic/metric-registry.md`, `glossary.md` | **Sinh ra** từ registry (`python3 -m analytics docs`) | renderer docs | người |
+| `evidence/areas/<area>/` | **Sinh ra** (`python3 -m analytics render evidence`): mỗi khu vực quyền một project Evidence (`basePath /<area>`), mỗi card một file SQL trích chỉ chứa kết quả card | renderer Evidence | builder Evidence (phase sau); hiện chưa được build hay phục vụ trên prod |
+
+Phụ thuộc cho phép: `analytics/` → `pyyaml`, `jsonschema` (có sẵn trên host và trong image `data_platform`, không thêm phụ thuộc); đọc `manifest.json` của dbt (chỉ đọc, để kiểm cột). Kiểm trước commit: bước 5 của `scripts/checks/run-all.sh` chạy `scripts/checks/check_analytics_registry.py` và `pytest analytics/tests` trong image prod, worktree mount chỉ đọc, không mạng.
+
+**Tái tạo đúng blueprint.** Cho tới khi user chốt các quyết định đổi số, mọi chỉ tiêu tái tạo đúng SQL của blueprint Weekly Pulse đang chạy (kể cả chỗ lệch đã ghi nhận). Kiểm sớm ngày 14/10/2026 trên bản chụp chỉ đọc: 136/136 phép so khớp (4 ngày tham chiếu, gồm tuần qua ranh giới tháng và ngày 1 của tháng).
+
+**Nguồn sự thật.** Hôm nay một chỉ tiêu được định nghĩa ở ba nơi: `docs/analytics-handbook/semantic/metrics.md`, Rill (`rill/metrics/*.yaml`, `rill/models/orders_enriched.sql`) và SQL trong blueprint Metabase; ba nơi đang cho số khác nhau ở một số chỉ tiêu. Đích đến: **registry trong `analytics/registry/` là nguồn chuẩn**; `metrics.md`, bảng chú giải, SQL của Evidence/Metabase và measure Rill sinh ra từ registry. Trong lúc chuyển, `metrics.md` vẫn là tài liệu tham khảo, có banner nói chỉ tiêu nào đã vào registry.
+
+**Bước 0: so sánh định nghĩa (đã làm cho nhóm Weekly Pulse).** Trước khi viết registry, mỗi chỉ tiêu được đối chiếu ở ba nguồn trên cột mart thật; mỗi chỗ lệch được đo số mẫu trên bản chụp chỉ đọc của `serving/olap.duckdb` (kỳ đã đóng: tuần và tháng gần nhất) và ghi thành một quyết định riêng chờ user, không ai tự chọn. Kết quả: `plans/261014-2225-report-productization/definitions-comparison.md` (bảng so sánh, ánh xạ 30 question của CEO Weekly Pulse) và `definition-decisions.md` (17 quyết định, mỗi chỗ lệch một dòng). Cho tới khi user chốt, registry tái tạo đúng blueprint đang chạy; quyết định đổi số chỉ áp sau thí điểm, qua gate S.
+

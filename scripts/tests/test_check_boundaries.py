@@ -73,8 +73,11 @@ def test_python_import_rule(tmp_path, monkeypatch):
     (tmp_path / "crm" / "ops" / "ok.py").write_text("import json\nfrom crm.src import y\n")
     (tmp_path / "ingestion").mkdir()
     (tmp_path / "ingestion" / "bad.py").write_text("import orchestration.ops\n")
+    (tmp_path / "analytics").mkdir()
+    (tmp_path / "analytics" / "bad.py").write_text("from transformation import x\n")
     monkeypatch.setattr(cb, "ROOT", str(tmp_path))
     found = cb.python_violations()
+    assert ("py-import", "analytics/bad.py", "transformation") in found
     assert ("py-import", "crm/ops/bad.py", "orchestration.notifications") in found
     assert ("py-import", "ingestion/bad.py", "orchestration.ops") in found
     assert not [f for f in found if f[1] == "crm/ops/ok.py"]

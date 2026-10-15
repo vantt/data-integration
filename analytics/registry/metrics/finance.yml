@@ -1,0 +1,97 @@
+# Chỉ tiêu lợi nhuận dùng trong CEO Weekly Pulse. Chỉ tính trên đơn có giá vốn (has_cogs);
+# mọi chỉ tiêu cost_sensitive kèm độ phủ giá vốn (cogs_coverage_pct).
+metrics:
+  - id: channel_net_profit
+    version: 1
+    label: {vi: Lãi ròng kênh, en: Channel net profit}
+    description: Doanh thu bán hàng trừ giá vốn và phí sàn (Shopee), trên đơn hiệu lực có giá vốn của kênh bán.
+    type: simple
+    model: order_economics
+    measure: channel_net_profit
+    filters: [in_sales_scope, is_active_order, has_cogs]
+    time_axis: ordered_at
+    additivity: additive
+    null_policy: propagate
+    empty_result: zero
+    cost_sensitive: true
+    coverage_metric: cogs_coverage_pct
+    unit: currency
+    status: active
+
+  - id: gross_profit
+    version: 1
+    label: {vi: Lãi gộp, en: Gross profit}
+    description: Doanh thu bán hàng trừ giá vốn, trên đơn hiệu lực có giá vốn của kênh bán.
+    type: simple
+    model: order_economics
+    measure: gross_profit
+    filters: [in_sales_scope, is_active_order, has_cogs]
+    time_axis: ordered_at
+    additivity: additive
+    null_policy: propagate
+    empty_result: zero
+    cost_sensitive: true
+    coverage_metric: cogs_coverage_pct
+    unit: currency
+    status: active
+
+  - id: net_sales_with_cogs
+    version: 1
+    label: {vi: Doanh thu bán hàng có giá vốn, en: Net sales with known cost}
+    description: Doanh thu bán hàng chỉ của đơn có giá vốn; mẫu số của biên lãi gộp.
+    type: simple
+    model: order_economics
+    measure: net_revenue
+    filters: [in_sales_scope, is_active_order, has_cogs]
+    time_axis: ordered_at
+    additivity: additive
+    null_policy: propagate
+    empty_result: zero
+    cost_sensitive: false
+    unit: currency
+    status: active
+
+  - id: gross_margin_pct
+    version: 1
+    label: {vi: Biên lãi gộp, en: Gross margin}
+    description: Lãi gộp trên doanh thu bán hàng của cùng tập đơn có giá vốn, phần trăm.
+    type: ratio
+    numerator: gross_profit
+    denominator: net_sales_with_cogs
+    scale: 100
+    additivity: non_additive
+    null_policy: propagate
+    cost_sensitive: true
+    coverage_metric: cogs_coverage_pct
+    unit: percent
+    status: active
+
+  - id: orders_with_cogs
+    version: 1
+    label: {vi: Số đơn có giá vốn, en: Orders with known cost}
+    description: Số đơn hiệu lực của kênh bán có giá vốn (Sapo-MAC hoặc MISA).
+    type: simple
+    model: order_economics
+    measure: orders
+    filters: [in_sales_scope, is_active_order, has_cogs]
+    time_axis: ordered_at
+    additivity: non_additive
+    null_policy: propagate
+    empty_result: zero
+    cost_sensitive: false
+    unit: count
+    status: active
+
+  - id: cogs_coverage_pct
+    version: 1
+    label: {vi: Độ phủ giá vốn, en: Cost coverage}
+    description: Phần trăm đơn hiệu lực của kênh bán có giá vốn; đi kèm mọi chỉ tiêu biên và lợi nhuận.
+    type: ratio
+    numerator: orders_with_cogs
+    denominator: active_orders_count
+    scale: 100
+    additivity: non_additive
+    null_policy: propagate
+    cost_sensitive: false
+    unit: percent
+    status: active

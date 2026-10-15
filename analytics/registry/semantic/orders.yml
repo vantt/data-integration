@@ -1,0 +1,24 @@
+id: orders
+model: fact_orders
+relation: main_marts.fact_orders
+description: Một dòng cho một đơn hàng Sapo (mọi trạng thái). Tiền tách cột; giá bán Sapo đã gồm VAT.
+grain: [order_id]
+time_dimensions:
+  - {name: ordered_at, column: ordered_at, type: timestamptz, axis: order_date, default: true}
+dimensions:
+  - {name: order_status, column: status, label: {vi: Trạng thái đơn, en: Order status}}
+joins:
+  - {model: channels, from: channel_key, to: channel_key, relationship: many_to_one}
+  - {model: customers, from: customer_key, to: customer_key, relationship: many_to_one}
+measures:
+  - {name: net_revenue, column: net_revenue, agg: sum, description: "Sau chiết khấu, đã trừ VAT, trước hoàn (net_sales)"}
+  - {name: gross_revenue, column: gross_revenue, agg: sum, description: "Giá bán × số lượng trước chiết khấu, gồm VAT"}
+  - {name: discount_amount, column: discount_amount, agg: sum}
+  - {name: orders, column: order_id, agg: count_distinct}
+  - {name: customers, column: customer_key, agg: count_distinct}
+gates:
+  is_active_order: {column: is_active_order, op: is_true, description: "status NOT IN (CANCELLED, DRAFT)"}
+  not_active_order: {column: is_active_order, op: is_false, description: "CANCELLED hoặc DRAFT"}
+  customer_seen_before_window: {column: first_order_date, via: customers, op: before_window_start, description: "Khách có đơn hiệu lực đầu tiên trước ngày đầu cửa sổ"}
+  customer_first_order_same_day: {column: first_order_date, via: customers, op: same_date_as, other: ordered_at, description: "Đơn đầu tiên của khách cùng ngày với đơn này"}
+  customer_first_order_other_day: {column: first_order_date, via: customers, op: date_distinct_from, other: ordered_at, description: "Đơn đầu tiên khác ngày, hoặc không xác định"}

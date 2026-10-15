@@ -1,0 +1,204 @@
+# Chỉ tiêu bán hàng dùng trong CEO Weekly Pulse. Mọi định nghĩa tái tạo đúng blueprint đang chạy
+# (docs/analytics-handbook/blueprints/metabase/ceo_weekly_pulse.md); chỗ lệch với metrics.md / Rill
+# chờ user chốt trong sổ quyết định định nghĩa của plan report; `notes` ghi điểm khác biệt.
+metrics:
+  - id: net_sales
+    version: 1
+    label: {vi: Doanh thu bán hàng (trước hoàn), en: Net sales}
+    description: Doanh thu sau chiết khấu, đã trừ VAT, trước hàng hoàn; ghi nhận theo ngày tạo đơn, chỉ đơn hiệu lực của kênh bán.
+    type: simple
+    model: orders
+    measure: net_revenue
+    filters: [in_sales_scope, is_active_order]
+    time_axis: ordered_at
+    additivity: additive
+    null_policy: propagate
+    empty_result: zero
+    cost_sensitive: false
+    legacy_names: [net_revenue]
+    unit: currency
+    status: active
+
+  - id: gross_revenue
+    version: 1
+    label: {vi: Doanh thu niêm yết (GMV), en: Gross revenue (GMV)}
+    description: Giá bán × số lượng trước chiết khấu, gồm VAT; đơn hiệu lực của kênh bán. Dùng so với mục tiêu GMV và làm mẫu số tỉ lệ chiết khấu.
+    type: simple
+    model: orders
+    measure: gross_revenue
+    filters: [in_sales_scope, is_active_order]
+    time_axis: ordered_at
+    additivity: additive
+    null_policy: propagate
+    empty_result: zero
+    cost_sensitive: false
+    unit: currency
+    status: active
+
+  - id: discount_amount
+    version: 1
+    label: {vi: Tiền chiết khấu, en: Discount amount}
+    description: Tổng chiết khấu (khuyến mãi, mã giảm, giá sỉ) trên đơn hiệu lực của kênh bán.
+    type: simple
+    model: orders
+    measure: discount_amount
+    filters: [in_sales_scope, is_active_order]
+    time_axis: ordered_at
+    additivity: additive
+    null_policy: propagate
+    empty_result: zero
+    cost_sensitive: false
+    unit: currency
+    status: active
+
+  - id: orders_count
+    version: 1
+    label: {vi: Số đơn (mọi trạng thái), en: Orders (all statuses)}
+    description: Số đơn của kênh bán ở mọi trạng thái, kể cả đơn huỷ và nháp.
+    type: simple
+    model: orders
+    measure: orders
+    filters: [in_sales_scope]
+    time_axis: ordered_at
+    additivity: non_additive
+    null_policy: propagate
+    empty_result: zero
+    cost_sensitive: false
+    unit: count
+    status: active
+    notes: Không lọc is_active_order như card "Total Orders" của Weekly Pulse.
+
+  - id: active_orders_count
+    version: 1
+    label: {vi: Số đơn hiệu lực, en: Active orders}
+    description: Số đơn hiệu lực (không huỷ, không nháp) của kênh bán; mẫu số của AOV.
+    type: simple
+    model: orders
+    measure: orders
+    filters: [in_sales_scope, is_active_order]
+    time_axis: ordered_at
+    additivity: non_additive
+    null_policy: propagate
+    empty_result: zero
+    cost_sensitive: false
+    unit: count
+    status: active
+
+  - id: cancelled_orders
+    version: 1
+    label: {vi: Đơn huỷ hoặc nháp, en: Cancelled or draft orders}
+    description: Số đơn không hiệu lực (CANCELLED hoặc DRAFT) của kênh bán.
+    type: simple
+    model: orders
+    measure: orders
+    filters: [in_sales_scope, not_active_order]
+    time_axis: ordered_at
+    additivity: non_additive
+    null_policy: propagate
+    empty_result: zero
+    cost_sensitive: false
+    unit: count
+    status: active
+    notes: Gồm cả DRAFT như card "Cancelled Orders".
+
+  - id: aov
+    version: 1
+    label: {vi: Giá trị đơn trung bình, en: Average order value}
+    description: Doanh thu bán hàng chia số đơn hiệu lực, mọi phân khúc của kênh bán.
+    type: ratio
+    numerator: net_sales
+    denominator: active_orders_count
+    on_zero_denominator: zero
+    additivity: non_additive
+    null_policy: propagate
+    cost_sensitive: false
+    unit: currency
+    status: active
+    notes: Trộn bán lẻ và B2B; tập rỗng trả 0 như blueprint.
+
+  - id: discount_rate
+    version: 1
+    label: {vi: Tỉ lệ chiết khấu, en: Discount rate}
+    description: Tiền chiết khấu trên doanh thu niêm yết, phần trăm.
+    type: ratio
+    numerator: discount_amount
+    denominator: gross_revenue
+    scale: 100
+    additivity: non_additive
+    null_policy: propagate
+    cost_sensitive: false
+    unit: percent
+    status: active
+    notes: Mọi phân khúc như card "Discount Rate".
+
+  - id: gmv_target
+    version: 1
+    label: {vi: Mục tiêu GMV tháng, en: Monthly GMV target}
+    description: Tổng mục tiêu GMV của mọi nhóm trong chu kỳ chứa ngày tham chiếu; không có mục tiêu thì để trống.
+    type: snapshot
+    model: targets
+    measure: target_value
+    filters: [gmv_goal]
+    additivity: semi_additive
+    null_policy: propagate
+    empty_result: missing
+    zero_as_missing: true
+    cost_sensitive: false
+    unit: currency
+    status: active
+
+  - id: gmv_pace_index
+    version: 1
+    label: {vi: Chỉ số tiến độ GMV, en: GMV pace index}
+    description: GMV từ đầu tháng chia cho phần mục tiêu tương ứng số ngày đã qua; > 1 là vượt tiến độ.
+    type: derived
+    expression: gross_revenue / (gmv_target * day_of_month / days_in_month)
+    additivity: non_additive
+    null_policy: propagate
+    cost_sensitive: false
+    unit: index
+    status: active
+    notes: Ngày đã qua tính cả ngày tham chiếu trong khi GMV dùng cửa sổ mtd_before_as_of.
+
+  - id: gmv_month_end_forecast
+    version: 1
+    label: {vi: GMV dự báo cuối tháng, en: Forecasted month-end GMV}
+    description: Ngoại suy tuyến tính GMV từ đầu tháng ra cả tháng.
+    type: derived
+    expression: gross_revenue / (day_of_month / days_in_month)
+    additivity: non_additive
+    null_policy: propagate
+    cost_sensitive: false
+    unit: currency
+    status: active
+    notes: Cùng cách đếm ngày với gmv_pace_index.
+
+  - id: gmv_required_daily_run_rate
+    version: 1
+    label: {vi: GMV cần đạt mỗi ngày, en: Required daily GMV run-rate}
+    description: Phần mục tiêu còn thiếu chia đều cho số ngày còn lại trong tháng (tối thiểu 1); không có mục tiêu thì để trống.
+    type: derived
+    expression: greatest(gmv_target - gross_revenue, 0) / days_left_in_month
+    additivity: non_additive
+    null_policy: propagate
+    cost_sensitive: false
+    unit: currency
+    status: active
+    notes: Ngày còn lại không tính ngày tham chiếu.
+
+  - id: return_count
+    version: 1
+    label: {vi: Số phiếu hoàn, en: Returns}
+    description: Số phiếu hoàn đã hoàn tất của đơn thuộc kênh bán, theo ngày hoàn.
+    type: simple
+    model: order_returns
+    measure: returns
+    filters: [in_sales_scope, return_completed]
+    time_axis: returned_at
+    additivity: non_additive
+    null_policy: propagate
+    empty_result: zero
+    cost_sensitive: false
+    unit: count
+    status: active
+    notes: metrics.md#return_count đếm fulfillment_status = RETURNED, giá trị Sapo không điền.

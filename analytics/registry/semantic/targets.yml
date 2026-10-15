@@ -1,0 +1,10 @@
+id: targets
+model: fact_targets
+relation: main_marts.fact_targets
+description: Mục tiêu theo chu kỳ (Google Sheet). Một dòng cho một mục tiêu của một nhóm trong một chu kỳ.
+grain: [target_key]
+validity: {from: cycle_start_date, to: cycle_end_date}
+measures:
+  - {name: target_value, column: target_val, agg: sum}
+gates:
+  gmv_goal: {column: metric_code, op: eq, value: gmv, description: "Mục tiêu GMV (doanh thu trước chiết khấu, gồm VAT)"}

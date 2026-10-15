@@ -1,0 +1,37 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "analytics/schema/catalog.schema.json",
+  "title": "Report catalog",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["catalog_version", "reports"],
+  "properties": {
+    "catalog_version": {"type": "integer", "minimum": 1},
+    "reports": {"type": "array", "minItems": 1, "items": {"$ref": "#/$defs/report"}}
+  },
+  "$defs": {
+    "ident": {"type": "string", "pattern": "^[a-z][a-z0-9_]*$"},
+    "cell": {"type": "string", "pattern": "^(EXE|SAL|MKT|FIN|INV|LOG|OPS|CUS|UTL)-(D|W|M|[0-9]+)$", "description": "<function>-<cadence>"},
+    "report": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["id", "title", "cell", "primary_cell", "engine", "area", "question", "metrics", "kpi_tiles", "spec", "cost_sensitive", "status"],
+      "properties": {
+        "id": {"$ref": "#/$defs/ident"},
+        "title": {"type": "string", "minLength": 1},
+        "cell": {"type": "array", "minItems": 1, "uniqueItems": true, "items": {"$ref": "#/$defs/cell"}},
+        "primary_cell": {"$ref": "#/$defs/cell"},
+        "engine": {"enum": ["evidence", "metabase"]},
+        "area": {"type": "string", "pattern": "^[a-z][a-z0-9-]*$", "description": "permission area (one function group)"},
+        "question": {"type": "string", "minLength": 1},
+        "metrics": {"type": "array", "uniqueItems": true, "items": {"$ref": "#/$defs/ident"},
+                    "description": "must equal the union of metric_ref in the spec (checked by the validator)"},
+        "kpi_tiles": {"type": "array", "uniqueItems": true, "items": {"$ref": "#/$defs/ident"},
+                      "description": "card_id of the cards used by summary messages and home pages"},
+        "spec": {"type": "string", "pattern": "^specs/[a-z][a-z0-9_]*\\.yml$"},
+        "cost_sensitive": {"type": "boolean", "description": "must equal: any metric of the report is cost_sensitive"},
+        "status": {"enum": ["draft", "pilot", "active", "deprecated"]}
+      }
+    }
+  }
+}

@@ -1,0 +1,11 @@
+id: customers
+model: dim_customers
+relation: main_marts.dim_customers
+description: Một dòng cho một khách. first_order_date = đơn hiệu lực đầu tiên ở mọi kênh (int_customer_metrics).
+grain: [customer_key]
+time_dimensions:
+  - {name: first_order_date, column: first_order_date, type: timestamptz, axis: order_date, default: true}
+dimensions:
+  - {name: full_name, column: full_name, label: {vi: Khách hàng, en: Customer}}
+measures:
+  - {name: customers, column: customer_key, agg: count_distinct}

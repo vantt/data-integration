@@ -22,6 +22,9 @@
 #      as FLAKY when it passes: see scripts/shadow/README.md for the known SQLite timing test)
 #   5. classification engine selftest: dbt build --select +tag:taxonomy_selftest with
 #      --vars '{taxonomy_selftest: true}' (unit tests of macros/taxonomy/)
+#   6. analytics: registry validator (scripts/checks/check_analytics_registry.py, reads the manifest
+#      of step 1) and pytest analytics/tests, in the prod image with the worktree mounted read-only
+#      and no network (analytics/README.md)
 #
 # This does not prove data equality; refactors that move models or SQL still need
 # scripts/shadow/gate.sh M|S before deploy.
@@ -91,6 +94,14 @@ in_shadow sh -c 'cd transformation && dbt build --profiles-dir . --target-path /
   --select +tag:taxonomy_selftest --indirect-selection cautious --vars "{taxonomy_selftest: true}"' 2>&1 \
   | grep -E "FAIL|ERROR|Done\." | tail -12
 check "${PIPESTATUS[0]}" "engine selftest"
+step "6. analytics registry and tests"
+docker run --rm --network none --user "$(id -u):$(id -g)" \
+  -v "$CODE_DIR:/w:ro" -v "$DEPS/home/pylib:/pylib:ro" -w /w \
+  -e HOME=/tmp -e PYTHONPATH=/w:/pylib -e PYTHONDONTWRITEBYTECODE=1 \
+  --entrypoint sh "${SHADOW_IMAGE:-fg-dataware-house-data_platform:latest}" -c \
+  'python scripts/checks/check_analytics_registry.py && python -m pytest -p no:cacheprovider -q analytics/tests' 2>&1 \
+  | grep -E "^(ERROR|analytics registry:)|[0-9]+ (passed|failed|errors?)" | tail -12
+check "${PIPESTATUS[0]}" "analytics registry and tests"
 
 echo
 if [ "$FAIL" -eq 0 ]; then echo "RUN-ALL: PASS"; else echo "RUN-ALL: FAIL"; fi

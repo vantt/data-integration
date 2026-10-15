@@ -9,7 +9,22 @@ description: Generate and deploy Evidence.dev dashboard pages from Design Specs 
 > Input: Design Spec (Phase 0-6 output) or Playbook. Output: Evidence `.md` page files in `evidence/pages/`.
 > Deploy: `docker compose restart evidence` (CMD = cp → sources → build → preview on every restart).
 
-## Architecture — CRITICAL
+## Product reports are generated, not hand-written
+
+Reports in the product catalog (`analytics/catalog/catalog.yml`, `engine: evidence`) are **generated**
+by `python3 -m analytics render evidence --tenant <t>` from the report spec (`analytics/specs/`), the
+metric registry and the tenant profile. Output: one Evidence project per permission area under
+`evidence/areas/<area>/` (`evidence.config.yaml` with `deployment.basePath: /<area>`,
+`sources/datalake/<report>__<card>.sql` = compiled SQL of one card, `pages/<report>/index.md`).
+Never edit those files: change the spec or the registry and re-render (`--check` fails on drift).
+Each extract holds only the card's result (a few rows), not a whole mart table, and cards that show
+costs are left out of areas without cost access. Details: `evidence/README.md`, `analytics/README.md`.
+
+The hand-written workflow below is **legacy only** (`evidence/pages/`, the `legacy` area): keep it
+working, do not add new product reports this way. Its SQL examples use Fine Japan's columns
+(`scope_sales`, `is_active_order`); another tenant binds its own segments in its profile.
+
+## Architecture (legacy pages) — CRITICAL
 
 Evidence has **two separate DuckDB contexts**. Confusing them causes silent query failures:
 
@@ -167,7 +182,7 @@ For multi-page navigation (separate `.md` files):
 ## SQL Rules
 
 1. **Always schema-qualify**: `main_marts.fact_orders`, `main_marts.dim_channels`, etc.
-2. **Scope filter**: `WHERE scope_sales AND is_active_order` for active sales orders
+2. **Scope filter** (legacy Fine Japan pages): `WHERE scope_sales AND is_active_order` for active sales orders
 3. **Time windows** (olap.duckdb TimeZone = Asia/Ho_Chi_Minh, timestamps are ICT):
    - This week (Mon-to-date): `ordered_at >= date_trunc('week', current_date) AND ordered_at < current_date + INTERVAL '1 day'`
    - Last week (Mon–Sun): `ordered_at >= date_trunc('week', current_date) - INTERVAL '7 days' AND ordered_at < date_trunc('week', current_date)`
@@ -233,8 +248,8 @@ Evidence has no separate deploy script.
 |---|---|---|
 | Cross-filtering | ✅ | ❌ |
 | Email alerts | ✅ | ❌ |
-| Gauge / progress bar | ✅ | ❌ (use BigValue) |
+| Gauge / progress bar | ✅ | ❌ (renderer: BigValue + band label / % of goal) |
 | Static shareable URL | ❌ | ✅ |
-| Tabs | ✅ Native | Separate pages with nav links |
-| Data freshness | Live query | Build-time snapshot (refresh = restart) |
-| Offline / no auth | ❌ | ✅ |
+| Tabs | ✅ Native | ✅ `<Tabs>`/`<Tab label>` (core-components 5.4.2) |
+| Data freshness | Live query | Build-time snapshot (refresh = rebuild) |
+| Login | ✅ | Reverse proxy (per area), see `evidence/README.md` |

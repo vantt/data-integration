@@ -1,0 +1,338 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "analytics/schema/semantic-model.schema.json",
+  "title": "Semantic model (one dbt mart)",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "id",
+    "model",
+    "relation",
+    "description",
+    "grain"
+  ],
+  "properties": {
+    "id": {
+      "$ref": "#/$defs/ident"
+    },
+    "model": {
+      "type": "string",
+      "pattern": "^[a-z][a-z0-9_]*$",
+      "description": "dbt model name"
+    },
+    "relation": {
+      "type": "string",
+      "pattern": "^[a-z_][a-z0-9_]*\\.[a-z_][a-z0-9_]*$",
+      "description": "serving view, schema.name"
+    },
+    "description": {
+      "type": "string",
+      "minLength": 1
+    },
+    "grain": {
+      "type": "array",
+      "minItems": 1,
+      "items": {
+        "$ref": "#/$defs/ident"
+      }
+    },
+    "time_dimensions": {
+      "type": "array",
+      "items": {
+        "$ref": "#/$defs/time_dimension"
+      }
+    },
+    "validity": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "from",
+        "to"
+      ],
+      "properties": {
+        "from": {
+          "$ref": "#/$defs/ident"
+        },
+        "to": {
+          "$ref": "#/$defs/ident"
+        }
+      },
+      "description": "row is valid on dates from <= d <= to (inclusive)"
+    },
+    "dimensions": {
+      "type": "array",
+      "items": {
+        "$ref": "#/$defs/dimension"
+      }
+    },
+    "joins": {
+      "type": "array",
+      "items": {
+        "$ref": "#/$defs/join"
+      }
+    },
+    "measures": {
+      "type": "array",
+      "items": {
+        "$ref": "#/$defs/measure"
+      }
+    },
+    "gates": {
+      "type": "object",
+      "propertyNames": {
+        "$ref": "#/$defs/ident"
+      },
+      "additionalProperties": {
+        "$ref": "#/$defs/gate"
+      }
+    }
+  },
+  "$defs": {
+    "ident": {
+      "type": "string",
+      "pattern": "^[a-z][a-z0-9_]*$"
+    },
+    "label": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "vi",
+        "en"
+      ],
+      "properties": {
+        "vi": {
+          "type": "string",
+          "minLength": 1
+        },
+        "en": {
+          "type": "string",
+          "minLength": 1
+        }
+      }
+    },
+    "time_dimension": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "name",
+        "column",
+        "type",
+        "axis"
+      ],
+      "properties": {
+        "name": {
+          "$ref": "#/$defs/ident"
+        },
+        "column": {
+          "$ref": "#/$defs/ident"
+        },
+        "via": {
+          "$ref": "#/$defs/ident",
+          "description": "joined model that owns the column"
+        },
+        "type": {
+          "enum": [
+            "timestamptz",
+            "date"
+          ]
+        },
+        "axis": {
+          "enum": [
+            "order_date",
+            "return_date",
+            "settlement_date"
+          ],
+          "description": "business time axis shown to readers (ngày đơn / ngày hoàn / ngày đối soát)"
+        },
+        "default": {
+          "type": "boolean"
+        }
+      }
+    },
+    "dimension": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "name",
+        "column"
+      ],
+      "properties": {
+        "name": {
+          "$ref": "#/$defs/ident"
+        },
+        "column": {
+          "$ref": "#/$defs/ident"
+        },
+        "label": {
+          "$ref": "#/$defs/label"
+        },
+        "description": {
+          "type": "string"
+        }
+      }
+    },
+    "join": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "model",
+        "from",
+        "to",
+        "relationship"
+      ],
+      "properties": {
+        "model": {
+          "$ref": "#/$defs/ident"
+        },
+        "from": {
+          "$ref": "#/$defs/ident"
+        },
+        "to": {
+          "$ref": "#/$defs/ident"
+        },
+        "relationship": {
+          "const": "many_to_one"
+        }
+      }
+    },
+    "measure": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "name",
+        "column",
+        "agg"
+      ],
+      "properties": {
+        "name": {
+          "$ref": "#/$defs/ident"
+        },
+        "column": {
+          "$ref": "#/$defs/ident"
+        },
+        "agg": {
+          "enum": [
+            "sum",
+            "count",
+            "count_distinct",
+            "min",
+            "max"
+          ]
+        },
+        "aggregatable": {
+          "type": "boolean",
+          "description": "false for per-row ratios (never aggregate them)"
+        },
+        "cost": {
+          "type": "boolean",
+          "description": "cost, margin or profit column"
+        },
+        "description": {
+          "type": "string"
+        }
+      }
+    },
+    "gate": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "column",
+        "op"
+      ],
+      "properties": {
+        "column": {
+          "$ref": "#/$defs/ident"
+        },
+        "via": {
+          "$ref": "#/$defs/ident"
+        },
+        "op": {
+          "enum": [
+            "is_true",
+            "is_false",
+            "eq",
+            "in",
+            "not_in",
+            "before_window_start",
+            "same_date_as",
+            "date_distinct_from"
+          ]
+        },
+        "value": {
+          "type": [
+            "string",
+            "number",
+            "boolean"
+          ]
+        },
+        "values": {
+          "type": "array",
+          "minItems": 1,
+          "items": {
+            "type": [
+              "string",
+              "number"
+            ]
+          }
+        },
+        "other": {
+          "$ref": "#/$defs/ident",
+          "description": "time dimension of the base model to compare with"
+        },
+        "description": {
+          "type": "string"
+        }
+      },
+      "allOf": [
+        {
+          "if": {
+            "properties": {
+              "op": {
+                "const": "eq"
+              }
+            }
+          },
+          "then": {
+            "required": [
+              "value"
+            ]
+          }
+        },
+        {
+          "if": {
+            "properties": {
+              "op": {
+                "enum": [
+                  "in",
+                  "not_in"
+                ]
+              }
+            }
+          },
+          "then": {
+            "required": [
+              "values"
+            ]
+          }
+        },
+        {
+          "if": {
+            "properties": {
+              "op": {
+                "enum": [
+                  "same_date_as",
+                  "date_distinct_from"
+                ]
+              }
+            }
+          },
+          "then": {
+            "required": [
+              "other"
+            ]
+          }
+        }
+      ]
+    }
+  }
+}

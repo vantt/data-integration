@@ -1,0 +1,93 @@
+# Report spec v2 — template (định dạng do skill analytics-design sở hữu).
+# Lưu thành analytics/specs/<report_id>.yml, thêm một mục vào analytics/catalog/catalog.yml, rồi chạy
+#   python3 scripts/checks/check_analytics_registry.py
+# Schema: analytics/schema/report-spec.schema.json. Spec không phụ thuộc công cụ: cùng file render ra
+# Evidence hoặc Metabase tuỳ `engine` trong catalog. Chỉ tiêu KHÔNG định nghĩa ở đây: card tham chiếu
+# id trong registry (docs/analytics-handbook/semantic/metric-registry.md).
+spec_id: sales_weekly_example          # = id trong catalog; slug ASCII
+spec_version: 2
+title: {vi: "Bán hàng tuần (ví dụ)", en: "Weekly sales (example)"}
+question: "Tuần này bán được bao nhiêu so với tuần trước, kênh nào kéo tăng hay giảm?"
+cadence: weekly                        # daily | weekly | monthly
+period_mode: to_date                   # to_date: kỳ hiện tại đến as_of; closed: kỳ đã đóng gần nhất
+as_of: yesterday                       # dữ liệu tính đến hết hôm qua (múi giờ trong hồ sơ khách)
+grid_columns: 18                       # lưới dùng cho size/position
+baseline:                              # mốc so số khi report thay một dashboard đang chạy
+  kind: none                           # metabase_blueprint | metabase_live | none
+  source: "-"
+  verified_against_live: false
+
+tabs:
+  - tab_id: tong_quan
+    title: {vi: Tổng quan}
+    blocks:
+      - block_id: kpi_tuan
+        title: {vi: "Doanh thu tuần này"}
+        time_axis: order_date            # order_date | return_date | settlement_date (hiện cạnh tiêu đề)
+        cards:
+          - card_id: net_sales_wow       # khoá danh tính ở mọi engine: không đổi, không dùng lại
+            kind: kpi_compare            # kpi_compare | trend | breakdown | breakdown_compare | derived | table
+                                         # | inline_sql | meta_period | meta_freshness | text
+            title: {vi: "Doanh thu bán hàng"}
+            metric_ref: net_sales        # id trong registry (hoặc danh sách id)
+            window: wtd                  # wtd | prev_week_full | mtd | month_full | last_<n>_days | ...
+            comparison: prev_week_full   # prev_week_full | prev_wtd_same_span | prev_month | target | ...
+            viz: single-value-with-trend # term của VISUALIZATION_VOCABULARY.md
+            size: {w: 6, h: 3}
+            position: {row: 0, col: 0}
+          - card_id: mtd_gmv_vs_goal
+            kind: kpi_compare
+            title: {vi: "GMV so với mục tiêu tháng"}
+            metric_ref: gross_revenue
+            window: mtd
+            comparison: target
+            goal: {param: monthly_target_goal}   # giá trị nằm trong tenant_params của hồ sơ khách
+            viz: progress-toward-goal
+            size: {w: 12, h: 3}
+            position: {row: 0, col: 6}
+      - block_id: theo_kenh
+        title: {vi: "Theo kênh"}
+        time_axis: order_date
+        cards:
+          - card_id: net_sales_by_channel
+            kind: breakdown
+            title: {vi: "Doanh thu theo kênh"}
+            metric_ref: net_sales
+            dimensions: [channels.channel_name]  # <model>.<dimension> khai báo trong lớp ngữ nghĩa
+            window: wtd
+            sort: value_desc
+            limit: 8
+            viz: horizontal-bar
+            size: {w: 18, h: 6}
+            position: {row: 3, col: 0}
+          - card_id: daily_net_sales
+            kind: trend
+            title: {vi: "Doanh thu theo ngày"}
+            metric_ref: net_sales
+            grain: day
+            window: last_14_days
+            sort: time_asc
+            viz: area-chart
+            size: {w: 18, h: 6}
+            position: {row: 9, col: 0}
+          # inline_sql: bậc đệm khi registry không biểu diễn được (bảng chi tiết, aggregate lồng).
+          # Bắt buộc `reason`, `outputs`, `cost_sensitive`; chỉ dùng placeholder {{as_of}}, {{window_start}},
+          # {{window_end}}, {{tz}} (không current_date/now()). Bị đếm là "không chuẩn" (> 30% là cảnh báo).
+          - card_id: orders_list
+            kind: inline_sql
+            title: {vi: "Đơn hàng tuần này"}
+            window: wtd
+            viz: data-table
+            inline_sql:
+              reason: "Danh sách từng đơn, không phải chỉ tiêu tổng hợp."
+              cost_sensitive: false     # true nếu SQL đọc giá vốn, biên, lợi nhuận
+              sql: |
+                SELECT o.order_code AS order_code, o.net_revenue AS net_sales
+                FROM main_marts.fact_orders o
+                WHERE o.ordered_at >= {{window_start}} AND o.ordered_at < {{window_end}}
+                ORDER BY o.ordered_at DESC
+              outputs:
+                - {name: order_code, type: string, label: "Mã đơn"}
+                - {name: net_sales, type: currency, label: "Doanh thu"}
+            size: {w: 18, h: 8}
+            position: {row: 15, col: 0}

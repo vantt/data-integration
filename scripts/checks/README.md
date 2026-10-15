@@ -10,6 +10,7 @@ true in code. The shadow gate ([scripts/shadow/README.md](../shadow/README.md)) 
 | `check_boundaries.py` | rule check | Module dependency matrix (core reads packs only through `pack_ref`), core reading tenant seeds, cross-component imports, duplicate seeds, hard-coded URLs in connectors and packs, pack switch declared consistently (`module-config`) |
 | `check_taxonomy_inventory.py`, `taxonomy_inventory.yaml` | warn-only check + data | Classification `CASE` blocks and expressions still in dbt SQL match the inventory (hash per block); a new `CASE` assigning a known taxonomy column is reported |
 | `check_taxonomy_rules.py` | rule check | Classification engine rules (seeds `taxonomy_rule_product`, `taxonomy_rule_tenant`) are valid against the registry `vars.taxonomy` and the label sets before they are loaded |
+| `check_analytics_registry.py` | rule check | Metric registry (`analytics/registry/`) and tenant profiles: JSON Schema, references, compiler limits, cost flags, dbt manifest columns, generated docs up to date ([analytics/README.md](../../analytics/README.md)) |
 | `model_buckets.yaml` | data | Bucket (module) of every dbt model; `pack_connectors` for packs |
 | `boundary_allowlist.yaml` | data | Known violations, each with a reason and an exit |
 | `golden_snapshot.py`, `public_models.yaml` | data equality | Public tables identical before/after a change |
@@ -32,6 +33,7 @@ scripts/checks/run-all.sh <worktree>      # or another worktree; the prod checko
 | 3. `dagster definitions validate -f orchestration/definitions.py` | shadow container | the Dagster code location does not load |
 | 4. `pytest ingestion/tests orchestration scripts/tests` | shadow container | a test fails twice (one re-run, printed as `FLAKY` when it passes) |
 | 5. `dbt build --select +tag:taxonomy_selftest --indirect-selection cautious --vars '{taxonomy_selftest: true}'` | shadow container | a unit test of the classification engine macro fails (`models/core/intermediate/taxonomy/selftest/`, [taxonomy-engine.md §4b](../../docs/architecture/taxonomy-engine.md#4b-hiện-thực-mvp)); compiles to a scratch target path, so the manifest of step 1 stays the default one |
+| 6. `check_analytics_registry.py` + `pytest analytics/tests` | prod image, worktree mounted read-only, no network | the registry has an ERROR (WARN lines do not fail) or an analytics test fails |
 
 The container steps go through `scripts/shadow/run-shadow.sh` (prod image, `--network none`, no
 secrets, no `SOURCES__*` variables) on an **empty** scratch lake created under `$SHADOW_ROOT`
@@ -111,7 +113,7 @@ python3 scripts/checks/check_boundaries.py --manifest <path/to/manifest.json>
 
 | Rule | Fails when |
 |---|---|
-| `py-import` | `crm/` or `detailView/` imports `orchestration`, `ingestion` or `transformation`; `ingestion/` imports `orchestration` |
+| `py-import` | `crm/`, `detailView/` or `analytics/` imports `orchestration`, `ingestion` or `transformation`; `ingestion/` imports `orchestration` |
 | `py-scan` | one of those trees is missing (prevents a silent pass inside a container) |
 | `orch-import` | a file under `orchestration/connectors/<c>/` imports `orchestration.packs.*`, or a file under `orchestration/packs/<p>/` imports another pack (`orchestration.packs.<q>`, q ≠ p). The kernel loads packs from `modules.yaml`; `__tests__` and the loaders are not scanned |
 | `dbt-bucket` | a dbt model (enabled or disabled) has no entry in `model_buckets.yaml` |

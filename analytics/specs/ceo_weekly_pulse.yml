@@ -1,0 +1,472 @@
+# CEO Weekly Pulse, spec v2. Viết theo dashboard đang chạy (blueprint), đúng thứ tự, tên và vị trí
+# của 30 question; định nghĩa chỉ tiêu nằm trong registry (analytics/registry/), không ở đây.
+spec_id: ceo_weekly_pulse
+spec_version: 2
+title: {vi: CEO Weekly Pulse, en: CEO Weekly Pulse}
+question: Doanh thu tuần này đang đi nhanh hay chậm so với tuần trước và mục tiêu tháng; kênh, khách hàng và lợi nhuận có tín hiệu gì cần xử lý?
+cadence: weekly
+period_mode: to_date
+as_of: yesterday
+grid_columns: 18
+baseline:
+  kind: metabase_blueprint
+  source: docs/analytics-handbook/blueprints/metabase/ceo_weekly_pulse.md
+  verified_against_live: false
+  note: >-
+    Chưa chụp được dashboard đang chạy (capture chỉ đọc cần METABASE_API_KEY); mốc tạm là blueprint.
+    Khi chụp xong: nếu lệch, mốc là bản đang chạy và sửa spec theo nó.
+
+tabs:
+  - tab_id: doanh_thu
+    title: {vi: Doanh thu & Target}
+    baseline_name: Doanh thu & Target
+    blocks:
+      - block_id: ky_bao_cao_doanh_thu
+        time_axis: order_date
+        cards:
+          - card_id: period_revenue
+            kind: meta_period
+            title: {vi: Chu kỳ báo cáo}
+            baseline_name: Chu kỳ báo cáo
+            size: {w: 18, h: 2}
+            position: {row: 0, col: 0}
+      - block_id: tong_quan_tuan
+        title: {vi: CEO Weekly Pulse — Đánh giá tiến độ doanh thu và sức khỏe kinh doanh tuần này}
+        time_axis: order_date
+        cards:
+          - card_id: net_sales_wow
+            kind: kpi_compare
+            title: {vi: "Doanh thu bán hàng", en: "Net Revenue"}
+            baseline_name: Net Revenue
+            baseline_columns: {net_sales: Net Revenue, net_sales__cmp: Tuan truoc}
+            metric_ref: net_sales
+            window: wtd
+            comparison: prev_week_full
+            viz: single-value-with-trend
+            size: {w: 6, h: 3}
+            position: {row: 3, col: 0}
+          - card_id: gross_revenue_wow
+            kind: kpi_compare
+            title: {vi: "Doanh thu niêm yết", en: "Gross Revenue"}
+            baseline_name: Gross Revenue
+            baseline_columns: {gross_revenue: Gross Revenue, gross_revenue__cmp: Tuan truoc}
+            metric_ref: gross_revenue
+            window: wtd
+            comparison: prev_week_full
+            viz: single-value-with-trend
+            size: {w: 4, h: 3}
+            position: {row: 3, col: 6}
+          - card_id: total_orders_wow
+            kind: kpi_compare
+            title: {vi: "Tổng đơn", en: "Total Orders"}
+            baseline_name: Total Orders
+            baseline_columns: {orders_count: Total Orders, orders_count__cmp: Tuan truoc}
+            metric_ref: orders_count
+            window: wtd
+            comparison: prev_week_full
+            viz: single-value-with-trend
+            size: {w: 4, h: 3}
+            position: {row: 3, col: 10}
+          - card_id: aov_wow
+            kind: kpi_compare
+            title: {vi: "Giá trị đơn trung bình", en: "AOV"}
+            baseline_name: AOV
+            baseline_columns: {aov: AOV, aov__cmp: Tuan truoc}
+            metric_ref: aov
+            window: wtd
+            comparison: prev_week_full
+            viz: single-value-with-trend
+            size: {w: 4, h: 3}
+            position: {row: 3, col: 14}
+      - block_id: tien_do_muc_tieu
+        title: {vi: "Kiểm tra tiến độ target tháng — on-track hay cần điều chỉnh?"}
+        time_axis: order_date
+        cards:
+          - card_id: mtd_gmv_vs_target
+            kind: kpi_compare
+            title: {vi: "GMV từ đầu tháng so với mục tiêu", en: "MTD GMV vs Target"}
+            baseline_name: MTD GMV vs Target
+            baseline_columns: {gross_revenue: MTD GMV}
+            metric_ref: gross_revenue
+            window: mtd_before_as_of
+            comparison: target
+            goal: {param: monthly_target_goal}
+            viz: progress-toward-goal
+            size: {w: 12, h: 3}
+            position: {row: 7, col: 0}
+          - card_id: gmv_pace_index
+            kind: derived
+            title: {vi: "Chỉ số tiến độ", en: "Pace Index"}
+            baseline_name: Pace Index
+            baseline_columns: {gmv_pace_index: Pace Index}
+            metric_ref: gmv_pace_index
+            window: mtd_before_as_of
+            viz: gauge
+            decimals: 2
+            bands:
+              - {max: 0.8, label: Behind, tone: bad}
+              - {max: 1.0, label: On Track, tone: warning}
+              - {max: 1.5, label: Ahead, tone: good}
+            size: {w: 6, h: 3}
+            position: {row: 7, col: 12}
+      - block_id: xu_huong_doanh_thu
+        title: {vi: "Theo dõi xu hướng doanh thu tuần này + tuần trước (WoW) — momentum tăng hay giảm?"}
+        time_axis: order_date
+        cards:
+          - card_id: daily_net_sales
+            kind: trend
+            title: {vi: "Doanh thu bán hàng theo ngày", en: "Daily Net Revenue (14 Days)"}
+            baseline_name: Daily Net Revenue (14 Days)
+            baseline_columns: {day: order_date, net_sales: revenue}
+            metric_ref: net_sales
+            grain: day
+            window: prev_week_start_to_date
+            sort: time_asc
+            viz: area-chart
+            size: {w: 18, h: 6}
+            position: {row: 11, col: 0}
+      - block_id: don_hang_tuan
+        title: {vi: Danh sách đơn hàng tuần này — chi tiết theo đơn}
+        time_axis: order_date
+        cards:
+          - card_id: orders_this_week
+            kind: inline_sql
+            title: {vi: Đơn hàng tuần này}
+            baseline_name: Đơn hàng tuần này
+            baseline_columns: {order_id: order_id, order_code: Mã đơn, ordered_at_local: Thời gian, channel_name: Kênh,
+                               customer_name: Khách hàng, status: Trạng thái, gross_revenue: Gross,
+                               discount_amount: Chiết khấu, net_sales: Net Revenue}
+            window: wtd
+            viz: data-table-formatted
+            inline_sql:
+              reason: Bảng chi tiết từng đơn (không phải chỉ tiêu tổng hợp); mọi trạng thái đơn, có link sang trang chi tiết.
+              cost_sensitive: false
+              sql: |
+                SELECT
+                    o.order_id AS order_id,
+                    o.order_code AS order_code,
+                    strftime(o.ordered_at AT TIME ZONE '{{tz}}', '%d/%m %H:%M') AS ordered_at_local,
+                    COALESCE(ch.channel_name, 'Unknown') AS channel_name,
+                    c.full_name AS customer_name,
+                    o.status AS status,
+                    o.gross_revenue AS gross_revenue,
+                    o.discount_amount AS discount_amount,
+                    o.net_revenue AS net_sales
+                FROM main_marts.fact_orders o
+                LEFT JOIN main_marts.dim_customers c ON o.customer_key = c.customer_key
+                LEFT JOIN main_marts.dim_channels ch ON o.channel_key = ch.channel_key
+                WHERE o.scope_sales
+                  AND o.ordered_at >= {{window_start}}
+                  AND o.ordered_at < {{window_end}}
+                ORDER BY o.ordered_at DESC
+              outputs:
+                - {name: order_id, type: string, hidden: true}
+                - {name: order_code, type: string, label: Mã đơn, link: {param: detailview_url_template}}
+                - {name: ordered_at_local, type: string, label: Thời gian}
+                - {name: channel_name, type: string, label: Kênh}
+                - {name: customer_name, type: string, label: Khách hàng}
+                - {name: status, type: string, label: Trạng thái}
+                - {name: gross_revenue, type: currency, label: Gross}
+                - {name: discount_amount, type: currency, label: Chiết khấu}
+                - {name: net_sales, type: currency, label: Net Revenue}
+            size: {w: 18, h: 9}
+            position: {row: 18, col: 0}
+      - block_id: du_bao_thang
+        time_axis: order_date
+        cards:
+          - card_id: gmv_month_end_forecast
+            kind: derived
+            title: {vi: "GMV dự báo cuối tháng", en: "Forecasted Month-End GMV"}
+            baseline_name: Forecasted Month-End GMV
+            baseline_columns: {gmv_month_end_forecast: Forecasted Month-End GMV}
+            metric_ref: gmv_month_end_forecast
+            window: mtd_before_as_of
+            comparison: target
+            goal: {param: monthly_target_goal}
+            viz: progress-toward-goal
+            decimals: 0
+            size: {w: 12, h: 3}
+            position: {row: 28, col: 0}
+          - card_id: gmv_required_daily_run_rate
+            kind: derived
+            title: {vi: "Cần đạt mỗi ngày", en: "Required Daily Run-Rate"}
+            baseline_name: Cần Đạt Mỗi Ngày (Required Daily Run-Rate)
+            baseline_columns: {gmv_required_daily_run_rate: Required Daily Run-Rate}
+            metric_ref: gmv_required_daily_run_rate
+            window: mtd_before_as_of
+            viz: single-value
+            decimals: 0
+            size: {w: 6, h: 3}
+            position: {row: 28, col: 12}
+      - block_id: do_tuoi_doanh_thu
+        time_axis: order_date
+        cards:
+          - card_id: freshness_revenue
+            kind: meta_freshness
+            title: {vi: Độ tươi dữ liệu}
+            baseline_name: Độ tươi dữ liệu
+            size: {w: 18, h: 2}
+            position: {row: 98, col: 0}
+
+  - tab_id: kenh_ban_hang
+    title: {vi: Kênh bán hàng}
+    baseline_name: Kenh ban hang
+    blocks:
+      - block_id: ky_bao_cao_kenh
+        time_axis: order_date
+        cards:
+          - card_id: period_channels
+            kind: meta_period
+            title: {vi: Chu kỳ báo cáo}
+            baseline_name: Chu kỳ báo cáo
+            size: {w: 18, h: 2}
+            position: {row: 0, col: 0}
+      - block_id: cau_truc_kenh
+        title: {vi: Phân tích cấu trúc kênh bán hàng — Online-Ecom vs Offline}
+        time_axis: order_date
+        cards:
+          - card_id: net_sales_by_channel_category
+            kind: breakdown
+            title: {vi: "Doanh thu theo nhóm kênh", en: "Revenue by Channel Category"}
+            baseline_name: Revenue by Channel Category
+            baseline_columns: {channel_category: Channel Category, net_sales: Revenue}
+            metric_ref: net_sales
+            dimensions: [channels.channel_category]
+            window: wtd
+            sort: value_desc
+            viz: donut
+            size: {w: 6, h: 6}
+            position: {row: 3, col: 0}
+          - card_id: channel_category_wow
+            kind: breakdown_compare
+            title: {vi: "Nhóm kênh tuần này so với tuần trước", en: "Channel Category WoW Comparison"}
+            baseline_name: Channel Category WoW Comparison
+            baseline_columns: {channel_category: Channel, net_sales: This Week, net_sales__cmp: Last Week}
+            metric_ref: net_sales
+            dimensions: [channels.channel_category]
+            window: wtd
+            comparison: prev_week_full
+            sort: value_desc
+            viz: grouped-bar
+            size: {w: 12, h: 6}
+            position: {row: 3, col: 6}
+      - block_id: top_kenh
+        title: {vi: Xác định top kênh bán hàng — ranking và biến động WoW}
+        time_axis: order_date
+        cards:
+          - card_id: top_channels
+            kind: breakdown
+            title: {vi: "Kênh doanh thu cao nhất", en: "Top Channels by Revenue"}
+            baseline_name: Top Channels by Revenue
+            baseline_columns: {channel_name: Channel, net_sales: Revenue}
+            metric_ref: net_sales
+            dimensions: [channels.channel_name]
+            window: wtd
+            sort: value_desc
+            limit: 8
+            viz: horizontal-bar
+            size: {w: 18, h: 6}
+            position: {row: 10, col: 0}
+          - card_id: channel_performance
+            kind: breakdown_compare
+            title: {vi: "Hiệu quả theo kênh", en: "Channel Performance Table"}
+            baseline_name: Channel Performance Table
+            baseline_columns: {channel_name: Channel, active_orders_count: Orders, net_sales: Revenue,
+                               active_orders_count__cmp: LW Orders, net_sales__cmp: LW Revenue,
+                               net_sales__pct_change: Revenue WoW %}
+            metric_ref: [active_orders_count, net_sales]
+            dimensions: [channels.channel_name]
+            window: wtd
+            comparison: prev_week_full
+            pct_change_of: net_sales
+            sort: value_desc
+            decimals: 1
+            viz: data-table-formatted
+            size: {w: 18, h: 6}
+            position: {row: 16, col: 0}
+      - block_id: do_tuoi_kenh
+        time_axis: order_date
+        cards:
+          - card_id: freshness_channels
+            kind: meta_freshness
+            title: {vi: Độ tươi dữ liệu}
+            baseline_name: Độ tươi dữ liệu
+            size: {w: 18, h: 2}
+            position: {row: 98, col: 0}
+
+  - tab_id: khach_hang_canh_bao
+    title: {vi: Khách hàng & Cảnh báo}
+    baseline_name: Khach hang & Canh bao
+    blocks:
+      - block_id: ky_bao_cao_khach
+        time_axis: order_date
+        cards:
+          - card_id: period_customers
+            kind: meta_period
+            title: {vi: Chu kỳ báo cáo}
+            baseline_name: Chu kỳ báo cáo
+            size: {w: 18, h: 2}
+            position: {row: 0, col: 0}
+      - block_id: suc_khoe_khach
+        title: {vi: Đánh giá sức khỏe khách hàng — acquisition và retention}
+        time_axis: order_date
+        cards:
+          - card_id: new_customers_wow
+            kind: kpi_compare
+            title: {vi: "Khách mới", en: "New Customers"}
+            baseline_name: New Customers
+            baseline_columns: {new_customers: New Customers, new_customers__cmp: Tuan truoc}
+            metric_ref: new_customers
+            window: wtd
+            comparison: prev_week_full
+            viz: single-value-with-trend
+            size: {w: 6, h: 3}
+            position: {row: 3, col: 0}
+          - card_id: returning_revenue_share
+            kind: kpi_compare
+            title: {vi: "Tỉ lệ doanh thu từ khách quay lại", en: "Returning Revenue %"}
+            baseline_name: Returning Revenue %
+            baseline_columns: {returning_revenue_share: Returning Revenue %}
+            metric_ref: returning_revenue_share
+            window: wtd
+            viz: gauge
+            decimals: 1
+            bands:
+              - {max: 40, label: Low, tone: bad}
+              - {max: 60, label: Warning, tone: warning}
+              - {max: 100, label: Healthy, tone: good}
+            size: {w: 6, h: 3}
+            position: {row: 3, col: 6}
+          - card_id: returning_customers_wow
+            kind: kpi_compare
+            title: {vi: "Khách quay lại", en: "Returning Customers"}
+            baseline_name: Returning Customers
+            baseline_columns: {returning_customers: Returning Customers, returning_customers__cmp: Tuan truoc}
+            metric_ref: returning_customers
+            window: wtd
+            comparison: prev_week_full
+            viz: single-value-with-trend
+            size: {w: 6, h: 3}
+            position: {row: 3, col: 12}
+      - block_id: moi_va_quay_lai
+        title: {vi: Theo dõi tỷ lệ New vs Returning tuần này + tuần trước (WoW) — chất lượng tăng trưởng}
+        time_axis: order_date
+        cards:
+          - card_id: new_vs_returning_orders
+            kind: trend
+            title: {vi: "Đơn khách mới và khách quay lại theo ngày", en: "New vs Returning Orders (14 Days)"}
+            baseline_name: New vs Returning Orders (14 Days)
+            baseline_columns: {day: order_date, new_customer_orders: New, returning_customer_orders: Returning}
+            metric_ref: [new_customer_orders, returning_customer_orders]
+            grain: day
+            window: prev_week_start_to_date
+            sort: time_asc
+            viz: stacked-bar-time
+            size: {w: 18, h: 6}
+            position: {row: 7, col: 0}
+      - block_id: canh_bao_van_hanh
+        title: {vi: "Kiểm tra cảnh báo vận hành — đơn hủy, trả hàng, chiết khấu"}
+        time_axis: order_date
+        cards:
+          - card_id: cancelled_orders_wow
+            kind: kpi_compare
+            title: {vi: "Đơn huỷ", en: "Cancelled Orders"}
+            baseline_name: Cancelled Orders
+            baseline_columns: {cancelled_orders: Cancelled Orders, cancelled_orders__cmp: Tuan truoc}
+            metric_ref: cancelled_orders
+            window: wtd
+            comparison: prev_week_full
+            viz: single-value-with-trend
+            size: {w: 6, h: 3}
+            position: {row: 14, col: 0}
+          - card_id: returns_wow
+            kind: kpi_compare
+            title: {vi: "Phiếu hoàn", en: "Return Count"}
+            baseline_name: Return Count
+            baseline_columns: {return_count: Returns, return_count__cmp: Tuan truoc}
+            metric_ref: return_count
+            window: wtd
+            comparison: prev_week_full
+            time_axis: return_date
+            viz: single-value-with-trend
+            size: {w: 6, h: 3}
+            position: {row: 14, col: 6}
+          - card_id: discount_rate
+            kind: kpi_compare
+            title: {vi: "Tỉ lệ chiết khấu", en: "Discount Rate"}
+            baseline_name: Discount Rate
+            baseline_columns: {discount_rate: Discount Rate %}
+            metric_ref: discount_rate
+            window: wtd
+            viz: gauge
+            decimals: 1
+            bands:
+              - {max: 10, label: Normal, tone: good}
+              - {max: 15, label: High, tone: warning}
+              - {max: 30, label: Alert, tone: bad}
+            size: {w: 6, h: 3}
+            position: {row: 14, col: 12}
+      - block_id: loi_nhuan_tuan
+        title: {vi: "Lợi nhuận tuần này — Net Profit, Gross Margin, Kênh lỗ"}
+        time_axis: order_date
+        cards:
+          - card_id: channel_net_profit_wow
+            kind: kpi_compare
+            title: {vi: "Lãi ròng kênh", en: "Weekly Net Profit"}
+            baseline_name: Weekly Net Profit
+            baseline_columns: {channel_net_profit: Net Profit, channel_net_profit__cmp: Tuan truoc}
+            metric_ref: channel_net_profit
+            window: wtd
+            comparison: prev_week_full
+            viz: single-value-with-trend
+            size: {w: 6, h: 3}
+            position: {row: 19, col: 0}
+          - card_id: gross_margin_wow
+            kind: kpi_compare
+            title: {vi: "Biên lãi gộp", en: "Gross Margin %"}
+            baseline_name: Gross Margin %
+            baseline_columns: {gross_margin_pct: Gross Margin %, gross_margin_pct__cmp: Tuan truoc}
+            metric_ref: gross_margin_pct
+            window: wtd
+            comparison: prev_week_full
+            decimals: 1
+            viz: single-value-with-trend
+            size: {w: 6, h: 3}
+            position: {row: 19, col: 6}
+          - card_id: loss_making_channels
+            kind: inline_sql
+            title: {vi: "Số kênh lỗ", en: "Loss-Making Channel Count"}
+            baseline_name: Loss-Making Channel Count
+            baseline_columns: {loss_making_channels: Kenh lo}
+            window: wtd
+            viz: single-value
+            inline_sql:
+              reason: Đếm số kênh có tổng lãi ròng âm là aggregate lồng (tổng theo kênh rồi đếm), vượt giới hạn compiler.
+              cost_sensitive: true
+              sql: |
+                SELECT COUNT(*) AS loss_making_channels
+                FROM (
+                    SELECT e.channel_key
+                    FROM main_marts.fact_order_economics e
+                    JOIN main_marts.fact_orders o ON e.order_id = o.order_id
+                    WHERE e.scope_sales
+                      AND e.has_cogs
+                      AND o.is_active_order
+                      AND o.ordered_at >= {{window_start}}
+                      AND o.ordered_at < {{window_end}}
+                    GROUP BY e.channel_key
+                    HAVING SUM(e.channel_net_profit) < 0
+                ) loss_channels
+              outputs:
+                - {name: loss_making_channels, type: integer, label: Kênh lỗ}
+            size: {w: 6, h: 3}
+            position: {row: 19, col: 12}
+      - block_id: do_tuoi_khach
+        time_axis: order_date
+        cards:
+          - card_id: freshness_customers
+            kind: meta_freshness
+            title: {vi: Độ tươi dữ liệu}
+            baseline_name: Độ tươi dữ liệu
+            size: {w: 18, h: 2}
+            position: {row: 21, col: 0}

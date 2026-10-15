@@ -1,0 +1,87 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "analytics/schema/metric.schema.json",
+  "title": "Metric registry file (one domain)",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["metrics"],
+  "properties": {
+    "metrics": {"type": "array", "minItems": 1, "items": {"$ref": "#/$defs/metric"}}
+  },
+  "$defs": {
+    "ident": {"type": "string", "pattern": "^[a-z][a-z0-9_]*$"},
+    "metric": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["id", "version", "label", "description", "type", "additivity", "null_policy", "cost_sensitive", "unit", "status"],
+      "properties": {
+        "id": {"$ref": "#/$defs/ident"},
+        "version": {"type": "integer", "minimum": 1},
+        "label": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["vi", "en"],
+          "properties": {"vi": {"type": "string", "minLength": 1}, "en": {"type": "string", "minLength": 1}}
+        },
+        "description": {"type": "string", "minLength": 1},
+        "type": {"enum": ["simple", "ratio", "derived", "snapshot"]},
+        "model": {"$ref": "#/$defs/ident"},
+        "measure": {"$ref": "#/$defs/ident"},
+        "filters": {"type": "array", "items": {"$ref": "#/$defs/ident"}, "uniqueItems": true},
+        "time_axis": {"$ref": "#/$defs/ident"},
+        "numerator": {"$ref": "#/$defs/ident"},
+        "denominator": {"$ref": "#/$defs/ident"},
+        "scale": {"enum": [1, 100]},
+        "on_zero_denominator": {"enum": ["missing", "zero"]},
+        "expression": {"type": "string", "minLength": 1},
+        "additivity": {"enum": ["additive", "semi_additive", "non_additive"]},
+        "null_policy": {"const": "propagate"},
+        "empty_result": {"enum": ["zero", "missing"]},
+        "zero_as_missing": {"type": "boolean"},
+        "cost_sensitive": {"type": "boolean"},
+        "coverage_metric": {"$ref": "#/$defs/ident"},
+        "requires": {"type": "array", "items": {"$ref": "#/$defs/ident"}, "uniqueItems": true},
+        "enhances": {"type": "array", "items": {"$ref": "#/$defs/ident"}, "uniqueItems": true},
+        "legacy_names": {"type": "array", "items": {"$ref": "#/$defs/ident"}, "uniqueItems": true},
+        "unit": {"enum": ["currency", "count", "percent", "ratio", "index"]},
+        "status": {"enum": ["draft", "active", "deprecated"]},
+        "replaced_by": {"$ref": "#/$defs/ident"},
+        "notes": {"type": "string"}
+      },
+      "allOf": [
+        {
+          "if": {"properties": {"type": {"const": "simple"}}},
+          "then": {
+            "required": ["model", "measure", "time_axis"],
+            "properties": {"numerator": false, "denominator": false, "expression": false, "scale": false, "on_zero_denominator": false}
+          }
+        },
+        {
+          "if": {"properties": {"type": {"const": "snapshot"}}},
+          "then": {
+            "required": ["model", "measure"],
+            "properties": {"time_axis": false, "numerator": false, "denominator": false, "expression": false, "scale": false, "on_zero_denominator": false}
+          }
+        },
+        {
+          "if": {"properties": {"type": {"const": "ratio"}}},
+          "then": {
+            "required": ["numerator", "denominator"],
+            "properties": {"model": false, "measure": false, "filters": false, "time_axis": false, "expression": false, "empty_result": false, "zero_as_missing": false}
+          }
+        },
+        {
+          "if": {"properties": {"type": {"const": "derived"}}},
+          "then": {
+            "required": ["expression"],
+            "properties": {"model": false, "measure": false, "filters": false, "time_axis": false, "numerator": false, "denominator": false, "scale": false, "on_zero_denominator": false, "empty_result": false, "zero_as_missing": false}
+          }
+        },
+        {
+          "if": {"properties": {"status": {"const": "deprecated"}}},
+          "then": {"required": ["replaced_by"]}
+        }
+      ]
+    }
+  }
+}

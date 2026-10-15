@@ -1,0 +1,100 @@
+# Chỉ tiêu khách hàng dùng trong CEO Weekly Pulse; tái tạo đúng blueprint đang chạy.
+metrics:
+  - id: new_customers
+    version: 1
+    label: {vi: Khách mới, en: New customers}
+    description: Số khách có đơn hiệu lực đầu tiên (ở mọi kênh) trong cửa sổ.
+    type: simple
+    model: customers
+    measure: customers
+    filters: []
+    time_axis: first_order_date
+    additivity: non_additive
+    null_policy: propagate
+    empty_result: zero
+    cost_sensitive: false
+    unit: count
+    status: active
+    notes: Không lọc kênh bán; đơn đầu tiên có thể ở kênh nội bộ.
+
+  - id: returning_customers
+    version: 1
+    label: {vi: Khách quay lại, en: Returning customers}
+    description: Số khách có đơn ở kênh bán trong cửa sổ và đã có đơn hiệu lực trước ngày đầu cửa sổ.
+    type: simple
+    model: orders
+    measure: customers
+    filters: [in_sales_scope, customer_seen_before_window]
+    time_axis: ordered_at
+    additivity: non_additive
+    null_policy: propagate
+    empty_result: zero
+    cost_sensitive: false
+    unit: count
+    status: active
+    notes: Không lọc is_active_order như card "Returning Customers".
+
+  - id: net_sales_returning_customers
+    version: 1
+    label: {vi: Doanh thu từ khách quay lại, en: Net sales from returning customers}
+    description: Doanh thu bán hàng của khách đã có đơn hiệu lực trước ngày đầu cửa sổ.
+    type: simple
+    model: orders
+    measure: net_revenue
+    filters: [in_sales_scope, is_active_order, customer_seen_before_window]
+    time_axis: ordered_at
+    additivity: additive
+    null_policy: propagate
+    empty_result: zero
+    cost_sensitive: false
+    unit: currency
+    status: active
+
+  - id: returning_revenue_share
+    version: 1
+    label: {vi: Tỉ lệ doanh thu từ khách quay lại, en: Returning customer revenue share}
+    description: Doanh thu từ khách quay lại trên doanh thu bán hàng, phần trăm.
+    type: ratio
+    numerator: net_sales_returning_customers
+    denominator: net_sales
+    scale: 100
+    additivity: non_additive
+    null_policy: propagate
+    cost_sensitive: false
+    unit: percent
+    status: active
+    notes: Tỉ lệ doanh thu, khác repeat_buyer_rate (tỉ lệ khách) của metrics.md.
+
+  - id: new_customer_orders
+    version: 1
+    label: {vi: Đơn của khách mới, en: Orders from new customers}
+    description: Số đơn của kênh bán mà đơn hiệu lực đầu tiên của khách rơi đúng ngày đặt đơn này.
+    type: simple
+    model: orders
+    measure: orders
+    filters: [in_sales_scope, customer_first_order_same_day]
+    time_axis: ordered_at
+    additivity: non_additive
+    null_policy: propagate
+    empty_result: zero
+    cost_sensitive: false
+    unit: count
+    status: active
+    notes: Phân loại theo ngày của card "New vs Returning Orders", mọi trạng thái.
+
+  - id: returning_customer_orders
+    version: 1
+    label: {vi: Đơn của khách quay lại, en: Orders from returning customers}
+    description: Số đơn của kênh bán còn lại (đơn đầu tiên của khách khác ngày, hoặc không xác định).
+    type: simple
+    model: orders
+    measure: orders
+    filters: [in_sales_scope, customer_first_order_other_day]
+    time_axis: ordered_at
+    additivity: non_additive
+    null_policy: propagate
+    empty_result: zero
+    cost_sensitive: false
+    unit: count
+    status: active
+    notes: Gồm khách không có first_order_date như card "New vs Returning Orders".

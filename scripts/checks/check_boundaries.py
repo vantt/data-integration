@@ -7,8 +7,8 @@ detailView/ are not mounted there and a missing tree is reported as a violation.
 
 Rules (design: docs/architecture/modules.md §2b, §3 and §12):
 
-  py-import       crm/ and detailView/ must not import orchestration, ingestion or
-                  transformation; ingestion/ must not import orchestration.
+  py-import       crm/, detailView/ and analytics/ must not import orchestration, ingestion
+                  or transformation; ingestion/ must not import orchestration.
   orch-import     orchestration/connectors/<c>/ must not import orchestration.packs; a pack
                   (orchestration/packs/<p>/) must not import another pack. Packs are loaded by
                   the kernel from modules.yaml; a known coupling is allowlisted per file.
@@ -87,6 +87,7 @@ PY_RULES = [
     ("crm", {"orchestration", "ingestion", "transformation"}),
     ("detailView", {"orchestration", "ingestion", "transformation"}),
     ("ingestion", {"orchestration"}),
+    ("analytics", {"orchestration", "ingestion", "transformation"}),
 ]
 URL_RE = re.compile(r"https?://[^\s'\"]+")
 # A host name with a public suffix inside a string literal ("docs.google.com", "x.mysapo.net").

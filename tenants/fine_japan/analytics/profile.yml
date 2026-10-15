@@ -1,0 +1,32 @@
+# Hồ sơ analytics của Fine Japan. Tham số doanh thu ghi tường minh đúng như mart hôm nay,
+# không thừa kế mặc định: nâng cấp sản phẩm không được âm thầm đổi số của khách.
+# Schema: analytics/schema/tenant-profile.schema.json.
+tenant: fine_japan
+profile_version: 1
+
+locale:
+  timezone: Asia/Ho_Chi_Minh
+  currency: VND
+  week_start: monday
+
+revenue:
+  recognition_date: order_created      # ghi nhận theo ngày tạo đơn (fact_orders.ordered_at)
+  vat: excluded                        # net_sales = total_amount − vat_amount (giá Sapo gồm VAT)
+  returns: deducted_on_return_date     # hoàn trừ vào kỳ hoàn, không sửa kỳ của đơn gốc
+  excluded_statuses: [CANCELLED, DRAFT]
+  notes: Không trùng preset nào (Như Sapo giữ VAT); áp preset chỉ khi user duyệt đổi số.
+
+segments:
+  in_sales_scope:                      # kênh bán hợp lệ (cột phân loại riêng của FJ)
+    orders: {column: scope_sales, op: is_true}
+    order_economics: {column: scope_sales, op: is_true}
+    order_returns: {column: is_sales_channel, via: channels, op: is_true}
+
+tenant_params:
+  monthly_target_goal: 600000000       # mục tiêu GMV tháng đang đặt cứng trong viz Metabase (fact_targets: CS + EC)
+  detailview_url_template: "https://detailview.lan.fwg.vn/orders/{order_code}"
+
+access:                                # khu vực quyền: mỗi khu vực một bản build Evidence, đăng nhập theo đường dẫn
+  areas:
+    - {id: dieu-hanh, title: Điều hành, functions: [EXE], can_view_cost: true}
+    - {id: legacy, title: Trang cũ (viết tay), functions: [], can_view_cost: true, legacy: true}

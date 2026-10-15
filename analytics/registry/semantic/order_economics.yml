@@ -1,0 +1,20 @@
+id: order_economics
+model: fact_order_economics
+relation: main_marts.fact_order_economics
+description: Kinh tế đơn hàng (giá vốn Sapo-MAC, MISA dự phòng; phí sàn Shopee). Một dòng cho một đơn; ngày đơn lấy từ fact_orders.
+grain: [order_id]
+time_dimensions:
+  - {name: ordered_at, column: ordered_at, via: orders, type: timestamptz, axis: order_date, default: true}
+joins:
+  - {model: orders, from: order_id, to: order_id, relationship: many_to_one}
+  - {model: channels, from: channel_key, to: channel_key, relationship: many_to_one}
+measures:
+  - {name: net_revenue, column: net_revenue, agg: sum}
+  - {name: cogs_amount, column: cogs_amount, agg: sum, cost: true}
+  - {name: gross_profit, column: gross_profit, agg: sum, cost: true}
+  - {name: channel_net_profit, column: channel_net_profit, agg: sum, cost: true}
+  - {name: gross_margin_pct_row, column: gross_margin_pct, agg: sum, aggregatable: false, cost: true, description: "Tỉ lệ theo dòng; dùng ratio gross_margin_pct"}
+  - {name: orders, column: order_id, agg: count_distinct}
+gates:
+  is_active_order: {column: is_active_order, op: is_true}
+  has_cogs: {column: has_cogs, op: is_true, description: "Đơn có giá vốn (Sapo-MAC hoặc MISA)"}

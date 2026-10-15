@@ -1,0 +1,8 @@
+id: channels
+model: dim_channels
+relation: main_marts.dim_channels
+description: Một dòng cho một kênh bán (nguồn đơn × chi nhánh).
+grain: [channel_key]
+dimensions:
+  - {name: channel_name, column: channel_name, label: {vi: Kênh, en: Channel}}
+  - {name: channel_category, column: channel_category, label: {vi: Nhóm kênh, en: Channel category}}

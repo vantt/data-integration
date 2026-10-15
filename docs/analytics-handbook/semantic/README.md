@@ -26,6 +26,8 @@ Domain drives semantic, không phải ngược lại. Khi semantic gặp ambigui
 |---|---|
 | `segments.md` | Scope/segment concepts: scope_retail, scope_b2b, scope_sales |
 | `metrics.md` | Metric formulas: net_revenue, gross_revenue, AOV, orders_count |
+| `metric-registry.md` | **Sinh ra** từ registry `analytics/registry/` (`python3 -m analytics docs`): chỉ tiêu đã có nguồn chuẩn; không sửa tay |
+| `glossary.md` | **Sinh ra** cùng lúc: chú giải Việt–Anh của chỉ tiêu và chiều trong registry |
 | `dimensions.md` | Dimension definitions: channel_name, customer_type, platform |
 | `entities.md` | Business entities: order, customer, product, channel |
 | `rules.md` | Cross-cutting business rules: VAT treatment, cancellation convention |
