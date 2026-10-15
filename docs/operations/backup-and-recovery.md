@@ -128,7 +128,7 @@ Hôm nay chỉ CRM có diễn tập tự động hằng ngày (`crm_restore_veri
 
 ## Cảnh báo
 
-Hôm nay `maintain_backup_platform_job` gửi Lark khi xong, và failure sensor gửi Lark khi lỗi. Dead-man healthchecks.io và check tuổi backup sẽ được ghi vào đây.
+`maintain_backup_platform_job` gửi một thẻ Lark theo `status/local.json` của lần chạy: `ok` thẻ xanh "Backup xong", `partial` thẻ vàng kèm danh sách lỗi (một phần chụp hỏng, hoặc không đọc được file trạng thái), `failed` thẻ đỏ (script thoát mã khác 0; job cũng lỗi và failure sensor báo thêm). Dead-man healthchecks.io và check tuổi backup sẽ được ghi vào đây.
 
 ## Dựng lại từ con số 0
 

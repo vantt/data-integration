@@ -8,6 +8,7 @@ Config env vars:
   BACKUP_KEEP_COUNT — rotation count, default 7
 """
 
+import json
 import os
 import subprocess
 from datetime import datetime, timezone, timedelta
@@ -93,28 +94,57 @@ def run_platform_backup(context: OpExecutionContext) -> None:
 
     context.log.info("Starting hot backup → %s (keep %s)", backup_root, keep_count)
 
-    _run_and_log(context, ["bash", str(BACKUP_SH)], env={
-        "BACKUP_PROJECT_ROOT": str(PROJECT_ROOT),
-        "BACKUP_ROOT": backup_root,
-        "BACKUP_KEEP_COUNT": keep_count,
-    })
-
-    context.log.info("Platform backup completed successfully.")
     try:
-        ts = datetime.now(_ICT).strftime("%Y-%m-%d %H:%M ICT")
-        send_lark_card(
-            title="ChợPulse BI — ✅ Backup xong",
-            color="green",
-            fields={
-                "Destination": backup_root,
-                "Keep count": keep_count,
-                "Completed at": ts,
-                "Run": context.run_id[:8],
-            },
-        )
+        _run_and_log(context, ["bash", str(BACKUP_SH)], env={
+            "BACKUP_PROJECT_ROOT": str(PROJECT_ROOT),
+            "BACKUP_ROOT": backup_root,
+            "BACKUP_KEEP_COUNT": keep_count,
+        })
+    except Failure:
+        # A non-zero exit is a failure whatever the status file says (it may be from an earlier run).
+        _notify(context, backup_root, keep_count, {**_read_status(backup_root, "failed"), "state": "failed"})
+        raise
+
+    # Exit 0 without a readable status file cannot be confirmed clean: report it as partial.
+    status = _read_status(backup_root, default_state="partial")
+    context.log.info("Platform backup finished: state=%s", status["state"])
+    _notify(context, backup_root, keep_count, status)
+
+
+# Card per state of status/local.json (written by backup.sh): a partial run (some snapshot failed,
+# exit code 0) must never look like a clean backup.
+_CARDS = {
+    "ok": ("ChợPulse BI — ✅ Backup xong", "green"),
+    "partial": ("ChợPulse BI — ⚠️ Backup thiếu một phần", "yellow"),
+    "failed": ("ChợPulse BI — ❌ Backup lỗi", "red"),
+}
+
+
+def _read_status(backup_root: str, default_state: str) -> dict:
+    """status/local.json of the last run; `default_state` when it is missing or unreadable."""
+    try:
+        status = json.loads((Path(backup_root) / "status" / "local.json").read_text())
+    except (OSError, ValueError):
+        return {"state": default_state, "errors": ["status/local.json missing or unreadable"]}
+    if status.get("state") not in _CARDS:
+        status["state"] = default_state
+    return status
+
+
+def _notify(context: OpExecutionContext, backup_root: str, keep_count: str, status: dict) -> None:
+    title, color = _CARDS[status["state"]]
+    fields = {
+        "Destination": backup_root,
+        "Keep count": keep_count,
+        "Completed at": datetime.now(_ICT).strftime("%Y-%m-%d %H:%M ICT"),
+        "Run": context.run_id[:8],
+    }
+    if status.get("errors"):
+        fields["Errors"] = "; ".join(str(e) for e in status["errors"])[:500]
+    try:
+        send_lark_card(title=title, color=color, fields=fields)
     except Exception:
         pass  # notification failure must never fail the job
-
 
 @job(
     description="Daily platform backup (app_data + config files).",
