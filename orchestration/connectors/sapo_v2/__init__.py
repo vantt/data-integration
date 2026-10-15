@@ -13,6 +13,7 @@ from .assets import (
     ingest_sapo_v2_products_batch_asset,
     ingest_sapo_v2_webhook_consumer_asset,
 )
+from .checks import product_daily_snapshot_coverage
 
 ASSETS = [
     ingest_sapo_v2_orders_batch_asset,
@@ -24,6 +25,9 @@ ASSETS = [
     ingest_sapo_v2_inventory_transactions_asset,
     ingest_sapo_v2_webhook_consumer_asset,
 ]
+
+# Connector-specific asset checks beyond the SLA checks
+ASSET_CHECKS = [product_daily_snapshot_coverage]
 
 # SLA key (ingestion_sla.yaml) -> asset definition the checks attach to
 CHECK_ASSET_DEFS = {
@@ -84,5 +88,6 @@ DBT_SOURCE_KEYS = {
         "account": AssetKey(["sapo", "ingest_sapo_v2_accounts_batch_asset"]),
         "product": AssetKey(["sapo", "ingest_sapo_v2_products_batch_asset"]),
         "inventory_transaction_v2": AssetKey(["sapo", "ingest_sapo_v2_inventory_transactions_asset"]),
+        "product_daily_snapshot": AssetKey(["sapo", "ingest_sapo_v2_product_daily_snapshot_asset"]),
     },
 }

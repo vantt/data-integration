@@ -28,6 +28,8 @@ Probe nằm một chỗ, dict `probes` đầu `transformation/models/monitoring/
 | `fulfillments` | sapo_v2 | core | `std_fulfillments` | `created_at` |
 | `staff` | sapo_v2 | core | `std_accounts` | — |
 | `inventory` | sapo_v2 | core | `std_inventory_movements` | `issued_date_key` |
+| `price_history` | sapo_v2 | core | `std_variant_price_observations` với `evidence_source = 'daily_capture'` (ảnh chụp giá hằng đêm, từ 15/10/2026) | `observed_at` |
+| `inventory_position_history` | sapo_v2 | core | `std_inventory_position_captures` (ảnh chụp vị trí tồn hằng đêm, từ 15/10/2026) | `captured_at` |
 | `cogs_moving_avg` | sapo_v2 | finance | `std_inventory_movements` có `cogs_amount` | `issued_date_key` |
 | `purchase_price` | sapo_v2 | finance | `std_variant_prices` với `price_list_code = 'GIANHAP'` (bảng giá nhập của Sapo; `dim_price_lists` cũng dùng mã này; chưa kiểm trên tài khoản Sapo khác) | — |
 | `marketplace_fees` | shopee | finance, marketplace | `stg_shopee_order_service_fees` | — |

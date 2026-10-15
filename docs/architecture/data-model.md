@@ -88,7 +88,11 @@ erDiagram
 | `fact_order_economics` | Fact | One row per order with cost/profit economics | `order_key` or economics key | `fact_orders`, Shopee fee intermediates, MISA sales lines | active |
 | `fact_order_costs` | Fact | One row per order cost component or order cost summary | cost key | `fact_orders`, product/channel dimensions as applicable | active |
 | `fact_order_returns` | Fact | One row per return event | `return_key` | `fact_orders`, `dim_channels`, `dim_date` | active |
-| `fact_inventory_snapshot` | Fact | SKU x warehouse x snapshot date | `inventory_snapshot_key` | `dim_products`, `dim_locations`, `dim_date` | planned |
+| `fact_inventory_snapshot` | Fact | Variant x location x snapshot date (latest product payload only; no history accumulates: rolling, last 3 files; `snapshot_date` = last time Sapo moved the product's `modified_on`, so values can be stale) | `inventory_snapshot_key` | `dim_products`, `dim_branch_location` | active |
+| `fact_inventory_position_daily` | Fact | Variant x location x `as_of_date` (one row per day a nightly capture ran, since 15/10/2026) | (`variant_id`, `location_id`, `as_of_date`) | `dim_products` (variant_id), `dim_branch_location`, `dim_date` (as_of_date) | active |
+| `fact_variant_price_daily` | Fact | Variant x price list x `as_of_date` (nightly capture, since 15/10/2026) | (`variant_id`, `price_list_id`, `as_of_date`) | `dim_products` (variant_id), `dim_price_lists`, `dim_date` | active |
+| `fact_variant_price_changes` | Fact (SCD2) | Variant x price list x price interval (backfilled from 28/05/2026) | (`variant_id`, `price_list_id`, `valid_from_at`) | `dim_products` (variant_id), `dim_price_lists` | active |
+| `fact_variant_prices_snapshot` | Fact | Variant x price list (current prices only, `snapshot_date` = build date; rolling, no history) | (`variant_id`, `price_list_id`, `snapshot_date`) | `dim_products`, `dim_price_lists` | active |
 | `fact_gl_entries` | Fact | One row per accounting ledger entry | `gl_entry_key` | `dim_date`, account/cost-center dimensions | planned |
 | `fact_account_balances` | Fact | Account x period snapshot | `account_balance_key` | `dim_date`, account dimension | planned |
 | `dim_customers` | Dimension | One row per customer | `customer_key` | Used by order and customer analysis facts | active |

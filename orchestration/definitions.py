@@ -385,7 +385,7 @@ defs = Definitions(
     # Schedules already pull in their target job implicitly, but sensors
     # targeting a job (e.g. ingest_sheets_modified_sensor → ingest_sheets_sync_job)
     # require the job to be present in the repository.
-    asset_checks=[*ALL_CHECKS, *RECON_CHECKS, *KPI_CHECKS],
+    asset_checks=[*ALL_CHECKS, *RECON_CHECKS, *KPI_CHECKS, *(chk for c in connectors for chk in c.ASSET_CHECKS)],
     jobs=[
         # ingest_* (per connector)
         *(j for c in connector_jobs for j in c.JOBS),

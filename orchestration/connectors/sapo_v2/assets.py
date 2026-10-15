@@ -301,8 +301,9 @@ def ingest_sapo_v2_product_daily_snapshot_asset(context):
     Reads every page of products.json (no cursor, no early stop) and appends one compact row per
     product to sapo_v2_raw/product_daily_snapshot. That raw table is the only history of prices
     and stock positions and cannot be rebuilt. Coverage against the Sapo catalogue total is
-    reported in metadata and logged as WARN below 98%; the SLA row-trend check (trend_min_ratio
-    0.98) warns when a night captures fewer products than the 7-day median.
+    reported in metadata and ingestion_health, logged as WARN below 98% and checked by the
+    `capture_coverage` asset check (checks.py); the SLA row-trend check (trend_min_ratio 0.98)
+    warns when a night captures fewer products than the 7-day median.
     Writes to ingestion_health via orchestration.ops.ingestion_health.
     """
     asset_key_str = "sapo/ingest_sapo_v2_product_daily_snapshot_asset"

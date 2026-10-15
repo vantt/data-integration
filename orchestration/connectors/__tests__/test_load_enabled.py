@@ -5,12 +5,13 @@ from datetime import timedelta
 
 import pytest
 import yaml
+from dagster import AssetChecksDefinition
 
 from orchestration import connectors
 from orchestration.asset_checks import sla_loader
 
 PACKAGE_EXPORTS = (
-    "ASSETS", "CHECK_ASSET_DEFS", "NIGHTLY_ASSETS", "DIGEST_ASSETS",
+    "ASSETS", "ASSET_CHECKS", "CHECK_ASSET_DEFS", "NIGHTLY_ASSETS", "DIGEST_ASSETS",
     "DIGEST_DISPLAY", "JOB_MAX_RUNTIME", "DBT_SOURCE_KEYS",
 )
 JOBS_EXPORTS = ("JOBS", "SCHEDULES", "SENSORS")
@@ -60,6 +61,7 @@ def test_every_enabled_connector_honours_the_contract():
         assert set(pkg.JOB_MAX_RUNTIME) <= job_names
         assert all(isinstance(v, timedelta) for v in pkg.JOB_MAX_RUNTIME.values())
         assert set(pkg.CHECK_ASSET_DEFS) <= set(sla_loader.list_asset_keys())
+        assert all(isinstance(c, AssetChecksDefinition) for c in pkg.ASSET_CHECKS)
         assert {s.job_name for s in jobs.SCHEDULES} <= job_names
 
 

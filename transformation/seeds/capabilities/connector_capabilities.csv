@@ -8,6 +8,8 @@ sapo_v2,payments,Sapo payments
 sapo_v2,fulfillments,Sapo fulfillments
 sapo_v2,staff,Sapo staff accounts
 sapo_v2,inventory,Sapo inventory transactions
+sapo_v2,price_history,Nightly full capture of Sapo product prices
+sapo_v2,inventory_position_history,Nightly full capture of Sapo stock positions
 sapo_v2,cogs_moving_avg,Moving-average cost on Sapo inventory out-movements
 sapo_v2,purchase_price,Sapo import price list (GIANHAP)
 shopee,marketplace_fees,Shopee service fees from income files

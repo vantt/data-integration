@@ -11,7 +11,7 @@ pack_connectors:   # connectors a pack may read directly (all other packs go thr
   hug: [hug]          # pack hug reads its own ingestion (connector hug: src_hug_*)
 
 buckets:
-  # --- cdm (24)
+  # --- cdm (26)
   std_accounts: cdm
   std_customer_addresses: cdm
   std_customer_contacts: cdm
@@ -20,6 +20,7 @@ buckets:
   std_customers: cdm
   std_fulfillments: cdm
   std_inventory_movements: cdm
+  std_inventory_position_captures: cdm
   std_marketing_spend: cdm
   std_misa_account_ledger: cdm
   std_misa_sales_lines: cdm
@@ -35,6 +36,7 @@ buckets:
   std_team_members: cdm
   std_teams: cdm
   std_variant_prices: cdm
+  std_variant_price_observations: cdm
   std_variants: cdm
   # --- connector:facebook_ads (3)
   stg_fb_ad_sets: connector:facebook_ads
@@ -55,7 +57,7 @@ buckets:
   src_misa_account_ledger: connector:misa
   src_misa_sales_lines: connector:misa
   stg_misa_sales_lines: connector:misa
-  # --- connector:sapo_v2 (28)
+  # --- connector:sapo_v2 (32)
   int_order_snapshots_ranked: connector:sapo_v2
   src_sapo_v2_accounts: connector:sapo_v2
   src_sapo_v2_customer_groups: connector:sapo_v2
@@ -65,6 +67,7 @@ buckets:
   src_sapo_v2_order_returns: connector:sapo_v2
   src_sapo_v2_orders: connector:sapo_v2
   src_sapo_v2_price_lists: connector:sapo_v2
+  src_sapo_v2_product_daily_snapshots: connector:sapo_v2
   src_sapo_v2_products: connector:sapo_v2
   src_sapo_v2_purchase_orders: connector:sapo_v2
   src_sapo_v2_stock_adjustments: connector:sapo_v2
@@ -76,6 +79,7 @@ buckets:
   stg_sapo_v2_customers: connector:sapo_v2
   stg_sapo_v2_fulfillments: connector:sapo_v2
   stg_sapo_v2_inventories: connector:sapo_v2
+  stg_sapo_v2_inventory_position_captures: connector:sapo_v2
   stg_sapo_v2_order_discount_items: connector:sapo_v2
   stg_sapo_v2_order_items: connector:sapo_v2
   stg_sapo_v2_order_returns: connector:sapo_v2
@@ -83,6 +87,8 @@ buckets:
   stg_sapo_v2_payments: connector:sapo_v2
   stg_sapo_v2_products: connector:sapo_v2
   stg_sapo_v2_variant_prices: connector:sapo_v2
+  stg_sapo_v2_variant_price_captures: connector:sapo_v2
+  stg_sapo_v2_variant_price_versions: connector:sapo_v2
   stg_sapo_v2_variants: connector:sapo_v2
   # --- connector:shopee (8)
   src_shopee_order_adjustments: connector:shopee
@@ -93,7 +99,7 @@ buckets:
   stg_shopee_order_revenue: connector:shopee
   stg_shopee_order_revenue_items: connector:shopee
   stg_shopee_order_service_fees: connector:shopee
-  # --- core (66)
+  # --- core (69)
   dim_branch_location: core
   dim_channel_targets: core
   dim_channels: core
@@ -118,6 +124,7 @@ buckets:
   fact_fulfillments: core
   fact_inventory_balance: core
   fact_inventory_movements: core
+  fact_inventory_position_daily: core
   fact_inventory_snapshot: core
   fact_marketing_spend: core
   fact_order_returns: core
@@ -127,6 +134,8 @@ buckets:
   fact_sales: core
   fact_targets: core
   fact_variant_prices_snapshot: core
+  fact_variant_price_changes: core
+  fact_variant_price_daily: core
   feat_customer_orders: core
   feat_customer_profile: core
   feat_taxonomy_selftest: core

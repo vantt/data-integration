@@ -20,13 +20,25 @@ FACT_ORDER_RETURNS = AssetSelection.assets(AssetKey(["marts", "fact_order_return
 
 # Built only by pipeline_batch_nightly_job / pipeline_batch_fullrefresh_job (user decision
 # 15/10/2026): the connector sync jobs that rebuild serving subtract this selection, so the
-# */3-minute realtime run does not recompute the capability report. Keys are those of the dbt
-# model monitoring/mart_capabilities and its two seeds (seeds/capabilities/); a renamed key fails
-# when the job resolves its selection (test: orchestration/connectors/__tests__/test_after_serving.py).
+# */3-minute realtime run does not recompute them. Keys are those of the dbt model
+# monitoring/mart_capabilities and its two seeds (seeds/capabilities/), and of every price and stock
+# position history model: their input (the nightly product capture) changes once a night, and the
+# views read src_sapo_v2_product_daily_snapshots, which only the nightly builds (a view on a table
+# that does not exist yet cannot be created). A renamed key fails when the job resolves its
+# selection (test: orchestration/connectors/__tests__/test_after_serving.py).
 NIGHTLY_ONLY_ASSETS = AssetSelection.assets(
     AssetKey(["mart_capabilities"]),
     AssetKey(["capability_catalog"]),
     AssetKey(["connector_capabilities"]),
+    AssetKey(["staging", "src_sapo_v2_product_daily_snapshots"]),
+    AssetKey(["staging", "stg_sapo_v2_variant_price_captures"]),
+    AssetKey(["staging", "stg_sapo_v2_inventory_position_captures"]),
+    AssetKey(["staging", "stg_sapo_v2_variant_price_versions"]),
+    AssetKey(["staging", "std_variant_price_observations"]),
+    AssetKey(["staging", "std_inventory_position_captures"]),
+    AssetKey(["marts", "fact_variant_price_daily"]),
+    AssetKey(["marts", "fact_variant_price_changes"]),
+    AssetKey(["marts", "fact_inventory_position_daily"]),
 )
 
 

@@ -76,3 +76,14 @@ sources:
           at transaction time; total_mac = cumulative MAC after the transaction.
           Business-grain dedup (e.g., last onhand per document) is deferred to the std layer.
 
+
+      # Bảng 12: Product daily snapshot (nightly full capture, append-only, NOT rebuildable)
+      - name: product_daily_snapshot
+        description: >
+          Nightly full capture of every Sapo product: one row per product per capture run, written
+          by ingest_sapo_v2_product_daily_snapshot_asset under
+          product_daily_snapshot/ingest_method=daily_snapshot/year=<ICT>/month=<ICT>/. captured_at
+          (UTC, run start) and capture_run_id are shared by every row of a run. payload is compact:
+          {id, modified_on, variants: [{id, sku, variant_prices, inventories}]}. The only history of
+          prices and stock positions: never delete or rewrite. Read through source_or_empty(), since
+          a lake without any capture yet (shadow, fresh install, rebuild) has no file to glob.

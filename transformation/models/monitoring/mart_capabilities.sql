@@ -26,6 +26,8 @@
     'fulfillments':      {'model': 'std_fulfillments',              'date': 'created_at'},
     'staff':             {'model': 'std_accounts'},
     'inventory':         {'model': 'std_inventory_movements',       'date': 'issued_date_key'},
+    'price_history':     {'model': 'std_variant_price_observations', 'date': 'observed_at', 'where': "evidence_source = 'daily_capture'"},
+    'inventory_position_history': {'model': 'std_inventory_position_captures', 'date': 'captured_at'},
     'cogs_moving_avg':   {'model': 'std_inventory_movements',       'date': 'issued_date_key', 'where': 'cogs_amount IS NOT NULL'},
     'purchase_price':    {'model': 'std_variant_prices',            'where': "price_list_code = 'GIANHAP'"},
     'marketplace_fees':  {'model': 'stg_shopee_order_service_fees'},

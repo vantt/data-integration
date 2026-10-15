@@ -7,8 +7,11 @@
 -- FACT: INVENTORY SNAPSHOT (Daily)
 -- =============================================================================
 -- Grain: 1 row per (variant_id, location_id, snapshot_date)
--- Materialization: external parquet, incremental append by snapshot_date
--- Retention: daily forever (~2,046 rows/day × 365 = ~750K rows/year)
+-- Materialization: external parquet rebuilt on every build (rolling GC keeps the last 3 files):
+--   no history accumulates here. Stock position history: fact_inventory_position_daily (nightly
+--   full capture); on_hand history: fact_inventory_balance (inventory ledger).
+-- Staleness: int_sapo_inventories reads the latest product payload, refreshed only when Sapo moves
+--   the product's modified_on, so on_hand can be weeks or years old (snapshot_date shows when).
 --
 -- Source: int_sapo_inventories (enriched inventory view from nightly batch)
 -- snapshot_date = date of the nightly Sapo product batch run (3am ICT)

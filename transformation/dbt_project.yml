@@ -339,3 +339,8 @@ vars:
   # ancestors of these marts); true = the classification engine (lbl_customer_type,
   # lbl_customer_type__group_blob).
   taxonomy_engine_customer_type: false
+  # Price and stock position history (core fact_variant_price_daily, fact_variant_price_changes,
+  # fact_inventory_position_daily; macro history_as_of_date): a capture taken before this ICT hour
+  # stands for the previous day. The nightly capture runs at ~03:00 ICT, so it records the end of
+  # the day before; a run after this hour counts for the day it ran.
+  history_day_cutoff_hour: 6

@@ -13,6 +13,7 @@ Each package is plain Python exporting lists and dicts — no base class, no reg
 | Export | Type | Consumed by |
 |---|---|---|
 | `ASSETS` | `list` of asset definitions | `definitions.py` (Definitions assets) |
+| `ASSET_CHECKS` | `list` of asset checks (`@asset_check`), `[]` when none | `definitions.py` (Definitions asset_checks). Checks specific to the connector that the SLA factories cannot express, e.g. sapo_v2 `capture_coverage` (nightly product capture ≥ 98% of the Sapo catalogue total, read from `ingestion_health`). Keep them standalone (not `check_specs` on the asset): `health_checks_asset_job` selects every non-dbt check without its asset, which a check built into an asset cannot do |
 | `CHECK_ASSET_DEFS` | `dict[str, AssetsDefinition \| AssetKey]`, key = SLA key `<prefix>/<function_name>` | `asset_checks/__init__.py` builds freshness / not-empty / trend / cursor checks for every SLA key that has an entry |
 | `NIGHTLY_ASSETS` | `list` of ingest assets | the cross-source `pipeline_batch_nightly_job` and `pipeline_batch_fullrefresh_job` in `definitions.py` |
 | `DIGEST_ASSETS` | `list[tuple[short_name, sla_key, recon_sla_key \| None]]` | `ops/morning_digest.py` `KNOWN_ASSETS` |
@@ -36,7 +37,7 @@ Jobs that span sources (`pipeline_batch_nightly_job`, `pipeline_batch_fullrefres
 
 - Names are the identity of live state: asset keys, asset check keys, job, schedule and sensor names, cron, timezone and default status must not change when code moves. Schedule on/off state in `dagster_home` is keyed by code location, repository and name.
 - Connectors import from the kernel (`orchestration.assets.utils`, `orchestration.ops.*`, `orchestration.job_support`, `orchestration.sensors.file_drop_sensors`), never the reverse except through `load_enabled()`.
-- Connectors do not import packs (`check_boundaries.py`, rule `orch-import`; no allowlist entry). A sync job that rebuilds serving ends with `| after_serving_selection()` from `orchestration.job_support`: the kernel adds the `AFTER_SERVING_ASSETS` of the enabled packs (today the crm pack's `crm_cache_refresh`), or nothing when no enabled pack declares any. The jobs of `sapo_v2` (realtime, incremental), `shopee`, `misa_amis` (two file-drop jobs) and `sheets` do this, and subtract `job_support.NIGHTLY_ONLY_ASSETS` (assets built only by the nightly and full-refresh jobs: today `mart_capabilities` and its two seeds).
+- Connectors do not import packs (`check_boundaries.py`, rule `orch-import`; no allowlist entry). A sync job that rebuilds serving ends with `| after_serving_selection()` from `orchestration.job_support`: the kernel adds the `AFTER_SERVING_ASSETS` of the enabled packs (today the crm pack's `crm_cache_refresh`), or nothing when no enabled pack declares any. The jobs of `sapo_v2` (realtime, incremental), `shopee`, `misa_amis` (two file-drop jobs) and `sheets` do this, and subtract `job_support.NIGHTLY_ONLY_ASSETS` (assets built only by the nightly and full-refresh jobs: today `mart_capabilities` and its two seeds, and the nine price/stock history models: `src_sapo_v2_product_daily_snapshots`, its `stg_`/`std_` views and the three history marts).
 - Paths come from `DLT_DIR` (`orchestration/assets/utils.py`), not from `__file__`, so a package can move without breaking ingestion script imports.
 - No hard-coded `http(s)://` URL, and no domain name in a string literal, in this tree (`scripts/checks/check_boundaries.py`, rule `connector-url`); tenant values live in `orchestration/tenants/<tenant>/config.py` and are read with `orchestration.tenants.setting(name)`, which fails closed when the value is missing (the `sheets` connector's `ingest_sheets_modified_sensor` reads its sheet URLs this way).
 - One SLA file: `config/ingestion_sla.yaml`.
@@ -51,7 +52,7 @@ Declare what the connector provides: a block of rows `<id>,<capability>,<note>` 
 its data is observed.
 
 1. `orchestration/connectors/<id>/assets.py` with the assets; ingestion scripts stay in `ingestion/`.
-2. `__init__.py` exporting the seven names above; `jobs.py` exporting `JOBS`, `SCHEDULES`, `SENSORS` (empty lists are fine). Reuse `make_file_drop_sensor` (`sensors/file_drop_sensors.py`) for Excel drop zones and `job_support.has_active_run` for schedule overlap checks.
+2. `__init__.py` exporting the eight names above; `jobs.py` exporting `JOBS`, `SCHEDULES`, `SENSORS` (empty lists are fine). Reuse `make_file_drop_sensor` (`sensors/file_drop_sensors.py`) for Excel drop zones and `job_support.has_active_run` for schedule overlap checks.
 3. SLA entries in `config/ingestion_sla.yaml` for the keys in `CHECK_ASSET_DEFS`.
 4. Add the id to `config/modules.yaml`, restart the code server.
 5. dbt side: `transformation/models/connectors/<id>/` (see `docs/architecture/modules.md` §2b).

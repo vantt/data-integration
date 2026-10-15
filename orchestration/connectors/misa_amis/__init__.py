@@ -17,6 +17,9 @@ ASSETS = [
     misa_account_ledger_file_drop_asset,
 ]
 
+# Connector-specific asset checks beyond the SLA checks (none)
+ASSET_CHECKS: list = []
+
 # SLA key (ingestion_sla.yaml) -> asset definition the checks attach to
 CHECK_ASSET_DEFS = {
     "misa_amis/misa_sales_file_drop_asset": misa_sales_file_drop_asset,

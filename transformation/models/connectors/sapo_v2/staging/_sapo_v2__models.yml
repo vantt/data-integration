@@ -108,3 +108,62 @@ models:
       - name: product_id
         tests: [not_null]
 
+
+  - name: src_sapo_v2_product_daily_snapshots
+    description: >
+      Nightly full capture of Sapo products, extracted from raw product_daily_snapshot. Grain: 1 row
+      per (capture run, product); every capture is kept. Incremental on _dlt_load_id; empty when the
+      raw table has no file yet (source_or_empty).
+    tests:
+      - dbt_utils.unique_combination_of_columns:
+          arguments:
+            combination_of_columns: [capture_run_id, entity_id]
+    columns:
+      - name: entity_id
+        tests: [not_null]
+      - name: captured_at
+        description: "UTC start of the capture run; one value per run."
+        tests: [not_null]
+      - name: capture_run_id
+        tests: [not_null]
+
+  - name: stg_sapo_v2_variant_price_captures
+    description: "Captured prices. Grain: 1 row per (capture run, variant_id, price_list_id). Zero prices kept."
+    tests:
+      - dbt_utils.unique_combination_of_columns:
+          arguments:
+            combination_of_columns: [capture_run_id, variant_id, price_list_id]
+    columns:
+      - name: variant_id
+        tests: [not_null]
+      - name: price_list_id
+        tests: [not_null]
+      - name: captured_at
+        tests: [not_null]
+
+  - name: stg_sapo_v2_inventory_position_captures
+    description: "Captured stock positions. Grain: 1 row per (capture run, variant_id, location_id)."
+    tests:
+      - dbt_utils.unique_combination_of_columns:
+          arguments:
+            combination_of_columns: [capture_run_id, variant_id, location_id]
+    columns:
+      - name: variant_id
+        tests: [not_null]
+      - name: location_id
+        tests: [not_null]
+      - name: captured_at
+        tests: [not_null]
+
+  - name: stg_sapo_v2_variant_price_versions
+    description: >
+      Prices of every product version loaded into raw product (all ingest methods, not deduplicated).
+      Grain: 1 row per (product version, variant_id, price_list_id); a version loaded several times
+      appears several times. observed_at = version event_timestamp. Backfill evidence for price history.
+    columns:
+      - name: variant_id
+        tests: [not_null]
+      - name: price_list_id
+        tests: [not_null]
+      - name: observed_at
+        tests: [not_null]

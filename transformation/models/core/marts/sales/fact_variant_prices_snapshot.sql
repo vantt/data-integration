@@ -3,9 +3,11 @@
     location="{{ get_rolling_location() }}"
 ) }}
 
--- Materialization: default `external` parquet via get_rolling_location() — each
--- dbt run writes a timestamped parquet file; historical snapshots accumulate
--- naturally because the serving view UNIONs all parquets via glob pattern.
+-- Materialization: default `external` parquet via get_rolling_location(). Each build writes a
+-- new timestamped file holding the CURRENT prices only, and the rolling GC keeps the last 3
+-- files: this table has no history. Price history: fact_variant_price_daily (daily, from the
+-- nightly full capture) and fact_variant_price_changes (price intervals, backfilled from
+-- 28/05/2026).
 
 -- =================================================================================================
 -- FACT: VARIANT PRICES SNAPSHOT (daily)
@@ -13,8 +15,9 @@
 -- Grain: 1 row per (variant_id × price_list_id × snapshot_date).
 -- Only non-zero prices stored — value=0 means "channel not configured for this SKU".
 --
--- Incremental: appends today's snapshot. Never overwrites historical prices.
--- Run daily after Sapo product batch_sync completes.
+-- Rebuilt on every build from the latest product payload in src_sapo_v2_products, which is only
+-- refreshed when Sapo moves the product's modified_on: a price changed without a new modified_on
+-- stays stale here (the nightly capture behind fact_variant_price_daily sees it).
 --
 -- Use cases:
 --   1. Price change detection   — compare today vs yesterday for same (variant_id, price_list_id)

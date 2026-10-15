@@ -8,6 +8,8 @@ payments,core,Thanh toán
 fulfillments,core,Giao hàng
 staff,core,Nhân viên (tài khoản bán hàng)
 inventory,core,Xuất nhập tồn kho
+price_history,core,Lịch sử giá theo bảng giá (ảnh chụp hằng đêm)
+inventory_position_history,core,Lịch sử vị trí tồn theo kho (ảnh chụp hằng đêm)
 cogs_moving_avg,finance,Giá vốn bình quân theo phiếu xuất kho
 purchase_price,finance,Giá nhập (bảng giá nhập)
 marketplace_fees,finance,Phí sàn thương mại điện tử

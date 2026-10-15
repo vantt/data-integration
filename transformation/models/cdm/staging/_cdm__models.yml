@@ -382,3 +382,74 @@ models:
             - {name: year, type: "BIGINT"}
             - {name: month, type: "BIGINT"}
             - {name: source_system, type: "VARCHAR"}
+
+  - name: std_variant_price_observations
+    description: >
+      Every observed price of a (variant, price list). evidence_source = daily_capture (nightly full
+      capture, observed_at = captured_at) or sapo_product_version (product versions in raw,
+      observed_at = version event_timestamp). Grain: 1 row per observation.
+    tests:
+      - std_column_contract:
+          config: {severity: warn}
+          columns:
+            - {name: variant_id, type: "VARCHAR"}
+            - {name: product_id, type: "VARCHAR"}
+            - {name: sku, type: "VARCHAR"}
+            - {name: price_list_id, type: "VARCHAR"}
+            - {name: price_list_name, type: "VARCHAR"}
+            - {name: price_list_code, type: "VARCHAR"}
+            - {name: is_cost_price, type: "BOOLEAN"}
+            - {name: price_value, type: "DECIMAL(18,2)"}
+            - {name: price_incl_tax, type: "DECIMAL(18,2)"}
+            - {name: observed_at, type: "TIMESTAMP WITH TIME ZONE"}
+            - {name: evidence_source, type: "VARCHAR"}
+            - {name: observation_ref, type: "VARCHAR"}
+            - {name: source_system, type: "VARCHAR"}
+            - {name: source_version, type: "VARCHAR"}
+    columns:
+      - name: variant_id
+        tests: [not_null]
+      - name: price_list_id
+        tests: [not_null]
+      - name: observed_at
+        tests: [not_null]
+      - name: evidence_source
+        tests:
+          - not_null
+          - accepted_values:
+              arguments:
+                values: [daily_capture, sapo_product_version]
+
+  - name: std_inventory_position_captures
+    description: >
+      Stock positions reported by the source at each capture. Grain: 1 row per (capture run,
+      variant_id, location_id). Thin pass-through over stg_sapo_v2_inventory_position_captures.
+    tests:
+      - std_column_contract:
+          config: {severity: warn}
+          columns:
+            - {name: variant_id, type: "VARCHAR"}
+            - {name: product_id, type: "VARCHAR"}
+            - {name: sku, type: "VARCHAR"}
+            - {name: location_id, type: "VARCHAR"}
+            - {name: on_hand, type: "DECIMAL(18,4)"}
+            - {name: available, type: "DECIMAL(18,4)"}
+            - {name: committed, type: "DECIMAL(18,4)"}
+            - {name: incoming, type: "DECIMAL(18,4)"}
+            - {name: onway, type: "DECIMAL(18,4)"}
+            - {name: min_value, type: "DECIMAL(18,4)"}
+            - {name: max_value, type: "DECIMAL(18,4)"}
+            - {name: mac, type: "DECIMAL(18,4)"}
+            - {name: bin_location, type: "VARCHAR"}
+            - {name: wait_to_pack, type: "DECIMAL(18,4)"}
+            - {name: captured_at, type: "TIMESTAMP WITH TIME ZONE"}
+            - {name: capture_run_id, type: "VARCHAR"}
+            - {name: source_system, type: "VARCHAR"}
+            - {name: source_version, type: "VARCHAR"}
+    columns:
+      - name: variant_id
+        tests: [not_null]
+      - name: location_id
+        tests: [not_null]
+      - name: captured_at
+        tests: [not_null]
