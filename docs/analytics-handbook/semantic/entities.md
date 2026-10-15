@@ -218,6 +218,8 @@ See [freshness.md](freshness.md#mart-sla) — `dim_channels` SLA row.
 |---|---|---|
 | Order Line Item (`fact_order_items`) | 1:many | `product_key` |
 | Inventory Snapshot (`fact_inventory_snapshot`) | 1:many | `sku` / `variant_id` |
+| Inventory Position Daily (`fact_inventory_position_daily`) | 1:many | `variant_id` |
+| Variant Price History (`fact_variant_price_daily`, `fact_variant_price_changes`) | 1:many | `variant_id` |
 | SKU Economics Monthly (`mart_sku_economics_monthly`) | 1:many | `product_key` |
 
 #### Conflicts
@@ -413,7 +415,7 @@ See [freshness.md](freshness.md#mart-sla) — `fact_marketing_spend` SLA row.
 > **Type:** Entity | **Mart:** `fact_inventory_snapshot` | **Grain:** 1 row = (variant_id, location_id, snapshot_date) | **Status:** `active`
 > **Key:** `variant_id + location_id + snapshot_date` | **Source:** Sapo | **Since:** 2023
 
-**Definition:** Daily end-of-day inventory snapshot from Sapo nightly batch (3am ICT). Incremental parquet, retained indefinitely.
+**Definition:** Inventory per variant and location from the latest Sapo product payload. Rebuilt on every build (rolling, last 3 files): **no history accumulates**. The payload is only refreshed when Sapo moves the product's `modified_on`, so `snapshot_date` is the last product edit and `on_hand` can be weeks or years old. Daily history: [Inventory Position Daily](#inventory-position-daily); `on_hand` ledger since 2021: `fact_inventory_balance`.
 
 **Key Fields:**
 | Field | Type | Description |
@@ -451,6 +453,50 @@ See [freshness.md](freshness.md#mart-sla) — `fact_marketing_spend` SLA row.
 
 #### Freshness
 See [freshness.md](freshness.md#mart-sla) — `fact_inventory_snapshot` SLA row.
+
+---
+
+## Inventory Position Daily
+
+> **Type:** Entity | **Mart:** `fact_inventory_position_daily` | **Grain:** 1 row = (variant_id, location_id, as_of_date) | **Status:** `active`
+> **Key:** `variant_id + location_id + as_of_date` | **Source:** Sapo nightly full capture | **Since:** 15/10/2026
+
+**Definition:** The stock position Sapo reported for each variant and location at the nightly capture (~03:00 ICT), one row per day the capture ran. `as_of_date` = ICT date of `captured_at − 6h` (dbt var `history_day_cutoff_hour`): the 03:01 capture of D+1 records the end of day D; when several captures fall on one day, the latest wins. Rebuilt in full from raw `sapo_v2_raw/product_daily_snapshot` on every build.
+
+**Key Fields:**
+| Field | Type | Description |
+|---|---|---|
+| `variant_id`, `location_id` | varchar | Sapo ids (same type as `fact_inventory_snapshot`) |
+| `as_of_date` | date | ICT day the position stands for |
+| `on_hand`, `available`, `committed`, `incoming`, `onway` | decimal | Quantities reported by Sapo (`available = on_hand − committed`) |
+| `min_value`, `max_value` | decimal | Reorder thresholds set in Sapo |
+| `bin_location`, `wait_to_pack` | varchar, decimal | Shelf location; quantity waiting to be packed |
+| `mac` | decimal | Moving average cost reported by Sapo (source-provided; no stock value column) |
+| `captured_at` | timestamptz | Capture used for the day (UTC) |
+
+**Intent:** Stock trends, out-of-stock days on `available`, reserved and incoming stock over time.
+
+#### Anti-patterns
+- Filling missing days: a night without capture is absent, not zero. As of D, read the latest `as_of_date ≤ D` and show how old it is.
+- Expecting rows before 15/10/2026: use `fact_inventory_balance` for `on_hand` history (since 2021).
+
+#### Freshness
+See [freshness.md](freshness.md#price-and-stock-position-history--nightly-capture).
+
+---
+
+## Variant Price History
+
+> **Type:** Entity | **Marts:** `fact_variant_price_daily`, `fact_variant_price_changes` | **Status:** `active`
+> **Keys:** (`variant_id`, `price_list_id`, `as_of_date`); (`variant_id`, `price_list_id`, `valid_from_at`) | **Source:** Sapo | **Since:** 15/10/2026 (daily), 28/05/2026 (intervals)
+
+**Definition:** Prices per variant and price list over time. `fact_variant_price_daily` holds one row per day a nightly capture ran (same `as_of_date` rule as Inventory Position Daily; zero prices kept with `is_configured = false`). `fact_variant_price_changes` merges consecutive observations with the same price into intervals (SCD2), from the nightly capture plus every product version loaded since 28/05/2026 (earlier starts are inferred from the product's `modified_on`); a pair missing from the latest capture is closed (`is_current = false`).
+
+**Intent:** Price change log, price "as of" a date, cost price list (`GIANHAP`, `is_cost`) over time. Margin calculations belong to the finance pack.
+
+#### Anti-patterns
+- Reading a price as of D with `valid_from_date <= D` only: use `D BETWEEN valid_from_date AND COALESCE(valid_to_date, DATE '9999-12-31')`. An interval with `valid_to_date < valid_from_date` was replaced on its first day and never held at the end of a day.
+- Treating intervals before 28/05/2026 as observed: they are inferred (`evidence_source = 'sapo_product_version'`); changes Sapo made without a new `modified_on` are missing before 15/10/2026.
 
 ---
 

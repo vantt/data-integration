@@ -25,7 +25,9 @@ Each row is self-contained: Depends On shows the upstream asset gate, SLA Breach
 | `fact_fulfillments` | Real-time | ~5 min lag | Per fulfillment | Sapo webhook | `sapo_webhook_consumer` (SLA 12h) | Logistics Operations dashboard, `fulfillment_rate` metric |
 | `fact_marketing_spend` | Daily | 09:00 ICT | Per campaign/day | Manual import (Sheets) | `sheets_marketing_spend_asset` (SLA 48h) | Marketing ROI, CTR, CPM dashboards |
 | `mart_sku_economics_monthly` | Daily | 08:30 ICT | Per (SKU, month) | MISA + Sapo | `fact_order_economics` + `fact_sales` | Product Profitability, SKU margin analysis |
-| `fact_inventory_snapshot` | Daily | 07:00 ICT | Per (SKU, location, date) | Sapo nightly batch (3am ICT) | `sapo_batch_asset` (SLA 28h) | Inventory Health dashboard, OOS rate |
+| `fact_inventory_snapshot` | Daily | 07:00 ICT | Per (SKU, location, date of last product edit) | Latest product payload (refreshed only when Sapo moves `modified_on`: values can be stale) | `sapo_batch_asset` (SLA 28h) | Inventory Health dashboard, OOS rate |
+| `fact_inventory_position_daily` | Daily (nightly only) | 07:00 ICT | Per (variant, location, as_of_date) | Sapo nightly full capture (~03:00 ICT) | `sapo/ingest_sapo_v2_product_daily_snapshot_asset` (SLA 28h) | Stock position history; a missed night is a permanent gap |
+| `fact_variant_price_daily` / `fact_variant_price_changes` | Daily (nightly only) | 07:00 ICT | Per (variant, price list, as_of_date) / per price interval | Sapo nightly full capture + product versions | `sapo/ingest_sapo_v2_product_daily_snapshot_asset` (SLA 28h) | Price history, price change log |
 | `mart_inventory_health` | Daily | 07:30 ICT | Per (SKU, location, date) | Derived | `fact_inventory_snapshot` + `mart_sku_economics_monthly` | Days of supply, dead stock alerts |
 | `fact_targets` | On-demand | Manual trigger | Per target rule | Sheets CSV seed | `sheets_targets_asset` (SLA 48h) | Target Achievement Rate, Variance to Target |
 | `dim_channel_targets` | On-demand | Manual trigger | Per (channel, month, metric) | CSV seed | Manual `dbt seed` | Channel budget overlay in Finance P&L |
@@ -150,7 +152,7 @@ Dashboard shows unexpected numbers
 
 **`sapo_v2_raw/product_daily_snapshot` is the only record of past prices and stock positions** (available, committed, incoming, onway, min/max, `mac` per location). The Sapo API, with the access the connector has, returns current values only, so this history starts with the first capture (October 2026) and cannot be backfilled or rebuilt.
 
-- One capture per night (`pipeline_batch_nightly_job`, ~03:00 ICT); a capture taken before 06:00 ICT counts for the previous day.
+- One capture per night (`pipeline_batch_nightly_job`, ~03:00 ICT); a capture taken before 06:00 ICT counts for the previous day (dbt var `history_day_cutoff_hour`). The derived tables `fact_variant_price_daily`, `fact_variant_price_changes` and `fact_inventory_position_daily` are rebuilt in full from this folder by the same nightly run.
 - A night that fails and is not re-run before 06:00 ICT is a permanent gap for prices and stock positions. `on_hand` history stays available from the inventory ledger (`fact_inventory_balance`, since 2021).
 - **Action: NEVER delete or full-refresh this folder.** It is append-only and kept forever.
 

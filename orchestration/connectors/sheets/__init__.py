@@ -23,6 +23,9 @@ ASSETS = [
     budget_suggestion_writeback_asset,
 ]
 
+# Connector-specific asset checks beyond the SLA checks (none)
+ASSET_CHECKS: list = []
+
 # SLA key (ingestion_sla.yaml) -> asset definition the checks attach to
 CHECK_ASSET_DEFS = {
     "sheets/sheets_targets_asset": sheets_targets_asset,

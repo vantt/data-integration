@@ -11,6 +11,9 @@ ASSETS = [shopee_income_file_drop_asset]
 # shopee_income_file_drop_asset is a @multi_asset and @asset_check(asset=) requires a
 # single key, so order_revenue is the anchor; the check logic still queries the health DB
 # through the "shopee/shopee_income_file_drop_asset" string key.
+# Connector-specific asset checks beyond the SLA checks (none)
+ASSET_CHECKS: list = []
+
 CHECK_ASSET_DEFS = {
     "shopee/shopee_income_file_drop_asset": AssetKey(["shopee", "order_revenue"]),
 }

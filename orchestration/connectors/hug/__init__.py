@@ -5,6 +5,9 @@ from .assets import ingest_hug_webhook_consumer_asset
 
 ASSETS = [ingest_hug_webhook_consumer_asset]
 
+# Connector-specific asset checks beyond the SLA checks (none)
+ASSET_CHECKS: list = []
+
 # SLA key (ingestion_sla.yaml) -> asset definition the checks attach to
 CHECK_ASSET_DEFS = {
     "hug/ingest_hug_webhook_consumer_asset": ingest_hug_webhook_consumer_asset,

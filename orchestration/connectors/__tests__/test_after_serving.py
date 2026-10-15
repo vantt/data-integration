@@ -101,12 +101,19 @@ def test_crm_disabled_definitions_load_without_crm_cache_refresh(tmp_path):
     assert not [j for j, sel in loaded["jobs"].items() if CRM_REFRESH in sel]
 
 
-NIGHTLY_ONLY = {"mart_capabilities", "capability_catalog", "connector_capabilities"}
+NIGHTLY_ONLY = {
+    "mart_capabilities", "capability_catalog", "connector_capabilities",
+    "staging/src_sapo_v2_product_daily_snapshots", "staging/stg_sapo_v2_variant_price_captures",
+    "staging/stg_sapo_v2_inventory_position_captures", "staging/stg_sapo_v2_variant_price_versions",
+    "staging/std_variant_price_observations", "staging/std_inventory_position_captures",
+    "marts/fact_variant_price_daily",
+    "marts/fact_variant_price_changes", "marts/fact_inventory_position_daily",
+}
 
 
 @needs_manifest
 def test_capability_report_runs_only_in_nightly_jobs(tmp_path):
-    """mart_capabilities and its seeds: nightly/full refresh only, never the connector sync jobs."""
+    """Capability report and price/stock history: nightly/full refresh only, never the connector sync jobs."""
     loaded = _load_definitions(tmp_path, yaml.safe_load(MODULES.read_text())["packs"])
     assert NIGHTLY_ONLY <= set(loaded["assets"])          # keys exist: a rename fails here
     for job in CONNECTOR_SYNC_JOBS:

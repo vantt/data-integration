@@ -248,12 +248,12 @@ flowchart TB
 
 ⚠ = chỉ được qua một mục trong `scripts/checks/boundary_allowlist.yaml` kèm lý do và hướng thoát; ma trận không bao giờ cho phép core → tenants. **Core → pack** hợp lệ khi và chỉ khi đi qua macro `pack_ref('<pack>', '<model>')` (mục 8): `check_boundaries.py` (luật `dbt-ref`) chấp nhận cạnh core → `pack:<p>` tới model `m` chỉ khi `raw_code` của model lõi gọi đúng dạng `pack_ref('<p>', '<m>'` (vị trí, nháy đơn hoặc kép), không có `ref('<m>')` thẳng, và `m` có hợp đồng của pack `<p>` trong `pack_contracts()`. Cạnh core → pack bằng `ref()` thẳng là vi phạm; từ 14/10/2026 allowlist không còn mục nào loại này. `check_boundaries.py` fail khi có cạnh mới ngoài ma trận, và cả khi một mục allowlist không còn xảy ra (để allowlist không phình). Allowlist được **sinh từ manifest** (`depends_on` của model đang bật; model tắt vẫn phải có bucket và nằm đúng thư mục, nhưng dbt không phân giải ref của nó nên không kiểm cạnh) và từ import Python của `orchestration/connectors/**`, `orchestration/packs/**` (`--write-allowlist`), không viết tay. Đọc source dbt chỉ dành cho connector và tenant (luật `dbt-source`). Cột seeds: seed dùng chung (`seeds/taxonomy/`, ...) ai cũng đọc; seed tenant (`seeds/tenants/<t>/`) chỉ pack, `monitoring` và chính tenant `<t>` được đọc, lõi chỉ qua `tenant_ref('<seed>')` (luật `dbt-seed`, mục 10).
 
-Số model theo bucket (`model_buckets.yaml`, 201 model gồm 14 đang tắt):
+Số model theo bucket (`model_buckets.yaml`, 210 model gồm 14 đang tắt):
 
 | Bucket | Model | Bucket | Model |
 |---|---|---|---|
-| connector:sapo_v2 | 28 | cdm | 24 |
-| connector:shopee | 8 | core | 66 (gồm 4 model selftest của bộ máy phân loại, tắt) |
+| connector:sapo_v2 | 32 | cdm | 26 |
+| connector:shopee | 8 | core | 69 (gồm 4 model selftest của bộ máy phân loại, tắt) |
 | connector:misa | 3 | pack:finance | 22 |
 | connector:gsheet | 4 | pack:crm | 14 |
 | connector:hug | 2 | pack:hug | 5 |
@@ -312,7 +312,7 @@ flowchart TB
 |---|---|
 | `SYNC_TAGS` (`job_support.py`) và `duckdb_lock` (khoá ghi DuckDB) | Mọi job ghi warehouse |
 | `has_active_run`, `long_dbt_rw_holder` (`job_support.py`) | Schedule của connector (bỏ tick khi run trước còn chạy hoặc nightly đang giữ `dbt_rw`) |
-| `NIGHTLY_ONLY_ASSETS` (`job_support.py`): asset chỉ chạy trong job nightly/full refresh (hôm nay `mart_capabilities` và hai seed khả năng) | 6 job đồng bộ của connector trừ selection này (mục 11b) |
+| `NIGHTLY_ONLY_ASSETS` (`job_support.py`): asset chỉ chạy trong job nightly/full refresh (hôm nay `mart_capabilities` và hai seed khả năng; chín model lịch sử giá/tồn: `src_sapo_v2_product_daily_snapshots`, các view `stg_`/`std_` của nó và ba bảng lịch sử) | 6 job đồng bộ của connector trừ selection này (mục 11b) |
 | `after_serving_selection()` (`job_support.py`): hợp `AFTER_SERVING_ASSETS` của các pack đang bật (đọc `modules.yaml` qua `orchestration.packs.load_enabled()`, import pack trong thân hàm để không vòng import) | Job đồng bộ của connector có `build_serving_db` (6 job của `sapo_v2`, `shopee`, `misa_amis`, `sheets`): đuôi sau serving, hôm nay là `crm_cache_refresh` của pack `crm`; rỗng khi không pack nào khai báo |
 | `make_file_drop_sensor(...)` (`sensors/file_drop_sensors.py`) | Connector shopee, misa_amis (sensor theo dõi thư mục thả file .xlsx) |
 | `load_dlt_configuration`, `DLT_DIR` (`assets/utils.py`) | Mọi `assets.py` của connector: đường dẫn script ingestion lấy từ `DLT_DIR`, không tính theo `__file__` nên package dời được |
@@ -353,7 +353,7 @@ Mỗi connector là package `orchestration/connectors/<id>/`; `orchestration/con
 flowchart LR
     subgraph PKG["orchestration/connectors/&lt;id&gt;/"]
         A["assets.py<br/>các asset ingest"]
-        M["__init__.py<br/>ASSETS, CHECK_ASSET_DEFS, NIGHTLY_ASSETS,<br/>DIGEST_ASSETS, DIGEST_DISPLAY,<br/>JOB_MAX_RUNTIME, DBT_SOURCE_KEYS"]
+        M["__init__.py<br/>ASSETS, ASSET_CHECKS, CHECK_ASSET_DEFS, NIGHTLY_ASSETS,<br/>DIGEST_ASSETS, DIGEST_DISPLAY,<br/>JOB_MAX_RUNTIME, DBT_SOURCE_KEYS"]
         J["jobs.py<br/>JOBS, SCHEDULES, SENSORS"]
     end
     subgraph ING["ingestion/"]
@@ -379,6 +379,7 @@ Job đồng bộ của connector có `build_serving_db` gắn đuôi `| after_se
 | Export | Kiểu | Kernel dùng ở đâu |
 |---|---|---|
 | `ASSETS` | list asset | `definitions.py` |
+| `ASSET_CHECKS` | list `@asset_check` riêng của connector (`[]` nếu không có) | `definitions.py`. Check mà factory SLA không diễn đạt được, vd. sapo_v2 `capture_coverage`. Viết check đứng riêng, không dùng `check_specs` trong asset: `health_checks_asset_job` chọn mọi check không phải dbt mà không chọn asset, check gắn trong asset làm job đó không phân giải được |
 | `CHECK_ASSET_DEFS` | `dict[sla_key, asset \| AssetKey]` | `asset_checks/__init__.py` (freshness, not-empty, trend, cursor) |
 | `NIGHTLY_ASSETS` | list asset ingest | job nightly và full refresh |
 | `DIGEST_ASSETS`, `DIGEST_DISPLAY` | `list[(short, sla_key, recon_key\|None)]`, `dict[str, tuple[str, str, str]]` | `ops/morning_digest.py` |
@@ -430,7 +431,7 @@ flowchart LR
 
 - Mỗi sản phẩm một dòng: `entity_id`, `captured_at` (UTC lúc bắt đầu run, một giá trị cho cả run), `capture_run_id`, `modified_on`, `payload_hash`, `payload` gọn (`id`, `modified_on`, `variants[].{id, sku, variant_prices, inventories}`), `year`/`month` theo giờ ICT. Sản phẩm trùng giữa hai trang chỉ giữ một, lấy `modified_on` lớn nhất.
 - Tất cả hoặc không có gì: cả danh mục được đọc vào bộ nhớ trước khi giao cho dlt, nên lỗi ở bất kỳ trang nào làm run fail mà không ghi dòng nào. Asset thử lại 2 lần (cách 120 giây) trong cùng run.
-- Theo dõi: metadata asset và `ingestion_health` ghi số sản phẩm, số trang, tổng Sapo và `coverage_ratio`; dưới 0,98 thì log `WARN`. Check theo SLA: freshness 28 giờ và `row_count_within_trend` với `trend_min_ratio: 0.98` (WARN khi số sản phẩm một đêm thấp hơn 98% trung vị 7 ngày). Digest có dòng "Sapo ảnh chụp giá/tồn".
+- Theo dõi: metadata asset và `ingestion_health` ghi số sản phẩm, số trang, tổng Sapo và `coverage_ratio`; dưới 0,98 thì log `WARN`. Check riêng của connector `capture_coverage` (`orchestration/connectors/sapo_v2/checks.py`, export `ASSET_CHECKS`): WARN khi lần chụp thành công gần nhất trong `ingestion_health` có `coverage_ratio < 0,98` so với tổng Sapo. Check theo SLA: freshness 28 giờ và `row_count_within_trend` với `trend_min_ratio: 0.98` (WARN khi số sản phẩm một đêm thấp hơn 98% trung vị 7 ngày). Digest có dòng "Sapo ảnh chụp giá/tồn".
 - Đây là lịch sử **không dựng lại được**: với quyền hiện có, API Sapo không trả lịch sử giá hay vị trí tồn, nên một đêm bị lỡ (và không chạy lại trước 06:00) là mất ngày đó. Runner chỉ append, không có `--full-refresh` hay `--reset-cursor`; không xoá thư mục này khi dọn raw hay khi rollback. Thư mục nằm trong `sapo_v2_raw`, phần được đưa lên off-site hằng ngày.
 
 Code orchestration của connector sapo_v2 không chứa giá trị riêng của Fine Japan (luật `connector-url`). Domain Sapo, `login_url` và worker URL vẫn ở `ingestion/.dlt/config.toml` (user quyết định 14/10/2026), ghi nhận là cấu hình Fine Japan ở [orchestration/tenants/fine_japan/README.md](../../orchestration/tenants/fine_japan/README.md).
@@ -480,10 +481,10 @@ flowchart TB
     CDM --> FACTS
     subgraph CORE["models/core/"]
         DIMS["dims/<br/>dim_customers, dim_customers_base, dim_customer_*,<br/>dim_products, dim_product_types, dim_channels,<br/>dim_staff, dim_teams, dim_date, dim_time,<br/>dim_geography, dim_branch_location, dim_order_status,<br/>dim_payment_methods, dim_promotions, dim_sku_alias,<br/>dim_price_lists, dim_channel_targets"]
-        FACTS["facts/<br/>fact_orders, fact_sales, fact_order_returns,<br/>fact_order_transitions, fact_fulfillments, fact_payments,<br/>fact_targets, fact_marketing_spend, fact_variant_prices_snapshot"]
+        FACTS["facts/<br/>fact_orders, fact_sales, fact_order_returns,<br/>fact_order_transitions, fact_fulfillments, fact_payments,<br/>fact_targets, fact_marketing_spend, fact_variant_prices_snapshot,<br/>fact_variant_price_daily, fact_variant_price_changes (lịch sử giá)"]
         CUST["customer/<br/>int_customer_* (4 incremental), mart_customer_tier,<br/>mart_cohort_retention, mart_retention_waterfall_monthly,<br/>mart_customer_status_snapshot_monthly"]
         PROD["product/<br/>int_sku_sales_monthly (doanh số SKU-tháng),<br/>mart_product_health, mart_product_action_queue,<br/>mart_data_quality, ..."]
-        INV["inventory/<br/>int_sapo_inventories, int_return_sku_lines,<br/>fact_inventory_balance/movements/snapshot, mart_inventory_health"]
+        INV["inventory/<br/>int_sapo_inventories, int_return_sku_lines,<br/>fact_inventory_balance/movements/snapshot, mart_inventory_health,<br/>fact_inventory_position_daily (lịch sử vị trí tồn)"]
     end
     DIMS --> FACTS --> CUST & PROD
     INV --> FACTS
@@ -495,7 +496,8 @@ flowchart TB
 
 - **Lõi giữ doanh thu**; giá vốn, chi phí và lợi nhuận ở pack `finance` (mục 8). Chỉ có lõi thì xem doanh thu, bật finance thì xem thêm lợi nhuận.
 - **Doanh số SKU theo tháng ở lõi: `int_sku_sales_monthly`** (`core/marts/intermediate/`, `table` trong warehouse, không có parquet rolling, không lên serving). Grain `(product_key, snapshot_month)`, 24 tháng đã đóng; cột doanh số, tốc độ bán, trả hàng, kênh đứng đầu, `is_slow_mover`, `revenue_share_pct`. Đây là nửa doanh thu của `mart_sku_economics_monthly` cũ: mart finance đọc lại mọi cột này nguyên giá trị (cùng tập dòng) và chỉ thêm giá vốn/biên, nên số thực không lệch do tính lại. Người đọc ở lõi: `int_product_velocity_trend`, `mart_inventory_health`, `mart_product_action_queue` (chỉ doanh số), `mart_product_health` (doanh số ở đây, biên qua `pack_ref`).
-- **Ngoại lệ có lối ra (user chốt 14/10/2026):** `fact_variant_prices_snapshot.implied_gross_margin_pct`, `is_below_cost` là phép tính biên trên giá nhập Sapo (`GIANHAP`) nhưng vẫn nằm ở lõi. Dời sang finance là đổi bảng public tích luỹ ảnh chụp hằng ngày (serving đọc gộp file theo `union_by_name`: ngày cũ còn giá trị, ngày mới NULL), trong khi hai cột không đọc pack nào nên không cản lõi trần. Lối ra: dời khi plan report định nghĩa chỉ tiêu biên theo bảng giá trong finance (gate S, deploy riêng).
+- **Ngoại lệ có lối ra (user chốt 14/10/2026):** `fact_variant_prices_snapshot.implied_gross_margin_pct`, `is_below_cost` là phép tính biên trên giá nhập Sapo (`GIANHAP`) nhưng vẫn nằm ở lõi. Dời sang finance là đổi cột của một bảng public đang được dùng (bảng chỉ giữ giá hiện tại, 3 file rolling, không tích luỹ lịch sử; lịch sử giá ở `fact_variant_price_daily` và `fact_variant_price_changes`, không có cột biên), trong khi hai cột không đọc pack nào nên không cản lõi trần. Lối ra: dời khi plan report định nghĩa chỉ tiêu biên theo bảng giá trong finance (gate S, deploy riêng).
+- **Lịch sử giá và vị trí tồn (từ 15/10/2026):** `fact_variant_price_daily` (variant × bảng giá × `as_of_date`), `fact_variant_price_changes` (khoảng hiệu lực SCD2, backfill từ phiên bản sản phẩm trong raw, chắc chắn từ 28/05/2026) và `fact_inventory_position_daily` (variant × kho × `as_of_date`, có `bin_location`, `wait_to_pack`). Nguồn là ảnh chụp hằng đêm (mục 5.2) qua `cdm/std_variant_price_observations`, `std_inventory_position_captures`. Cả ba **dựng lại toàn bộ từ raw** mỗi lần build (rolling, không incremental `full_refresh=false`), nên không có bảng phái sinh nào cần backup riêng. `as_of_date` = ngày ICT của `captured_at − history_day_cutoff_hour` (biến dbt, mặc định 6; macro `history_as_of_date`). Cả chín model mới (kể cả view) chỉ build trong nightly/full refresh (`NIGHTLY_ONLY_ASSETS`): đầu vào chỉ đổi mỗi đêm, và view đọc bảng `src_` mà chỉ nightly tạo, nên job */3 không được tạo view trước khi bảng có. Tập `unique_id` dbt của job realtime, incremental, hourly vì vậy không đổi. Chỉ có giá trị do nguồn cung cấp (`GIANHAP`, `mac`); không có cột biên hay giá trị tồn. Cách đọc "as of": [domains/product.md](../analytics-handbook/domains/product.md).
 - Core chỉ đọc `cdm/`, `core/` và seed dùng chung (`seeds/taxonomy`). Ba seed của tenant mà core đọc (`seed_channel_targets`, `seed_sku_alias_manual`, `seed_sku_regimen_config`) đi qua `tenant_ref`: không có tenant thì lõi đọc bản mặc định rỗng đúng cột (mục 10). Các luật phân loại còn viết trong SQL của core được kiểm kê ở `transformation/docs/TAXONOMY.md`.
 - Mọi tên model ở đây là **public** (76 serving view, Rill, CRM, detailView): không đổi tên khi refactor module.
 - **Cột lõi đến từ pack** (đọc qua `pack_ref`, hợp đồng ở mục 8.1). Khi pack bật, SQL compile ra giống hệt `ref()` cũ (Fine Japan không đổi số). Khi pack tắt:
@@ -794,7 +796,7 @@ flowchart LR
 | `observed_rows`, `last_observed_date`, `is_observed` | Probe có dòng (probe chỉ đọc connector/cdm, không đọc pack) |
 | `status` | `OK` (cần, khai báo, có dữ liệu); `DECLARED_NO_DATA` (cần, khai báo, chưa có dòng); `PACK_ON_NO_SOURCE` (cần, không connector đang bật nào khai báo, kể cả khi còn dữ liệu cũ); `DATA_NOT_DECLARED` (không cần, không khai báo, nhưng có dòng); `NOT_NEEDED` (còn lại) |
 
-Đo trên shadow (dữ liệu Fine Japan, 15/10/2026): mọi pack và connector bật thì 19/19 khả năng `OK`; tắt connector `misa_amis` (`enabled_connectors: [sapo_v2, shopee, sheets, hug]`) thì `gl`, `cogs_accounting` ra `PACK_ON_NO_SOURCE` ("bật finance nhưng chưa có nguồn"); lõi trần thì 7 khả năng chỉ pack cần ra `NOT_NEEDED`, 12 khả năng lõi `OK`. Model chạy 0,4 s. **Chỉ chạy trong `pipeline_batch_nightly_job` và `pipeline_batch_fullrefresh_job`** (user chốt 15/10/2026): 6 job đồng bộ của connector có `build_serving_db` (`pipeline_sapo_v2_realtime_job`, `…_incremental_job`, `ingest_filedrop_shopee_job`, `ingest_filedrop_misa_job`, `ingest_filedrop_misa_account_ledger_job`, `ingest_sheets_sync_job`) trừ selection `job_support.NIGHTLY_ONLY_ASSETS` (asset key `mart_capabilities`, `capability_catalog`, `connector_capabilities`), nên báo cáo khả năng cập nhật mỗi đêm, không theo nhịp */3 phút. Asset key, check và job nightly không đổi; test `orchestration/connectors/__tests__/test_after_serving.py` kiểm cả hai phía và kiểm key còn tồn tại.
+Đo trên shadow (dữ liệu Fine Japan, 15/10/2026, trước khi thêm hai khả năng lịch sử `price_history`, `inventory_position_history`): mọi pack và connector bật thì 19/19 khả năng `OK`; tắt connector `misa_amis` (`enabled_connectors: [sapo_v2, shopee, sheets, hug]`) thì `gl`, `cogs_accounting` ra `PACK_ON_NO_SOURCE` ("bật finance nhưng chưa có nguồn"); lõi trần thì 7 khả năng chỉ pack cần ra `NOT_NEEDED`, 12 khả năng lõi `OK`. Model chạy 0,4 s. **Chỉ chạy trong `pipeline_batch_nightly_job` và `pipeline_batch_fullrefresh_job`** (user chốt 15/10/2026): 6 job đồng bộ của connector có `build_serving_db` (`pipeline_sapo_v2_realtime_job`, `…_incremental_job`, `ingest_filedrop_shopee_job`, `ingest_filedrop_misa_job`, `ingest_filedrop_misa_account_ledger_job`, `ingest_sheets_sync_job`) trừ selection `job_support.NIGHTLY_ONLY_ASSETS` (asset key `mart_capabilities`, `capability_catalog`, `connector_capabilities`, cùng chín model lịch sử giá/tồn ở mục 7), nên báo cáo khả năng cập nhật mỗi đêm, không theo nhịp */3 phút. Asset key, check và job nightly không đổi; test `orchestration/connectors/__tests__/test_after_serving.py` kiểm cả hai phía và kiểm key còn tồn tại.
 
 ## 12. Ranh giới Python và container ✅
 

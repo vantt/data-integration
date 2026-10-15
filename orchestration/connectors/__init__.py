@@ -3,7 +3,7 @@
 `orchestration/config/modules.yaml` lists the enabled ids. A package exports plain
 lists/dicts (see connectors/README.md for the contract):
 
-  <id>/__init__.py   ASSETS, CHECK_ASSET_DEFS, NIGHTLY_ASSETS, DIGEST_ASSETS,
+  <id>/__init__.py   ASSETS, ASSET_CHECKS, CHECK_ASSET_DEFS, NIGHTLY_ASSETS, DIGEST_ASSETS,
                      DIGEST_DISPLAY, JOB_MAX_RUNTIME, DBT_SOURCE_KEYS
   <id>/jobs.py       JOBS, SCHEDULES, SENSORS
 

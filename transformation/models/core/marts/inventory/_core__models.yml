@@ -101,3 +101,68 @@ models:
       - name: source_version
         description: "Source API version ('v2')."
 
+
+  - name: fact_inventory_position_daily
+    description: >
+      Daily stock position per variant and location, as Sapo reported it at the nightly full capture
+      (sapo_v2_raw/product_daily_snapshot, since 15/10/2026): on_hand, available, committed,
+      incoming, onway, min/max, bin_location, wait_to_pack, mac (all source-provided).
+      Grain: 1 row per (variant_id × location_id × as_of_date). as_of_date = ICT day the capture
+      stands for (var history_day_cutoff_hour, default 6); the latest capture of a day wins. A missed
+      night is a missing day. on_hand before the first capture: fact_inventory_balance. No stock value
+      column. Rebuilt in full from raw on every build.
+    tests:
+      - dbt_utils.unique_combination_of_columns:
+          arguments:
+            combination_of_columns: [variant_id, location_id, as_of_date]
+    columns:
+      - name: variant_id
+        tests: [not_null]
+      - name: location_id
+        tests: [not_null]
+      - name: as_of_date
+        description: "ICT day the position stands for (end of day when captured by the nightly)."
+        tests: [not_null]
+      - name: location_name
+        description: "From dim_branch_location; 'Unknown' when missing."
+      - name: location_code
+        description: "From dim_branch_location; 'UNK' when missing."
+      - name: on_hand
+        description: "Physical stock reported by Sapo."
+      - name: available
+        description: "Sellable stock (on_hand − committed)."
+      - name: committed
+        description: "Stock reserved by open orders."
+      - name: incoming
+        description: "Stock on incoming purchase orders."
+      - name: onway
+        description: "Stock in transfer between locations."
+      - name: min_value
+        description: "Reorder minimum set in Sapo for this location."
+      - name: max_value
+        description: "Reorder maximum set in Sapo for this location."
+      - name: mac
+        description: "Moving average cost reported by Sapo at capture time."
+      - name: bin_location
+        description: "Bin (shelf) location set in Sapo."
+      - name: wait_to_pack
+        description: "Quantity waiting to be packed."
+      - name: captured_at
+        description: "UTC time of the capture used for this day."
+        tests: [not_null]
+
+unit_tests:
+  - name: inventory_position_daily_keeps_the_latest_capture_of_each_day
+    description: "A 10:00 ICT capture and the 03:01 capture of the next day give one row for the day, with the 03:01 values and the location name."
+    model: fact_inventory_position_daily
+    given:
+      - input: ref('std_inventory_position_captures')
+        rows:
+          - {variant_id: '1', product_id: '9', sku: S1, location_id: '100', on_hand: 5, available: 4, committed: 1, captured_at: '2026-10-16 03:00:00+00', capture_run_id: r1}
+          - {variant_id: '1', product_id: '9', sku: S1, location_id: '100', on_hand: 3, available: 3, committed: 0, captured_at: '2026-10-16 20:01:00+00', capture_run_id: r2}
+      - input: ref('dim_branch_location')
+        rows:
+          - {branch_location_id: 100, branch_location_name: Main store, branch_location_code: MAIN}
+    expect:
+      rows:
+        - {variant_id: '1', location_id: '100', as_of_date: '2026-10-16', on_hand: 3, available: 3, location_name: Main store, location_code: MAIN}

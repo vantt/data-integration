@@ -207,7 +207,7 @@ Single source of truth for SKU-level economics. Replaces ad-hoc joins of
 
 > **Description:** Stock levels and efficiency — daily snapshot from Sapo nightly batch.
 > **dbt Sources:**
-> - [`fact_inventory_snapshot`](../../../transformation/models/core/marts/sales/fact_inventory_snapshot.sql) — grain: (variant_id, location_id, snapshot_date), incremental parquet, retention: forever
+> - [`fact_inventory_snapshot`](../../../transformation/models/core/marts/sales/fact_inventory_snapshot.sql) — grain: (variant_id, location_id, snapshot_date); latest product payload only, rebuilt each build (no history; values can be stale, see [Price and Stock Position History](#context-price-and-stock-position-history))
 > - [`mart_inventory_health`](../../../transformation/models/core/marts/sales/mart_inventory_health.sql) — derived health flags + days_of_supply + capital-at-risk signals
 > - Velocity sourced from [`mart_sku_economics_monthly`](../../../transformation/models/packs/finance/marts/sales/mart_sku_economics_monthly.sql)
 
@@ -335,6 +335,34 @@ Single source of truth for SKU-level economics. Replaces ad-hoc joins of
 
 - **Business Definition:** Units_Sold / (Start_Stock + Received) for a period.
 - **Blocker:** No intra-period stock movement tracking (only point-in-time snapshots available).
+
+## Context: Price and Stock Position History
+
+> **Description:** What a price or a stock position was on a past day.
+> **dbt Sources:**
+> - [`fact_variant_price_daily`](../../../transformation/models/core/marts/sales/fact_variant_price_daily.sql) — (variant_id, price_list_id, as_of_date), from the nightly full capture, since 15/10/2026
+> - [`fact_variant_price_changes`](../../../transformation/models/core/marts/sales/fact_variant_price_changes.sql) — price intervals (SCD2), backfilled from 28/05/2026
+> - [`fact_inventory_position_daily`](../../../transformation/models/core/marts/inventory/fact_inventory_position_daily.sql) — (variant_id, location_id, as_of_date), since 15/10/2026
+> - [`fact_inventory_balance`](../../../transformation/models/core/marts/inventory/fact_inventory_balance.sql) — `on_hand` ledger, since 20/05/2021
+
+### Reading "as of" a day
+
+- **`as_of_date`** is the ICT day a capture stands for: ICT date of `captured_at − 6h` (dbt var `history_day_cutoff_hour`). The ~03:00 nightly capture of D+1 records the **end of day D**; a manual capture at 10:00 on D records D and is replaced by the next nightly. Several captures for one day: the latest wins.
+- **Exact day:** `WHERE as_of_date = D`. A night without capture has no row (never filled in).
+- **Latest known on or before D:** take the greatest `as_of_date ≤ D` per key and show `D − as_of_date` as the age of the value.
+- **Price intervals:** `WHERE D BETWEEN valid_from_date AND COALESCE(valid_to_date, DATE '9999-12-31')`. `valid_to_date < valid_from_date` marks a price replaced on the same day (it never held at the end of a day). `is_current` is false for a variant or price list no longer in the latest capture.
+- **`on_hand` before 15/10/2026:** `fact_inventory_balance` (`WHERE D BETWEEN valid_from_date AND valid_to_date`).
+
+### Backfill limits
+
+| Data | Available from | Limit |
+|---|---|---|
+| `on_hand` per variant × location | 20/05/2021 | Ledger; ~4.4% of pairs have unexplained jumps (Sapo edits without a ledger entry) |
+| Price per price list (intervals) | 28/05/2026 (first full product load) | Later product versions only when Sapo moved `modified_on` (3 of 575 version pairs changed price without it); starts before 28/05 are inferred from `modified_on` (`evidence_source = 'sapo_product_version'`). Complete from 15/10/2026 (`daily_capture`) |
+| Daily price rows | 15/10/2026 | One row per captured night |
+| `available`, `committed`, `incoming`, `onway`, `min/max`, `bin_location`, `wait_to_pack`, `mac` per location | 15/10/2026 | Not recoverable before the first capture |
+
+Margin on price lists (price vs `GIANHAP`, below-cost flags) is a finance-pack calculation on these core tables, not a column here.
 
 ## Context: Product Health Classification
 

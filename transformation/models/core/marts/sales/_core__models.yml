@@ -71,8 +71,10 @@ models:
   - name: fact_inventory_snapshot
     description: >
       Daily inventory snapshot. Grain: 1 row per (variant_id, location_id, snapshot_date).
-      Incremental external parquet — appends each day, never deletes (retention: forever).
-      snapshot_date = date of the nightly Sapo product batch run (3am ICT).
+      Rebuilt on every build (rolling, last 3 files): no history accumulates; see
+      fact_inventory_position_daily (positions per day from the nightly capture) and
+      fact_inventory_balance (on_hand ledger). Values come from the latest product payload, refreshed
+      only when Sapo moves modified_on, so snapshot_date can be weeks or years old.
       3 physical locations only: 452566 (Trương Định), 494912 (Hậu Giang), 624127 (MM Market An Phú).
       mac-derived stock values are estimates only — not accounting-grade.
     tests:
@@ -458,7 +460,9 @@ models:
       Daily snapshot of variant prices per price list.
       Grain: 1 row per (variant_id × price_list_id × snapshot_date).
       Only non-zero prices stored (value=0 means channel not configured for this SKU).
-      Incremental external parquet — appends today's snapshot, never overwrites historical prices.
+      Rebuilt on every build with the current prices only (rolling, last 3 files): no history; see
+      fact_variant_price_daily and fact_variant_price_changes. Prices come from the latest product
+      payload, refreshed only when Sapo moves modified_on, so they can be stale.
       snapshot_date = dbt run date (CURRENT_DATE), not Sapo product modified_on.
       gianhap_cost denormalized per row for inline margin calcs without self-join.
       17 price lists × ~682 variants × 365 days ≈ 4.2M rows/year.
@@ -595,3 +599,148 @@ models:
         description: "stock_value_at_mac when is_slow_mover, else 0"
       - name: dead_stock_value_at_risk
         description: "stock_value_at_mac when is_dead_stock, else 0"
+
+  - name: fact_variant_price_daily
+    description: >
+      Daily price history per variant and price list, from the nightly full capture of Sapo
+      (sapo_v2_raw/product_daily_snapshot, since 15/10/2026). Grain: 1 row per
+      (variant_id × price_list_id × as_of_date). as_of_date = ICT day the capture stands for
+      (var history_day_cutoff_hour, default 6: the 03:01 capture of D+1 records the end of day D);
+      the latest capture of a day wins. A missed night is a missing day (never filled in). Zero
+      prices kept with is_configured = false. Source-provided values only, no margin columns.
+      Rebuilt in full from raw on every build.
+    tests:
+      - dbt_utils.unique_combination_of_columns:
+          arguments:
+            combination_of_columns: [variant_id, price_list_id, as_of_date]
+    columns:
+      - name: variant_id
+        description: "Sapo variant identifier."
+        tests: [not_null]
+      - name: price_list_id
+        description: "Foreign key to `dim_price_lists`."
+        tests: [not_null]
+      - name: as_of_date
+        description: "ICT day the price stands for (end of day when captured by the nightly)."
+        tests: [not_null]
+      - name: sku
+        description: "Variant SKU at capture time."
+      - name: product_id
+        description: "Sapo product identifier."
+      - name: price_list_code
+        description: "Price list code (BANLE, GIANHAP, ...)."
+      - name: price_list_name
+        description: "Price list name at capture time."
+      - name: is_cost
+        description: "true for the cost price list (GIANHAP). Source-provided."
+      - name: price_value
+        description: "Price in VND as captured; 0 = not configured for this SKU."
+      - name: price_incl_tax
+        description: "Price including VAT as captured."
+      - name: is_configured
+        description: "price_value > 0."
+        tests: [not_null]
+      - name: captured_at
+        description: "UTC time of the capture used for this day."
+        tests: [not_null]
+
+  - name: fact_variant_price_changes
+    description: >
+      Price intervals (SCD type 2) per variant and price list: consecutive observations with the same
+      price form one interval. Evidence: every product version in raw (from 28/05/2026; earlier starts
+      are inferred from product modified_on) plus the nightly full capture (from 15/10/2026).
+      Grain: 1 row per (variant_id × price_list_id × valid_from_at). As of end of day D:
+      `D BETWEEN valid_from_date AND COALESCE(valid_to_date, DATE '9999-12-31')`. A pair missing
+      from the latest capture is closed at its last observation (is_current = false).
+      previous_price_value / price_change_pct compare with the previous interval (not a margin).
+      Rebuilt in full from raw on every build.
+    tests:
+      - dbt_utils.unique_combination_of_columns:
+          arguments:
+            combination_of_columns: [variant_id, price_list_id, valid_from_at]
+    columns:
+      - name: variant_id
+        tests: [not_null]
+      - name: price_list_id
+        tests: [not_null]
+      - name: valid_from_at
+        description: "First observation of this price (UTC)."
+        tests: [not_null]
+      - name: valid_from_date
+        description: "First day this price holds: as_of_date for a capture, ICT date for a product version."
+        tests: [not_null]
+      - name: valid_to_at
+        description: "Start of the next interval (exclusive), or last observation when the pair was removed; NULL while current."
+      - name: valid_to_date
+        description: "Last day this price holds at end of day; NULL while current. Below valid_from_date when replaced on the same day."
+      - name: price_value
+        description: "Price in VND for the interval; 0 = not configured."
+      - name: price_incl_tax
+        description: "Price including VAT for the interval."
+      - name: is_configured
+        description: "price_value > 0."
+      - name: previous_price_value
+        description: "price_value of the previous interval; NULL for the first."
+      - name: price_change_pct
+        description: "(price_value − previous_price_value) / previous_price_value × 100, when the previous price is > 0."
+      - name: evidence_source
+        description: "Evidence of the interval's first observation."
+        tests:
+          - not_null
+          - accepted_values:
+              arguments:
+                values: [daily_capture, sapo_product_version]
+      - name: last_observed_at
+        description: "Last observation of this price (UTC)."
+        tests: [not_null]
+      - name: is_current
+        description: "true for the open interval of a pair still present in the latest capture."
+        tests:
+          - not_null
+          - accepted_values:
+              arguments:
+                values: [true, false]
+
+unit_tests:
+  - name: price_daily_as_of_date_follows_the_cutoff_and_latest_capture_wins
+    description: >
+      The 03:01 ICT capture of D+1 records day D; a 10:00 capture on D and the 03:01 capture of D+1
+      give one row for D with the 03:01 price; a zero price is kept as not configured; product
+      versions are not daily captures.
+    model: fact_variant_price_daily
+    given:
+      - input: ref('std_variant_price_observations')
+        rows:
+          - {variant_id: '1', product_id: '9', sku: S1, price_list_id: '10', price_list_name: Retail, price_list_code: BANLE, is_cost_price: false, price_value: 100, price_incl_tax: 100, observed_at: '2026-10-15 20:01:00+00', evidence_source: daily_capture, observation_ref: r1, source_system: sapo_v2, source_version: v2}
+          - {variant_id: '1', product_id: '9', sku: S1, price_list_id: '20', price_list_name: Wholesale, price_list_code: BANSI, is_cost_price: false, price_value: 0, price_incl_tax: 0, observed_at: '2026-10-15 20:01:00+00', evidence_source: daily_capture, observation_ref: r1, source_system: sapo_v2, source_version: v2}
+          - {variant_id: '1', product_id: '9', sku: S1, price_list_id: '10', price_list_name: Retail, price_list_code: BANLE, is_cost_price: false, price_value: 110, price_incl_tax: 110, observed_at: '2026-10-16 03:00:00+00', evidence_source: daily_capture, observation_ref: r2, source_system: sapo_v2, source_version: v2}
+          - {variant_id: '1', product_id: '9', sku: S1, price_list_id: '10', price_list_name: Retail, price_list_code: BANLE, is_cost_price: false, price_value: 120, price_incl_tax: 120, observed_at: '2026-10-16 20:01:00+00', evidence_source: daily_capture, observation_ref: r3, source_system: sapo_v2, source_version: v2}
+          - {variant_id: '1', product_id: '9', sku: S1, price_list_id: '10', price_list_name: Retail, price_list_code: BANLE, is_cost_price: false, price_value: 90, price_incl_tax: 90, observed_at: '2026-10-14 08:00:00+00', evidence_source: sapo_product_version, observation_ref: l1, source_system: sapo_v2, source_version: v2}
+    expect:
+      rows:
+        - {variant_id: 1, price_list_id: 10, as_of_date: '2026-10-15', price_value: 100, is_configured: true}
+        - {variant_id: 1, price_list_id: 20, as_of_date: '2026-10-15', price_value: 0, is_configured: false}
+        - {variant_id: 1, price_list_id: 10, as_of_date: '2026-10-16', price_value: 120, is_configured: true}
+
+  - name: price_changes_merge_runs_of_the_same_price_and_close_removed_pairs
+    description: >
+      Captures A, A, B, A give three intervals with the right valid_to_date; a pair seen in a product
+      version and an early capture but missing from the latest capture is one closed interval
+      (duplicate product versions collapse).
+    model: fact_variant_price_changes
+    given:
+      - input: ref('std_variant_price_observations')
+        rows:
+          - {variant_id: '1', product_id: '9', sku: S1, price_list_id: '10', price_list_name: Retail, price_list_code: BANLE, is_cost_price: false, price_value: 100, price_incl_tax: 100, observed_at: '2026-10-01 20:01:00+00', evidence_source: daily_capture, observation_ref: r1, source_system: sapo_v2, source_version: v2}
+          - {variant_id: '1', product_id: '9', sku: S1, price_list_id: '10', price_list_name: Retail, price_list_code: BANLE, is_cost_price: false, price_value: 100, price_incl_tax: 100, observed_at: '2026-10-02 20:01:00+00', evidence_source: daily_capture, observation_ref: r2, source_system: sapo_v2, source_version: v2}
+          - {variant_id: '1', product_id: '9', sku: S1, price_list_id: '10', price_list_name: Retail, price_list_code: BANLE, is_cost_price: false, price_value: 120, price_incl_tax: 120, observed_at: '2026-10-03 20:01:00+00', evidence_source: daily_capture, observation_ref: r3, source_system: sapo_v2, source_version: v2}
+          - {variant_id: '1', product_id: '9', sku: S1, price_list_id: '10', price_list_name: Retail, price_list_code: BANLE, is_cost_price: false, price_value: 100, price_incl_tax: 100, observed_at: '2026-10-04 20:01:00+00', evidence_source: daily_capture, observation_ref: r4, source_system: sapo_v2, source_version: v2}
+          - {variant_id: '2', product_id: '8', sku: S2, price_list_id: '10', price_list_name: Retail, price_list_code: BANLE, is_cost_price: false, price_value: 50, price_incl_tax: 50, observed_at: '2026-06-01 03:00:00+00', evidence_source: sapo_product_version, observation_ref: l1, source_system: sapo_v2, source_version: v2}
+          - {variant_id: '2', product_id: '8', sku: S2, price_list_id: '10', price_list_name: Retail, price_list_code: BANLE, is_cost_price: false, price_value: 50, price_incl_tax: 50, observed_at: '2026-06-01 03:00:00+00', evidence_source: sapo_product_version, observation_ref: l2, source_system: sapo_v2, source_version: v2}
+          - {variant_id: '2', product_id: '8', sku: S2, price_list_id: '10', price_list_name: Retail, price_list_code: BANLE, is_cost_price: false, price_value: 50, price_incl_tax: 50, observed_at: '2026-10-01 20:01:00+00', evidence_source: daily_capture, observation_ref: r1, source_system: sapo_v2, source_version: v2}
+    expect:
+      rows:
+        - {variant_id: 1, price_list_id: 10, valid_from_date: '2026-10-01', valid_to_date: '2026-10-02', price_value: 100, previous_price_value: null, price_change_pct: null, evidence_source: daily_capture, is_current: false}
+        - {variant_id: 1, price_list_id: 10, valid_from_date: '2026-10-03', valid_to_date: '2026-10-03', price_value: 120, previous_price_value: 100, price_change_pct: 20.00, evidence_source: daily_capture, is_current: false}
+        - {variant_id: 1, price_list_id: 10, valid_from_date: '2026-10-04', valid_to_date: null, price_value: 100, previous_price_value: 120, price_change_pct: -16.67, evidence_source: daily_capture, is_current: true}
+        - {variant_id: 2, price_list_id: 10, valid_from_date: '2026-06-01', valid_to_date: '2026-10-01', price_value: 50, previous_price_value: null, price_change_pct: null, evidence_source: sapo_product_version, is_current: false}
