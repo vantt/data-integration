@@ -6,7 +6,7 @@ true in code. The shadow gate ([scripts/shadow/README.md](../shadow/README.md)) 
 
 | File | Kind | Purpose |
 |---|---|---|
-| `run-all.sh` | pre-commit | dbt parse + `check_boundaries.py` + `dagster definitions validate` + pytest, in one command |
+| `run-all.sh` | pre-commit | dbt parse + `check_boundaries.py` + `dagster definitions validate` + pytest + classification engine selftest, in one command |
 | `check_boundaries.py` | rule check | Module dependency matrix (core reads packs only through `pack_ref`), core reading tenant seeds, cross-component imports, duplicate seeds, hard-coded URLs in connectors and packs, pack switch declared consistently (`module-config`) |
 | `check_taxonomy_inventory.py`, `taxonomy_inventory.yaml` | warn-only check + data | Classification `CASE` blocks and expressions still in dbt SQL match the inventory (hash per block); a new `CASE` assigning a known taxonomy column is reported |
 | `check_taxonomy_rules.py` | rule check | Classification engine rules (seeds `taxonomy_rule_product`, `taxonomy_rule_tenant`) are valid against the registry `vars.taxonomy` and the label sets before they are loaded |
@@ -31,6 +31,7 @@ scripts/checks/run-all.sh <worktree>      # or another worktree; the prod checko
 | 2. `check_boundaries.py --manifest <that manifest>` | host `python3` (needs `crm/`, `detailView/`) | a new boundary violation or a stale allowlist entry (below) |
 | 3. `dagster definitions validate -f orchestration/definitions.py` | shadow container | the Dagster code location does not load |
 | 4. `pytest ingestion/tests orchestration scripts/tests` | shadow container | a test fails twice (one re-run, printed as `FLAKY` when it passes) |
+| 5. `dbt build --select +tag:taxonomy_selftest --indirect-selection cautious --vars '{taxonomy_selftest: true}'` | shadow container | a unit test of the classification engine macro fails (`models/core/intermediate/taxonomy/selftest/`, [taxonomy-engine.md §4b](../../docs/architecture/taxonomy-engine.md#4b-hiện-thực-mvp)); compiles to a scratch target path, so the manifest of step 1 stays the default one |
 
 The container steps go through `scripts/shadow/run-shadow.sh` (prod image, `--network none`, no
 secrets, no `SOURCES__*` variables) on an **empty** scratch lake created under `$SHADOW_ROOT`
@@ -87,8 +88,8 @@ and the label sets in the matching `taxonomy_label`. Stdlib + PyYAML, no dbt and
 | Error | Example |
 |---|---|
 | Header differs from `rule_id,domain,priority,label,feature,op,value,value_to,enabled,note`; a core default rule seed has rows | a column renamed |
-| Registry inconsistent: unknown `hit_policy`/`cardinality`, COLLECT without `multi` (or FIRST/UNIQUE without `single`), undeclared feature model or different `subject`, a feature column declared by two models of a domain, unsupported DuckDB type, `required_features`/`survey.features` not a feature of the domain, `matched_flags` not in the label set | `hit_policy: PRIORITY` (not in the MVP) |
-| `domain` not in the registry; `feature` not a column of the domain's feature models | a typo in `group_code` |
+| Registry inconsistent: unknown `hit_policy`/`cardinality`, COLLECT without `multi` (or FIRST/UNIQUE without `single`), undeclared feature model or different `subject`, feature models of a domain with different `key`, a feature column declared by two models of a domain, unsupported DuckDB type (lists only as `<type>[]`), `required_features`/`survey.features` not a feature of the domain, `matched_flags` not in the label set | `hit_policy: PRIORITY` (not in the MVP) |
+| `domain` not in the registry, or a selftest domain (`selftest: true`: its rules live in unit tests, and its `matched_flags` are not checked against `taxonomy_label`); `feature` not a column of the domain's feature models | a typo in `group_code` |
 | `op` not allowed for the feature type (`like`/`starts_with`/`contains`/`regex` on strings, `between` on numbers and dates, `has` on lists, `is_null` on any) or unknown | `between` on a varchar |
 | `value` not castable to the feature type (each `\|` item for `in`/`not_in`), empty value, invalid regex, `value_to` outside `between`, `is_null` value other than empty/`true`/`false` | `eq abc` on a double |
 | `between` without either bound, or `value >= value_to` | both cells empty |

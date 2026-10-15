@@ -15,7 +15,8 @@ joined by AND). A rule whose rows all have enabled=false and no label is a *disa
 turns off the rule with that rule_id defined in the other layer. Semantics and the registry
 schema: docs/architecture/taxonomy-engine.md "Hiện thực MVP".
 
-Errors (exit 1): wrong header; registry inconsistent; domain not in the registry; feature not
+Errors (exit 1): wrong header; registry inconsistent; domain not in the registry or a selftest
+domain (its rules live in unit tests); feature not
 declared for the domain; operator not allowed for the feature type; value not castable to the
 feature type; between without either bound; label not in the domain's label set; rule attributes
 differing between the rows of one rule_id; two rule_ids with the same (domain, layer, priority) in
@@ -69,7 +70,7 @@ def _norm_type(t: str) -> str:
 def type_family(duckdb_type: str) -> str | None:
     """Family of a DuckDB type name, or None when the type is not supported for features."""
     t = _norm_type(duckdb_type)
-    if t.endswith("[]") or t.startswith("LIST(") or t.startswith("LIST<"):
+    if t.endswith("[]"):
         return "list"
     if t in _INT or t in _FLOAT or _DECIMAL.match(t):
         return "number"
@@ -83,10 +84,7 @@ def type_family(duckdb_type: str) -> str | None:
 
 
 def element_type(list_type: str) -> str:
-    t = _norm_type(list_type)
-    if t.endswith("[]"):
-        return t[:-2]
-    return t[5:-1]  # LIST(x) / LIST<x>
+    return _norm_type(list_type)[:-2]
 
 
 def cast_value(raw: str, duckdb_type: str) -> object:
@@ -266,6 +264,9 @@ def check_registry(registry: dict, label_sets: dict[str, set[str]]) -> tuple[lis
             errors.append(f"{where}: `features` must list at least one feature model")
             fmodels = []
         cols: dict[str, str] = {}
+        keys = {(features.get(fm) or {}).get("key") for fm in fmodels if isinstance(features.get(fm), dict)}
+        if len(keys) > 1:
+            errors.append(f"{where}: feature models must share one key column (found {sorted(map(str, keys))})")
         for fm in fmodels:
             fspec = features.get(fm)
             if not isinstance(fspec, dict):
@@ -282,8 +283,9 @@ def check_registry(registry: dict, label_sets: dict[str, set[str]]) -> tuple[lis
         for col in spec.get("required_features") or []:
             if col not in cols:
                 errors.append(f"{where}: required_features {col!r} is not a feature of the domain")
+        # Selftest domains take their labels from unit test fixtures, not from taxonomy_label.
         for lab in spec.get("matched_flags") or []:
-            if label_set and lab not in label_sets.get(label_set, set()):
+            if label_set and not spec.get("selftest") and lab not in label_sets.get(label_set, set()):
                 errors.append(f"{where}: matched_flags {lab!r} not in label set {label_set!r}")
         survey = spec.get("survey")
         if survey is not None:
@@ -373,6 +375,8 @@ def check_rules(rows: list[Row], registry: dict, domain_columns: dict[str, dict[
             errors.append(f"{row.where}: rule {rid!r}: domain is empty")
         elif dom not in domains:
             errors.append(f"{row.where}: rule {rid!r}: domain {dom!r} not in vars.taxonomy.domains")
+        elif isinstance(domains[dom], dict) and domains[dom].get("selftest"):
+            errors.append(f"{row.where}: rule {rid!r}: domain {dom!r} is a selftest domain (rules live in its unit tests)")
         groups.setdefault((row.layer, rid), []).append(row)
 
     # Rule-level checks: definitions and disable markers.

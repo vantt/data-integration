@@ -155,8 +155,9 @@ Phạm vi MVP ở §7. Mục này ghi **cái đã có trong repo**; mỗi bướ
 
 | Thành phần | Trạng thái |
 |---|---|
-| Registry `vars.taxonomy`, ba seed luật (rỗng), validator `check_taxonomy_rules.py` | Đã có (15/10/2026). Chưa domain nào, chưa luật nào, chưa model nào đọc |
-| Macro bộ máy, model `lbl_<domain>` sinh từ luật, nối mart, giám sát | Chưa có |
+| Registry `vars.taxonomy`, ba seed luật (rỗng), validator `check_taxonomy_rules.py` | Đã có (15/10/2026). Chưa domain thật nào, chưa luật nào |
+| Macro bộ máy `macros/taxonomy/` (FIRST/UNIQUE/COLLECT, logic ba giá trị, hai lớp, `ruleset_version`) và selftest (3 domain selftest, 24 unit test) | Đã có (15/10/2026). Chưa model thật nào gọi macro; model selftest chỉ bật khi chạy selftest |
+| Domain thật (`customer_type`), nối mart, `entity_labels`, giám sát | Chưa có |
 
 ```mermaid
 flowchart LR
@@ -167,7 +168,7 @@ flowchart LR
     TL["taxonomy_label<br/>(nhãn → mã chuẩn)"]
     V["scripts/checks/check_taxonomy_rules.py<br/>(trước khi nạp)"]
     REG & RP & RT & RD & TL --> V
-    REG -. "đọc lúc compile" .-> ENG["macro bộ máy → lbl_&lt;domain&gt;<br/>(chưa có)"]
+    REG -. "đọc lúc compile" .-> ENG["macro taxonomy_label_model<br/>→ lbl_&lt;domain&gt;"]
     RP -- "ref()" --> ENG
     RT -- "tenant_ref()" --> ENG
 ```
@@ -233,8 +234,68 @@ Ba seed cùng một schema (một dòng là một điều kiện); mọi cột k
 ### Thứ tự lớp và hit policy
 
 - Lớp doanh nghiệp xét trước lớp sản phẩm; trong một lớp theo `priority` tăng dần, rồi `rule_id` (tất định khi hoà, nhưng validator không cho hoà ở FIRST/UNIQUE).
-- FIRST: nhãn của luật khớp đầu tiên theo thứ tự trên. UNIQUE: quá một luật khớp là lỗi. COLLECT: mọi luật khớp, mỗi luật một nhãn (domain `multi`; luật không điều kiện bị cấm vì sẽ gắn nhãn cho mọi đối tượng).
-- Điều kiện đánh giá theo logic SQL ba giá trị, không `bool_and` (§6); cách xử lý luật có điều kiện NULL và cột `matched__<nhãn>` được ghi ở đây khi làm macro.
+- Luật hiệu lực của một domain: hợp hai lớp, bỏ mọi `rule_id` có một dòng `enabled=false` ở bất kỳ lớp nào (kể cả dòng "tắt").
+- Chỉ luật có kết quả `TRUE` mới tính là khớp (giống `CASE WHEN`).
+  - FIRST: nhãn của luật khớp đầu tiên theo thứ tự trên.
+  - UNIQUE: như FIRST (tất định), thêm cột `n_hits` (số luật khớp); test `n_hits <= 1` mức `warn` để vi phạm không làm đỏ nightly.
+  - COLLECT (`multi`): mỗi nhãn khớp một dòng, `rule_id` là luật khớp đầu tiên của nhãn đó. Luật không điều kiện bị cấm vì sẽ gắn nhãn cho mọi đối tượng.
+
+### Macro bộ máy (`transformation/macros/taxonomy/`)
+
+Một model `lbl_<domain>` chỉ có một dòng gọi macro; mọi SQL sinh từ registry lúc compile, dữ liệu luật đọc bằng `ref()` và join trong SQL (không `run_query`), nên lineage tĩnh và lake trống vẫn build được:
+
+```sql
+{{ config(materialized='table') }}
+{{ taxonomy_label_model('customer_type', tenant_ref('taxonomy_rule_tenant'), tenant_ref('taxonomy_label')) }}
+```
+
+Model truyền hai seed tenant vào macro để chính SQL của model gọi `tenant_ref` (luật `dbt-seed`, `tenant-seed-contract` của `check_boundaries.py` đọc SQL của model, như `label_std_model`); lớp sản phẩm macro đọc bằng `ref('taxonomy_rule_product')`.
+
+| Macro | Việc |
+|---|---|
+| `taxonomy_registry.sql` | `taxonomy_domain(domain)`: đọc `var('taxonomy')`, trả domain đã phân giải (model đặc trưng, khoá chung, cột đặc trưng và kiểu, `label_column`); lỗi biên dịch khi domain, model đặc trưng, kiểu, `required_features` không hợp lệ. `taxonomy_type_family`, `taxonomy_ops` (bảng toán tử theo kiểu, giống validator), `taxonomy_domain_names`, `taxonomy_flag_column` |
+| `taxonomy_rules.sql` | CTE `rule_rows` (hai lớp, `source_layer`, `layer_rank`), `rules` (luật hiệu lực), `conditions`, `ruleset` |
+| `taxonomy_condition.sql` | Biểu thức của một điều kiện: một nhánh `WHEN` cho mỗi cặp (cột đặc trưng của domain, toán tử hợp kiểu); cặp khác gọi `error()` của DuckDB (build lỗi rõ thay vì ra NULL lặng lẽ) |
+| `taxonomy_label_model.sql` | Thân model `lbl_<domain>` |
+| `taxonomy_entity_labels.sql` | Thân view `entity_labels`: `UNION ALL` các `lbl_*` của domain không phải selftest (`subject, entity_id, domain, label, label_std, rule_id, source_layer, ruleset_version`); không domain nào thì là quan hệ rỗng cùng cột. Chỉ cho giám sát và giải thích, không mart nào được `ref` |
+
+**Ngữ nghĩa đánh giá** (đã kiểm bằng unit test):
+
+1. Đối tượng là tập khoá của model đặc trưng đầu tiên trong `features` của domain; các model đặc trưng khác `LEFT JOIN` theo khoá chung (validator và macro đòi mọi model đặc trưng của domain cùng `key`).
+2. Mỗi điều kiện cho `TRUE`/`FALSE`/`NULL` đúng như vị từ SQL tương ứng; `value`/`value_to` ép về kiểu khai báo của đặc trưng bằng `CAST`:
+
+   | Toán tử | SQL sinh ra | Đặc trưng NULL |
+   |---|---|---|
+   | `like` | `f LIKE value` (không `ESCAPE`, phân biệt hoa thường, `_` và `%` là wildcard) | NULL |
+   | `eq` | `f = CAST(value AS t)` | NULL |
+   | `in`, `not_in` | `[NOT] list_contains(CAST(string_split(value, '\|') AS t[]), f)` | NULL (bọc `CASE WHEN f IS NULL`) |
+   | `between` | `(value IS NULL OR f >= value) AND (value_to IS NULL OR f < value_to)` | NULL |
+   | `starts_with`, `contains`, `regex` | `starts_with`, `contains`, `regexp_matches` của DuckDB | NULL |
+   | `is_null` | `f IS NULL` (`value` = `false`: `f IS NOT NULL`) | không bao giờ NULL |
+   | `has` | `list_contains(f, CAST(value AS phần tử))` | NULL (bọc `CASE WHEN f IS NULL`); danh sách rỗng cho FALSE |
+
+3. Một luật là `FALSE` nếu có điều kiện `FALSE`, ngược lại `NULL` nếu có điều kiện `NULL`, ngược lại `TRUE` (AND ba giá trị, **không** `bool_and` vì nó bỏ qua NULL). Luật không điều kiện là `TRUE`.
+4. Thứ tự và hit policy: như mục trên.
+5. **Mã dành riêng:** một đặc trưng trong `required_features` là NULL thì nhãn `UNKNOWN`, không xét luật nào (kể cả luật không điều kiện); không luật nào khớp thì `UNMAPPED`, `rule_id` NULL. `<nhãn>_std` của hai mã này là chính nó.
+6. **Cờ khớp:** mỗi nhãn `X` trong `matched_flags` cho cột `matched__<x>` (chữ thường, ký tự khác chữ/số thành `_`): `TRUE` nếu có luật nhãn `X` khớp, ngược lại `NULL` nếu có luật nhãn `X` cho `NULL`, ngược lại `FALSE`; không phụ thuộc thứ tự ưu tiên (phép OR của `is_us_gift_recipient`). Đối tượng `UNKNOWN` có cờ NULL.
+7. **Cột đầu ra** của `lbl_<domain>`: `<key>`, `<nhãn>` (cột mang tên domain trước `__`, ví dụ `customer_type__group_blob` → `customer_type`), `<nhãn>_std` (join `taxonomy_label` với `domain` = `label_set`; nhãn không neo thì `UNMAPPED`), `rule_id`, `source_layer` (`tenant`/`product`), `ruleset_version`, các `matched__*`, `n_hits` (chỉ UNIQUE). Tên `<nhãn>_std` (không phải `label_std`) giữ hợp đồng của các `lbl_<domain>` đã có (`customer_type_std`, TAXONOMY.md mục 5b); `entity_labels` đổi tên thành `label_std`.
+8. **`ruleset_version`:** `md5` của mọi dòng luật của domain ở cả hai lớp (gồm dòng tắt; các cột `source_layer, rule_id, priority, label, feature, op, value, value_to, enabled`, bỏ `note`), sắp theo nội dung; một giá trị cho cả domain, đổi khi bất kỳ dòng luật nào của domain đổi. Đây là tín hiệu để restate (full-refresh các model incremental phía sau).
+
+Hiệu năng: mỗi domain là `CROSS JOIN` đối tượng × điều kiện rồi `GROUP BY`; với subject khách (khoảng 7 nghìn dòng × khoảng 20 điều kiện) không đáng kể. Domain cấp đơn sau này nên tách theo toán tử (`eq`/`in` thành hash join).
+
+### Selftest của bộ máy
+
+Ba domain selftest trong registry (`selftest: true`) trên model đặc trưng `feat_taxonomy_selftest` (rỗng, một cột mỗi họ kiểu: `s_text`, `s_text2`, `s_num`, `s_list`): `selftest_first` (FIRST, `required_features: [s_text2]`, `matched_flags: [A]`), `selftest_unique`, `selftest_collect`. Bốn model ở `models/core/intermediate/taxonomy/selftest/` có `config(enabled=var('taxonomy_selftest'))`: biến mặc định `false` nên build thật không tạo bảng nào và dbt cũng tắt unit test của chúng (không tốn gì trên prod). Validator không cho luật trong seed trỏ tới domain selftest (luật của chúng nằm trong fixture).
+
+24 unit test ở `_taxonomy_selftest.yml` (mỗi toán tử với khớp/không khớp/NULL, `like` với `_` và hoa thường, `TRUE AND NULL` rơi xuống luật sau, thứ tự lớp rồi `priority`, dòng tắt, luật mặc định, `UNMAPPED`, `UNKNOWN`, nhãn chưa neo, cờ khớp ba giá trị, UNIQUE `n_hits`, COLLECT, `ruleset_version` đổi khi một `priority` đổi). Chạy:
+
+```bash
+scripts/checks/run-all.sh      # bước 5, trên lake trống
+# hoặc trực tiếp (trong container shadow)
+dbt build --select +tag:taxonomy_selftest --indirect-selection cautious --vars '{taxonomy_selftest: true}'
+```
+
+Đo trên shadow 15/10/2026: 24 unit test tổng 2,4 giây (khoảng 0,1 giây mỗi test), cả lệnh khoảng 8 giây gồm nạp ba seed.
 
 ### Kiểm tra luật trước khi nạp
 

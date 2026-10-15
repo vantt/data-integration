@@ -1,5 +1,6 @@
 #!/usr/bin/env bash
-# Pre-commit checks in one command: dbt parse, module boundaries, Dagster definitions, pytest.
+# Pre-commit checks in one command: dbt parse, module boundaries, Dagster definitions, pytest,
+# classification engine selftest.
 #
 # Usage: scripts/checks/run-all.sh [code_dir]
 #   code_dir  the worktree to check (default: the checkout containing this script). The prod
@@ -19,6 +20,8 @@
 #   3. dagster definitions validate -f orchestration/definitions.py
 #   4. pytest ingestion/tests orchestration scripts/tests (one re-run after a failure, reported
 #      as FLAKY when it passes: see scripts/shadow/README.md for the known SQLite timing test)
+#   5. classification engine selftest: dbt build --select +tag:taxonomy_selftest with
+#      --vars '{taxonomy_selftest: true}' (unit tests of macros/taxonomy/)
 #
 # This does not prove data equality; refactors that move models or SQL still need
 # scripts/shadow/gate.sh M|S before deploy.
@@ -78,6 +81,16 @@ if [ "$RC" -ne 0 ]; then
   [ "$RC" -eq 0 ] && echo "FLAKY: first pytest run failed, re-run passed"
 fi
 check "$RC" "pytest"
+
+step "5. classification engine selftest (dbt unit tests, var taxonomy_selftest)"
+# Builds the 3 rule/label seeds the selftest models read, the empty feature model, then runs every
+# unit test of the engine macro (docs/architecture/taxonomy-engine.md §4b). Cautious indirect
+# selection keeps out tests of those seeds that need unselected models. The compile output goes to
+# a scratch path so the default manifest of step 1 is not replaced by one with selftest enabled.
+in_shadow sh -c 'cd transformation && dbt build --profiles-dir . --target-path /tmp/dbt-selftest \
+  --select +tag:taxonomy_selftest --indirect-selection cautious --vars "{taxonomy_selftest: true}"' 2>&1 \
+  | grep -E "FAIL|ERROR|Done\." | tail -12
+check "${PIPESTATUS[0]}" "engine selftest"
 
 echo
 if [ "$FAIL" -eq 0 ]; then echo "RUN-ALL: PASS"; else echo "RUN-ALL: FAIL"; fi

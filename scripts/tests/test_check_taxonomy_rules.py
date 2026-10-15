@@ -250,6 +250,8 @@ def test_default_seed_must_stay_empty(tmp_path):
     (lambda r: r["features"]["feat_customer_orders"]["columns"].update(group_code="varchar"),
      "feature column 'group_code' declared by two feature models"),
     (lambda r: r["features"]["feat_customer_orders"].update(subject="order"), "has subject 'order'"),
+    (lambda r: r["features"]["feat_customer_orders"].update(key="order_key"), "must share one key column"),
+    (lambda r: r["features"]["feat_customer_orders"]["columns"].update(x="LIST(VARCHAR)"), "unsupported type 'LIST(VARCHAR)'"),
 ])
 def test_invalid_registry_is_rejected(tmp_path, mutate, expected):
     import copy
@@ -257,6 +259,17 @@ def test_invalid_registry_is_rejected(tmp_path, mutate, expected):
     mutate(reg)
     errs = errors_of(make_repo(tmp_path, registry=reg))
     assert any(expected in e for e in errs), errs
+
+
+def test_selftest_domain(tmp_path):
+    import copy
+    reg = copy.deepcopy(REGISTRY)
+    reg["domains"]["selftest_x"] = dict(reg["domains"]["customer_band"], selftest=True, matched_flags=["NOT_A_LABEL"])
+    assert errors_of(make_repo(tmp_path / "ok", registry=reg)) == []  # fixture labels: no label-set check
+    errs = errors_of(make_repo(tmp_path / "bad", tenant=[rule("s1", domain="selftest_x", label="RETAIL",
+                                                                 feature="order_count", op="eq", value="1")],
+                               registry=reg))
+    assert any("is a selftest domain" in e for e in errs), errs
 
 
 def test_missing_registry_fails(tmp_path):

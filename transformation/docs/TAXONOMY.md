@@ -26,7 +26,7 @@ Liên quan: [docs/architecture/modules.md](../../docs/architecture/modules.md) �
 - Bảng "Vị trí và hash" của từng domain dưới đây hiển thị **16 ký tự đầu** của sha256; hash đầy đủ ở `scripts/checks/taxonomy_inventory.yaml`. Test `scripts/tests/test_check_taxonomy_inventory.py` kiểm tra mọi hash trong tài liệu này khớp inventory.
 - Hai khối **khác văn bản nhưng cùng logic** (ví dụ `value_group` có `COALESCE`) được ghi là một biến thể, kèm chứng minh. Hai khối **cùng văn bản** (cùng sha256) là một biến thể.
 
-### 2.2 Sáu dạng luật
+### 2.2 Sáu dạng luật (và luật dữ liệu qua bộ máy)
 
 | Dạng | Ý nghĩa | Ví dụ ở Fine Japan |
 |---|---|---|
@@ -36,6 +36,7 @@ Liên quan: [docs/architecture/modules.md](../../docs/architecture/modules.md) �
 | Tổ hợp (bảng quyết định) | Điều kiện kết hợp **giá trị của domain khác** | `scope_*`, `is_sales_channel`, `benchmark_status`, `strategic_tier` |
 | Gán tay | Người đặt nhãn cho từng đối tượng, thắng luật | `seed_sku_alias_manual`; nhóm khách chỉnh tay ở Sapo; (đề xuất) `ref_customer_tags` |
 | Phân cấp | Nhãn có cha con; luật ở tầng dưới gom lên tầng trên | cây kênh 4 tầng; 10 loại giảm giá gom thành 4 nhóm |
+| Luật dữ liệu qua bộ máy | Ánh xạ, dò mẫu, chia ngưỡng viết thành dòng của seed luật (`taxonomy_rule_product`, `taxonomy_rule_tenant`), đánh giá bằng macro `taxonomy_label_model` ra model `lbl_<domain>` (FIRST/UNIQUE/COLLECT, logic ba giá trị, hai lớp). Ngữ nghĩa: [taxonomy-engine.md §4b](../../docs/architecture/taxonomy-engine.md#4b-hiện-thực-mvp) | chưa domain nào (bộ máy mới có selftest); `customer_type` là domain đầu tiên |
 
 ### 2.3 Kiểm tra tự động
 

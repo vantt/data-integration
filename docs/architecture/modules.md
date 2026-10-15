@@ -8,7 +8,7 @@
 
 | Hạng mục | Trạng thái |
 |---|---|
-| Bucket của mọi dbt model (189 model: 179 đang bật, 10 đang tắt) | ✅ Khai báo trong `scripts/checks/model_buckets.yaml` |
+| Bucket của mọi dbt model (193 model: 179 đang bật, 14 đang tắt) | ✅ Khai báo trong `scripts/checks/model_buckets.yaml` |
 | Ma trận phụ thuộc, lõi đọc seed tenant, import chéo (kể cả connector → pack và pack → pack trong orchestration), seed trùng tên, URL/domain cứng trong connector và pack | ✅ Cưỡng chế bằng `scripts/checks/check_boundaries.py` (mục 3, mục 12) |
 | Vi phạm đã biết | 21, sinh từ manifest và import orchestration: 8 cạnh `ref` (tenant hook, pack → pack, pack → connector; không còn pack hook), 0 lõi đọc seed tenant (qua `tenant_ref`), 12 pack đọc source, 1 import pack → pack (`sales_playbook` → `crm`); ghi trong `scripts/checks/boundary_allowlist.yaml` kèm lý do và hướng thoát (mục 3, 10) |
 | Kiểm tra trước commit bằng một lệnh | ✅ `scripts/checks/run-all.sh`: `dbt parse`, `check_boundaries.py`, `dagster definitions validate`, pytest (bắt buộc, ghi trong `AGENTS.md`) |
@@ -246,12 +246,12 @@ flowchart TB
 
 ⚠ = chỉ được qua một mục trong `scripts/checks/boundary_allowlist.yaml` kèm lý do và hướng thoát; ma trận không bao giờ cho phép core → tenants. **Core → pack** hợp lệ khi và chỉ khi đi qua macro `pack_ref('<pack>', '<model>')` (mục 8): `check_boundaries.py` (luật `dbt-ref`) chấp nhận cạnh core → `pack:<p>` tới model `m` chỉ khi `raw_code` của model lõi gọi đúng dạng `pack_ref('<p>', '<m>'` (vị trí, nháy đơn hoặc kép), không có `ref('<m>')` thẳng, và `m` có hợp đồng của pack `<p>` trong `pack_contracts()`. Cạnh core → pack bằng `ref()` thẳng là vi phạm; từ 14/10/2026 allowlist không còn mục nào loại này. `check_boundaries.py` fail khi có cạnh mới ngoài ma trận, và cả khi một mục allowlist không còn xảy ra (để allowlist không phình). Allowlist được **sinh từ manifest** (`depends_on` của model đang bật; model tắt vẫn phải có bucket và nằm đúng thư mục, nhưng dbt không phân giải ref của nó nên không kiểm cạnh) và từ import Python của `orchestration/connectors/**`, `orchestration/packs/**` (`--write-allowlist`), không viết tay. Đọc source dbt chỉ dành cho connector và tenant (luật `dbt-source`). Cột seeds: seed dùng chung (`seeds/taxonomy/`, ...) ai cũng đọc; seed tenant (`seeds/tenants/<t>/`) chỉ pack, `monitoring` và chính tenant `<t>` được đọc, lõi chỉ qua `tenant_ref('<seed>')` (luật `dbt-seed`, mục 10).
 
-Số model theo bucket (`model_buckets.yaml`, 189 model gồm 10 đang tắt):
+Số model theo bucket (`model_buckets.yaml`, 193 model gồm 14 đang tắt):
 
 | Bucket | Model | Bucket | Model |
 |---|---|---|---|
 | connector:sapo_v2 | 28 | cdm | 24 |
-| connector:shopee | 8 | core | 59 |
+| connector:shopee | 8 | core | 63 (4 model selftest của bộ máy phân loại, tắt) |
 | connector:misa | 3 | pack:finance | 22 |
 | connector:gsheet | 4 | pack:crm | 14 |
 | connector:hug | 2 | pack:hug | 5 |
@@ -610,7 +610,7 @@ Giá trị khi tắt pack: mục 7.
 
 ## 9. Taxonomy module
 
-**Trạng thái:** phần đã làm là **đặc tả, seed, công cụ kiểm tra và lớp nhãn chuẩn dạng dữ liệu** (thiết kế §3.3–3.4: `taxonomy_canonical` của sản phẩm, `taxonomy_label` của tenant, 5 model `lbl_<domain>` với cột `*_std`; chi tiết [TAXONOMY.md mục 5b](../../transformation/docs/TAXONOMY.md)). Bộ máy luật chưa có: các khối `CASE` phân loại vẫn nằm trong SQL của core, lớp nhãn chỉ neo nhãn chúng sinh ra vào mã chuẩn (bản xem trước). `lbl_*` là bảng trong warehouse, chưa lên serving (user chốt 14/10/2026: chờ plan report). Bộ máy phân loại (luật thành dữ liệu, mỗi domain một model sinh từ macro chung) là **plan riêng sau Đợt 1**, thiết kế đã duyệt ở [taxonomy-engine.md](taxonomy-engine.md), bộ mã chuẩn của nó **chưa chốt**. Plan bộ máy (`plans/261014-2225-taxonomy-engine/`) đã thêm phần nền: registry domain `vars.taxonomy` trong `dbt_project.yml`, hai lớp bảng luật (seed rỗng) và validator luật `check_taxonomy_rules.py`; chưa domain nào, chưa model nào đọc chúng ([taxonomy-engine.md §4b](taxonomy-engine.md#4b-hiện-thực-mvp)).
+**Trạng thái:** phần đã làm là **đặc tả, seed, công cụ kiểm tra và lớp nhãn chuẩn dạng dữ liệu** (thiết kế §3.3–3.4: `taxonomy_canonical` của sản phẩm, `taxonomy_label` của tenant, 5 model `lbl_<domain>` với cột `*_std`; chi tiết [TAXONOMY.md mục 5b](../../transformation/docs/TAXONOMY.md)). Bộ máy luật chưa có: các khối `CASE` phân loại vẫn nằm trong SQL của core, lớp nhãn chỉ neo nhãn chúng sinh ra vào mã chuẩn (bản xem trước). `lbl_*` là bảng trong warehouse, chưa lên serving (user chốt 14/10/2026: chờ plan report). Bộ máy phân loại (luật thành dữ liệu, mỗi domain một model sinh từ macro chung) là **plan riêng sau Đợt 1**, thiết kế đã duyệt ở [taxonomy-engine.md](taxonomy-engine.md), bộ mã chuẩn của nó **chưa chốt**. Plan bộ máy (`plans/261014-2225-taxonomy-engine/`) đã thêm phần nền: registry domain `vars.taxonomy` trong `dbt_project.yml`, hai lớp bảng luật (seed rỗng), validator luật `check_taxonomy_rules.py` và macro bộ máy `macros/taxonomy/` có selftest (24 unit test trên 4 model selftest chỉ bật bằng `--vars '{taxonomy_selftest: true}'`); chưa domain thật nào, chưa model thật nào gọi macro ([taxonomy-engine.md §4b](taxonomy-engine.md#4b-hiện-thực-mvp)).
 
 ```mermaid
 flowchart TB
@@ -624,9 +624,12 @@ flowchart TB
         REG["dbt_project.yml vars.taxonomy<br/>(registry: features, domains; rỗng)"]
         RULE["seeds/taxonomy/taxonomy_rule_product<br/>(lớp luật sản phẩm, rỗng)"]
         VAL["scripts/checks/check_taxonomy_rules.py<br/>(validator luật, chặn khi sai)"]
+        MAC["macros/taxonomy/<br/>taxonomy_label_model (bộ máy)<br/>+ selftest (tắt mặc định)"]
     end
     RT["seeds/tenants/fine_japan/taxonomy_rule_tenant<br/>(lớp luật tenant, rỗng)"]
     REG & RULE & RT & TL --> VAL
+    REG -. "compile" .-> MAC
+    RULE & RT & TL -- "ref / tenant_ref" --> MAC
     TL["seeds/tenants/fine_japan/taxonomy_label<br/>(nhãn → mã, tenant)"] -- "tenant_ref" --> LBL
     TC -. "test" .-> TL
     DOC <-. "hash khớp (test)" .-> INV
@@ -649,6 +652,7 @@ flowchart TB
 | `transformation/seeds/taxonomy/` | 10 seed phân loại (8 seed ánh xạ/dò mẫu cũ, bộ mã chuẩn `taxonomy_canonical`, lớp luật sản phẩm `taxonomy_rule_product`); `+column_types` đặt dưới khoá `taxonomy:` trong `dbt_project.yml` | `transformation/AGENTS.md` |
 | Registry `vars.taxonomy` (`transformation/dbt_project.yml`) | Danh mục đặc trưng và domain của bộ máy, đọc lúc compile (chưa có domain) | [taxonomy-engine.md §4b](taxonomy-engine.md#4b-hiện-thực-mvp) |
 | Bảng luật hai lớp: `seeds/taxonomy/taxonomy_rule_product.csv` (sản phẩm), `seeds/tenants/fine_japan/taxonomy_rule_tenant.csv` (tenant, lõi sẽ đọc qua `tenant_ref`; bản mặc định rỗng `seeds/defaults/taxonomy_rule_tenant__default.csv`) | Luật phân loại dạng dữ liệu, một dòng một điều kiện; hiện chỉ có dòng tiêu đề | như trên |
+| `transformation/macros/taxonomy/` | Macro bộ máy: `taxonomy_label_model` (thân model `lbl_<domain>`: hai lớp, logic ba giá trị, FIRST/UNIQUE/COLLECT, `UNMAPPED`/`UNKNOWN`, `matched__*`, `ruleset_version`), `taxonomy_entity_labels`, registry, điều kiện, luật; selftest ở `models/core/intermediate/taxonomy/selftest/` (bước 5 của `run-all.sh`) | [taxonomy-engine.md §4b](taxonomy-engine.md#4b-hiện-thực-mvp) |
 | `scripts/checks/check_taxonomy_rules.py` | Validator luật trước khi nạp (domain, đặc trưng, toán tử theo kiểu, giá trị, nhãn, `rule_id`/priority, luật tắt); thoát 1 khi sai; chạy trong pytest của `run-all.sh` và shadow gate | [scripts/checks/README.md](../../scripts/checks/README.md#check_taxonomy_rulespy) |
 
 Ai ghi seed nào: `sync_seeds.py` (chạy tay) thêm dòng vào `ref_order_sources` và `ref_branch_locations`; không writer tự động nào ghi seed phân loại. Job Google Sheet 02:30 (`budget_sheet_sync_asset` gọi `gsheet_budget_sync`) ghi hai seed ngân sách của tenant (`seed_cashflow_budget`, `seed_cash_allocation_policy`, ở `transformation/seeds/tenants/fine_japan/`), cũng qua `seed_path`. Bảng đầy đủ đọc/ghi: [TAXONOMY.md mục 5](../../transformation/docs/TAXONOMY.md#5-seed-phân-loại-và-ai-đọc-ai-ghi).

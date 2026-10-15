@@ -270,5 +270,38 @@ vars:
   # are rows of the seeds taxonomy_rule_product / taxonomy_rule_tenant, never here.
   # scripts/checks/check_taxonomy_rules.py validates the rules against this registry.
   taxonomy:
-    features: {}
-    domains: {}
+    features:
+      # Engine selftest only (models/core/intermediate/taxonomy/selftest/, built when
+      # taxonomy_selftest is true): one typed column per type family.
+      feat_taxonomy_selftest:
+        subject: selftest
+        key: s_key
+        columns: {s_text: varchar, s_text2: varchar, s_num: double, s_list: "varchar[]"}
+    domains:
+      selftest_first:
+        subject: selftest
+        cardinality: single
+        hit_policy: FIRST
+        features: [feat_taxonomy_selftest]
+        label_set: selftest
+        required_features: [s_text2]
+        matched_flags: [A]
+        selftest: true
+      selftest_unique:
+        subject: selftest
+        cardinality: single
+        hit_policy: UNIQUE
+        features: [feat_taxonomy_selftest]
+        label_set: selftest
+        selftest: true
+      selftest_collect:
+        subject: selftest
+        cardinality: multi
+        hit_policy: COLLECT
+        features: [feat_taxonomy_selftest]
+        label_set: selftest
+        selftest: true
+  # Builds the engine selftest models and runs their unit tests (scripts/checks/run-all.sh step
+  # 5: dbt build --select +tag:taxonomy_selftest --vars '{taxonomy_selftest: true}'). Off in every
+  # real build: no selftest table is ever created in the warehouse.
+  taxonomy_selftest: false

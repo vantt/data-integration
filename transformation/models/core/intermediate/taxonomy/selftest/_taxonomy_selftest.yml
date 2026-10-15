@@ -1,0 +1,1486 @@
+# Engine selftest of the classification engine (docs/architecture/taxonomy-engine.md §4b).
+# Models enabled only with --vars '{taxonomy_selftest: true}'; run with
+#   dbt build --select +tag:taxonomy_selftest --vars '{taxonomy_selftest: true}'
+# (scripts/checks/run-all.sh step 5). Generated fixtures: one unit test per behaviour.
+version: 2
+models:
+- name: feat_taxonomy_selftest
+  description: 'Feature model of the engine selftest domains: empty and typed (one column per type family); unit
+    tests give the rows.'
+- name: lbl_selftest_first
+  description: Engine selftest, FIRST hit policy, required feature s_text2, matched flag A.
+- name: lbl_selftest_unique
+  description: Engine selftest, UNIQUE hit policy (n_hits).
+  data_tests:
+  - dbt_utils.expression_is_true:
+      arguments:
+        expression: n_hits <= 1
+      config:
+        severity: warn
+- name: lbl_selftest_collect
+  description: Engine selftest, COLLECT hit policy (multi).
+unit_tests:
+- name: taxonomy_engine_op_like
+  description: 'Operator like: TRUE on a match, FALSE on a non-match, NULL (or FALSE for is_null) on a NULL feature,
+    like the SQL predicate.'
+  model: lbl_selftest_first
+  given:
+  - input: ref('feat_taxonomy_selftest')
+    format: sql
+    rows: |
+      select CAST('k1' AS VARCHAR) as s_key, CAST('KYG' AS VARCHAR) as s_text, CAST('r' AS VARCHAR) as s_text2, CAST(NULL AS DOUBLE) as s_num, CAST(NULL AS VARCHAR[]) as s_list
+      union all
+      select CAST('k2' AS VARCHAR) as s_key, CAST('K G' AS VARCHAR) as s_text, CAST('r' AS VARCHAR) as s_text2, CAST(NULL AS DOUBLE) as s_num, CAST(NULL AS VARCHAR[]) as s_list
+      union all
+      select CAST('k3' AS VARCHAR) as s_key, CAST('kyg' AS VARCHAR) as s_text, CAST('r' AS VARCHAR) as s_text2, CAST(NULL AS DOUBLE) as s_num, CAST(NULL AS VARCHAR[]) as s_list
+      union all
+      select CAST('k4' AS VARCHAR) as s_key, CAST(NULL AS VARCHAR) as s_text, CAST('r' AS VARCHAR) as s_text2, CAST(NULL AS DOUBLE) as s_num, CAST(NULL AS VARCHAR[]) as s_list
+  - input: ref('taxonomy_rule_tenant')
+    rows:
+    - rule_id: a1
+      domain: selftest_first
+      priority: 10
+      label: A
+      feature: s_text
+      op: like
+      value: K_G
+      value_to: null
+      enabled: true
+  - input: ref('taxonomy_rule_product')
+    format: sql
+    rows: |
+      select cast(null as varchar) as rule_id, cast(null as varchar) as domain, cast(null as integer) as priority, cast(null as varchar) as label, cast(null as varchar) as feature, cast(null as varchar) as op, cast(null as varchar) as value, cast(null as varchar) as value_to, cast(null as boolean) as enabled, cast(null as varchar) as note where false
+  - input: ref('taxonomy_label')
+    rows:
+    - domain: selftest
+      label: A
+      label_std: STD_A
+      note: null
+    - domain: selftest
+      label: B
+      label_std: STD_B
+      note: null
+    - domain: selftest
+      label: C
+      label_std: STD_C
+      note: null
+  expect:
+    rows:
+    - s_key: k1
+      selftest_first: A
+      selftest_first_std: STD_A
+      rule_id: a1
+      matched__a: true
+    - s_key: k2
+      selftest_first: A
+      selftest_first_std: STD_A
+      rule_id: a1
+      matched__a: true
+    - s_key: k3
+      selftest_first: UNMAPPED
+      selftest_first_std: UNMAPPED
+      rule_id: null
+      matched__a: false
+    - s_key: k4
+      selftest_first: UNMAPPED
+      selftest_first_std: UNMAPPED
+      rule_id: null
+      matched__a: null
+- name: taxonomy_engine_op_eq
+  description: 'Operator eq: TRUE on a match, FALSE on a non-match, NULL (or FALSE for is_null) on a NULL feature,
+    like the SQL predicate.'
+  model: lbl_selftest_first
+  given:
+  - input: ref('feat_taxonomy_selftest')
+    format: sql
+    rows: |
+      select CAST('k1' AS VARCHAR) as s_key, CAST(NULL AS VARCHAR) as s_text, CAST('r' AS VARCHAR) as s_text2, CAST(5 AS DOUBLE) as s_num, CAST(NULL AS VARCHAR[]) as s_list
+      union all
+      select CAST('k2' AS VARCHAR) as s_key, CAST(NULL AS VARCHAR) as s_text, CAST('r' AS VARCHAR) as s_text2, CAST(6 AS DOUBLE) as s_num, CAST(NULL AS VARCHAR[]) as s_list
+      union all
+      select CAST('k3' AS VARCHAR) as s_key, CAST(NULL AS VARCHAR) as s_text, CAST('r' AS VARCHAR) as s_text2, CAST(NULL AS DOUBLE) as s_num, CAST(NULL AS VARCHAR[]) as s_list
+  - input: ref('taxonomy_rule_tenant')
+    rows:
+    - rule_id: a1
+      domain: selftest_first
+      priority: 10
+      label: A
+      feature: s_num
+      op: eq
+      value: '5'
+      value_to: null
+      enabled: true
+  - input: ref('taxonomy_rule_product')
+    format: sql
+    rows: |
+      select cast(null as varchar) as rule_id, cast(null as varchar) as domain, cast(null as integer) as priority, cast(null as varchar) as label, cast(null as varchar) as feature, cast(null as varchar) as op, cast(null as varchar) as value, cast(null as varchar) as value_to, cast(null as boolean) as enabled, cast(null as varchar) as note where false
+  - input: ref('taxonomy_label')
+    rows:
+    - domain: selftest
+      label: A
+      label_std: STD_A
+      note: null
+    - domain: selftest
+      label: B
+      label_std: STD_B
+      note: null
+    - domain: selftest
+      label: C
+      label_std: STD_C
+      note: null
+  expect:
+    rows:
+    - s_key: k1
+      selftest_first: A
+      selftest_first_std: STD_A
+      rule_id: a1
+      matched__a: true
+    - s_key: k2
+      selftest_first: UNMAPPED
+      selftest_first_std: UNMAPPED
+      rule_id: null
+      matched__a: false
+    - s_key: k3
+      selftest_first: UNMAPPED
+      selftest_first_std: UNMAPPED
+      rule_id: null
+      matched__a: null
+- name: taxonomy_engine_op_in
+  description: 'Operator in: TRUE on a match, FALSE on a non-match, NULL (or FALSE for is_null) on a NULL feature,
+    like the SQL predicate.'
+  model: lbl_selftest_first
+  given:
+  - input: ref('feat_taxonomy_selftest')
+    format: sql
+    rows: |
+      select CAST('k1' AS VARCHAR) as s_key, CAST('y' AS VARCHAR) as s_text, CAST('r' AS VARCHAR) as s_text2, CAST(NULL AS DOUBLE) as s_num, CAST(NULL AS VARCHAR[]) as s_list
+      union all
+      select CAST('k2' AS VARCHAR) as s_key, CAST('z' AS VARCHAR) as s_text, CAST('r' AS VARCHAR) as s_text2, CAST(NULL AS DOUBLE) as s_num, CAST(NULL AS VARCHAR[]) as s_list
+      union all
+      select CAST('k3' AS VARCHAR) as s_key, CAST(NULL AS VARCHAR) as s_text, CAST('r' AS VARCHAR) as s_text2, CAST(NULL AS DOUBLE) as s_num, CAST(NULL AS VARCHAR[]) as s_list
+  - input: ref('taxonomy_rule_tenant')
+    rows:
+    - rule_id: a1
+      domain: selftest_first
+      priority: 10
+      label: A
+      feature: s_text
+      op: in
+      value: x|y
+      value_to: null
+      enabled: true
+  - input: ref('taxonomy_rule_product')
+    format: sql
+    rows: |
+      select cast(null as varchar) as rule_id, cast(null as varchar) as domain, cast(null as integer) as priority, cast(null as varchar) as label, cast(null as varchar) as feature, cast(null as varchar) as op, cast(null as varchar) as value, cast(null as varchar) as value_to, cast(null as boolean) as enabled, cast(null as varchar) as note where false
+  - input: ref('taxonomy_label')
+    rows:
+    - domain: selftest
+      label: A
+      label_std: STD_A
+      note: null
+    - domain: selftest
+      label: B
+      label_std: STD_B
+      note: null
+    - domain: selftest
+      label: C
+      label_std: STD_C
+      note: null
+  expect:
+    rows:
+    - s_key: k1
+      selftest_first: A
+      selftest_first_std: STD_A
+      rule_id: a1
+      matched__a: true
+    - s_key: k2
+      selftest_first: UNMAPPED
+      selftest_first_std: UNMAPPED
+      rule_id: null
+      matched__a: false
+    - s_key: k3
+      selftest_first: UNMAPPED
+      selftest_first_std: UNMAPPED
+      rule_id: null
+      matched__a: null
+- name: taxonomy_engine_op_not_in
+  description: 'Operator not_in: TRUE on a match, FALSE on a non-match, NULL (or FALSE for is_null) on a NULL feature,
+    like the SQL predicate.'
+  model: lbl_selftest_first
+  given:
+  - input: ref('feat_taxonomy_selftest')
+    format: sql
+    rows: |
+      select CAST('k1' AS VARCHAR) as s_key, CAST('z' AS VARCHAR) as s_text, CAST('r' AS VARCHAR) as s_text2, CAST(NULL AS DOUBLE) as s_num, CAST(NULL AS VARCHAR[]) as s_list
+      union all
+      select CAST('k2' AS VARCHAR) as s_key, CAST('x' AS VARCHAR) as s_text, CAST('r' AS VARCHAR) as s_text2, CAST(NULL AS DOUBLE) as s_num, CAST(NULL AS VARCHAR[]) as s_list
+      union all
+      select CAST('k3' AS VARCHAR) as s_key, CAST(NULL AS VARCHAR) as s_text, CAST('r' AS VARCHAR) as s_text2, CAST(NULL AS DOUBLE) as s_num, CAST(NULL AS VARCHAR[]) as s_list
+  - input: ref('taxonomy_rule_tenant')
+    rows:
+    - rule_id: a1
+      domain: selftest_first
+      priority: 10
+      label: A
+      feature: s_text
+      op: not_in
+      value: x|y
+      value_to: null
+      enabled: true
+  - input: ref('taxonomy_rule_product')
+    format: sql
+    rows: |
+      select cast(null as varchar) as rule_id, cast(null as varchar) as domain, cast(null as integer) as priority, cast(null as varchar) as label, cast(null as varchar) as feature, cast(null as varchar) as op, cast(null as varchar) as value, cast(null as varchar) as value_to, cast(null as boolean) as enabled, cast(null as varchar) as note where false
+  - input: ref('taxonomy_label')
+    rows:
+    - domain: selftest
+      label: A
+      label_std: STD_A
+      note: null
+    - domain: selftest
+      label: B
+      label_std: STD_B
+      note: null
+    - domain: selftest
+      label: C
+      label_std: STD_C
+      note: null
+  expect:
+    rows:
+    - s_key: k1
+      selftest_first: A
+      selftest_first_std: STD_A
+      rule_id: a1
+      matched__a: true
+    - s_key: k2
+      selftest_first: UNMAPPED
+      selftest_first_std: UNMAPPED
+      rule_id: null
+      matched__a: false
+    - s_key: k3
+      selftest_first: UNMAPPED
+      selftest_first_std: UNMAPPED
+      rule_id: null
+      matched__a: null
+- name: taxonomy_engine_op_between
+  description: 'Operator between: TRUE on a match, FALSE on a non-match, NULL (or FALSE for is_null) on a NULL feature,
+    like the SQL predicate.'
+  model: lbl_selftest_first
+  given:
+  - input: ref('feat_taxonomy_selftest')
+    format: sql
+    rows: |
+      select CAST('k1' AS VARCHAR) as s_key, CAST(NULL AS VARCHAR) as s_text, CAST('r' AS VARCHAR) as s_text2, CAST(10 AS DOUBLE) as s_num, CAST(NULL AS VARCHAR[]) as s_list
+      union all
+      select CAST('k2' AS VARCHAR) as s_key, CAST(NULL AS VARCHAR) as s_text, CAST('r' AS VARCHAR) as s_text2, CAST(19.5 AS DOUBLE) as s_num, CAST(NULL AS VARCHAR[]) as s_list
+      union all
+      select CAST('k3' AS VARCHAR) as s_key, CAST(NULL AS VARCHAR) as s_text, CAST('r' AS VARCHAR) as s_text2, CAST(20 AS DOUBLE) as s_num, CAST(NULL AS VARCHAR[]) as s_list
+      union all
+      select CAST('k4' AS VARCHAR) as s_key, CAST(NULL AS VARCHAR) as s_text, CAST('r' AS VARCHAR) as s_text2, CAST(9.5 AS DOUBLE) as s_num, CAST(NULL AS VARCHAR[]) as s_list
+      union all
+      select CAST('k5' AS VARCHAR) as s_key, CAST(NULL AS VARCHAR) as s_text, CAST('r' AS VARCHAR) as s_text2, CAST(NULL AS DOUBLE) as s_num, CAST(NULL AS VARCHAR[]) as s_list
+  - input: ref('taxonomy_rule_tenant')
+    rows:
+    - rule_id: a1
+      domain: selftest_first
+      priority: 10
+      label: A
+      feature: s_num
+      op: between
+      value: '10'
+      value_to: '20'
+      enabled: true
+  - input: ref('taxonomy_rule_product')
+    format: sql
+    rows: |
+      select cast(null as varchar) as rule_id, cast(null as varchar) as domain, cast(null as integer) as priority, cast(null as varchar) as label, cast(null as varchar) as feature, cast(null as varchar) as op, cast(null as varchar) as value, cast(null as varchar) as value_to, cast(null as boolean) as enabled, cast(null as varchar) as note where false
+  - input: ref('taxonomy_label')
+    rows:
+    - domain: selftest
+      label: A
+      label_std: STD_A
+      note: null
+    - domain: selftest
+      label: B
+      label_std: STD_B
+      note: null
+    - domain: selftest
+      label: C
+      label_std: STD_C
+      note: null
+  expect:
+    rows:
+    - s_key: k1
+      selftest_first: A
+      selftest_first_std: STD_A
+      rule_id: a1
+      matched__a: true
+    - s_key: k2
+      selftest_first: A
+      selftest_first_std: STD_A
+      rule_id: a1
+      matched__a: true
+    - s_key: k3
+      selftest_first: UNMAPPED
+      selftest_first_std: UNMAPPED
+      rule_id: null
+      matched__a: false
+    - s_key: k4
+      selftest_first: UNMAPPED
+      selftest_first_std: UNMAPPED
+      rule_id: null
+      matched__a: false
+    - s_key: k5
+      selftest_first: UNMAPPED
+      selftest_first_std: UNMAPPED
+      rule_id: null
+      matched__a: null
+- name: taxonomy_engine_op_between_open_upper_bound
+  description: 'Operator between: TRUE on a match, FALSE on a non-match, NULL (or FALSE for is_null) on a NULL feature,
+    like the SQL predicate.'
+  model: lbl_selftest_first
+  given:
+  - input: ref('feat_taxonomy_selftest')
+    format: sql
+    rows: |
+      select CAST('k1' AS VARCHAR) as s_key, CAST(NULL AS VARCHAR) as s_text, CAST('r' AS VARCHAR) as s_text2, CAST(1000 AS DOUBLE) as s_num, CAST(NULL AS VARCHAR[]) as s_list
+      union all
+      select CAST('k2' AS VARCHAR) as s_key, CAST(NULL AS VARCHAR) as s_text, CAST('r' AS VARCHAR) as s_text2, CAST(9 AS DOUBLE) as s_num, CAST(NULL AS VARCHAR[]) as s_list
+      union all
+      select CAST('k3' AS VARCHAR) as s_key, CAST(NULL AS VARCHAR) as s_text, CAST('r' AS VARCHAR) as s_text2, CAST(NULL AS DOUBLE) as s_num, CAST(NULL AS VARCHAR[]) as s_list
+  - input: ref('taxonomy_rule_tenant')
+    rows:
+    - rule_id: a1
+      domain: selftest_first
+      priority: 10
+      label: A
+      feature: s_num
+      op: between
+      value: '10'
+      value_to: null
+      enabled: true
+  - input: ref('taxonomy_rule_product')
+    format: sql
+    rows: |
+      select cast(null as varchar) as rule_id, cast(null as varchar) as domain, cast(null as integer) as priority, cast(null as varchar) as label, cast(null as varchar) as feature, cast(null as varchar) as op, cast(null as varchar) as value, cast(null as varchar) as value_to, cast(null as boolean) as enabled, cast(null as varchar) as note where false
+  - input: ref('taxonomy_label')
+    rows:
+    - domain: selftest
+      label: A
+      label_std: STD_A
+      note: null
+    - domain: selftest
+      label: B
+      label_std: STD_B
+      note: null
+    - domain: selftest
+      label: C
+      label_std: STD_C
+      note: null
+  expect:
+    rows:
+    - s_key: k1
+      selftest_first: A
+      selftest_first_std: STD_A
+      rule_id: a1
+      matched__a: true
+    - s_key: k2
+      selftest_first: UNMAPPED
+      selftest_first_std: UNMAPPED
+      rule_id: null
+      matched__a: false
+    - s_key: k3
+      selftest_first: UNMAPPED
+      selftest_first_std: UNMAPPED
+      rule_id: null
+      matched__a: null
+- name: taxonomy_engine_op_starts_with
+  description: 'Operator starts_with: TRUE on a match, FALSE on a non-match, NULL (or FALSE for is_null) on a NULL
+    feature, like the SQL predicate.'
+  model: lbl_selftest_first
+  given:
+  - input: ref('feat_taxonomy_selftest')
+    format: sql
+    rows: |
+      select CAST('k1' AS VARCHAR) as s_key, CAST('abc' AS VARCHAR) as s_text, CAST('r' AS VARCHAR) as s_text2, CAST(NULL AS DOUBLE) as s_num, CAST(NULL AS VARCHAR[]) as s_list
+      union all
+      select CAST('k2' AS VARCHAR) as s_key, CAST('xab' AS VARCHAR) as s_text, CAST('r' AS VARCHAR) as s_text2, CAST(NULL AS DOUBLE) as s_num, CAST(NULL AS VARCHAR[]) as s_list
+      union all
+      select CAST('k3' AS VARCHAR) as s_key, CAST(NULL AS VARCHAR) as s_text, CAST('r' AS VARCHAR) as s_text2, CAST(NULL AS DOUBLE) as s_num, CAST(NULL AS VARCHAR[]) as s_list
+  - input: ref('taxonomy_rule_tenant')
+    rows:
+    - rule_id: a1
+      domain: selftest_first
+      priority: 10
+      label: A
+      feature: s_text
+      op: starts_with
+      value: ab
+      value_to: null
+      enabled: true
+  - input: ref('taxonomy_rule_product')
+    format: sql
+    rows: |
+      select cast(null as varchar) as rule_id, cast(null as varchar) as domain, cast(null as integer) as priority, cast(null as varchar) as label, cast(null as varchar) as feature, cast(null as varchar) as op, cast(null as varchar) as value, cast(null as varchar) as value_to, cast(null as boolean) as enabled, cast(null as varchar) as note where false
+  - input: ref('taxonomy_label')
+    rows:
+    - domain: selftest
+      label: A
+      label_std: STD_A
+      note: null
+    - domain: selftest
+      label: B
+      label_std: STD_B
+      note: null
+    - domain: selftest
+      label: C
+      label_std: STD_C
+      note: null
+  expect:
+    rows:
+    - s_key: k1
+      selftest_first: A
+      selftest_first_std: STD_A
+      rule_id: a1
+      matched__a: true
+    - s_key: k2
+      selftest_first: UNMAPPED
+      selftest_first_std: UNMAPPED
+      rule_id: null
+      matched__a: false
+    - s_key: k3
+      selftest_first: UNMAPPED
+      selftest_first_std: UNMAPPED
+      rule_id: null
+      matched__a: null
+- name: taxonomy_engine_op_contains
+  description: 'Operator contains: TRUE on a match, FALSE on a non-match, NULL (or FALSE for is_null) on a NULL
+    feature, like the SQL predicate.'
+  model: lbl_selftest_first
+  given:
+  - input: ref('feat_taxonomy_selftest')
+    format: sql
+    rows: |
+      select CAST('k1' AS VARCHAR) as s_key, CAST('abc' AS VARCHAR) as s_text, CAST('r' AS VARCHAR) as s_text2, CAST(NULL AS DOUBLE) as s_num, CAST(NULL AS VARCHAR[]) as s_list
+      union all
+      select CAST('k2' AS VARCHAR) as s_key, CAST('xyz' AS VARCHAR) as s_text, CAST('r' AS VARCHAR) as s_text2, CAST(NULL AS DOUBLE) as s_num, CAST(NULL AS VARCHAR[]) as s_list
+      union all
+      select CAST('k3' AS VARCHAR) as s_key, CAST(NULL AS VARCHAR) as s_text, CAST('r' AS VARCHAR) as s_text2, CAST(NULL AS DOUBLE) as s_num, CAST(NULL AS VARCHAR[]) as s_list
+  - input: ref('taxonomy_rule_tenant')
+    rows:
+    - rule_id: a1
+      domain: selftest_first
+      priority: 10
+      label: A
+      feature: s_text
+      op: contains
+      value: b
+      value_to: null
+      enabled: true
+  - input: ref('taxonomy_rule_product')
+    format: sql
+    rows: |
+      select cast(null as varchar) as rule_id, cast(null as varchar) as domain, cast(null as integer) as priority, cast(null as varchar) as label, cast(null as varchar) as feature, cast(null as varchar) as op, cast(null as varchar) as value, cast(null as varchar) as value_to, cast(null as boolean) as enabled, cast(null as varchar) as note where false
+  - input: ref('taxonomy_label')
+    rows:
+    - domain: selftest
+      label: A
+      label_std: STD_A
+      note: null
+    - domain: selftest
+      label: B
+      label_std: STD_B
+      note: null
+    - domain: selftest
+      label: C
+      label_std: STD_C
+      note: null
+  expect:
+    rows:
+    - s_key: k1
+      selftest_first: A
+      selftest_first_std: STD_A
+      rule_id: a1
+      matched__a: true
+    - s_key: k2
+      selftest_first: UNMAPPED
+      selftest_first_std: UNMAPPED
+      rule_id: null
+      matched__a: false
+    - s_key: k3
+      selftest_first: UNMAPPED
+      selftest_first_std: UNMAPPED
+      rule_id: null
+      matched__a: null
+- name: taxonomy_engine_op_regex
+  description: 'Operator regex: TRUE on a match, FALSE on a non-match, NULL (or FALSE for is_null) on a NULL feature,
+    like the SQL predicate.'
+  model: lbl_selftest_first
+  given:
+  - input: ref('feat_taxonomy_selftest')
+    format: sql
+    rows: |
+      select CAST('k1' AS VARCHAR) as s_key, CAST('a12' AS VARCHAR) as s_text, CAST('r' AS VARCHAR) as s_text2, CAST(NULL AS DOUBLE) as s_num, CAST(NULL AS VARCHAR[]) as s_list
+      union all
+      select CAST('k2' AS VARCHAR) as s_key, CAST('a1b' AS VARCHAR) as s_text, CAST('r' AS VARCHAR) as s_text2, CAST(NULL AS DOUBLE) as s_num, CAST(NULL AS VARCHAR[]) as s_list
+      union all
+      select CAST('k3' AS VARCHAR) as s_key, CAST(NULL AS VARCHAR) as s_text, CAST('r' AS VARCHAR) as s_text2, CAST(NULL AS DOUBLE) as s_num, CAST(NULL AS VARCHAR[]) as s_list
+  - input: ref('taxonomy_rule_tenant')
+    rows:
+    - rule_id: a1
+      domain: selftest_first
+      priority: 10
+      label: A
+      feature: s_text
+      op: regex
+      value: ^a[0-9]+$
+      value_to: null
+      enabled: true
+  - input: ref('taxonomy_rule_product')
+    format: sql
+    rows: |
+      select cast(null as varchar) as rule_id, cast(null as varchar) as domain, cast(null as integer) as priority, cast(null as varchar) as label, cast(null as varchar) as feature, cast(null as varchar) as op, cast(null as varchar) as value, cast(null as varchar) as value_to, cast(null as boolean) as enabled, cast(null as varchar) as note where false
+  - input: ref('taxonomy_label')
+    rows:
+    - domain: selftest
+      label: A
+      label_std: STD_A
+      note: null
+    - domain: selftest
+      label: B
+      label_std: STD_B
+      note: null
+    - domain: selftest
+      label: C
+      label_std: STD_C
+      note: null
+  expect:
+    rows:
+    - s_key: k1
+      selftest_first: A
+      selftest_first_std: STD_A
+      rule_id: a1
+      matched__a: true
+    - s_key: k2
+      selftest_first: UNMAPPED
+      selftest_first_std: UNMAPPED
+      rule_id: null
+      matched__a: false
+    - s_key: k3
+      selftest_first: UNMAPPED
+      selftest_first_std: UNMAPPED
+      rule_id: null
+      matched__a: null
+- name: taxonomy_engine_op_is_null
+  description: 'Operator is_null: TRUE on a match, FALSE on a non-match, NULL (or FALSE for is_null) on a NULL feature,
+    like the SQL predicate.'
+  model: lbl_selftest_first
+  given:
+  - input: ref('feat_taxonomy_selftest')
+    format: sql
+    rows: |
+      select CAST('k1' AS VARCHAR) as s_key, CAST(NULL AS VARCHAR) as s_text, CAST('r' AS VARCHAR) as s_text2, CAST(NULL AS DOUBLE) as s_num, CAST(NULL AS VARCHAR[]) as s_list
+      union all
+      select CAST('k2' AS VARCHAR) as s_key, CAST('v' AS VARCHAR) as s_text, CAST('r' AS VARCHAR) as s_text2, CAST(NULL AS DOUBLE) as s_num, CAST(NULL AS VARCHAR[]) as s_list
+  - input: ref('taxonomy_rule_tenant')
+    rows:
+    - rule_id: a1
+      domain: selftest_first
+      priority: 10
+      label: A
+      feature: s_text
+      op: is_null
+      value: null
+      value_to: null
+      enabled: true
+  - input: ref('taxonomy_rule_product')
+    format: sql
+    rows: |
+      select cast(null as varchar) as rule_id, cast(null as varchar) as domain, cast(null as integer) as priority, cast(null as varchar) as label, cast(null as varchar) as feature, cast(null as varchar) as op, cast(null as varchar) as value, cast(null as varchar) as value_to, cast(null as boolean) as enabled, cast(null as varchar) as note where false
+  - input: ref('taxonomy_label')
+    rows:
+    - domain: selftest
+      label: A
+      label_std: STD_A
+      note: null
+    - domain: selftest
+      label: B
+      label_std: STD_B
+      note: null
+    - domain: selftest
+      label: C
+      label_std: STD_C
+      note: null
+  expect:
+    rows:
+    - s_key: k1
+      selftest_first: A
+      selftest_first_std: STD_A
+      rule_id: a1
+      matched__a: true
+    - s_key: k2
+      selftest_first: UNMAPPED
+      selftest_first_std: UNMAPPED
+      rule_id: null
+      matched__a: false
+- name: taxonomy_engine_op_is_null_false_means_not_null
+  description: 'Operator is_null: TRUE on a match, FALSE on a non-match, NULL (or FALSE for is_null) on a NULL feature,
+    like the SQL predicate.'
+  model: lbl_selftest_first
+  given:
+  - input: ref('feat_taxonomy_selftest')
+    format: sql
+    rows: |
+      select CAST('k1' AS VARCHAR) as s_key, CAST('v' AS VARCHAR) as s_text, CAST('r' AS VARCHAR) as s_text2, CAST(NULL AS DOUBLE) as s_num, CAST(NULL AS VARCHAR[]) as s_list
+      union all
+      select CAST('k2' AS VARCHAR) as s_key, CAST(NULL AS VARCHAR) as s_text, CAST('r' AS VARCHAR) as s_text2, CAST(NULL AS DOUBLE) as s_num, CAST(NULL AS VARCHAR[]) as s_list
+  - input: ref('taxonomy_rule_tenant')
+    rows:
+    - rule_id: a1
+      domain: selftest_first
+      priority: 10
+      label: A
+      feature: s_text
+      op: is_null
+      value: 'false'
+      value_to: null
+      enabled: true
+  - input: ref('taxonomy_rule_product')
+    format: sql
+    rows: |
+      select cast(null as varchar) as rule_id, cast(null as varchar) as domain, cast(null as integer) as priority, cast(null as varchar) as label, cast(null as varchar) as feature, cast(null as varchar) as op, cast(null as varchar) as value, cast(null as varchar) as value_to, cast(null as boolean) as enabled, cast(null as varchar) as note where false
+  - input: ref('taxonomy_label')
+    rows:
+    - domain: selftest
+      label: A
+      label_std: STD_A
+      note: null
+    - domain: selftest
+      label: B
+      label_std: STD_B
+      note: null
+    - domain: selftest
+      label: C
+      label_std: STD_C
+      note: null
+  expect:
+    rows:
+    - s_key: k1
+      selftest_first: A
+      selftest_first_std: STD_A
+      rule_id: a1
+      matched__a: true
+    - s_key: k2
+      selftest_first: UNMAPPED
+      selftest_first_std: UNMAPPED
+      rule_id: null
+      matched__a: false
+- name: taxonomy_engine_op_has
+  description: 'Operator has: TRUE on a match, FALSE on a non-match, NULL (or FALSE for is_null) on a NULL feature,
+    like the SQL predicate.'
+  model: lbl_selftest_first
+  given:
+  - input: ref('feat_taxonomy_selftest')
+    format: sql
+    rows: |
+      select CAST('k1' AS VARCHAR) as s_key, CAST(NULL AS VARCHAR) as s_text, CAST('r' AS VARCHAR) as s_text2, CAST(NULL AS DOUBLE) as s_num, CAST(['US', 'VN'] AS VARCHAR[]) as s_list
+      union all
+      select CAST('k2' AS VARCHAR) as s_key, CAST(NULL AS VARCHAR) as s_text, CAST('r' AS VARCHAR) as s_text2, CAST(NULL AS DOUBLE) as s_num, CAST(['VN'] AS VARCHAR[]) as s_list
+      union all
+      select CAST('k3' AS VARCHAR) as s_key, CAST(NULL AS VARCHAR) as s_text, CAST('r' AS VARCHAR) as s_text2, CAST(NULL AS DOUBLE) as s_num, CAST([] AS VARCHAR[]) as s_list
+      union all
+      select CAST('k4' AS VARCHAR) as s_key, CAST(NULL AS VARCHAR) as s_text, CAST('r' AS VARCHAR) as s_text2, CAST(NULL AS DOUBLE) as s_num, CAST(NULL AS VARCHAR[]) as s_list
+  - input: ref('taxonomy_rule_tenant')
+    rows:
+    - rule_id: a1
+      domain: selftest_first
+      priority: 10
+      label: A
+      feature: s_list
+      op: has
+      value: US
+      value_to: null
+      enabled: true
+  - input: ref('taxonomy_rule_product')
+    format: sql
+    rows: |
+      select cast(null as varchar) as rule_id, cast(null as varchar) as domain, cast(null as integer) as priority, cast(null as varchar) as label, cast(null as varchar) as feature, cast(null as varchar) as op, cast(null as varchar) as value, cast(null as varchar) as value_to, cast(null as boolean) as enabled, cast(null as varchar) as note where false
+  - input: ref('taxonomy_label')
+    rows:
+    - domain: selftest
+      label: A
+      label_std: STD_A
+      note: null
+    - domain: selftest
+      label: B
+      label_std: STD_B
+      note: null
+    - domain: selftest
+      label: C
+      label_std: STD_C
+      note: null
+  expect:
+    rows:
+    - s_key: k1
+      selftest_first: A
+      selftest_first_std: STD_A
+      rule_id: a1
+      matched__a: true
+    - s_key: k2
+      selftest_first: UNMAPPED
+      selftest_first_std: UNMAPPED
+      rule_id: null
+      matched__a: false
+    - s_key: k3
+      selftest_first: UNMAPPED
+      selftest_first_std: UNMAPPED
+      rule_id: null
+      matched__a: false
+    - s_key: k4
+      selftest_first: UNMAPPED
+      selftest_first_std: UNMAPPED
+      rule_id: null
+      matched__a: null
+- name: taxonomy_engine_and_true_null_does_not_match
+  description: A rule whose conditions are TRUE and NULL does not match (three-valued AND) and evaluation falls
+    to the next rule; FALSE and NULL is FALSE.
+  model: lbl_selftest_first
+  given:
+  - input: ref('feat_taxonomy_selftest')
+    format: sql
+    rows: |
+      select CAST('k1' AS VARCHAR) as s_key, CAST('abc' AS VARCHAR) as s_text, CAST('r' AS VARCHAR) as s_text2, CAST(NULL AS DOUBLE) as s_num, CAST(NULL AS VARCHAR[]) as s_list
+      union all
+      select CAST('k2' AS VARCHAR) as s_key, CAST('abc' AS VARCHAR) as s_text, CAST('r' AS VARCHAR) as s_text2, CAST(1 AS DOUBLE) as s_num, CAST(NULL AS VARCHAR[]) as s_list
+      union all
+      select CAST('k3' AS VARCHAR) as s_key, CAST('zzz' AS VARCHAR) as s_text, CAST('r' AS VARCHAR) as s_text2, CAST(NULL AS DOUBLE) as s_num, CAST(NULL AS VARCHAR[]) as s_list
+  - input: ref('taxonomy_rule_tenant')
+    rows:
+    - rule_id: r1
+      domain: selftest_first
+      priority: 10
+      label: A
+      feature: s_text
+      op: like
+      value: a%
+      value_to: null
+      enabled: true
+    - rule_id: r1
+      domain: selftest_first
+      priority: 10
+      label: A
+      feature: s_num
+      op: eq
+      value: '1'
+      value_to: null
+      enabled: true
+    - rule_id: r2
+      domain: selftest_first
+      priority: 20
+      label: B
+      feature: null
+      op: null
+      value: null
+      value_to: null
+      enabled: true
+  - input: ref('taxonomy_rule_product')
+    format: sql
+    rows: |
+      select cast(null as varchar) as rule_id, cast(null as varchar) as domain, cast(null as integer) as priority, cast(null as varchar) as label, cast(null as varchar) as feature, cast(null as varchar) as op, cast(null as varchar) as value, cast(null as varchar) as value_to, cast(null as boolean) as enabled, cast(null as varchar) as note where false
+  - input: ref('taxonomy_label')
+    rows:
+    - domain: selftest
+      label: A
+      label_std: STD_A
+      note: null
+    - domain: selftest
+      label: B
+      label_std: STD_B
+      note: null
+    - domain: selftest
+      label: C
+      label_std: STD_C
+      note: null
+  expect:
+    rows:
+    - s_key: k1
+      selftest_first: B
+      selftest_first_std: STD_B
+      rule_id: r2
+      matched__a: null
+    - s_key: k2
+      selftest_first: A
+      selftest_first_std: STD_A
+      rule_id: r1
+      matched__a: true
+    - s_key: k3
+      selftest_first: B
+      selftest_first_std: STD_B
+      rule_id: r2
+      matched__a: false
+- name: taxonomy_engine_first_tenant_layer_then_priority
+  description: 'FIRST: when several rules match, a tenant-layer rule wins over a product-layer rule, then the lower
+    priority wins.'
+  model: lbl_selftest_first
+  given:
+  - input: ref('feat_taxonomy_selftest')
+    format: sql
+    rows: |
+      select CAST('k1' AS VARCHAR) as s_key, CAST('x' AS VARCHAR) as s_text, CAST('r' AS VARCHAR) as s_text2, CAST(1 AS DOUBLE) as s_num, CAST(NULL AS VARCHAR[]) as s_list
+      union all
+      select CAST('k2' AS VARCHAR) as s_key, CAST('x' AS VARCHAR) as s_text, CAST('r' AS VARCHAR) as s_text2, CAST(2 AS DOUBLE) as s_num, CAST(NULL AS VARCHAR[]) as s_list
+  - input: ref('taxonomy_rule_tenant')
+    rows:
+    - rule_id: t1
+      domain: selftest_first
+      priority: 50
+      label: B
+      feature: s_text
+      op: like
+      value: '%'
+      value_to: null
+      enabled: true
+    - rule_id: t2
+      domain: selftest_first
+      priority: 40
+      label: C
+      feature: s_num
+      op: eq
+      value: '1'
+      value_to: null
+      enabled: true
+  - input: ref('taxonomy_rule_product')
+    rows:
+    - rule_id: p1
+      domain: selftest_first
+      priority: 1
+      label: A
+      feature: s_text
+      op: like
+      value: '%'
+      value_to: null
+      enabled: true
+  - input: ref('taxonomy_label')
+    rows:
+    - domain: selftest
+      label: A
+      label_std: STD_A
+      note: null
+    - domain: selftest
+      label: B
+      label_std: STD_B
+      note: null
+    - domain: selftest
+      label: C
+      label_std: STD_C
+      note: null
+  expect:
+    rows:
+    - s_key: k1
+      selftest_first: C
+      selftest_first_std: STD_C
+      rule_id: t2
+      source_layer: tenant
+    - s_key: k2
+      selftest_first: B
+      selftest_first_std: STD_B
+      rule_id: t1
+      source_layer: tenant
+- name: taxonomy_engine_tenant_disable_row_turns_off_product_rule
+  description: A tenant row enabled=false with the rule_id of a product rule removes that rule; the next product
+    rule applies.
+  model: lbl_selftest_first
+  given:
+  - input: ref('feat_taxonomy_selftest')
+    format: sql
+    rows: |
+      select CAST('k1' AS VARCHAR) as s_key, CAST('x' AS VARCHAR) as s_text, CAST('r' AS VARCHAR) as s_text2, CAST(NULL AS DOUBLE) as s_num, CAST(NULL AS VARCHAR[]) as s_list
+  - input: ref('taxonomy_rule_tenant')
+    rows:
+    - rule_id: p1
+      domain: selftest_first
+      priority: null
+      label: null
+      feature: null
+      op: null
+      value: null
+      value_to: null
+      enabled: false
+  - input: ref('taxonomy_rule_product')
+    rows:
+    - rule_id: p1
+      domain: selftest_first
+      priority: 10
+      label: A
+      feature: s_text
+      op: like
+      value: '%'
+      value_to: null
+      enabled: true
+    - rule_id: p2
+      domain: selftest_first
+      priority: 20
+      label: B
+      feature: null
+      op: null
+      value: null
+      value_to: null
+      enabled: true
+  - input: ref('taxonomy_label')
+    rows:
+    - domain: selftest
+      label: A
+      label_std: STD_A
+      note: null
+    - domain: selftest
+      label: B
+      label_std: STD_B
+      note: null
+    - domain: selftest
+      label: C
+      label_std: STD_C
+      note: null
+  expect:
+    rows:
+    - s_key: k1
+      selftest_first: B
+      selftest_first_std: STD_B
+      rule_id: p2
+      matched__a: false
+      source_layer: product
+- name: taxonomy_engine_unconditional_rule_is_the_default
+  description: A rule without condition matches every subject and serves as the default after the other rules.
+  model: lbl_selftest_first
+  given:
+  - input: ref('feat_taxonomy_selftest')
+    format: sql
+    rows: |
+      select CAST('k1' AS VARCHAR) as s_key, CAST('xa' AS VARCHAR) as s_text, CAST('r' AS VARCHAR) as s_text2, CAST(NULL AS DOUBLE) as s_num, CAST(NULL AS VARCHAR[]) as s_list
+      union all
+      select CAST('k2' AS VARCHAR) as s_key, CAST('b' AS VARCHAR) as s_text, CAST('r' AS VARCHAR) as s_text2, CAST(NULL AS DOUBLE) as s_num, CAST(NULL AS VARCHAR[]) as s_list
+  - input: ref('taxonomy_rule_tenant')
+    rows:
+    - rule_id: r1
+      domain: selftest_first
+      priority: 10
+      label: A
+      feature: s_text
+      op: like
+      value: x%
+      value_to: null
+      enabled: true
+    - rule_id: d
+      domain: selftest_first
+      priority: 999
+      label: C
+      feature: null
+      op: null
+      value: null
+      value_to: null
+      enabled: true
+  - input: ref('taxonomy_rule_product')
+    format: sql
+    rows: |
+      select cast(null as varchar) as rule_id, cast(null as varchar) as domain, cast(null as integer) as priority, cast(null as varchar) as label, cast(null as varchar) as feature, cast(null as varchar) as op, cast(null as varchar) as value, cast(null as varchar) as value_to, cast(null as boolean) as enabled, cast(null as varchar) as note where false
+  - input: ref('taxonomy_label')
+    rows:
+    - domain: selftest
+      label: A
+      label_std: STD_A
+      note: null
+    - domain: selftest
+      label: B
+      label_std: STD_B
+      note: null
+    - domain: selftest
+      label: C
+      label_std: STD_C
+      note: null
+  expect:
+    rows:
+    - s_key: k1
+      selftest_first: A
+      selftest_first_std: STD_A
+      rule_id: r1
+    - s_key: k2
+      selftest_first: C
+      selftest_first_std: STD_C
+      rule_id: d
+- name: taxonomy_engine_no_match_is_unmapped
+  description: No matching rule gives UNMAPPED with rule_id NULL and label_std UNMAPPED; a matching label gets its
+    label_std from taxonomy_label.
+  model: lbl_selftest_first
+  given:
+  - input: ref('feat_taxonomy_selftest')
+    format: sql
+    rows: |
+      select CAST('k1' AS VARCHAR) as s_key, CAST('x' AS VARCHAR) as s_text, CAST('r' AS VARCHAR) as s_text2, CAST(NULL AS DOUBLE) as s_num, CAST(NULL AS VARCHAR[]) as s_list
+      union all
+      select CAST('k2' AS VARCHAR) as s_key, CAST('y' AS VARCHAR) as s_text, CAST('r' AS VARCHAR) as s_text2, CAST(NULL AS DOUBLE) as s_num, CAST(NULL AS VARCHAR[]) as s_list
+  - input: ref('taxonomy_rule_tenant')
+    rows:
+    - rule_id: r1
+      domain: selftest_first
+      priority: 10
+      label: A
+      feature: s_text
+      op: eq
+      value: x
+      value_to: null
+      enabled: true
+  - input: ref('taxonomy_rule_product')
+    format: sql
+    rows: |
+      select cast(null as varchar) as rule_id, cast(null as varchar) as domain, cast(null as integer) as priority, cast(null as varchar) as label, cast(null as varchar) as feature, cast(null as varchar) as op, cast(null as varchar) as value, cast(null as varchar) as value_to, cast(null as boolean) as enabled, cast(null as varchar) as note where false
+  - input: ref('taxonomy_label')
+    rows:
+    - domain: selftest
+      label: A
+      label_std: STD_A
+      note: null
+    - domain: selftest
+      label: B
+      label_std: STD_B
+      note: null
+    - domain: selftest
+      label: C
+      label_std: STD_C
+      note: null
+  expect:
+    rows:
+    - s_key: k1
+      selftest_first: A
+      selftest_first_std: STD_A
+      rule_id: r1
+      matched__a: true
+    - s_key: k2
+      selftest_first: UNMAPPED
+      selftest_first_std: UNMAPPED
+      rule_id: null
+      matched__a: false
+- name: taxonomy_engine_null_required_feature_is_unknown
+  description: A NULL required feature gives UNKNOWN without evaluating rules, even an unconditional one; its matched
+    flags are NULL.
+  model: lbl_selftest_first
+  given:
+  - input: ref('feat_taxonomy_selftest')
+    format: sql
+    rows: |
+      select CAST('k1' AS VARCHAR) as s_key, CAST('x' AS VARCHAR) as s_text, CAST(NULL AS VARCHAR) as s_text2, CAST(NULL AS DOUBLE) as s_num, CAST(NULL AS VARCHAR[]) as s_list
+      union all
+      select CAST('k2' AS VARCHAR) as s_key, CAST('x' AS VARCHAR) as s_text, CAST('r' AS VARCHAR) as s_text2, CAST(NULL AS DOUBLE) as s_num, CAST(NULL AS VARCHAR[]) as s_list
+  - input: ref('taxonomy_rule_tenant')
+    rows:
+    - rule_id: r1
+      domain: selftest_first
+      priority: 10
+      label: A
+      feature: s_text
+      op: eq
+      value: x
+      value_to: null
+      enabled: true
+    - rule_id: d
+      domain: selftest_first
+      priority: 99
+      label: B
+      feature: null
+      op: null
+      value: null
+      value_to: null
+      enabled: true
+  - input: ref('taxonomy_rule_product')
+    format: sql
+    rows: |
+      select cast(null as varchar) as rule_id, cast(null as varchar) as domain, cast(null as integer) as priority, cast(null as varchar) as label, cast(null as varchar) as feature, cast(null as varchar) as op, cast(null as varchar) as value, cast(null as varchar) as value_to, cast(null as boolean) as enabled, cast(null as varchar) as note where false
+  - input: ref('taxonomy_label')
+    rows:
+    - domain: selftest
+      label: A
+      label_std: STD_A
+      note: null
+    - domain: selftest
+      label: B
+      label_std: STD_B
+      note: null
+    - domain: selftest
+      label: C
+      label_std: STD_C
+      note: null
+  expect:
+    rows:
+    - s_key: k1
+      selftest_first: UNKNOWN
+      selftest_first_std: UNKNOWN
+      rule_id: null
+      matched__a: null
+    - s_key: k2
+      selftest_first: A
+      selftest_first_std: STD_A
+      rule_id: r1
+      matched__a: true
+- name: taxonomy_engine_label_not_anchored_is_unmapped_std
+  description: A rule label missing from taxonomy_label keeps its label but its label_std is UNMAPPED.
+  model: lbl_selftest_first
+  given:
+  - input: ref('feat_taxonomy_selftest')
+    format: sql
+    rows: |
+      select CAST('k1' AS VARCHAR) as s_key, CAST('x' AS VARCHAR) as s_text, CAST('r' AS VARCHAR) as s_text2, CAST(NULL AS DOUBLE) as s_num, CAST(NULL AS VARCHAR[]) as s_list
+  - input: ref('taxonomy_rule_tenant')
+    rows:
+    - rule_id: r1
+      domain: selftest_first
+      priority: 10
+      label: Z
+      feature: s_text
+      op: eq
+      value: x
+      value_to: null
+      enabled: true
+  - input: ref('taxonomy_rule_product')
+    format: sql
+    rows: |
+      select cast(null as varchar) as rule_id, cast(null as varchar) as domain, cast(null as integer) as priority, cast(null as varchar) as label, cast(null as varchar) as feature, cast(null as varchar) as op, cast(null as varchar) as value, cast(null as varchar) as value_to, cast(null as boolean) as enabled, cast(null as varchar) as note where false
+  - input: ref('taxonomy_label')
+    rows:
+    - domain: selftest
+      label: A
+      label_std: STD_A
+      note: null
+    - domain: selftest
+      label: B
+      label_std: STD_B
+      note: null
+    - domain: selftest
+      label: C
+      label_std: STD_C
+      note: null
+  expect:
+    rows:
+    - s_key: k1
+      selftest_first: Z
+      selftest_first_std: UNMAPPED
+      rule_id: r1
+- name: taxonomy_engine_matched_flag_ignores_priority
+  description: matched__a is TRUE if any rule of label A is TRUE, else NULL if one is NULL, else FALSE, even when
+    a higher-priority rule of another label wins.
+  model: lbl_selftest_first
+  given:
+  - input: ref('feat_taxonomy_selftest')
+    format: sql
+    rows: |
+      select CAST('k1' AS VARCHAR) as s_key, CAST('abc' AS VARCHAR) as s_text, CAST('r' AS VARCHAR) as s_text2, CAST(NULL AS DOUBLE) as s_num, CAST(NULL AS VARCHAR[]) as s_list
+      union all
+      select CAST('k2' AS VARCHAR) as s_key, CAST(NULL AS VARCHAR) as s_text, CAST('r' AS VARCHAR) as s_text2, CAST(2 AS DOUBLE) as s_num, CAST(NULL AS VARCHAR[]) as s_list
+      union all
+      select CAST('k3' AS VARCHAR) as s_key, CAST('zz' AS VARCHAR) as s_text, CAST('r' AS VARCHAR) as s_text2, CAST(2 AS DOUBLE) as s_num, CAST(NULL AS VARCHAR[]) as s_list
+  - input: ref('taxonomy_rule_tenant')
+    rows:
+    - rule_id: b1
+      domain: selftest_first
+      priority: 1
+      label: B
+      feature: null
+      op: null
+      value: null
+      value_to: null
+      enabled: true
+    - rule_id: a1
+      domain: selftest_first
+      priority: 10
+      label: A
+      feature: s_text
+      op: like
+      value: a%
+      value_to: null
+      enabled: true
+    - rule_id: a2
+      domain: selftest_first
+      priority: 20
+      label: A
+      feature: s_num
+      op: eq
+      value: '1'
+      value_to: null
+      enabled: true
+  - input: ref('taxonomy_rule_product')
+    format: sql
+    rows: |
+      select cast(null as varchar) as rule_id, cast(null as varchar) as domain, cast(null as integer) as priority, cast(null as varchar) as label, cast(null as varchar) as feature, cast(null as varchar) as op, cast(null as varchar) as value, cast(null as varchar) as value_to, cast(null as boolean) as enabled, cast(null as varchar) as note where false
+  - input: ref('taxonomy_label')
+    rows:
+    - domain: selftest
+      label: A
+      label_std: STD_A
+      note: null
+    - domain: selftest
+      label: B
+      label_std: STD_B
+      note: null
+    - domain: selftest
+      label: C
+      label_std: STD_C
+      note: null
+  expect:
+    rows:
+    - s_key: k1
+      selftest_first: B
+      selftest_first_std: STD_B
+      rule_id: b1
+      matched__a: true
+    - s_key: k2
+      selftest_first: B
+      selftest_first_std: STD_B
+      rule_id: b1
+      matched__a: null
+    - s_key: k3
+      selftest_first: B
+      selftest_first_std: STD_B
+      rule_id: b1
+      matched__a: false
+- name: taxonomy_engine_unique_counts_hits
+  description: 'UNIQUE: the result is the first match (deterministic) and n_hits counts every matching rule.'
+  model: lbl_selftest_unique
+  given:
+  - input: ref('feat_taxonomy_selftest')
+    format: sql
+    rows: |
+      select CAST('k1' AS VARCHAR) as s_key, CAST('abc' AS VARCHAR) as s_text, CAST('r' AS VARCHAR) as s_text2, CAST(NULL AS DOUBLE) as s_num, CAST(NULL AS VARCHAR[]) as s_list
+      union all
+      select CAST('k2' AS VARCHAR) as s_key, CAST('ab' AS VARCHAR) as s_text, CAST('r' AS VARCHAR) as s_text2, CAST(NULL AS DOUBLE) as s_num, CAST(NULL AS VARCHAR[]) as s_list
+      union all
+      select CAST('k3' AS VARCHAR) as s_key, CAST('zz' AS VARCHAR) as s_text, CAST('r' AS VARCHAR) as s_text2, CAST(NULL AS DOUBLE) as s_num, CAST(NULL AS VARCHAR[]) as s_list
+  - input: ref('taxonomy_rule_tenant')
+    rows:
+    - rule_id: r1
+      domain: selftest_unique
+      priority: 10
+      label: A
+      feature: s_text
+      op: like
+      value: a%
+      value_to: null
+      enabled: true
+    - rule_id: r2
+      domain: selftest_unique
+      priority: 20
+      label: B
+      feature: s_text
+      op: like
+      value: '%c'
+      value_to: null
+      enabled: true
+  - input: ref('taxonomy_rule_product')
+    format: sql
+    rows: |
+      select cast(null as varchar) as rule_id, cast(null as varchar) as domain, cast(null as integer) as priority, cast(null as varchar) as label, cast(null as varchar) as feature, cast(null as varchar) as op, cast(null as varchar) as value, cast(null as varchar) as value_to, cast(null as boolean) as enabled, cast(null as varchar) as note where false
+  - input: ref('taxonomy_label')
+    rows:
+    - domain: selftest
+      label: A
+      label_std: STD_A
+      note: null
+    - domain: selftest
+      label: B
+      label_std: STD_B
+      note: null
+    - domain: selftest
+      label: C
+      label_std: STD_C
+      note: null
+  expect:
+    rows:
+    - s_key: k1
+      selftest_unique: A
+      rule_id: r1
+      n_hits: 2
+    - s_key: k2
+      selftest_unique: A
+      rule_id: r1
+      n_hits: 1
+    - s_key: k3
+      selftest_unique: UNMAPPED
+      rule_id: null
+      n_hits: 0
+- name: taxonomy_engine_collect_one_row_per_label
+  description: 'COLLECT: one row per matched label with the first matching rule of that label; a subject with no
+    match gets one UNMAPPED row.'
+  model: lbl_selftest_collect
+  given:
+  - input: ref('feat_taxonomy_selftest')
+    format: sql
+    rows: |
+      select CAST('k1' AS VARCHAR) as s_key, CAST('abc' AS VARCHAR) as s_text, CAST('r' AS VARCHAR) as s_text2, CAST(1 AS DOUBLE) as s_num, CAST(NULL AS VARCHAR[]) as s_list
+      union all
+      select CAST('k2' AS VARCHAR) as s_key, CAST('zz' AS VARCHAR) as s_text, CAST('r' AS VARCHAR) as s_text2, CAST(NULL AS DOUBLE) as s_num, CAST(NULL AS VARCHAR[]) as s_list
+      union all
+      select CAST('k3' AS VARCHAR) as s_key, CAST('abz' AS VARCHAR) as s_text, CAST('r' AS VARCHAR) as s_text2, CAST(NULL AS DOUBLE) as s_num, CAST(NULL AS VARCHAR[]) as s_list
+  - input: ref('taxonomy_rule_tenant')
+    rows:
+    - rule_id: r1
+      domain: selftest_collect
+      priority: 10
+      label: A
+      feature: s_text
+      op: like
+      value: a%
+      value_to: null
+      enabled: true
+    - rule_id: r2
+      domain: selftest_collect
+      priority: 20
+      label: B
+      feature: s_text
+      op: like
+      value: '%c'
+      value_to: null
+      enabled: true
+    - rule_id: r3
+      domain: selftest_collect
+      priority: 5
+      label: A
+      feature: s_num
+      op: eq
+      value: '1'
+      value_to: null
+      enabled: true
+  - input: ref('taxonomy_rule_product')
+    format: sql
+    rows: |
+      select cast(null as varchar) as rule_id, cast(null as varchar) as domain, cast(null as integer) as priority, cast(null as varchar) as label, cast(null as varchar) as feature, cast(null as varchar) as op, cast(null as varchar) as value, cast(null as varchar) as value_to, cast(null as boolean) as enabled, cast(null as varchar) as note where false
+  - input: ref('taxonomy_label')
+    rows:
+    - domain: selftest
+      label: A
+      label_std: STD_A
+      note: null
+    - domain: selftest
+      label: B
+      label_std: STD_B
+      note: null
+    - domain: selftest
+      label: C
+      label_std: STD_C
+      note: null
+  expect:
+    rows:
+    - s_key: k1
+      selftest_collect: A
+      selftest_collect_std: STD_A
+      rule_id: r3
+    - s_key: k1
+      selftest_collect: B
+      selftest_collect_std: STD_B
+      rule_id: r2
+    - s_key: k2
+      selftest_collect: UNMAPPED
+      selftest_collect_std: UNMAPPED
+      rule_id: null
+    - s_key: k3
+      selftest_collect: A
+      selftest_collect_std: STD_A
+      rule_id: r1
+- name: taxonomy_engine_ruleset_version_priority_10
+  description: ruleset_version is the md5 of every rule row of the domain; two rule sets that differ only by one
+    priority (this test and its twin with priority 10/11) give different versions.
+  model: lbl_selftest_first
+  given:
+  - input: ref('feat_taxonomy_selftest')
+    format: sql
+    rows: |
+      select CAST('k1' AS VARCHAR) as s_key, CAST('x' AS VARCHAR) as s_text, CAST('r' AS VARCHAR) as s_text2, CAST(NULL AS DOUBLE) as s_num, CAST(NULL AS VARCHAR[]) as s_list
+  - input: ref('taxonomy_rule_tenant')
+    rows:
+    - rule_id: r1
+      domain: selftest_first
+      priority: 10
+      label: A
+      feature: s_text
+      op: eq
+      value: x
+      value_to: null
+      enabled: true
+    - rule_id: d
+      domain: selftest_first
+      priority: 99
+      label: B
+      feature: null
+      op: null
+      value: null
+      value_to: null
+      enabled: true
+  - input: ref('taxonomy_rule_product')
+    format: sql
+    rows: |
+      select cast(null as varchar) as rule_id, cast(null as varchar) as domain, cast(null as integer) as priority, cast(null as varchar) as label, cast(null as varchar) as feature, cast(null as varchar) as op, cast(null as varchar) as value, cast(null as varchar) as value_to, cast(null as boolean) as enabled, cast(null as varchar) as note where false
+  - input: ref('taxonomy_label')
+    rows:
+    - domain: selftest
+      label: A
+      label_std: STD_A
+      note: null
+    - domain: selftest
+      label: B
+      label_std: STD_B
+      note: null
+    - domain: selftest
+      label: C
+      label_std: STD_C
+      note: null
+  expect:
+    rows:
+    - s_key: k1
+      ruleset_version: bd85e7ea8172110520b7bd12f143494f
+- name: taxonomy_engine_ruleset_version_priority_11
+  description: ruleset_version is the md5 of every rule row of the domain; two rule sets that differ only by one
+    priority (this test and its twin with priority 10/11) give different versions.
+  model: lbl_selftest_first
+  given:
+  - input: ref('feat_taxonomy_selftest')
+    format: sql
+    rows: |
+      select CAST('k1' AS VARCHAR) as s_key, CAST('x' AS VARCHAR) as s_text, CAST('r' AS VARCHAR) as s_text2, CAST(NULL AS DOUBLE) as s_num, CAST(NULL AS VARCHAR[]) as s_list
+  - input: ref('taxonomy_rule_tenant')
+    rows:
+    - rule_id: r1
+      domain: selftest_first
+      priority: 11
+      label: A
+      feature: s_text
+      op: eq
+      value: x
+      value_to: null
+      enabled: true
+    - rule_id: d
+      domain: selftest_first
+      priority: 99
+      label: B
+      feature: null
+      op: null
+      value: null
+      value_to: null
+      enabled: true
+  - input: ref('taxonomy_rule_product')
+    format: sql
+    rows: |
+      select cast(null as varchar) as rule_id, cast(null as varchar) as domain, cast(null as integer) as priority, cast(null as varchar) as label, cast(null as varchar) as feature, cast(null as varchar) as op, cast(null as varchar) as value, cast(null as varchar) as value_to, cast(null as boolean) as enabled, cast(null as varchar) as note where false
+  - input: ref('taxonomy_label')
+    rows:
+    - domain: selftest
+      label: A
+      label_std: STD_A
+      note: null
+    - domain: selftest
+      label: B
+      label_std: STD_B
+      note: null
+    - domain: selftest
+      label: C
+      label_std: STD_C
+      note: null
+  expect:
+    rows:
+    - s_key: k1
+      ruleset_version: 4fbda10e43dff0406796a31039be0be1

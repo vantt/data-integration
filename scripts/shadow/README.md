@@ -127,7 +127,7 @@ compare with lake-A. Only the build result decides the step; the printed differe
 reviewed by hand against this list. A table outside it must be explained before the phase is
 accepted.
 
-Expected differences (`{enabled_packs: [], tenant: ""}`, Fine Japan data, 15/10/2026; 154 models and seeds built, 384 tests pass, 5 warn):
+Expected differences (`{enabled_packs: [], tenant: ""}`, Fine Japan data, 15/10/2026 after the classification rule seeds; 157 models and seeds built, 390 tests pass, 5 warn; the engine selftest models are disabled in every profile):
 
 | Table | Expected difference | Why |
 |---|---|---|
@@ -154,7 +154,7 @@ Row counts that must stay equal to lake-A (velocity is core): `int_product_veloc
 
 ## Facts established while building this (2026-10-13)
 
-- dbt build had 633 nodes on 2026-10-13. On 2026-10-15 (after the pack mechanism) it has 718 nodes (179 models: 76 external, 16 incremental, 14 tables, 73 views; 22 seeds; 517 tests) plus 3 exposures, and runs in ≈ 23 s on the shadow lake; baseline result `PASS=717 WARN=1 NO-OP=3 TOTAL=721` (the warning is `assert_overhead_accounts_classified`, which also warns in prod).
+- dbt build had 633 nodes on 2026-10-13. On 2026-10-15 (after the pack mechanism) it had 718 nodes (179 models: 76 external, 16 incremental, 14 tables, 73 views; 22 seeds; 517 tests) plus 3 exposures, and runs in ≈ 23 s on the shadow lake; baseline result `PASS=717 WARN=1 NO-OP=3 TOTAL=721`. With the three classification rule seeds (same day) it has 727 nodes (25 seeds, 523 tests; the 4 engine selftest models are disabled): `PASS=726 WARN=1 NO-OP=3 TOTAL=730` (the warning is `assert_overhead_accounts_classified`, which also warns in prod).
 - `config.location` in the manifest is the unrendered string `{{ get_rolling_location() }}`; rolling models are detected by that string plus `materialized == 'external'` (`stg_marketing_spend` is a view with a stray `location` and writes nothing).
 - External models without a location write `<external_root>/<name>.parquet`; the warehouse view embeds an absolute path, so the golden reads the parquet file relative to the lake.
 - `orchestration/ops/__tests__/test_ingestion_health_retry.py::test_concurrent_writes_no_lock_error` is flaky (SQLite lock timing, about 1 in 4 full-suite runs, on baseline too). The gate re-runs pytest once after a failure and prints `FLAKY` when the re-run passes; a test that fails twice fails the gate.

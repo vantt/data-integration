@@ -93,7 +93,7 @@ buckets:
   stg_shopee_order_revenue: connector:shopee
   stg_shopee_order_revenue_items: connector:shopee
   stg_shopee_order_service_fees: connector:shopee
-  # --- core (59)
+  # --- core (63)
   dim_branch_location: core
   dim_channel_targets: core
   dim_channels: core
@@ -127,6 +127,7 @@ buckets:
   fact_sales: core
   fact_targets: core
   fact_variant_prices_snapshot: core
+  feat_taxonomy_selftest: core
   int_customer_benchmarks: core
   int_customer_discount_metrics: core
   int_customer_entry_attributes: core
@@ -144,6 +145,9 @@ buckets:
   lbl_customer_lifecycle_stage: core
   lbl_customer_type: core
   lbl_value_group: core
+  lbl_selftest_collect: core
+  lbl_selftest_first: core
+  lbl_selftest_unique: core
   mart_cohort_retention: core
   mart_customer_status_snapshot_monthly: core
   mart_customer_tier: core
