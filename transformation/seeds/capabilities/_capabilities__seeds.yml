@@ -1,0 +1,49 @@
+version: 2
+
+# Product seeds (not tenant data): what each connector provides and which module needs it.
+# Preview list; README.md explains each capability and how "observed" is measured.
+seeds:
+  - name: connector_capabilities
+    description: >
+      Capabilities each connector provides, one block of rows per connector. connector_id is the id
+      of `connectors:` in orchestration/config/modules.yaml (a package under
+      orchestration/connectors/), not the dbt folder name. Read by mart_capabilities.
+    columns:
+      - name: connector_id
+        data_type: varchar
+        tests: [not_null]
+      - name: capability
+        data_type: varchar
+        description: "Capability id; must exist in capability_catalog."
+        tests:
+          - not_null
+          - relationships:
+              arguments:
+                to: ref('capability_catalog')
+                field: capability
+      - name: note
+        data_type: varchar
+    tests:
+      - dbt_utils.unique_combination_of_columns:
+          arguments:
+            combination_of_columns: [connector_id, capability]
+
+  - name: capability_catalog
+    description: >
+      Every capability with the module that needs it: `core` or a pack id (a package under
+      orchestration/packs/). A capability several packs need has one row per pack. Read by
+      mart_capabilities, which must have a probe for each capability.
+    columns:
+      - name: capability
+        data_type: varchar
+        tests: [not_null]
+      - name: required_by
+        data_type: varchar
+        description: "`core` or a pack id."
+        tests: [not_null]
+      - name: description_vi
+        data_type: varchar
+    tests:
+      - dbt_utils.unique_combination_of_columns:
+          arguments:
+            combination_of_columns: [capability, required_by]

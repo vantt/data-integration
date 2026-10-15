@@ -38,6 +38,19 @@ seeds:
           channel_code: varchar
           channel_name: varchar
           channel_group: varchar
+    # Product seeds: what each connector provides and which module needs it
+    # (seeds/capabilities/README.md). Read by monitoring/mart_capabilities.
+    capabilities:
+      connector_capabilities:
+        +column_types:
+          connector_id: varchar
+          capability: varchar
+          note: varchar
+      capability_catalog:
+        +column_types:
+          capability: varchar
+          required_by: varchar
+          description_vi: varchar
     # Core defaults of the tenant seeds core reads (seeds/defaults/<seed>__default.csv): header
     # only, so they load as 0-row tables. tenant_ref('<seed>') reads them when var `tenant` is
     # empty. Every column needs a type (an untyped header-only CSV loads as INTEGER); types are
@@ -180,6 +193,10 @@ vars:
   # orchestration/config/modules.yaml. Read by pack_enabled()/pack_ref() in models; override with
   # --vars '{enabled_packs: [...]}' (e.g. scripts/shadow/build-profile.sh).
   enabled_packs: [crm, hug, finance, sales_playbook, marketplace, facebook_ads, facebook_messenger]
+  # Connectors of this deployment, same ids and order as `connectors:` in
+  # orchestration/config/modules.yaml (check_boundaries.py rule `module-config`). Read by
+  # monitoring/mart_capabilities (which capabilities are declared).
+  enabled_connectors: [sapo_v2, shopee, misa_amis, sheets, hug]
   # Tenant of this deployment, same as `tenants:` in orchestration/config/modules.yaml ("" when
   # none). tenant_ref('<seed>') reads seeds/tenants/<tenant>/<seed>.csv when set, the core default
   # seeds/defaults/<seed>__default.csv (0 rows) when empty.

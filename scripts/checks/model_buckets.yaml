@@ -148,7 +148,8 @@ buckets:
   mart_product_action_queue: core
   mart_product_health: core
   mart_retention_waterfall_monthly: core
-  # --- monitoring (1)
+  # --- monitoring (2)
+  mart_capabilities: monitoring
   monitor_uncategorized_tags: monitoring
   # --- pack:crm (14)
   int_crm_outreach_effort_events: pack:crm

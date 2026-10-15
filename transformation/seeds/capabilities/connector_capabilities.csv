@@ -1,0 +1,20 @@
+connector_id,capability,note
+sapo_v2,orders,Sapo orders
+sapo_v2,order_items,Sapo order lines
+sapo_v2,customers,Sapo customers
+sapo_v2,products,Sapo product variants
+sapo_v2,returns,Sapo order returns
+sapo_v2,payments,Sapo payments
+sapo_v2,fulfillments,Sapo fulfillments
+sapo_v2,staff,Sapo staff accounts
+sapo_v2,inventory,Sapo inventory transactions
+sapo_v2,cogs_moving_avg,Moving-average cost on Sapo inventory out-movements
+sapo_v2,purchase_price,Sapo import price list (GIANHAP)
+shopee,marketplace_fees,Shopee service fees from income files
+shopee,platform_discount,Shopee-funded product subsidy from income files
+misa_amis,gl,MISA general ledger
+misa_amis,cogs_accounting,MISA COGS on sales invoice lines
+sheets,targets,Sales targets sheet
+sheets,marketing_spend,Marketing spend sheet
+sheets,teams,Team configuration sheet
+hug,hug_scans,HUG QR scan events

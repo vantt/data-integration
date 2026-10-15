@@ -42,7 +42,7 @@ Rules (design: docs/architecture/modules.md §2b, §3 and §12):
                   has `+enabled` with exactly that default list; pack_ids() in
                   transformation/macros/packs/pack_enabled.sql lists the pack folders;
                   `tenants:` in modules.yaml has at most one id and equals `vars.tenant` ("" for
-                  none). Never allowlisted; the check prints the block to paste.
+                  none); `connectors:` in modules.yaml equals `vars.enabled_connectors`. Never allowlisted; the check prints the block to paste.
 
 Disabled models (dbt `config.enabled = false`, e.g. a pack turned off) still need a bucket and
 the right folder, but their dependencies are not checked: dbt does not resolve them. Run the check
@@ -334,13 +334,15 @@ def _yaml_list(ids: list[str]) -> str:
     return "[" + ", ".join(ids) + "]"
 
 
-def expected_pack_config(modules_packs: list[str], folders: list[str], tenant: str = "") -> str:
+def expected_pack_config(modules_packs: list[str], folders: list[str], tenant: str = "",
+                         connectors: list[str] | None = None) -> str:
     """The dbt side of the pack switch for `modules_packs`, ready to paste."""
     default = repr(list(modules_packs))
     lines = ["# transformation/dbt_project.yml, under models: sapo_warehouse: packs: <pack>:"]
     lines += [f"      {p}:\n        +enabled: \"{ENABLED_TEMPLATE.format(pack=p, default=default)}\"" for p in folders]
     lines += ["# transformation/dbt_project.yml, under vars:",
               f"  enabled_packs: {_yaml_list(modules_packs)}",
+              f"  enabled_connectors: {_yaml_list(connectors or [])}",
               "  tenant: " + (tenant or '""'),
               "# transformation/macros/packs/pack_enabled.sql, macro pack_ids():",
               f"  {{{{ return({repr(list(folders))}) }}}}"]
@@ -369,6 +371,10 @@ def module_config_violations() -> tuple[list[tuple[str, str, str]], str]:
                         "missing" if got is None else f"{got!r} is not the expected switch"))
     for p in sorted(set(pack_cfg) - set(folders)):
         out.append(("module-config", f"models.packs.{p}", "configured in dbt_project.yml but no folder"))
+    connectors = (yaml.safe_load(open(MODULES_FILE)) or {}).get("connectors") or []
+    connectors_var = (project.get("vars") or {}).get("enabled_connectors")
+    if connectors_var != connectors:
+        out.append(("module-config", "vars.enabled_connectors", f"{connectors_var} != modules.yaml connectors {connectors}"))
     tenants = (yaml.safe_load(open(MODULES_FILE)) or {}).get("tenants") or []
     tenant_var = (project.get("vars") or {}).get("tenant")
     if len(tenants) > 1:
@@ -380,7 +386,7 @@ def module_config_violations() -> tuple[list[tuple[str, str, str]], str]:
     ids = re.findall(r"['\"](\w+)['\"]", m.group(1)) if m else None
     if ids is None or sorted(ids) != folders:
         out.append(("module-config", "pack_ids()", f"{ids} != pack folders {folders}"))
-    return out, (expected_pack_config(modules, folders, tenants[0] if len(tenants) == 1 else "") if out else "")
+    return out, (expected_pack_config(modules, folders, tenants[0] if len(tenants) == 1 else "", connectors) if out else "")
 
 
 # ------------------------------------------------------------------ files

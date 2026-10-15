@@ -43,6 +43,13 @@ Jobs that span sources (`pipeline_batch_nightly_job`, `pipeline_batch_fullrefres
 
 ## Add a connector
 
+Declare what the connector provides: a block of rows `<id>,<capability>,<note>` in
+`transformation/seeds/capabilities/connector_capabilities.csv` (capabilities must exist in
+`capability_catalog.csv`; README there), and add `<id>` to `enabled_connectors` in
+`transformation/dbt_project.yml` in the same order as `connectors:` in `config/modules.yaml`
+(`check_boundaries.py` rule `module-config`). `monitoring/mart_capabilities` then reports whether
+its data is observed.
+
 1. `orchestration/connectors/<id>/assets.py` with the assets; ingestion scripts stay in `ingestion/`.
 2. `__init__.py` exporting the seven names above; `jobs.py` exporting `JOBS`, `SCHEDULES`, `SENSORS` (empty lists are fine). Reuse `make_file_drop_sensor` (`sensors/file_drop_sensors.py`) for Excel drop zones and `job_support.has_active_run` for schedule overlap checks.
 3. SLA entries in `config/ingestion_sla.yaml` for the keys in `CHECK_ASSET_DEFS`.

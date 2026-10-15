@@ -66,6 +66,13 @@ in `orchestration/config/modules.yaml`) and the core default `seeds/defaults/<se
 header-only CSV loads as INTEGER); a new tenant must ship every seed core reads, header copied
 from the default (rule `tenant-seed-contract`; `seeds/defaults/README.md`).
 
+Capabilities: `seeds/capabilities/connector_capabilities.csv` (what each connector provides, ids
+of `modules.yaml`) and `capability_catalog.csv` (which module needs it) are product seeds read by
+`monitoring/mart_capabilities` with the vars `enabled_connectors` and `enabled_packs`. A new
+connector adds its rows; a new capability adds a catalog row and a probe in `mart_capabilities.sql`
+(probes read connector/cdm models only, never a pack). `mart_capabilities` is a warehouse table,
+not on serving (`seeds/capabilities/README.md`).
+
 Before committing, run `scripts/checks/run-all.sh` (dbt parse, boundaries, Dagster definitions,
 pytest). Decisions behind this layout: `docs/decisions/015-module-boundaries.md`,
 `016-taxonomy-module.md`, `017-packs-and-tenants.md`.

@@ -1,0 +1,21 @@
+capability,required_by,description_vi
+orders,core,Đơn hàng
+order_items,core,Dòng hàng của đơn
+customers,core,Khách hàng
+products,core,Sản phẩm (biến thể)
+returns,core,Đơn trả hàng
+payments,core,Thanh toán
+fulfillments,core,Giao hàng
+staff,core,Nhân viên (tài khoản bán hàng)
+inventory,core,Xuất nhập tồn kho
+cogs_moving_avg,finance,Giá vốn bình quân theo phiếu xuất kho
+purchase_price,finance,Giá nhập (bảng giá nhập)
+marketplace_fees,finance,Phí sàn thương mại điện tử
+marketplace_fees,marketplace,Phí sàn thương mại điện tử
+platform_discount,finance,Giảm giá do sàn chịu
+gl,finance,Sổ cái kế toán
+cogs_accounting,finance,Giá vốn theo chứng từ kế toán
+targets,core,Chỉ tiêu bán hàng
+marketing_spend,core,Chi phí marketing
+teams,core,Đội nhóm bán hàng
+hug_scans,hug,Lượt quét QR HUG

@@ -14,3 +14,39 @@ models:
         description: "Auto-suggested category based on pattern"
       - name: checked_at
         description: "Timestamp of query"
+
+  - name: mart_capabilities
+    description: >
+      What data this deployment has, one row per capability of seeds/capabilities/capability_catalog:
+      declared by an enabled connector (var enabled_connectors, seed connector_capabilities), needed
+      by core or an enabled pack (var enabled_packs), observed in the data (row count of a probe on a
+      connector or cdm model). Table in the warehouse only, not on serving. Statuses and probes:
+      transformation/seeds/capabilities/README.md.
+    columns:
+      - name: capability
+        description: "Capability id (capability_catalog)."
+        tests: [unique, not_null]
+      - name: required_by
+        description: "Modules that need it, comma-separated: `core` and/or pack ids."
+      - name: declared_by
+        description: "Enabled connectors that declare it, comma-separated; NULL when none."
+      - name: is_declared
+        description: "An enabled connector declares it."
+      - name: is_pack_enabled
+        description: "Core needs it, or a pack that needs it is in enabled_packs."
+      - name: observed_rows
+        description: "Rows of the probe relation (with its filter)."
+      - name: last_observed_date
+        description: "Latest date in the probe when it has a date column; NULL otherwise."
+      - name: is_observed
+        description: "observed_rows > 0."
+      - name: status
+        description: >
+          OK (needed, declared, observed); DECLARED_NO_DATA (needed, declared, no rows);
+          PACK_ON_NO_SOURCE (needed, no enabled connector declares it, whatever rows are left);
+          DATA_NOT_DECLARED (not needed, not declared, rows present); NOT_NEEDED (otherwise).
+        tests:
+          - not_null
+          - accepted_values:
+              arguments:
+                values: ['OK', 'DECLARED_NO_DATA', 'PACK_ON_NO_SOURCE', 'DATA_NOT_DECLARED', 'NOT_NEEDED']

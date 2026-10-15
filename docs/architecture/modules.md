@@ -8,7 +8,7 @@
 
 | Hạng mục | Trạng thái |
 |---|---|
-| Bucket của mọi dbt model (183 model: 173 đang bật, 10 đang tắt) | ✅ Khai báo trong `scripts/checks/model_buckets.yaml` |
+| Bucket của mọi dbt model (184 model: 174 đang bật, 10 đang tắt) | ✅ Khai báo trong `scripts/checks/model_buckets.yaml` |
 | Ma trận phụ thuộc, lõi đọc seed tenant, import chéo (kể cả connector → pack và pack → pack trong orchestration), seed trùng tên, URL/domain cứng trong connector và pack | ✅ Cưỡng chế bằng `scripts/checks/check_boundaries.py` (mục 3, mục 12) |
 | Vi phạm đã biết | 21, sinh từ manifest và import orchestration: 8 cạnh `ref` (tenant hook, pack → pack, pack → connector; không còn pack hook), 0 lõi đọc seed tenant (qua `tenant_ref`), 12 pack đọc source, 1 import pack → pack (`sales_playbook` → `crm`); ghi trong `scripts/checks/boundary_allowlist.yaml` kèm lý do và hướng thoát (mục 3, 10) |
 | Kiểm tra trước commit bằng một lệnh | ✅ `scripts/checks/run-all.sh`: `dbt parse`, `check_boundaries.py`, `dagster definitions validate`, pytest (bắt buộc, ghi trong `AGENTS.md`) |
@@ -19,6 +19,7 @@
 | Công tắc pack (`enabled_packs`, `+enabled` theo thư mục, `pack_enabled`/`pack_ref`, hợp đồng cột `pack_contracts()`, rule `module-config`) | ✅ Lõi đọc pack chỉ qua `pack_ref` (5 hợp đồng, mục 8.1) và seed tenant chỉ qua `tenant_ref` (3 seed mặc định, mục 10); dbt build xanh với mọi pack tắt và không tenant (profile "lõi trần", bước 6b của gate); job connector không import pack: `crm_cache_refresh` vào job qua `AFTER_SERVING_ASSETS` của pack `crm` (mục 4) |
 | Taxonomy: đặc tả, seed phân loại, `seed_paths.py`, check kiểm kê | ✅ `transformation/docs/TAXONOMY.md`, `transformation/seeds/taxonomy/` (8 seed), `ingestion/src/utils/seed_paths.py`, `scripts/checks/check_taxonomy_inventory.py` (mục 9) |
 | Tenant overlay Fine Japan | ✅ Tối thiểu: US shipment (dbt), `seeds/tenants/fine_japan/`, `orchestration/tenants/fine_japan/config.py` (endpoint CRM); 6 URL Google Sheet chỉ ở biến môi trường `SOURCES__SPREADSHEET_URL__*`, không còn URL mặc định trong code (mục 10) |
+| Khả năng của connector (khai báo / cần / quan sát được) | ✅ Seed `seeds/capabilities/` (`connector_capabilities`, `capability_catalog`), biến `enabled_connectors`, model `monitoring/mart_capabilities` (bảng trong warehouse, chưa lên serving) (mục 5.1, 11b) |
 | Bộ máy phân loại (luật thành dữ liệu) | ⏳ Plan riêng sau Đợt 1 (mục 9) |
 
 Các mục dưới đây mô tả trạng thái đích; chỗ nào đã khớp code được đánh dấu ✅.
@@ -244,7 +245,7 @@ flowchart TB
 
 ⚠ = chỉ được qua một mục trong `scripts/checks/boundary_allowlist.yaml` kèm lý do và hướng thoát; ma trận không bao giờ cho phép core → tenants. **Core → pack** hợp lệ khi và chỉ khi đi qua macro `pack_ref('<pack>', '<model>')` (mục 8): `check_boundaries.py` (luật `dbt-ref`) chấp nhận cạnh core → `pack:<p>` tới model `m` chỉ khi `raw_code` của model lõi gọi đúng dạng `pack_ref('<p>', '<m>'` (vị trí, nháy đơn hoặc kép), không có `ref('<m>')` thẳng, và `m` có hợp đồng của pack `<p>` trong `pack_contracts()`. Cạnh core → pack bằng `ref()` thẳng là vi phạm; từ 14/10/2026 allowlist không còn mục nào loại này. `check_boundaries.py` fail khi có cạnh mới ngoài ma trận, và cả khi một mục allowlist không còn xảy ra (để allowlist không phình). Allowlist được **sinh từ manifest** (`depends_on` của model đang bật; model tắt vẫn phải có bucket và nằm đúng thư mục, nhưng dbt không phân giải ref của nó nên không kiểm cạnh) và từ import Python của `orchestration/connectors/**`, `orchestration/packs/**` (`--write-allowlist`), không viết tay. Đọc source dbt chỉ dành cho connector và tenant (luật `dbt-source`). Cột seeds: seed dùng chung (`seeds/taxonomy/`, ...) ai cũng đọc; seed tenant (`seeds/tenants/<t>/`) chỉ pack, `monitoring` và chính tenant `<t>` được đọc, lõi chỉ qua `tenant_ref('<seed>')` (luật `dbt-seed`, mục 10).
 
-Số model theo bucket (`model_buckets.yaml`, 183 model gồm 10 đang tắt):
+Số model theo bucket (`model_buckets.yaml`, 184 model gồm 10 đang tắt):
 
 | Bucket | Model | Bucket | Model |
 |---|---|---|---|
@@ -256,7 +257,7 @@ Số model theo bucket (`model_buckets.yaml`, 183 model gồm 10 đang tắt):
 | connector:facebook_ads (tắt) | 3 | pack:sales_playbook | 3 |
 | connector:facebook_messenger (tắt) | 2 | pack:marketplace | 3 |
 | tenant:fine_japan | 3 | pack:facebook_ads (tắt), pack:facebook_messenger (tắt) | 2 + 2 |
-| monitoring | 1 | | |
+| monitoring | 2 | | |
 
 Vi phạm đã biết (21, đúng bằng allowlist):
 
@@ -382,6 +383,8 @@ Job đồng bộ của connector có `build_serving_db` gắn đuôi `| after_se
 | `JOBS`, `SCHEDULES`, `SENSORS` | list | `definitions.py` |
 
 Bất biến: tên asset key, check key, job, schedule (cron, timezone, default status), sensor và tập `unique_id` dbt mà mỗi job chọn không đổi khi dời code (trạng thái bật/tắt schedule trên prod gắn với code location + repository + tên). `scripts/shadow/gate.sh M` chứng minh bằng Dagster inventory.
+
+**Khai báo khả năng (từ 15/10/2026).** Mỗi connector khai báo nó cung cấp dữ liệu gì bằng một khối dòng trong `transformation/seeds/capabilities/connector_capabilities.csv` (`connector_id` là id của `modules.yaml`, không phải tên thư mục dbt), khả năng phải có trong `capability_catalog.csv`. Danh sách connector đang bật đi vào dbt qua biến `enabled_connectors` (`dbt_project.yml`, bằng `connectors:` của `modules.yaml`, luật `module-config`). Thêm connector mới: thêm package, dòng `modules.yaml`, biến dbt và khối dòng khả năng (pytest `scripts/tests/test_capabilities_seeds.py` kiểm id). Kết quả đo: mục 11b.
 
 Bỏ một connector khỏi `modules.yaml` chỉ làm mất asset, job, schedule, sensor, check và dòng digest của connector đó (đã thử trong shadow với `hug`).
 
@@ -536,6 +539,7 @@ Quy tắc:
 - Một pack chỉ đọc `cdm`, `core`, chính nó và connector khai báo trong `pack_connectors` của `model_buckets.yaml` (finance → misa, marketplace → shopee, hug → hug, facebook_* → facebook_*). Pack → pack khác và pack → connector khác chỉ qua allowlist (mục 3).
 - Orchestration: mỗi pack là package `orchestration/packs/<id>/` export `ASSETS`, `NIGHTLY_ASSETS` (`__init__.py`) và `JOBS`, `SCHEDULES`, `SENSORS` (`jobs.py`); `definitions.py` nạp các pack liệt kê ở `packs:` trong `config/modules.yaml` giống connector, và đưa `NIGHTLY_ASSETS` vào job nightly/full refresh. Hợp đồng: [orchestration/packs/README.md](../../orchestration/packs/README.md).
 - Pack không import pack khác, connector không import pack (luật `orch-import`); pack không chứa URL/domain cứng (luật `pack-url`), endpoint lấy qua `orchestration.tenants.setting()`.
+- Pack cần khả năng nào: `required_by` trong `transformation/seeds/capabilities/capability_catalog.csv` (finance: `cogs_moving_avg`, `purchase_price`, `marketplace_fees`, `platform_discount`, `gl`, `cogs_accounting`; marketplace: `marketplace_fees`; hug: `hug_scans`; còn lại là `core`). Pack bật mà không connector đang bật nào khai báo khả năng nó cần thì `mart_capabilities` báo `PACK_ON_NO_SOURCE` (mục 11b).
 - Bật/tắt pack: mục 8.1. Lõi đọc pack chỉ qua `pack_ref` với hợp đồng cột; cạnh pack → pack vẫn là `ref()`.
 
 ### 8.1 Bật/tắt pack (công tắc pack)
@@ -734,6 +738,27 @@ flowchart LR
 | CRM | `serving/olap.duckdb` read-only, theo tên relation (`crm/sync/duckdb_reader.py`, `crm/src/adapters/outbound/duckdb/`); gồm model của lõi, `finance`, `sales_playbook`, `hug` và tenant | read-only với warehouse; ghi SQLite riêng |
 
 Tên các bảng này là hợp đồng public; danh sách nằm ở `scripts/checks/public_models.yaml`.
+
+## 11b. Khả năng dữ liệu của triển khai (`mart_capabilities`)
+
+Trả lời "doanh nghiệp này có dữ liệu gì" ở ba mức (report-product-design §4 ②), đầu vào cho catalog report sau này. `transformation/models/monitoring/mart_capabilities.sql`, bucket `monitoring`, `materialized='table'` trong warehouse, **không** có `location` nên không có parquet rolling và **chưa lên serving** (user chốt 14/10/2026: chờ plan report). Chi tiết: [transformation/seeds/capabilities/README.md](../../transformation/seeds/capabilities/README.md).
+
+```mermaid
+flowchart LR
+    CC["seed connector_capabilities<br/>(connector → khả năng)"] --> MC
+    CAT["seed capability_catalog<br/>(khả năng → core / pack cần)"] --> MC
+    V["vars enabled_connectors, enabled_packs"] --> MC
+    PR["probe: count(*) trên model connector/cdm<br/>(std_*, stg_shopee_*, src_hug_scan)"] --> MC["mart_capabilities<br/>1 dòng / khả năng"]
+```
+
+| Cột | Nghĩa |
+|---|---|
+| `is_declared`, `declared_by` | Connector đang bật khai báo |
+| `is_pack_enabled`, `required_by` | Lõi cần, hoặc một pack đang bật cần |
+| `observed_rows`, `last_observed_date`, `is_observed` | Probe có dòng (probe chỉ đọc connector/cdm, không đọc pack) |
+| `status` | `OK` (cần, khai báo, có dữ liệu); `DECLARED_NO_DATA` (cần, khai báo, chưa có dòng); `PACK_ON_NO_SOURCE` (cần, không connector đang bật nào khai báo, kể cả khi còn dữ liệu cũ); `DATA_NOT_DECLARED` (không cần, không khai báo, nhưng có dòng); `NOT_NEEDED` (còn lại) |
+
+Đo trên shadow (dữ liệu Fine Japan, 15/10/2026): mọi pack và connector bật thì 19/19 khả năng `OK`; tắt connector `misa_amis` (`enabled_connectors: [sapo_v2, shopee, sheets, hug]`) thì `gl`, `cogs_accounting` ra `PACK_ON_NO_SOURCE` ("bật finance nhưng chưa có nguồn"); lõi trần thì 7 khả năng chỉ pack cần ra `NOT_NEEDED`, 12 khả năng lõi `OK`. Model chạy 0,4 s, nằm trong mọi job dbt có `build_serving_db` (realtime */3 phút cũng chọn nó).
 
 ## 12. Ranh giới Python và container ✅
 

@@ -286,7 +286,7 @@ def _pack_tree(tmp_path, monkeypatch, modules, enabled_var, folders, defaults=No
     packs_cfg = {p: {"+enabled": cb.ENABLED_TEMPLATE.format(pack=p, default=repr(list(defaults)))} for p in folders}
     _write(tmp_path / "dbt_project.yml", _yaml({
         "name": "sapo_warehouse", "models": {"sapo_warehouse": {"packs": packs_cfg}},
-        "vars": {"external_root": "x", "enabled_packs": enabled_var, "tenant": ""}}))
+        "vars": {"external_root": "x", "enabled_packs": enabled_var, "enabled_connectors": [], "tenant": ""}}))
     for p in folders:
         (tmp_path / "packs" / p).mkdir(parents=True)
     _write(tmp_path / "macros" / "pack_enabled.sql",
@@ -433,3 +433,22 @@ def test_committed_tenant_seed_contracts_hold():
     for i, path in enumerate(glob.glob(str(Path(cb.ROOT) / "transformation" / "models" / "**" / "*.sql"), recursive=True)):
         nodes[f"model.p.m{i}"] = {"resource_type": "model", "raw_code": open(path, encoding="utf-8").read(), "config": {}}
     assert cb.tenant_seed_contract_violations({"nodes": nodes}) == []
+
+
+
+@pytest.mark.parametrize("connectors,connectors_var,ok", [
+    (["sapo_v2", "hug"], ["sapo_v2", "hug"], True),
+    (["sapo_v2", "hug"], ["sapo_v2"], False),
+    (["sapo_v2", "hug"], ["hug", "sapo_v2"], False),     # same order as modules.yaml
+    ([], None, False),
+])
+def test_module_config_checks_the_connectors(tmp_path, monkeypatch, connectors, connectors_var, ok):
+    _pack_tree(tmp_path, monkeypatch, ["crm"], ["crm"], ["crm"])
+    doc = yaml.safe_load((tmp_path / "dbt_project.yml").read_text())
+    doc["vars"]["enabled_connectors"] = connectors_var
+    (tmp_path / "dbt_project.yml").write_text(_yaml(doc))
+    (tmp_path / "modules.yaml").write_text(_yaml({"packs": ["crm"], "connectors": connectors}))
+    problems, block = cb.module_config_violations()
+    assert (problems == []) is ok, problems
+    if not ok:
+        assert f"enabled_connectors: [{', '.join(connectors)}]" in block
