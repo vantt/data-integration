@@ -117,7 +117,8 @@ services:
       dockerfile: Dockerfile.evidence
     container_name: evidence
     restart: unless-stopped
-    mem_limit: 2g
+    # `evidence build` peaks at ~3.5 GiB; with 2g it was OOM-killed whenever host swap was full.
+    mem_limit: 4g
     cpus: 1
     # No host port: the pages bundle customer data (PII) and order economics, so the only way
     # in is Caddy with basic_auth below. Credentials come from the compose `.env` (not

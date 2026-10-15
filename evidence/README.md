@@ -8,6 +8,12 @@ Pages live in `pages/`, SQL sources in `sources/datalake/`, and the image is def
 `evidence build`, then serves the static build. `docker compose restart evidence` rebuilds the
 site from the current serving database; it does not reinstall packages.
 
+## Memory
+
+`evidence build` peaks at about 3.5 GiB, so the container has `mem_limit: 4g` in
+`docker-compose.yml`. With 2 GiB it relied on host swap and was killed for lack of memory when the
+host swap was full.
+
 ## Access
 
 The only way in is the Caddy route `evidence.lan.fwg.vn` (container `caddy-global`), which asks for
@@ -73,7 +79,7 @@ Consequences for the scheduled builder: build each area sequentially with a time
 ## Why the versions are pinned
 
 `package.json` pins exact versions and `package-lock.json` locks the whole dependency tree
-(919 packages). The Dockerfile installs with `npm ci`, which installs exactly the locked tree
+(974 packages). The Dockerfile installs with `npm ci`, which installs exactly the locked tree
 and fails when `package.json` and the lock disagree.
 
 Before 14/10/2026 the Evidence packages were declared as `latest`, without a lockfile, so every
@@ -88,6 +94,7 @@ lock is that container's own lockfile):
 | `@evidence-dev/duckdb` | 2.0.1 |
 | `tailwindcss` | 3.4.18 |
 | `autoprefixer` | 10.5.4 |
+| `serve` | 14.2.6 (serves the static build; installed from the lock, never downloaded at start) |
 
 The base image is pinned too: `Dockerfile.evidence` uses `node:20.20.2-slim` (node 20.20.2,
 npm 10.8.2, Debian 12.13), the same versions the production image was built with.
