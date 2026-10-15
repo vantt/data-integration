@@ -34,6 +34,9 @@ Thư mục này ghi nhận các quyết định kiến trúc quan trọng của 
 - [ADR-017: Pack và tenant: logic là pack, dữ liệu/cấu hình là tenant](./017-packs-and-tenants.md)
 - [ADR-018: Bật/tắt pack và điểm cắm lõi ↔ pack/tenant (`pack_ref`, `tenant_ref`, `AFTER_SERVING_ASSETS`, khả năng connector, lớp nhãn)](./018-pack-switch-and-core-plug-points.md)
 
+### Operations
+- [ADR-019: Backup ngoài máy, khôi phục và dựng lại hệ thống (Proposed)](./019-offsite-backup-and-recovery.md)
+
 ## Quy ước
 
 - **Đánh số:** `NNN-tên-ngắn-gọn.md` (ví dụ: `001-pipeline-7-hop-elt.md`)

@@ -33,6 +33,7 @@ This documentation follows a **progressive disclosure** model. Start with Level 
 | [Deployment](./operations/deployment.md) | Environment setup, configuration, initial load | 1 hour |
 | [Operations](./operations/operations.md) | Daily operations, monitoring, maintenance | 1 hour |
 | [Troubleshooting](./operations/troubleshooting.md) | Common issues and recovery procedures | 30 min |
+| [Backup and Recovery](./operations/backup-and-recovery.md) | Backup data scope, off-site copy, restore, drills, rebuild from zero (in progress) | 20 min |
 | [Refactor Safety Harness](./operations/refactor-safety-harness.md) | Shadow gate proving a refactor changes no data, relation or orchestration wiring | 30 min |
 
 ### Level 4: Contribute
