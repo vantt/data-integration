@@ -41,20 +41,88 @@ models:
 
   - name: lbl_customer_type
     description: >
-      Preview, not final. One row per customer_key of dim_customers with the customer type of the customer (dim_customers; differs from fact_orders.customer_type for customers with only the US-channel signal, see TAXONOMY.md Known divergence) and customer_type_std, the
-      canonical code (taxonomy_canonical, domain customer_type) its label is anchored to in the tenant's
-      taxonomy_label: UNMAPPED when the label is not in the table, UNKNOWN when the label is NULL;
-      without a tenant every label is UNMAPPED. Not on serving.
+      Preview, not final. One row per customer_key of dim_customers_base (= dim_customers) with the
+      customer type computed by the classification engine from the tenant rules
+      (seeds/tenants/fine_japan/taxonomy_rule_tenant.csv, domain customer_type: group code/name +
+      US-order signal, the logic of dim_customers; differs from fact_orders.customer_type for
+      customers with only the US-channel signal, see TAXONOMY.md Known divergence) and
+      customer_type_std, the canonical code (taxonomy_canonical, domain customer_type) its label is
+      anchored to in the tenant's taxonomy_label: UNMAPPED when the label is not in the table; without
+      a tenant there is no rule and every label is UNMAPPED. Engine semantics:
+      docs/architecture/taxonomy-engine.md §4b. Marts do not read it yet. Not on serving.
+    tests:
+      - dbt_utils.equal_rowcount:
+          arguments:
+            compare_model: ref('dim_customers_base')
+      - dbt_utils.expression_is_true:
+          arguments:
+            expression: "customer_type NOT IN ('UNMAPPED', 'UNKNOWN')"
+          config:
+            severity: warn
     columns:
       - name: customer_key
         tests: [unique, not_null]
       - name: customer_type
-        description: "Label as produced by dim_customers."
+        description: "Label of the first matching rule (FIRST); RETAIL is the unconditional default rule."
+        tests:
+          - not_null
+          - taxonomy_label_declared:
+              arguments:
+                label_set: customer_type
       - name: customer_type_std
         description: "Canonical code of the label (preview)."
         tests:
           - not_null
           - labels_mapped
+      - name: rule_id
+        description: "Rule that gave the label (seed taxonomy_rule_tenant / taxonomy_rule_product)."
+      - name: source_layer
+        description: "Layer of that rule: tenant or product."
+      - name: ruleset_version
+        description: "md5 of every rule row of the domain; changes when a rule changes (restate signal)."
+      - name: matched__crossborder
+        description: >
+          TRUE if a CROSSBORDER rule matches, else NULL if one is unknown (NULL group code/name and no
+          US order), else FALSE, whatever the winning label: the same value as
+          dim_customers.is_us_gift_recipient.
+
+  - name: lbl_customer_type__group_blob
+    description: >
+      Preview, not final. One row per customer_key of dim_customers_base with the customer type of
+      the fact_orders / int_customer_benchmarks variant (LIKE on the raw customer_group JSON, no
+      US-order signal), computed by the classification engine from the tenant rules (domain
+      customer_type__group_blob), and customer_type_std. Engine semantics:
+      docs/architecture/taxonomy-engine.md §4b. Marts do not read it yet. Not on serving.
+    tests:
+      - dbt_utils.equal_rowcount:
+          arguments:
+            compare_model: ref('dim_customers_base')
+      - dbt_utils.expression_is_true:
+          arguments:
+            expression: "customer_type NOT IN ('UNMAPPED', 'UNKNOWN')"
+          config:
+            severity: warn
+    columns:
+      - name: customer_key
+        tests: [unique, not_null]
+      - name: customer_type
+        description: "Label of the first matching rule (FIRST); RETAIL is the unconditional default rule."
+        tests:
+          - not_null
+          - taxonomy_label_declared:
+              arguments:
+                label_set: customer_type
+      - name: customer_type_std
+        description: "Canonical code of the label (preview)."
+        tests:
+          - not_null
+          - labels_mapped
+      - name: rule_id
+        description: "Rule that gave the label."
+      - name: source_layer
+        description: "Layer of that rule: tenant or product."
+      - name: ruleset_version
+        description: "md5 of every rule row of the domain (restate signal)."
 
   - name: lbl_value_group
     description: >

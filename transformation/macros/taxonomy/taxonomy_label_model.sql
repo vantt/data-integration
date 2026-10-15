@@ -9,7 +9,9 @@
   with ref('taxonomy_rule_product').
 
   1. Subjects: the keys of the first feature model of the domain; the other feature models are
-     LEFT JOINed on the shared key.
+     LEFT JOINed on the shared key. A list feature of a joined model is [] (not NULL) for a
+     subject missing from that model: "has no row there" means "the list is empty", like the
+     EXISTS it replaces.
   2. Each condition row evaluates to TRUE / FALSE / NULL like its SQL predicate
      (taxonomy_condition). 3. A rule is FALSE if one condition is FALSE, else NULL if one is
      NULL, else TRUE (three-valued AND, not bool_and); a rule without condition is TRUE.
@@ -35,7 +37,12 @@ WITH subjects AS (
     SELECT
         f0.{{ k }},
         {%- for c, typ in d.columns.items() %}
-        {{ aliases[d.column_model[c]] }}.{{ c }},
+        {%- set a = aliases[d.column_model[c]] %}
+        {%- if a != 'f0' and taxonomy_type_family(typ) == 'list' %}
+        COALESCE({{ a }}.{{ c }}, CAST([] AS {{ typ }})) AS {{ c }},
+        {%- else %}
+        {{ a }}.{{ c }},
+        {%- endif %}
         {%- endfor %}
         {% if d.required_features | length > 0 -%}
         ({% for c in d.required_features %}{{ aliases[d.column_model[c]] }}.{{ c }} IS NULL{% if not loop.last %} OR {% endif %}{% endfor %})

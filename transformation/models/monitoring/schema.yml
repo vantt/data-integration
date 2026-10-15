@@ -50,3 +50,27 @@ models:
           - accepted_values:
               arguments:
                 values: ['OK', 'DECLARED_NO_DATA', 'PACK_ON_NO_SOURCE', 'DATA_NOT_DECLARED', 'NOT_NEEDED']
+
+  - name: entity_labels
+    description: >
+      Long table of every label of the classification engine: UNION ALL of the lbl_<domain> models
+      of vars.taxonomy (selftest domains excluded), one row per subject, domain and label. For
+      monitoring and explanation only; no core or pack model may read it (monitoring bucket,
+      check_boundaries.py). docs/architecture/taxonomy-engine.md §4b.
+    columns:
+      - name: subject
+        description: "Subject of the domain (customer)."
+      - name: entity_id
+        description: "Key of the subject, as varchar (customer_key)."
+      - name: domain
+        description: "Domain name, e.g. customer_type, customer_type__group_blob."
+      - name: label
+        description: "Tenant label, or UNMAPPED / UNKNOWN."
+      - name: label_std
+        description: "Canonical code (the <label>_std column of lbl_<domain>)."
+      - name: rule_id
+        description: "Rule that gave the label (NULL for UNMAPPED / UNKNOWN)."
+      - name: source_layer
+        description: "Layer of that rule: tenant or product."
+      - name: ruleset_version
+        description: "md5 of every rule row of the domain."

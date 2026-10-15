@@ -1,1 +1,25 @@
 rule_id,domain,priority,label,feature,op,value,value_to,enabled,note
+ct_wholesale_1,customer_type,10,WHOLESALE,group_code,like,%WHOLESALE%,,true,dim_customers: TYPE_WHOLESALE + legacy BANBUON
+ct_wholesale_2,customer_type,11,WHOLESALE,group_name,like,%WHOLESALE%,,true,
+ct_partner_1,customer_type,20,PARTNER,group_code,like,%TYPE_PARTNER%,,true,
+ct_partner_2,customer_type,21,PARTNER,group_name,like,%TYPE_PARTNER%,,true,
+ct_partner_3,customer_type,22,PARTNER,group_code,like,%KY_GUI%,,true,Ký gửi; '_' is a LIKE wildcard (also matches 'KY GUI')
+ct_partner_4,customer_type,23,PARTNER,group_name,like,%KY_GUI%,,true,
+ct_staff_1,customer_type,30,STAFF,group_code,like,%TYPE_STAFF%,,true,
+ct_staff_2,customer_type,31,STAFF,group_name,like,%TYPE_STAFF%,,true,
+ct_kol_1,customer_type,40,KOL,group_code,like,%TYPE_KOL%,,true,
+ct_kol_2,customer_type,41,KOL,group_name,like,%TYPE_KOL%,,true,
+ct_crossborder_1,customer_type,50,CROSSBORDER,group_code,like,%TYPE_CROSSBORDER%,,true,
+ct_crossborder_2,customer_type,51,CROSSBORDER,group_name,like,%TYPE_CROSSBORDER%,,true,
+ct_crossborder_3,customer_type,52,CROSSBORDER,group_code,like,%CTN00014%,,true,legacy CROSSBORDER group code
+ct_crossborder_4,customer_type,53,CROSSBORDER,group_name,like,%CTN00014%,,true,
+ct_crossborder_5,customer_type,54,CROSSBORDER,channels_ordered_on,has,US,,true,has a non-cancelled order on the Sapo channel named US (gift fulfilment for FG Care US)
+ct_retail_1,customer_type,9999,RETAIL,,,,,true,"default (old ELSE): TYPE_RETAIL/BANLE, Selly, untagged"
+ctb_wholesale_1,customer_type__group_blob,10,WHOLESALE,group_blob,like,%WHOLESALE%,,true,fact_orders / int_customer_benchmarks: LIKE on the raw customer_group JSON
+ctb_partner_1,customer_type__group_blob,20,PARTNER,group_blob,like,%TYPE_PARTNER%,,true,
+ctb_partner_2,customer_type__group_blob,21,PARTNER,group_blob,like,%KY_GUI%,,true,
+ctb_staff_1,customer_type__group_blob,30,STAFF,group_blob,like,%TYPE_STAFF%,,true,
+ctb_kol_1,customer_type__group_blob,40,KOL,group_blob,like,%TYPE_KOL%,,true,
+ctb_crossborder_1,customer_type__group_blob,50,CROSSBORDER,group_blob,like,%TYPE_CROSSBORDER%,,true,
+ctb_crossborder_2,customer_type__group_blob,51,CROSSBORDER,group_blob,like,%CTN00014%,,true,
+ctb_retail_1,customer_type__group_blob,9999,RETAIL,,,,,true,default (old ELSE); no US-order signal in this variant

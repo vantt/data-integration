@@ -12,7 +12,7 @@ references: [docs/reference/taxonomy/shopify.md, docs/reference/taxonomy/china.m
 
 > Đọc cùng [transformation/docs/TAXONOMY.md](../../transformation/docs/TAXONOMY.md) (kiểm kê từng luật đang chạy) và [modules.md](modules.md) §9 (vị trí của module taxonomy). Bộ máy đang được hiện thực theo từng bước; phần đã có nằm ở [§4b](#4b-hiện-thực-mvp), phần còn lại của tài liệu là thiết kế.
 
-> **Đã làm trước bộ máy (15/10/2026, plan `261014-2225-pack-mechanism` phase 8): lớp nhãn dạng dữ liệu của §3.3–3.4.** Hai bảng seed `taxonomy_canonical` (sản phẩm, `seeds/taxonomy/`) và `taxonomy_label` (tenant, `seeds/tenants/<tenant>/`, đọc qua `tenant_ref`) cùng 5 model `lbl_channel_format`, `lbl_channel_category`, `lbl_customer_type`, `lbl_value_group`, `lbl_customer_lifecycle_stage` (cột `<nhãn>_std`). Các model này **chỉ neo nhãn mà SQL hiện tại sinh ra** vào một mã chuẩn (macro `label_std_model`), chưa có luật. Khi bộ máy làm: nó thay phần sinh nhãn trong `lbl_<domain>` bằng luật, **giữ tên model `lbl_<domain>` và hai bảng seed** để người đọc `*_std` không phải đổi. Chi tiết: [TAXONOMY.md mục 5b](../../transformation/docs/TAXONOMY.md).
+> **Đã làm trước bộ máy (15/10/2026, plan `261014-2225-pack-mechanism` phase 8): lớp nhãn dạng dữ liệu của §3.3–3.4.** Hai bảng seed `taxonomy_canonical` (sản phẩm, `seeds/taxonomy/`) và `taxonomy_label` (tenant, `seeds/tenants/<tenant>/`, đọc qua `tenant_ref`) cùng 5 model `lbl_channel_format`, `lbl_channel_category`, `lbl_customer_type`, `lbl_value_group`, `lbl_customer_lifecycle_stage` (cột `<nhãn>_std`). Các model này **chỉ neo nhãn mà SQL hiện tại sinh ra** vào một mã chuẩn (macro `label_std_model`), chưa có luật. Khi bộ máy làm: nó thay phần sinh nhãn trong `lbl_<domain>` bằng luật, **giữ tên model `lbl_<domain>` và hai bảng seed** để người đọc `*_std` không phải đổi. Đã làm cho `lbl_customer_type` (§4b). Chi tiết: [TAXONOMY.md mục 5b](../../transformation/docs/TAXONOMY.md).
 
 ## 1. Vấn đề cần giải
 
@@ -157,7 +157,8 @@ Phạm vi MVP ở §7. Mục này ghi **cái đã có trong repo**; mỗi bướ
 |---|---|
 | Registry `vars.taxonomy`, ba seed luật (rỗng), validator `check_taxonomy_rules.py` | Đã có (15/10/2026). Chưa domain thật nào, chưa luật nào |
 | Macro bộ máy `macros/taxonomy/` (FIRST/UNIQUE/COLLECT, logic ba giá trị, hai lớp, `ruleset_version`) và selftest (3 domain selftest, 24 unit test) | Đã có (15/10/2026). Chưa model thật nào gọi macro; model selftest chỉ bật khi chạy selftest |
-| Domain thật (`customer_type`), nối mart, `entity_labels`, giám sát | Chưa có |
+| Hai domain pilot `customer_type`, `customer_type__group_blob` (đặc trưng, 24 luật Fine Japan, 21 unit test với luật thật), view `entity_labels` | Đã có (15/10/2026). **Chưa nối mart**: mart vẫn chạy khối `CASE` cũ; đối chiếu shadow 0 khác biệt trên hai bộ dữ liệu |
+| Nối mart sau `var`, giám sát đối chiếu và giá trị chưa phân loại | Chưa có |
 
 ```mermaid
 flowchart LR
@@ -281,7 +282,31 @@ Model truyền hai seed tenant vào macro để chính SQL của model gọi `te
 7. **Cột đầu ra** của `lbl_<domain>`: `<key>`, `<nhãn>` (cột mang tên domain trước `__`, ví dụ `customer_type__group_blob` → `customer_type`), `<nhãn>_std` (join `taxonomy_label` với `domain` = `label_set`; nhãn không neo thì `UNMAPPED`), `rule_id`, `source_layer` (`tenant`/`product`), `ruleset_version`, các `matched__*`, `n_hits` (chỉ UNIQUE). Tên `<nhãn>_std` (không phải `label_std`) giữ hợp đồng của các `lbl_<domain>` đã có (`customer_type_std`, TAXONOMY.md mục 5b); `entity_labels` đổi tên thành `label_std`.
 8. **`ruleset_version`:** `md5` của mọi dòng luật của domain ở cả hai lớp (gồm dòng tắt; các cột `source_layer, rule_id, priority, label, feature, op, value, value_to, enabled`, bỏ `note`), sắp theo nội dung; một giá trị cho cả domain, đổi khi bất kỳ dòng luật nào của domain đổi. Đây là tín hiệu để restate (full-refresh các model incremental phía sau).
 
+Đặc trưng danh sách của model đặc trưng **không phải model đầu tiên** được đọc là `[]` khi đối tượng không có dòng ở model đó (`LEFT JOIN` hụt): "không có dòng" nghĩa là "danh sách rỗng", như `EXISTS` mà nó thay; nhờ vậy `has` cho FALSE chứ không NULL.
+
 Hiệu năng: mỗi domain là `CROSS JOIN` đối tượng × điều kiện rồi `GROUP BY`; với subject khách (khoảng 7 nghìn dòng × khoảng 20 điều kiện) không đáng kể. Domain cấp đơn sau này nên tách theo toán tử (`eq`/`in` thành hash join).
+
+### Danh mục đặc trưng và domain pilot
+
+Đặc trưng (model ở `transformation/models/core/intermediate/taxonomy/`, `materialized='table'`, giá trị **thô**, không chuẩn hoá để giữ đúng ngữ nghĩa `LIKE` của SQL cũ):
+
+| Model đặc trưng | Khoá | Cột (kiểu) | Nguồn |
+|---|---|---|---|
+| `feat_customer_profile` | `customer_key` | `group_blob`, `group_code`, `group_name` (varchar) | `dim_customers_base` (`customer_group`, `customer_group_code`, `customer_group_name`), mọi khách kể cả sentinel `Unknown` |
+| `feat_customer_orders` | `customer_key` | `channels_ordered_on` (varchar[]) | `fact_orders` ⋈ `dim_channels`, `status != 'CANCELLED'`: tên kênh khác NULL đã có đơn, sắp xếp; khoá theo **tên** kênh như `dim_customers` |
+
+Domain pilot (cùng `label_set: customer_type`, nhãn và neo tạm có sẵn trong `taxonomy_label` của plan cơ chế pack):
+
+| Domain | Model | Đặc trưng | Luật (`seeds/tenants/fine_japan/taxonomy_rule_tenant.csv`) | Thay khối |
+|---|---|---|---|---|
+| `customer_type` | `core/marts/labels/lbl_customer_type` (thay nội dung model của plan pack, giữ grain `customer_key` của `dim_customers_base` = `dim_customers`, cột `customer_type`, `customer_type_std`) | `feat_customer_profile`, `feat_customer_orders` | 16 dòng `ct_*`: WHOLESALE 10–11, PARTNER 20–23, STAFF 30–31, KOL 40–41, CROSSBORDER 50–54 (gồm `channels_ordered_on has US`), RETAIL 9999 không điều kiện; `matched_flags: [CROSSBORDER]` → `matched__crossborder` = `is_us_gift_recipient` | `dim_customers.customer_type`, `is_us_gift_recipient` |
+| `customer_type__group_blob` | `core/marts/labels/lbl_customer_type__group_blob` | `feat_customer_profile` (không có `feat_customer_orders`: model đó đọc `fact_orders`, mà `fact_orders` sẽ đọc domain này) | 8 dòng `ctb_*`: `group_blob like` theo cùng thứ tự, RETAIL 9999 | khối `CASE` của `fact_orders` và `int_customer_benchmarks` |
+
+Mỗi vế `OR` của một nhánh `CASE` là một luật riêng cùng nhãn, priority theo thứ tự nhánh, nên "luật đầu tiên khớp" trùng "nhánh đầu tiên có một vế `TRUE`" (kể cả khi vế khác là NULL). **Quy ước biến thể:** khi cùng một khái niệm có hai logic khác nhau (khác luật, khác đặc trưng), biến thể là một domain riêng tên `<domain>__<biến thể>`, dùng chung `label_set` và tên cột nhãn của domain gốc; xoá khi thống nhất (thống nhất là thay đổi đổi số, user duyệt riêng).
+
+Test lúc build (`core/marts/labels/_labels__models.yml`): `customer_key` `unique`, `not_null`; số dòng bằng `dim_customers_base` (`equal_rowcount`); `customer_type` `not_null` và thuộc bộ nhãn hoặc mã dành riêng (`taxonomy_label_declared`), mức error; `customer_type` không phải `UNMAPPED`/`UNKNOWN` và `labels_mapped` trên `customer_type_std`, mức warn. Unit test với **luật thật** (`core/intermediate/taxonomy/_taxonomy__models.yml`, 21 test: `_` wildcard, phân biệt hoa thường, thứ tự nhánh, WHOLESALE thắng CROSSBORDER, chỉ có đơn US, cờ NULL/FALSE, code NULL, sentinel `Unknown`, blob khớp ở trường khác, blob NULL, khách không có đơn, `CTN00014`, cột luật và mã chuẩn, và đặc trưng `feat_customer_orders` loại đơn huỷ). Fixture luật là bản sao đúng từng byte của seed (`scripts/tests/test_taxonomy_fixtures.py`).
+
+Đo trên shadow 15/10/2026: bốn model mới và `entity_labels` build tổng khoảng 0,2 giây; 21 unit test tổng khoảng 3,1 giây (cộng thời gian các luồng); cả `dbt build` từ 20,9 lên 23,3–24,4 giây.
 
 ### Selftest của bộ máy
 

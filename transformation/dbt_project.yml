@@ -271,6 +271,15 @@ vars:
   # scripts/checks/check_taxonomy_rules.py validates the rules against this registry.
   taxonomy:
     features:
+      # Customer features (models/core/intermediate/taxonomy/). Raw values, not normalized.
+      feat_customer_profile:
+        subject: customer
+        key: customer_key
+        columns: {group_blob: varchar, group_code: varchar, group_name: varchar}
+      feat_customer_orders:
+        subject: customer
+        key: customer_key
+        columns: {channels_ordered_on: "varchar[]"}
       # Engine selftest only (models/core/intermediate/taxonomy/selftest/, built when
       # taxonomy_selftest is true): one typed column per type family.
       feat_taxonomy_selftest:
@@ -278,6 +287,26 @@ vars:
         key: s_key
         columns: {s_text: varchar, s_text2: varchar, s_num: double, s_list: "varchar[]"}
     domains:
+      # Customer type as dim_customers computes it (group code/name + US-order signal).
+      customer_type:
+        subject: customer
+        cardinality: single
+        hit_policy: FIRST
+        features: [feat_customer_profile, feat_customer_orders]
+        label_set: customer_type
+        required_features: []
+        matched_flags: [CROSSBORDER]
+        survey: {features: [group_code, group_name], metrics_model: int_customer_metrics, order_count: frequency, revenue: monetary_value}
+      # Variant of fact_orders / int_customer_benchmarks (LIKE on the raw group JSON, no US-order
+      # signal). No feat_customer_orders: it reads fact_orders, which will read this domain.
+      customer_type__group_blob:
+        subject: customer
+        cardinality: single
+        hit_policy: FIRST
+        features: [feat_customer_profile]
+        label_set: customer_type
+        required_features: []
+        survey: {features: [group_blob], metrics_model: int_customer_metrics, order_count: frequency, revenue: monetary_value}
       selftest_first:
         subject: selftest
         cardinality: single

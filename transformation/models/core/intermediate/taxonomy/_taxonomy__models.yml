@@ -1,0 +1,1108 @@
+# Classification engine pilot: feature models of the customer_type domains and unit tests with the
+# real Fine Japan rules (fixture tests/fixtures/taxonomy_rule_tenant_customer_type.csv is a
+# byte copy of seeds/tenants/fine_japan/taxonomy_rule_tenant.csv, checked by
+# scripts/tests/test_taxonomy_fixtures.py). Model tests of lbl_customer_type and
+# lbl_customer_type__group_blob: models/core/marts/labels/_labels__models.yml.
+# The lbl_* unit tests run only for tenant fine_japan: they mock the tenant seeds, which are not
+# parents of the models when var tenant is empty (tenant_ref then reads the core defaults).
+version: 2
+models:
+- name: feat_customer_profile
+  description: 'Customer profile features of the classification engine: one row per customer of dim_customers_base
+    (sentinel Unknown included), raw group values, not normalized.'
+  columns:
+  - name: customer_key
+    tests:
+    - unique
+    - not_null
+  - name: group_blob
+    description: dim_customers_base.customer_group (raw JSON of the Sapo group).
+  - name: group_code
+    description: dim_customers_base.customer_group_code.
+  - name: group_name
+    description: dim_customers_base.customer_group_name.
+- name: feat_customer_orders
+  description: 'Order features of the classification engine: per customer with a non-cancelled order, the distinct
+    channel names ordered on (fact_orders JOIN dim_channels, status != ''CANCELLED'').'
+  columns:
+  - name: customer_key
+    tests:
+    - unique
+    - not_null
+  - name: channels_ordered_on
+    description: Sorted distinct dim_channels.channel_name; read as [] for a customer without row.
+unit_tests:
+- name: customer_type_underscore_is_a_wildcard
+  description: '''_'' in %KY_GUI% is a LIKE wildcard: KY GUI and KYxGUI are PARTNER (real Fine Japan rules: tests/fixtures/taxonomy_rule_tenant_customer_type.csv).'
+  model: lbl_customer_type
+  config:
+    enabled: '{{ var(''tenant'', '''') == ''fine_japan'' }}'
+  given:
+  - input: ref('feat_customer_profile')
+    format: sql
+    rows: |
+      select CAST('c1' AS VARCHAR) as customer_key, CAST(NULL AS VARCHAR) as group_blob, CAST('KY GUI' AS VARCHAR) as group_code, CAST(NULL AS VARCHAR) as group_name
+      union all
+      select CAST('c2' AS VARCHAR) as customer_key, CAST(NULL AS VARCHAR) as group_blob, CAST(NULL AS VARCHAR) as group_code, CAST('KYxGUI' AS VARCHAR) as group_name
+  - input: ref('feat_customer_orders')
+    format: sql
+    rows: |
+      select cast(null as varchar) as customer_key, cast(null as varchar[]) as channels_ordered_on where false
+  - input: ref('taxonomy_rule_tenant')
+    format: csv
+    fixture: taxonomy_rule_tenant_customer_type
+  - input: ref('taxonomy_rule_product')
+    format: sql
+    rows: |
+      select cast(null as varchar) as rule_id, cast(null as varchar) as domain, cast(null as integer) as priority, cast(null as varchar) as label, cast(null as varchar) as feature, cast(null as varchar) as op, cast(null as varchar) as value, cast(null as varchar) as value_to, cast(null as boolean) as enabled, cast(null as varchar) as note where false
+  - input: ref('taxonomy_label')
+    rows:
+    - domain: customer_type
+      label: RETAIL
+      label_std: CONSUMER
+      note: null
+    - domain: customer_type
+      label: WHOLESALE
+      label_std: WHOLESALE
+      note: null
+    - domain: customer_type
+      label: PARTNER
+      label_std: TRADE
+      note: null
+    - domain: customer_type
+      label: STAFF
+      label_std: STAFF
+      note: null
+    - domain: customer_type
+      label: KOL
+      label_std: KOL
+      note: null
+    - domain: customer_type
+      label: CROSSBORDER
+      label_std: OTHER
+      note: null
+  expect:
+    rows:
+    - customer_key: c1
+      customer_type: PARTNER
+    - customer_key: c2
+      customer_type: PARTNER
+- name: customer_type_group_blob_underscore_is_a_wildcard
+  description: '''_'' in %KY_GUI% is a LIKE wildcard: KY GUI and KYxGUI are PARTNER (real Fine Japan rules: tests/fixtures/taxonomy_rule_tenant_customer_type.csv).'
+  model: lbl_customer_type__group_blob
+  config:
+    enabled: '{{ var(''tenant'', '''') == ''fine_japan'' }}'
+  given:
+  - input: ref('feat_customer_profile')
+    format: sql
+    rows: |
+      select CAST('c1' AS VARCHAR) as customer_key, CAST('{"code":"KY GUI"}' AS VARCHAR) as group_blob, CAST(NULL AS VARCHAR) as group_code, CAST(NULL AS VARCHAR) as group_name
+      union all
+      select CAST('c2' AS VARCHAR) as customer_key, CAST('KYxGUI' AS VARCHAR) as group_blob, CAST(NULL AS VARCHAR) as group_code, CAST(NULL AS VARCHAR) as group_name
+  - input: ref('taxonomy_rule_tenant')
+    format: csv
+    fixture: taxonomy_rule_tenant_customer_type
+  - input: ref('taxonomy_rule_product')
+    format: sql
+    rows: |
+      select cast(null as varchar) as rule_id, cast(null as varchar) as domain, cast(null as integer) as priority, cast(null as varchar) as label, cast(null as varchar) as feature, cast(null as varchar) as op, cast(null as varchar) as value, cast(null as varchar) as value_to, cast(null as boolean) as enabled, cast(null as varchar) as note where false
+  - input: ref('taxonomy_label')
+    rows:
+    - domain: customer_type
+      label: RETAIL
+      label_std: CONSUMER
+      note: null
+    - domain: customer_type
+      label: WHOLESALE
+      label_std: WHOLESALE
+      note: null
+    - domain: customer_type
+      label: PARTNER
+      label_std: TRADE
+      note: null
+    - domain: customer_type
+      label: STAFF
+      label_std: STAFF
+      note: null
+    - domain: customer_type
+      label: KOL
+      label_std: KOL
+      note: null
+    - domain: customer_type
+      label: CROSSBORDER
+      label_std: OTHER
+      note: null
+  expect:
+    rows:
+    - customer_key: c1
+      customer_type: PARTNER
+    - customer_key: c2
+      customer_type: PARTNER
+- name: customer_type_like_is_case_sensitive
+  description: 'LIKE is case-sensitive: type_wholesale is RETAIL (real Fine Japan rules: tests/fixtures/taxonomy_rule_tenant_customer_type.csv).'
+  model: lbl_customer_type
+  config:
+    enabled: '{{ var(''tenant'', '''') == ''fine_japan'' }}'
+  given:
+  - input: ref('feat_customer_profile')
+    format: sql
+    rows: |
+      select CAST('c1' AS VARCHAR) as customer_key, CAST(NULL AS VARCHAR) as group_blob, CAST('type_wholesale' AS VARCHAR) as group_code, CAST(NULL AS VARCHAR) as group_name
+  - input: ref('feat_customer_orders')
+    format: sql
+    rows: |
+      select cast(null as varchar) as customer_key, cast(null as varchar[]) as channels_ordered_on where false
+  - input: ref('taxonomy_rule_tenant')
+    format: csv
+    fixture: taxonomy_rule_tenant_customer_type
+  - input: ref('taxonomy_rule_product')
+    format: sql
+    rows: |
+      select cast(null as varchar) as rule_id, cast(null as varchar) as domain, cast(null as integer) as priority, cast(null as varchar) as label, cast(null as varchar) as feature, cast(null as varchar) as op, cast(null as varchar) as value, cast(null as varchar) as value_to, cast(null as boolean) as enabled, cast(null as varchar) as note where false
+  - input: ref('taxonomy_label')
+    rows:
+    - domain: customer_type
+      label: RETAIL
+      label_std: CONSUMER
+      note: null
+    - domain: customer_type
+      label: WHOLESALE
+      label_std: WHOLESALE
+      note: null
+    - domain: customer_type
+      label: PARTNER
+      label_std: TRADE
+      note: null
+    - domain: customer_type
+      label: STAFF
+      label_std: STAFF
+      note: null
+    - domain: customer_type
+      label: KOL
+      label_std: KOL
+      note: null
+    - domain: customer_type
+      label: CROSSBORDER
+      label_std: OTHER
+      note: null
+  expect:
+    rows:
+    - customer_key: c1
+      customer_type: RETAIL
+- name: customer_type_group_blob_like_is_case_sensitive
+  description: 'LIKE is case-sensitive: type_wholesale is RETAIL (real Fine Japan rules: tests/fixtures/taxonomy_rule_tenant_customer_type.csv).'
+  model: lbl_customer_type__group_blob
+  config:
+    enabled: '{{ var(''tenant'', '''') == ''fine_japan'' }}'
+  given:
+  - input: ref('feat_customer_profile')
+    format: sql
+    rows: |
+      select CAST('c1' AS VARCHAR) as customer_key, CAST('{"code":"type_wholesale"}' AS VARCHAR) as group_blob, CAST(NULL AS VARCHAR) as group_code, CAST(NULL AS VARCHAR) as group_name
+  - input: ref('taxonomy_rule_tenant')
+    format: csv
+    fixture: taxonomy_rule_tenant_customer_type
+  - input: ref('taxonomy_rule_product')
+    format: sql
+    rows: |
+      select cast(null as varchar) as rule_id, cast(null as varchar) as domain, cast(null as integer) as priority, cast(null as varchar) as label, cast(null as varchar) as feature, cast(null as varchar) as op, cast(null as varchar) as value, cast(null as varchar) as value_to, cast(null as boolean) as enabled, cast(null as varchar) as note where false
+  - input: ref('taxonomy_label')
+    rows:
+    - domain: customer_type
+      label: RETAIL
+      label_std: CONSUMER
+      note: null
+    - domain: customer_type
+      label: WHOLESALE
+      label_std: WHOLESALE
+      note: null
+    - domain: customer_type
+      label: PARTNER
+      label_std: TRADE
+      note: null
+    - domain: customer_type
+      label: STAFF
+      label_std: STAFF
+      note: null
+    - domain: customer_type
+      label: KOL
+      label_std: KOL
+      note: null
+    - domain: customer_type
+      label: CROSSBORDER
+      label_std: OTHER
+      note: null
+  expect:
+    rows:
+    - customer_key: c1
+      customer_type: RETAIL
+- name: customer_type_branch_order_partner_before_staff
+  description: 'A group with both TYPE_PARTNER and TYPE_STAFF is PARTNER (branch order) (real Fine Japan rules:
+    tests/fixtures/taxonomy_rule_tenant_customer_type.csv).'
+  model: lbl_customer_type
+  config:
+    enabled: '{{ var(''tenant'', '''') == ''fine_japan'' }}'
+  given:
+  - input: ref('feat_customer_profile')
+    format: sql
+    rows: |
+      select CAST('c1' AS VARCHAR) as customer_key, CAST(NULL AS VARCHAR) as group_blob, CAST('TYPE_STAFF,TYPE_PARTNER' AS VARCHAR) as group_code, CAST(NULL AS VARCHAR) as group_name
+  - input: ref('feat_customer_orders')
+    format: sql
+    rows: |
+      select cast(null as varchar) as customer_key, cast(null as varchar[]) as channels_ordered_on where false
+  - input: ref('taxonomy_rule_tenant')
+    format: csv
+    fixture: taxonomy_rule_tenant_customer_type
+  - input: ref('taxonomy_rule_product')
+    format: sql
+    rows: |
+      select cast(null as varchar) as rule_id, cast(null as varchar) as domain, cast(null as integer) as priority, cast(null as varchar) as label, cast(null as varchar) as feature, cast(null as varchar) as op, cast(null as varchar) as value, cast(null as varchar) as value_to, cast(null as boolean) as enabled, cast(null as varchar) as note where false
+  - input: ref('taxonomy_label')
+    rows:
+    - domain: customer_type
+      label: RETAIL
+      label_std: CONSUMER
+      note: null
+    - domain: customer_type
+      label: WHOLESALE
+      label_std: WHOLESALE
+      note: null
+    - domain: customer_type
+      label: PARTNER
+      label_std: TRADE
+      note: null
+    - domain: customer_type
+      label: STAFF
+      label_std: STAFF
+      note: null
+    - domain: customer_type
+      label: KOL
+      label_std: KOL
+      note: null
+    - domain: customer_type
+      label: CROSSBORDER
+      label_std: OTHER
+      note: null
+  expect:
+    rows:
+    - customer_key: c1
+      customer_type: PARTNER
+- name: customer_type_group_blob_branch_order_partner_before_staff
+  description: 'A group with both TYPE_PARTNER and TYPE_STAFF is PARTNER (branch order) (real Fine Japan rules:
+    tests/fixtures/taxonomy_rule_tenant_customer_type.csv).'
+  model: lbl_customer_type__group_blob
+  config:
+    enabled: '{{ var(''tenant'', '''') == ''fine_japan'' }}'
+  given:
+  - input: ref('feat_customer_profile')
+    format: sql
+    rows: |
+      select CAST('c1' AS VARCHAR) as customer_key, CAST('{"code":"TYPE_STAFF","name":"TYPE_PARTNER"}' AS VARCHAR) as group_blob, CAST(NULL AS VARCHAR) as group_code, CAST(NULL AS VARCHAR) as group_name
+  - input: ref('taxonomy_rule_tenant')
+    format: csv
+    fixture: taxonomy_rule_tenant_customer_type
+  - input: ref('taxonomy_rule_product')
+    format: sql
+    rows: |
+      select cast(null as varchar) as rule_id, cast(null as varchar) as domain, cast(null as integer) as priority, cast(null as varchar) as label, cast(null as varchar) as feature, cast(null as varchar) as op, cast(null as varchar) as value, cast(null as varchar) as value_to, cast(null as boolean) as enabled, cast(null as varchar) as note where false
+  - input: ref('taxonomy_label')
+    rows:
+    - domain: customer_type
+      label: RETAIL
+      label_std: CONSUMER
+      note: null
+    - domain: customer_type
+      label: WHOLESALE
+      label_std: WHOLESALE
+      note: null
+    - domain: customer_type
+      label: PARTNER
+      label_std: TRADE
+      note: null
+    - domain: customer_type
+      label: STAFF
+      label_std: STAFF
+      note: null
+    - domain: customer_type
+      label: KOL
+      label_std: KOL
+      note: null
+    - domain: customer_type
+      label: CROSSBORDER
+      label_std: OTHER
+      note: null
+  expect:
+    rows:
+    - customer_key: c1
+      customer_type: PARTNER
+- name: customer_type_wholesale_wins_over_us_order
+  description: 'TYPE_WHOLESALE with a US order stays WHOLESALE and its CROSSBORDER flag is TRUE (real Fine Japan
+    rules: tests/fixtures/taxonomy_rule_tenant_customer_type.csv).'
+  model: lbl_customer_type
+  config:
+    enabled: '{{ var(''tenant'', '''') == ''fine_japan'' }}'
+  given:
+  - input: ref('feat_customer_profile')
+    format: sql
+    rows: |
+      select CAST('c1' AS VARCHAR) as customer_key, CAST(NULL AS VARCHAR) as group_blob, CAST('TYPE_WHOLESALE' AS VARCHAR) as group_code, CAST('Bán buôn' AS VARCHAR) as group_name
+  - input: ref('feat_customer_orders')
+    format: sql
+    rows: |
+      select CAST('c1' AS VARCHAR) as customer_key, CAST([CAST('Shopee' AS VARCHAR), CAST('US' AS VARCHAR)] AS VARCHAR[]) as channels_ordered_on
+  - input: ref('taxonomy_rule_tenant')
+    format: csv
+    fixture: taxonomy_rule_tenant_customer_type
+  - input: ref('taxonomy_rule_product')
+    format: sql
+    rows: |
+      select cast(null as varchar) as rule_id, cast(null as varchar) as domain, cast(null as integer) as priority, cast(null as varchar) as label, cast(null as varchar) as feature, cast(null as varchar) as op, cast(null as varchar) as value, cast(null as varchar) as value_to, cast(null as boolean) as enabled, cast(null as varchar) as note where false
+  - input: ref('taxonomy_label')
+    rows:
+    - domain: customer_type
+      label: RETAIL
+      label_std: CONSUMER
+      note: null
+    - domain: customer_type
+      label: WHOLESALE
+      label_std: WHOLESALE
+      note: null
+    - domain: customer_type
+      label: PARTNER
+      label_std: TRADE
+      note: null
+    - domain: customer_type
+      label: STAFF
+      label_std: STAFF
+      note: null
+    - domain: customer_type
+      label: KOL
+      label_std: KOL
+      note: null
+    - domain: customer_type
+      label: CROSSBORDER
+      label_std: OTHER
+      note: null
+  expect:
+    rows:
+    - customer_key: c1
+      customer_type: WHOLESALE
+      matched__crossborder: true
+- name: customer_type_us_order_only_is_crossborder
+  description: 'A TYPE_RETAIL customer with a US order is CROSSBORDER, flag TRUE (real Fine Japan rules: tests/fixtures/taxonomy_rule_tenant_customer_type.csv).'
+  model: lbl_customer_type
+  config:
+    enabled: '{{ var(''tenant'', '''') == ''fine_japan'' }}'
+  given:
+  - input: ref('feat_customer_profile')
+    format: sql
+    rows: |
+      select CAST('c1' AS VARCHAR) as customer_key, CAST(NULL AS VARCHAR) as group_blob, CAST('TYPE_RETAIL' AS VARCHAR) as group_code, CAST('Bán lẻ' AS VARCHAR) as group_name
+  - input: ref('feat_customer_orders')
+    format: sql
+    rows: |
+      select CAST('c1' AS VARCHAR) as customer_key, CAST([CAST('US' AS VARCHAR)] AS VARCHAR[]) as channels_ordered_on
+  - input: ref('taxonomy_rule_tenant')
+    format: csv
+    fixture: taxonomy_rule_tenant_customer_type
+  - input: ref('taxonomy_rule_product')
+    format: sql
+    rows: |
+      select cast(null as varchar) as rule_id, cast(null as varchar) as domain, cast(null as integer) as priority, cast(null as varchar) as label, cast(null as varchar) as feature, cast(null as varchar) as op, cast(null as varchar) as value, cast(null as varchar) as value_to, cast(null as boolean) as enabled, cast(null as varchar) as note where false
+  - input: ref('taxonomy_label')
+    rows:
+    - domain: customer_type
+      label: RETAIL
+      label_std: CONSUMER
+      note: null
+    - domain: customer_type
+      label: WHOLESALE
+      label_std: WHOLESALE
+      note: null
+    - domain: customer_type
+      label: PARTNER
+      label_std: TRADE
+      note: null
+    - domain: customer_type
+      label: STAFF
+      label_std: STAFF
+      note: null
+    - domain: customer_type
+      label: KOL
+      label_std: KOL
+      note: null
+    - domain: customer_type
+      label: CROSSBORDER
+      label_std: OTHER
+      note: null
+  expect:
+    rows:
+    - customer_key: c1
+      customer_type: CROSSBORDER
+      matched__crossborder: true
+- name: customer_type_null_group_without_order_row_has_null_flag
+  description: 'No group and no feat_customer_orders row (e.g. its only US order is cancelled) is RETAIL with a
+    NULL flag, as is_us_gift_recipient (real Fine Japan rules: tests/fixtures/taxonomy_rule_tenant_customer_type.csv).'
+  model: lbl_customer_type
+  config:
+    enabled: '{{ var(''tenant'', '''') == ''fine_japan'' }}'
+  given:
+  - input: ref('feat_customer_profile')
+    format: sql
+    rows: |
+      select CAST('c1' AS VARCHAR) as customer_key, CAST(NULL AS VARCHAR) as group_blob, CAST(NULL AS VARCHAR) as group_code, CAST(NULL AS VARCHAR) as group_name
+  - input: ref('feat_customer_orders')
+    format: sql
+    rows: |
+      select cast(null as varchar) as customer_key, cast(null as varchar[]) as channels_ordered_on where false
+  - input: ref('taxonomy_rule_tenant')
+    format: csv
+    fixture: taxonomy_rule_tenant_customer_type
+  - input: ref('taxonomy_rule_product')
+    format: sql
+    rows: |
+      select cast(null as varchar) as rule_id, cast(null as varchar) as domain, cast(null as integer) as priority, cast(null as varchar) as label, cast(null as varchar) as feature, cast(null as varchar) as op, cast(null as varchar) as value, cast(null as varchar) as value_to, cast(null as boolean) as enabled, cast(null as varchar) as note where false
+  - input: ref('taxonomy_label')
+    rows:
+    - domain: customer_type
+      label: RETAIL
+      label_std: CONSUMER
+      note: null
+    - domain: customer_type
+      label: WHOLESALE
+      label_std: WHOLESALE
+      note: null
+    - domain: customer_type
+      label: PARTNER
+      label_std: TRADE
+      note: null
+    - domain: customer_type
+      label: STAFF
+      label_std: STAFF
+      note: null
+    - domain: customer_type
+      label: KOL
+      label_std: KOL
+      note: null
+    - domain: customer_type
+      label: CROSSBORDER
+      label_std: OTHER
+      note: null
+  expect:
+    rows:
+    - customer_key: c1
+      customer_type: RETAIL
+      matched__crossborder: null
+- name: customer_type_null_code_matching_name
+  description: 'Code NULL and name TYPE_KOL is KOL (real Fine Japan rules: tests/fixtures/taxonomy_rule_tenant_customer_type.csv).'
+  model: lbl_customer_type
+  config:
+    enabled: '{{ var(''tenant'', '''') == ''fine_japan'' }}'
+  given:
+  - input: ref('feat_customer_profile')
+    format: sql
+    rows: |
+      select CAST('c1' AS VARCHAR) as customer_key, CAST(NULL AS VARCHAR) as group_blob, CAST(NULL AS VARCHAR) as group_code, CAST('TYPE_KOL' AS VARCHAR) as group_name
+  - input: ref('feat_customer_orders')
+    format: sql
+    rows: |
+      select cast(null as varchar) as customer_key, cast(null as varchar[]) as channels_ordered_on where false
+  - input: ref('taxonomy_rule_tenant')
+    format: csv
+    fixture: taxonomy_rule_tenant_customer_type
+  - input: ref('taxonomy_rule_product')
+    format: sql
+    rows: |
+      select cast(null as varchar) as rule_id, cast(null as varchar) as domain, cast(null as integer) as priority, cast(null as varchar) as label, cast(null as varchar) as feature, cast(null as varchar) as op, cast(null as varchar) as value, cast(null as varchar) as value_to, cast(null as boolean) as enabled, cast(null as varchar) as note where false
+  - input: ref('taxonomy_label')
+    rows:
+    - domain: customer_type
+      label: RETAIL
+      label_std: CONSUMER
+      note: null
+    - domain: customer_type
+      label: WHOLESALE
+      label_std: WHOLESALE
+      note: null
+    - domain: customer_type
+      label: PARTNER
+      label_std: TRADE
+      note: null
+    - domain: customer_type
+      label: STAFF
+      label_std: STAFF
+      note: null
+    - domain: customer_type
+      label: KOL
+      label_std: KOL
+      note: null
+    - domain: customer_type
+      label: CROSSBORDER
+      label_std: OTHER
+      note: null
+  expect:
+    rows:
+    - customer_key: c1
+      customer_type: KOL
+- name: customer_type_null_group_with_other_orders_has_null_flag
+  description: 'No group, orders only on other channels: RETAIL, flag NULL (real Fine Japan rules: tests/fixtures/taxonomy_rule_tenant_customer_type.csv).'
+  model: lbl_customer_type
+  config:
+    enabled: '{{ var(''tenant'', '''') == ''fine_japan'' }}'
+  given:
+  - input: ref('feat_customer_profile')
+    format: sql
+    rows: |
+      select CAST('c1' AS VARCHAR) as customer_key, CAST(NULL AS VARCHAR) as group_blob, CAST(NULL AS VARCHAR) as group_code, CAST(NULL AS VARCHAR) as group_name
+  - input: ref('feat_customer_orders')
+    format: sql
+    rows: |
+      select CAST('c1' AS VARCHAR) as customer_key, CAST([CAST('Shopee' AS VARCHAR)] AS VARCHAR[]) as channels_ordered_on
+  - input: ref('taxonomy_rule_tenant')
+    format: csv
+    fixture: taxonomy_rule_tenant_customer_type
+  - input: ref('taxonomy_rule_product')
+    format: sql
+    rows: |
+      select cast(null as varchar) as rule_id, cast(null as varchar) as domain, cast(null as integer) as priority, cast(null as varchar) as label, cast(null as varchar) as feature, cast(null as varchar) as op, cast(null as varchar) as value, cast(null as varchar) as value_to, cast(null as boolean) as enabled, cast(null as varchar) as note where false
+  - input: ref('taxonomy_label')
+    rows:
+    - domain: customer_type
+      label: RETAIL
+      label_std: CONSUMER
+      note: null
+    - domain: customer_type
+      label: WHOLESALE
+      label_std: WHOLESALE
+      note: null
+    - domain: customer_type
+      label: PARTNER
+      label_std: TRADE
+      note: null
+    - domain: customer_type
+      label: STAFF
+      label_std: STAFF
+      note: null
+    - domain: customer_type
+      label: KOL
+      label_std: KOL
+      note: null
+    - domain: customer_type
+      label: CROSSBORDER
+      label_std: OTHER
+      note: null
+  expect:
+    rows:
+    - customer_key: c1
+      customer_type: RETAIL
+      matched__crossborder: null
+- name: customer_type_group_not_crossborder_has_false_flag
+  description: 'TYPE_RETAIL / Bán lẻ without US order: RETAIL, flag FALSE (real Fine Japan rules: tests/fixtures/taxonomy_rule_tenant_customer_type.csv).'
+  model: lbl_customer_type
+  config:
+    enabled: '{{ var(''tenant'', '''') == ''fine_japan'' }}'
+  given:
+  - input: ref('feat_customer_profile')
+    format: sql
+    rows: |
+      select CAST('c1' AS VARCHAR) as customer_key, CAST(NULL AS VARCHAR) as group_blob, CAST('TYPE_RETAIL' AS VARCHAR) as group_code, CAST('Bán lẻ' AS VARCHAR) as group_name
+  - input: ref('feat_customer_orders')
+    format: sql
+    rows: |
+      select cast(null as varchar) as customer_key, cast(null as varchar[]) as channels_ordered_on where false
+  - input: ref('taxonomy_rule_tenant')
+    format: csv
+    fixture: taxonomy_rule_tenant_customer_type
+  - input: ref('taxonomy_rule_product')
+    format: sql
+    rows: |
+      select cast(null as varchar) as rule_id, cast(null as varchar) as domain, cast(null as integer) as priority, cast(null as varchar) as label, cast(null as varchar) as feature, cast(null as varchar) as op, cast(null as varchar) as value, cast(null as varchar) as value_to, cast(null as boolean) as enabled, cast(null as varchar) as note where false
+  - input: ref('taxonomy_label')
+    rows:
+    - domain: customer_type
+      label: RETAIL
+      label_std: CONSUMER
+      note: null
+    - domain: customer_type
+      label: WHOLESALE
+      label_std: WHOLESALE
+      note: null
+    - domain: customer_type
+      label: PARTNER
+      label_std: TRADE
+      note: null
+    - domain: customer_type
+      label: STAFF
+      label_std: STAFF
+      note: null
+    - domain: customer_type
+      label: KOL
+      label_std: KOL
+      note: null
+    - domain: customer_type
+      label: CROSSBORDER
+      label_std: OTHER
+      note: null
+  expect:
+    rows:
+    - customer_key: c1
+      customer_type: RETAIL
+      matched__crossborder: false
+- name: customer_type_unknown_sentinel_is_retail
+  description: 'The Unknown sentinel customer (blob ''Unknown'', no code/name) is RETAIL (real Fine Japan rules:
+    tests/fixtures/taxonomy_rule_tenant_customer_type.csv).'
+  model: lbl_customer_type
+  config:
+    enabled: '{{ var(''tenant'', '''') == ''fine_japan'' }}'
+  given:
+  - input: ref('feat_customer_profile')
+    format: sql
+    rows: |
+      select CAST('c1' AS VARCHAR) as customer_key, CAST('Unknown' AS VARCHAR) as group_blob, CAST(NULL AS VARCHAR) as group_code, CAST(NULL AS VARCHAR) as group_name
+  - input: ref('feat_customer_orders')
+    format: sql
+    rows: |
+      select cast(null as varchar) as customer_key, cast(null as varchar[]) as channels_ordered_on where false
+  - input: ref('taxonomy_rule_tenant')
+    format: csv
+    fixture: taxonomy_rule_tenant_customer_type
+  - input: ref('taxonomy_rule_product')
+    format: sql
+    rows: |
+      select cast(null as varchar) as rule_id, cast(null as varchar) as domain, cast(null as integer) as priority, cast(null as varchar) as label, cast(null as varchar) as feature, cast(null as varchar) as op, cast(null as varchar) as value, cast(null as varchar) as value_to, cast(null as boolean) as enabled, cast(null as varchar) as note where false
+  - input: ref('taxonomy_label')
+    rows:
+    - domain: customer_type
+      label: RETAIL
+      label_std: CONSUMER
+      note: null
+    - domain: customer_type
+      label: WHOLESALE
+      label_std: WHOLESALE
+      note: null
+    - domain: customer_type
+      label: PARTNER
+      label_std: TRADE
+      note: null
+    - domain: customer_type
+      label: STAFF
+      label_std: STAFF
+      note: null
+    - domain: customer_type
+      label: KOL
+      label_std: KOL
+      note: null
+    - domain: customer_type
+      label: CROSSBORDER
+      label_std: OTHER
+      note: null
+  expect:
+    rows:
+    - customer_key: c1
+      customer_type: RETAIL
+      matched__crossborder: null
+- name: customer_type_group_blob_unknown_sentinel_is_retail
+  description: 'The Unknown sentinel customer (blob ''Unknown'', no code/name) is RETAIL (real Fine Japan rules:
+    tests/fixtures/taxonomy_rule_tenant_customer_type.csv).'
+  model: lbl_customer_type__group_blob
+  config:
+    enabled: '{{ var(''tenant'', '''') == ''fine_japan'' }}'
+  given:
+  - input: ref('feat_customer_profile')
+    format: sql
+    rows: |
+      select CAST('c1' AS VARCHAR) as customer_key, CAST('Unknown' AS VARCHAR) as group_blob, CAST(NULL AS VARCHAR) as group_code, CAST(NULL AS VARCHAR) as group_name
+  - input: ref('taxonomy_rule_tenant')
+    format: csv
+    fixture: taxonomy_rule_tenant_customer_type
+  - input: ref('taxonomy_rule_product')
+    format: sql
+    rows: |
+      select cast(null as varchar) as rule_id, cast(null as varchar) as domain, cast(null as integer) as priority, cast(null as varchar) as label, cast(null as varchar) as feature, cast(null as varchar) as op, cast(null as varchar) as value, cast(null as varchar) as value_to, cast(null as boolean) as enabled, cast(null as varchar) as note where false
+  - input: ref('taxonomy_label')
+    rows:
+    - domain: customer_type
+      label: RETAIL
+      label_std: CONSUMER
+      note: null
+    - domain: customer_type
+      label: WHOLESALE
+      label_std: WHOLESALE
+      note: null
+    - domain: customer_type
+      label: PARTNER
+      label_std: TRADE
+      note: null
+    - domain: customer_type
+      label: STAFF
+      label_std: STAFF
+      note: null
+    - domain: customer_type
+      label: KOL
+      label_std: KOL
+      note: null
+    - domain: customer_type
+      label: CROSSBORDER
+      label_std: OTHER
+      note: null
+  expect:
+    rows:
+    - customer_key: c1
+      customer_type: RETAIL
+- name: customer_type_group_blob_match_in_any_field
+  description: 'The blob variant matches anywhere in the JSON: a note WHOLESALE is WHOLESALE (real Fine Japan rules:
+    tests/fixtures/taxonomy_rule_tenant_customer_type.csv).'
+  model: lbl_customer_type__group_blob
+  config:
+    enabled: '{{ var(''tenant'', '''') == ''fine_japan'' }}'
+  given:
+  - input: ref('feat_customer_profile')
+    format: sql
+    rows: |
+      select CAST('c1' AS VARCHAR) as customer_key, CAST('{"name":"X","note":"WHOLESALE"}' AS VARCHAR) as group_blob, CAST(NULL AS VARCHAR) as group_code, CAST(NULL AS VARCHAR) as group_name
+  - input: ref('taxonomy_rule_tenant')
+    format: csv
+    fixture: taxonomy_rule_tenant_customer_type
+  - input: ref('taxonomy_rule_product')
+    format: sql
+    rows: |
+      select cast(null as varchar) as rule_id, cast(null as varchar) as domain, cast(null as integer) as priority, cast(null as varchar) as label, cast(null as varchar) as feature, cast(null as varchar) as op, cast(null as varchar) as value, cast(null as varchar) as value_to, cast(null as boolean) as enabled, cast(null as varchar) as note where false
+  - input: ref('taxonomy_label')
+    rows:
+    - domain: customer_type
+      label: RETAIL
+      label_std: CONSUMER
+      note: null
+    - domain: customer_type
+      label: WHOLESALE
+      label_std: WHOLESALE
+      note: null
+    - domain: customer_type
+      label: PARTNER
+      label_std: TRADE
+      note: null
+    - domain: customer_type
+      label: STAFF
+      label_std: STAFF
+      note: null
+    - domain: customer_type
+      label: KOL
+      label_std: KOL
+      note: null
+    - domain: customer_type
+      label: CROSSBORDER
+      label_std: OTHER
+      note: null
+  expect:
+    rows:
+    - customer_key: c1
+      customer_type: WHOLESALE
+- name: customer_type_group_blob_null_blob_is_retail
+  description: 'A NULL blob is RETAIL (real Fine Japan rules: tests/fixtures/taxonomy_rule_tenant_customer_type.csv).'
+  model: lbl_customer_type__group_blob
+  config:
+    enabled: '{{ var(''tenant'', '''') == ''fine_japan'' }}'
+  given:
+  - input: ref('feat_customer_profile')
+    format: sql
+    rows: |
+      select CAST('c1' AS VARCHAR) as customer_key, CAST(NULL AS VARCHAR) as group_blob, CAST(NULL AS VARCHAR) as group_code, CAST(NULL AS VARCHAR) as group_name
+  - input: ref('taxonomy_rule_tenant')
+    format: csv
+    fixture: taxonomy_rule_tenant_customer_type
+  - input: ref('taxonomy_rule_product')
+    format: sql
+    rows: |
+      select cast(null as varchar) as rule_id, cast(null as varchar) as domain, cast(null as integer) as priority, cast(null as varchar) as label, cast(null as varchar) as feature, cast(null as varchar) as op, cast(null as varchar) as value, cast(null as varchar) as value_to, cast(null as boolean) as enabled, cast(null as varchar) as note where false
+  - input: ref('taxonomy_label')
+    rows:
+    - domain: customer_type
+      label: RETAIL
+      label_std: CONSUMER
+      note: null
+    - domain: customer_type
+      label: WHOLESALE
+      label_std: WHOLESALE
+      note: null
+    - domain: customer_type
+      label: PARTNER
+      label_std: TRADE
+      note: null
+    - domain: customer_type
+      label: STAFF
+      label_std: STAFF
+      note: null
+    - domain: customer_type
+      label: KOL
+      label_std: KOL
+      note: null
+    - domain: customer_type
+      label: CROSSBORDER
+      label_std: OTHER
+      note: null
+  expect:
+    rows:
+    - customer_key: c1
+      customer_type: RETAIL
+- name: customer_type_customer_without_any_order
+  description: 'A customer with no order at all (no feat_customer_orders row) is like one without US order (real
+    Fine Japan rules: tests/fixtures/taxonomy_rule_tenant_customer_type.csv).'
+  model: lbl_customer_type
+  config:
+    enabled: '{{ var(''tenant'', '''') == ''fine_japan'' }}'
+  given:
+  - input: ref('feat_customer_profile')
+    format: sql
+    rows: |
+      select CAST('c1' AS VARCHAR) as customer_key, CAST(NULL AS VARCHAR) as group_blob, CAST('TYPE_RETAIL' AS VARCHAR) as group_code, CAST('Bán lẻ' AS VARCHAR) as group_name
+      union all
+      select CAST('c2' AS VARCHAR) as customer_key, CAST(NULL AS VARCHAR) as group_blob, CAST('TYPE_STAFF' AS VARCHAR) as group_code, CAST('Nhân viên' AS VARCHAR) as group_name
+  - input: ref('feat_customer_orders')
+    format: sql
+    rows: |
+      select CAST('c3' AS VARCHAR) as customer_key, CAST([CAST('US' AS VARCHAR)] AS VARCHAR[]) as channels_ordered_on
+  - input: ref('taxonomy_rule_tenant')
+    format: csv
+    fixture: taxonomy_rule_tenant_customer_type
+  - input: ref('taxonomy_rule_product')
+    format: sql
+    rows: |
+      select cast(null as varchar) as rule_id, cast(null as varchar) as domain, cast(null as integer) as priority, cast(null as varchar) as label, cast(null as varchar) as feature, cast(null as varchar) as op, cast(null as varchar) as value, cast(null as varchar) as value_to, cast(null as boolean) as enabled, cast(null as varchar) as note where false
+  - input: ref('taxonomy_label')
+    rows:
+    - domain: customer_type
+      label: RETAIL
+      label_std: CONSUMER
+      note: null
+    - domain: customer_type
+      label: WHOLESALE
+      label_std: WHOLESALE
+      note: null
+    - domain: customer_type
+      label: PARTNER
+      label_std: TRADE
+      note: null
+    - domain: customer_type
+      label: STAFF
+      label_std: STAFF
+      note: null
+    - domain: customer_type
+      label: KOL
+      label_std: KOL
+      note: null
+    - domain: customer_type
+      label: CROSSBORDER
+      label_std: OTHER
+      note: null
+  expect:
+    rows:
+    - customer_key: c1
+      customer_type: RETAIL
+      matched__crossborder: false
+    - customer_key: c2
+      customer_type: STAFF
+      matched__crossborder: false
+- name: customer_type_legacy_ctn00014_is_crossborder
+  description: 'Legacy group code CTN00014 is CROSSBORDER, flag TRUE (real Fine Japan rules: tests/fixtures/taxonomy_rule_tenant_customer_type.csv).'
+  model: lbl_customer_type
+  config:
+    enabled: '{{ var(''tenant'', '''') == ''fine_japan'' }}'
+  given:
+  - input: ref('feat_customer_profile')
+    format: sql
+    rows: |
+      select CAST('c1' AS VARCHAR) as customer_key, CAST(NULL AS VARCHAR) as group_blob, CAST('CTN00014' AS VARCHAR) as group_code, CAST(NULL AS VARCHAR) as group_name
+  - input: ref('feat_customer_orders')
+    format: sql
+    rows: |
+      select cast(null as varchar) as customer_key, cast(null as varchar[]) as channels_ordered_on where false
+  - input: ref('taxonomy_rule_tenant')
+    format: csv
+    fixture: taxonomy_rule_tenant_customer_type
+  - input: ref('taxonomy_rule_product')
+    format: sql
+    rows: |
+      select cast(null as varchar) as rule_id, cast(null as varchar) as domain, cast(null as integer) as priority, cast(null as varchar) as label, cast(null as varchar) as feature, cast(null as varchar) as op, cast(null as varchar) as value, cast(null as varchar) as value_to, cast(null as boolean) as enabled, cast(null as varchar) as note where false
+  - input: ref('taxonomy_label')
+    rows:
+    - domain: customer_type
+      label: RETAIL
+      label_std: CONSUMER
+      note: null
+    - domain: customer_type
+      label: WHOLESALE
+      label_std: WHOLESALE
+      note: null
+    - domain: customer_type
+      label: PARTNER
+      label_std: TRADE
+      note: null
+    - domain: customer_type
+      label: STAFF
+      label_std: STAFF
+      note: null
+    - domain: customer_type
+      label: KOL
+      label_std: KOL
+      note: null
+    - domain: customer_type
+      label: CROSSBORDER
+      label_std: OTHER
+      note: null
+  expect:
+    rows:
+    - customer_key: c1
+      customer_type: CROSSBORDER
+      matched__crossborder: true
+- name: customer_type_group_blob_legacy_ctn00014_is_crossborder
+  description: 'Legacy group code CTN00014 is CROSSBORDER (real Fine Japan rules: tests/fixtures/taxonomy_rule_tenant_customer_type.csv).'
+  model: lbl_customer_type__group_blob
+  config:
+    enabled: '{{ var(''tenant'', '''') == ''fine_japan'' }}'
+  given:
+  - input: ref('feat_customer_profile')
+    format: sql
+    rows: |
+      select CAST('c1' AS VARCHAR) as customer_key, CAST('{"code":"CTN00014"}' AS VARCHAR) as group_blob, CAST(NULL AS VARCHAR) as group_code, CAST(NULL AS VARCHAR) as group_name
+  - input: ref('taxonomy_rule_tenant')
+    format: csv
+    fixture: taxonomy_rule_tenant_customer_type
+  - input: ref('taxonomy_rule_product')
+    format: sql
+    rows: |
+      select cast(null as varchar) as rule_id, cast(null as varchar) as domain, cast(null as integer) as priority, cast(null as varchar) as label, cast(null as varchar) as feature, cast(null as varchar) as op, cast(null as varchar) as value, cast(null as varchar) as value_to, cast(null as boolean) as enabled, cast(null as varchar) as note where false
+  - input: ref('taxonomy_label')
+    rows:
+    - domain: customer_type
+      label: RETAIL
+      label_std: CONSUMER
+      note: null
+    - domain: customer_type
+      label: WHOLESALE
+      label_std: WHOLESALE
+      note: null
+    - domain: customer_type
+      label: PARTNER
+      label_std: TRADE
+      note: null
+    - domain: customer_type
+      label: STAFF
+      label_std: STAFF
+      note: null
+    - domain: customer_type
+      label: KOL
+      label_std: KOL
+      note: null
+    - domain: customer_type
+      label: CROSSBORDER
+      label_std: OTHER
+      note: null
+  expect:
+    rows:
+    - customer_key: c1
+      customer_type: CROSSBORDER
+- name: customer_type_rule_and_std_columns
+  description: 'The result carries the matching rule, its layer and the canonical code (real Fine Japan rules: tests/fixtures/taxonomy_rule_tenant_customer_type.csv).'
+  model: lbl_customer_type
+  config:
+    enabled: '{{ var(''tenant'', '''') == ''fine_japan'' }}'
+  given:
+  - input: ref('feat_customer_profile')
+    format: sql
+    rows: |
+      select CAST('c1' AS VARCHAR) as customer_key, CAST(NULL AS VARCHAR) as group_blob, CAST('TYPE_PARTNER' AS VARCHAR) as group_code, CAST(NULL AS VARCHAR) as group_name
+      union all
+      select CAST('c2' AS VARCHAR) as customer_key, CAST(NULL AS VARCHAR) as group_blob, CAST(NULL AS VARCHAR) as group_code, CAST(NULL AS VARCHAR) as group_name
+  - input: ref('feat_customer_orders')
+    format: sql
+    rows: |
+      select cast(null as varchar) as customer_key, cast(null as varchar[]) as channels_ordered_on where false
+  - input: ref('taxonomy_rule_tenant')
+    format: csv
+    fixture: taxonomy_rule_tenant_customer_type
+  - input: ref('taxonomy_rule_product')
+    format: sql
+    rows: |
+      select cast(null as varchar) as rule_id, cast(null as varchar) as domain, cast(null as integer) as priority, cast(null as varchar) as label, cast(null as varchar) as feature, cast(null as varchar) as op, cast(null as varchar) as value, cast(null as varchar) as value_to, cast(null as boolean) as enabled, cast(null as varchar) as note where false
+  - input: ref('taxonomy_label')
+    rows:
+    - domain: customer_type
+      label: RETAIL
+      label_std: CONSUMER
+      note: null
+    - domain: customer_type
+      label: WHOLESALE
+      label_std: WHOLESALE
+      note: null
+    - domain: customer_type
+      label: PARTNER
+      label_std: TRADE
+      note: null
+    - domain: customer_type
+      label: STAFF
+      label_std: STAFF
+      note: null
+    - domain: customer_type
+      label: KOL
+      label_std: KOL
+      note: null
+    - domain: customer_type
+      label: CROSSBORDER
+      label_std: OTHER
+      note: null
+  expect:
+    rows:
+    - customer_key: c1
+      customer_type: PARTNER
+      customer_type_std: TRADE
+      rule_id: ct_partner_1
+      source_layer: tenant
+    - customer_key: c2
+      customer_type: RETAIL
+      customer_type_std: CONSUMER
+      rule_id: ct_retail_1
+      source_layer: tenant
+- name: feat_customer_orders_excludes_cancelled_and_unnamed
+  description: Channel list per customer from non-cancelled orders (status != 'CANCELLED', so NULL status is out
+    too), inner join on dim_channels, NULL channel names dropped (list [] then, never NULL), as the us_channel_customers
+    CTE of dim_customers.
+  model: feat_customer_orders
+  given:
+  - input: ref('fact_orders')
+    rows:
+    - customer_key: c1
+      channel_key: us
+      status: CANCELLED
+    - customer_key: c1
+      channel_key: shopee
+      status: COMPLETED
+    - customer_key: c2
+      channel_key: us
+      status: COMPLETED
+    - customer_key: c2
+      channel_key: us
+      status: COMPLETED
+    - customer_key: c3
+      channel_key: us
+      status: null
+    - customer_key: c4
+      channel_key: nameless
+      status: COMPLETED
+    - customer_key: c5
+      channel_key: missing
+      status: COMPLETED
+  - input: ref('dim_channels')
+    rows:
+    - channel_key: us
+      channel_name: US
+    - channel_key: shopee
+      channel_name: Shopee
+    - channel_key: nameless
+      channel_name: null
+  expect:
+    format: sql
+    rows: |
+      select CAST('c1' AS VARCHAR) as customer_key, CAST(['Shopee'] AS VARCHAR[]) as channels_ordered_on
+      union all select CAST('c2' AS VARCHAR), CAST(['US'] AS VARCHAR[])
+      union all select CAST('c4' AS VARCHAR), CAST([] AS VARCHAR[])

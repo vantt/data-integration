@@ -93,7 +93,7 @@ buckets:
   stg_shopee_order_revenue: connector:shopee
   stg_shopee_order_revenue_items: connector:shopee
   stg_shopee_order_service_fees: connector:shopee
-  # --- core (63)
+  # --- core (66)
   dim_branch_location: core
   dim_channel_targets: core
   dim_channels: core
@@ -127,6 +127,8 @@ buckets:
   fact_sales: core
   fact_targets: core
   fact_variant_prices_snapshot: core
+  feat_customer_orders: core
+  feat_customer_profile: core
   feat_taxonomy_selftest: core
   int_customer_benchmarks: core
   int_customer_discount_metrics: core
@@ -144,6 +146,7 @@ buckets:
   lbl_channel_format: core
   lbl_customer_lifecycle_stage: core
   lbl_customer_type: core
+  lbl_customer_type__group_blob: core
   lbl_value_group: core
   lbl_selftest_collect: core
   lbl_selftest_first: core
@@ -157,7 +160,8 @@ buckets:
   mart_product_action_queue: core
   mart_product_health: core
   mart_retention_waterfall_monthly: core
-  # --- monitoring (2)
+  # --- monitoring (3)
+  entity_labels: monitoring
   mart_capabilities: monitoring
   monitor_uncategorized_tags: monitoring
   # --- pack:crm (14)

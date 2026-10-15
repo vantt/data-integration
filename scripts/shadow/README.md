@@ -127,7 +127,7 @@ compare with lake-A. Only the build result decides the step; the printed differe
 reviewed by hand against this list. A table outside it must be explained before the phase is
 accepted.
 
-Expected differences (`{enabled_packs: [], tenant: ""}`, Fine Japan data, 15/10/2026 after the classification rule seeds; 157 models and seeds built, 390 tests pass, 5 warn; the engine selftest models are disabled in every profile):
+Expected differences (`{enabled_packs: [], tenant: ""}`, Fine Japan data, 15/10/2026 with the classification engine pilot; 161 models and seeds built, 404 tests pass, 8 warn; the engine selftest models and the Fine Japan pilot unit tests are disabled in this profile):
 
 | Table | Expected difference | Why |
 |---|---|---|
@@ -145,9 +145,12 @@ Expected differences (`{enabled_packs: [], tenant: ""}`, Fine Japan data, 15/10/
 | `mart_product_action_queue` | `health_class`, `has_margin_data`, `realized_margin_pct` | reads `mart_product_health` |
 | `mart_deadstock_target_queue` | fewer rows (249 → 208) and their values | selects SKUs by `mart_product_health.health_class` (DOG/QUESTION) |
 
-Also expected (not public, so not in the compare): the 5 `lbl_<domain>` models build with every
-label `UNMAPPED` (no tenant, empty `taxonomy_label__default`) and their 5 `labels_mapped` tests
-`warn` (`status: {... 'warn': 5}`).
+Also expected (not public, so not in the compare): the 6 `lbl_<domain>` models build with every
+label `UNMAPPED` (no tenant: empty `taxonomy_label__default`, and for the two `customer_type` models
+of the classification engine no rule, `taxonomy_rule_tenant__default` being empty) and 8 tests
+`warn` (`status: {... 'warn': 8}`): their 6 `labels_mapped` tests and the two
+`customer_type NOT IN ('UNMAPPED', 'UNKNOWN')` checks of `lbl_customer_type` and
+`lbl_customer_type__group_blob`.
 
 Row counts that must stay equal to lake-A (velocity is core): `int_product_velocity_trend`,
 `mart_product_health`, `mart_product_action_queue`, `mart_inventory_health`.
