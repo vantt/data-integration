@@ -9,8 +9,7 @@ reports:
     engine: evidence
     area: dieu-hanh
     question: Doanh thu tuần này đang đi nhanh hay chậm so với tuần trước và mục tiêu tháng; kênh, khách hàng và lợi nhuận có tín hiệu gì cần xử lý?
-    metrics: [active_orders_count, aov, cancelled_orders, channel_net_profit, discount_rate, gmv_month_end_forecast,
-              gmv_pace_index, gmv_required_daily_run_rate, gross_margin_pct, gross_revenue, net_sales, new_customer_orders,
+    metrics: [active_orders_count, aov, cancelled_orders, channel_net_profit, discount_rate, gmv_pace_index, gross_margin_pct, gross_revenue, net_sales, new_customer_orders,
               new_customers, orders_count, return_count, returning_customer_orders, returning_customers,
               returning_revenue_share]
     kpi_tiles: [net_sales_wow, gmv_pace_index, aov_wow, new_customers_wow, channel_net_profit_wow, gross_margin_wow]

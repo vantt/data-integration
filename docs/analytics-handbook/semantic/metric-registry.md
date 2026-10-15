@@ -23,9 +23,9 @@ Nguồn chuẩn của các chỉ tiêu đã vào registry (`analytics/registry/`
 | [`cancelled_orders`](#cancelled_orders) | Đơn huỷ hoặc nháp | đơn | số đếm | không | `active` | sales |
 | [`discount_amount`](#discount_amount) | Tiền chiết khấu | đơn | tiền | không | `active` | sales |
 | [`discount_rate`](#discount_rate) | Tỉ lệ chiết khấu | tỉ số | % | không | `active` | sales |
-| [`gmv_month_end_forecast`](#gmv_month_end_forecast) | GMV dự báo cuối tháng | dẫn xuất | tiền | không | `active` | sales |
+| [`gmv_month_end_forecast`](#gmv_month_end_forecast) | GMV dự báo cuối tháng | dẫn xuất | tiền | không | `draft` | sales |
 | [`gmv_pace_index`](#gmv_pace_index) | Chỉ số tiến độ GMV | dẫn xuất | chỉ số | không | `active` | sales |
-| [`gmv_required_daily_run_rate`](#gmv_required_daily_run_rate) | GMV cần đạt mỗi ngày | dẫn xuất | tiền | không | `active` | sales |
+| [`gmv_required_daily_run_rate`](#gmv_required_daily_run_rate) | GMV cần đạt mỗi ngày | dẫn xuất | tiền | không | `draft` | sales |
 | [`gmv_target`](#gmv_target) | Mục tiêu GMV tháng | ảnh chụp | tiền | không | `active` | sales |
 | [`gross_revenue`](#gross_revenue) | Doanh thu niêm yết (GMV) | đơn | tiền | không | `active` | sales |
 | [`net_sales`](#net_sales) | Doanh thu bán hàng (trước hoàn) | đơn | tiền | không | `active` | sales |
@@ -282,7 +282,7 @@ Ngoại suy tuyến tính GMV từ đầu tháng ra cả tháng.
 | Công thức | `gross_revenue / (day_of_month / days_in_month)` |
 | Cộng dồn | `non_additive` |
 | NULL | `propagate` |
-| Ghi chú | Cùng cách đếm ngày với gmv_pace_index. |
+| Ghi chú | Cùng cách đếm ngày với gmv_pace_index. Có trong blueprint nhưng không có trên dashboard đang chạy (Metabase id 43, 15/10/2026); chưa dùng. |
 
 ## gmv_pace_index
 
@@ -308,7 +308,7 @@ Phần mục tiêu còn thiếu chia đều cho số ngày còn lại trong thá
 | Công thức | `greatest(gmv_target - gross_revenue, 0) / days_left_in_month` |
 | Cộng dồn | `non_additive` |
 | NULL | `propagate` |
-| Ghi chú | Ngày còn lại không tính ngày tham chiếu. |
+| Ghi chú | Ngày còn lại không tính ngày tham chiếu. Có trong blueprint nhưng không có trên dashboard đang chạy (Metabase id 43, 15/10/2026); chưa dùng. |
 
 ## gmv_target
 

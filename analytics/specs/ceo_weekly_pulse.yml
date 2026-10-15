@@ -1,5 +1,5 @@
-# CEO Weekly Pulse, spec v2. Viết theo dashboard đang chạy (blueprint), đúng thứ tự, tên và vị trí
-# của 30 question; định nghĩa chỉ tiêu nằm trong registry (analytics/registry/), không ở đây.
+# CEO Weekly Pulse, spec v2. Viết theo dashboard đang chạy (Metabase id 43), đúng thứ tự, tên và vị trí
+# của 28 question; định nghĩa chỉ tiêu nằm trong registry (analytics/registry/), không ở đây.
 spec_id: ceo_weekly_pulse
 spec_version: 2
 title: {vi: CEO Weekly Pulse, en: CEO Weekly Pulse}
@@ -9,12 +9,13 @@ period_mode: to_date
 as_of: yesterday
 grid_columns: 18
 baseline:
-  kind: metabase_blueprint
-  source: docs/analytics-handbook/blueprints/metabase/ceo_weekly_pulse.md
-  verified_against_live: false
+  kind: metabase_live
+  source: Metabase dashboard 43 "CEO Weekly Pulse [All]" (collection Executive), chụp chỉ đọc 15/10/2026
+  verified_against_live: true
   note: >-
-    Chưa chụp được dashboard đang chạy (capture chỉ đọc cần METABASE_API_KEY); mốc tạm là blueprint.
-    Khi chụp xong: nếu lệch, mốc là bản đang chạy và sửa spec theo nó.
+    SQL của 28 question đang chạy trùng blueprint docs/analytics-handbook/blueprints/metabase/ceo_weekly_pulse.md
+    từng ký tự (sau khi chuẩn hoá khoảng trắng); bản đang chạy không có hai question "Forecasted Month-End GMV"
+    và "Cần Đạt Mỗi Ngày" của blueprint, nên spec cũng bỏ hai card đó.
 
 tabs:
   - tab_id: doanh_thu
@@ -171,33 +172,6 @@ tabs:
                 - {name: net_sales, type: currency, label: Net Revenue}
             size: {w: 18, h: 9}
             position: {row: 18, col: 0}
-      - block_id: du_bao_thang
-        time_axis: order_date
-        cards:
-          - card_id: gmv_month_end_forecast
-            kind: derived
-            title: {vi: "GMV dự báo cuối tháng", en: "Forecasted Month-End GMV"}
-            baseline_name: Forecasted Month-End GMV
-            baseline_columns: {gmv_month_end_forecast: Forecasted Month-End GMV}
-            metric_ref: gmv_month_end_forecast
-            window: mtd_before_as_of
-            comparison: target
-            goal: {param: monthly_target_goal}
-            viz: progress-toward-goal
-            decimals: 0
-            size: {w: 12, h: 3}
-            position: {row: 28, col: 0}
-          - card_id: gmv_required_daily_run_rate
-            kind: derived
-            title: {vi: "Cần đạt mỗi ngày", en: "Required Daily Run-Rate"}
-            baseline_name: Cần Đạt Mỗi Ngày (Required Daily Run-Rate)
-            baseline_columns: {gmv_required_daily_run_rate: Required Daily Run-Rate}
-            metric_ref: gmv_required_daily_run_rate
-            window: mtd_before_as_of
-            viz: single-value
-            decimals: 0
-            size: {w: 6, h: 3}
-            position: {row: 28, col: 12}
       - block_id: do_tuoi_doanh_thu
         time_axis: order_date
         cards:

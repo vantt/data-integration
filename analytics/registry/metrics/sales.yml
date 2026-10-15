@@ -170,8 +170,8 @@ metrics:
     null_policy: propagate
     cost_sensitive: false
     unit: currency
-    status: active
-    notes: Cùng cách đếm ngày với gmv_pace_index.
+    status: draft
+    notes: Cùng cách đếm ngày với gmv_pace_index. Có trong blueprint nhưng không có trên dashboard đang chạy (Metabase id 43, 15/10/2026); chưa dùng.
 
   - id: gmv_required_daily_run_rate
     version: 1
@@ -183,8 +183,8 @@ metrics:
     null_policy: propagate
     cost_sensitive: false
     unit: currency
-    status: active
-    notes: Ngày còn lại không tính ngày tham chiếu.
+    status: draft
+    notes: Ngày còn lại không tính ngày tham chiếu. Có trong blueprint nhưng không có trên dashboard đang chạy (Metabase id 43, 15/10/2026); chưa dùng.
 
   - id: return_count
     version: 1

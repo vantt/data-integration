@@ -75,7 +75,7 @@ Chú thích từng thẻ và chân trang "doanh thu được tính thế nào" d
 
 Validator kiểm thêm: schema spec và catalog; mọi `metric_ref` có trong registry và `active`; chiều khai báo trong lớp ngữ nghĩa và tới được bằng một join; card nhóm (`trend`, `breakdown*`) chỉ dùng chỉ tiêu của một model; trục thời gian của chỉ tiêu khớp trục hiển thị; `card_id` duy nhất; `inline_sql` có `outputs`, không đọc đồng hồ (`current_date`, `now()`), chỉ dùng placeholder cho phép; tham số khách tồn tại trong mọi hồ sơ; `metrics` của catalog bằng hợp `metric_ref` của spec; `cost_sensitive` của report suy ra từ chỉ tiêu; `kpi_tiles` là card có thật; tỉ lệ card `inline_sql` trên card dữ liệu (cảnh báo khi > 30%).
 
-Report đầu tiên: `ceo_weekly_pulse` (`EXE-W`, `engine: evidence`, `area: dieu-hanh`, `status: pilot`), viết theo blueprint đang chạy: 3 tab, 30 question đúng thứ tự và tên, 2/24 card dữ liệu dùng `inline_sql` (bảng đơn hàng, đếm kênh lỗ).
+Report đầu tiên: `ceo_weekly_pulse` (`EXE-W`, `engine: evidence`, `area: dieu-hanh`, `status: pilot`), viết theo dashboard đang chạy (Metabase id 43, đã chụp chỉ đọc 15/10/2026; SQL trùng blueprint, nhưng không có hai question Forecast và Run-rate của blueprint): 3 tab, 28 question đúng thứ tự và tên, 2/22 card dữ liệu dùng `inline_sql` (bảng đơn hàng, đếm kênh lỗ).
 
 ## Renderer Evidence
 

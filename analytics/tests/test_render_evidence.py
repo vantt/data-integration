@@ -27,7 +27,7 @@ def test_committed_output_is_up_to_date():
 def test_every_data_card_has_one_extract_and_no_clock():
     files = _render().files
     sources = [p for p in files if p.startswith("dieu-hanh/sources/datalake/ceo_weekly_pulse__")]
-    assert len(sources) == 24 + 1  # 24 data cards + meta
+    assert len(sources) == 22 + 1  # 22 data cards + meta
     for path in sources:
         sql = files[path]
         assert sql.startswith("-- GENERATED"), path

@@ -13,6 +13,7 @@ from analytics.compiler.loader import CATALOG_FILE, PACKAGE_DIR, REPO_ROOT, disc
 
 PROFILE = discover_profiles()[0]
 SPEC = PACKAGE_DIR / "specs" / "ceo_weekly_pulse.yml"
+NOT_ON_LIVE_DASHBOARD = {"Forecasted Month-End GMV", "Cần Đạt Mỗi Ngày (Required Daily Run-Rate)"}
 BLUEPRINT = REPO_ROOT / "docs" / "analytics-handbook" / "blueprints" / "metabase" / "ceo_weekly_pulse.md"
 
 
@@ -51,11 +52,12 @@ def _errors(package: Path, profile: Path = PROFILE) -> list[str]:
 def test_real_catalog_and_spec_pass():
     issues = v.validate(None, None, catalog_path=CATALOG_FILE)
     assert not [i for i in issues if i.level == "ERROR"], issues
-    assert any("2/24 data cards use inline_sql" in i.message for i in issues if i.level == "INFO")
+    assert any("2/22 data cards use inline_sql" in i.message for i in issues if i.level == "INFO")
 
 
 def test_spec_follows_the_blueprint_order_and_names():
-    """30 questions, same tabs, same order, same names as the running blueprint."""
+    """28 questions, same tabs, order and names as the running dashboard (Metabase 43). Its SQL equals the
+    blueprint's; it lacks two blueprint questions, which the spec therefore leaves out."""
     tabs, current = [], None
     for line in BLUEPRINT.read_text(encoding="utf-8").splitlines():
         m = re.match(r"^### Tab: (.*)$", line)
@@ -65,11 +67,12 @@ def test_spec_follows_the_blueprint_order_and_names():
             continue
         m = re.match(r"^#### (?:❓ )?Question: (.*)$", line)
         if m:
-            current[1].append(m.group(1).strip())
+            if m.group(1).strip() not in NOT_ON_LIVE_DASHBOARD:
+                current[1].append(m.group(1).strip())
     spec = yaml.safe_load(SPEC.read_text(encoding="utf-8"))
     ours = [(t["baseline_name"], [c["baseline_name"] for b in t["blocks"] for c in b["cards"]]) for t in spec["tabs"]]
     assert ours == tabs
-    assert sum(len(names) for _, names in ours) == 30
+    assert sum(len(names) for _, names in ours) == 28
 
 
 def test_copy_passes(package):
