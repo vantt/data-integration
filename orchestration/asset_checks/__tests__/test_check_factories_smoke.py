@@ -62,6 +62,9 @@ def temp_db(tmp_path):
         ("sapo/ingest_sapo_v2_customers_batch_asset", "run-c01", now - timedelta(hours=50), "success", 500, 500),
         # zero-row asset — ran recently but wrote nothing
         ("sapo/ingest_sapo_v2_products_batch_asset", "run-p01", now - timedelta(hours=1), "success", 0, 0),
+        # source with nothing new: old success, recent runs found nothing (status skipped)
+        ("sapo/ingest_sapo_v2_inventory_transactions_asset", "run-i01", now - timedelta(hours=1), "skipped", 0, 0),
+        ("sapo/ingest_sapo_v2_inventory_transactions_asset", "run-i02", now - timedelta(days=30), "success", 10, 10),
         # cursor-stall asset — cursor moved but no rows for 3 runs
         ("sapo/ingest_sapo_v2_history_log_asset", "run-h01", now - timedelta(hours=1), "success", 0, 0, "cursor-A", "cursor-B"),
         ("sapo/ingest_sapo_v2_history_log_asset", "run-h02", now - timedelta(hours=2), "success", 0, 0, "cursor-B", "cursor-C"),
@@ -118,6 +121,27 @@ def test_last_success_returns_none_for_unknown_key(temp_db):
             result = last_success(conn, "unknown/unknown_asset")
 
     assert result is None
+
+
+def test_last_completed_counts_skipped_runs(temp_db):
+    from orchestration.asset_checks.health_db import open_readonly, last_completed, last_success
+
+    with _patch_db(temp_db):
+        with open_readonly() as conn:
+            completed = last_completed(conn, "sapo/ingest_sapo_v2_inventory_transactions_asset")
+            success = last_success(conn, "sapo/ingest_sapo_v2_inventory_transactions_asset")
+
+    assert completed is not None and success is not None
+    # the skipped run 1h ago is the latest completed run; the latest success is 30 days old
+    assert completed > success
+
+
+def test_last_completed_returns_none_for_unknown_key(temp_db):
+    from orchestration.asset_checks.health_db import open_readonly, last_completed
+
+    with _patch_db(temp_db):
+        with open_readonly() as conn:
+            assert last_completed(conn, "unknown/unknown_asset") is None
 
 
 def test_rows_by_day_returns_list(temp_db):
@@ -185,6 +209,23 @@ def test_freshness_check_fails_for_stale_run(temp_db):
     assert result.severity == AssetCheckSeverity.ERROR
 
 
+def test_freshness_check_passes_when_recent_runs_found_nothing_new(temp_db):
+    from dagster import build_asset_context
+    from orchestration.connectors.sapo_v2 import assets as sapo_v2_assets
+    from orchestration.asset_checks.freshness_checks import make_freshness_check
+
+    # last success 30 days ago, but a run 1h ago completed with nothing new (skipped)
+    check_fn = make_freshness_check(
+        sapo_v2_assets.ingest_sapo_v2_inventory_transactions_asset,
+        "sapo/ingest_sapo_v2_inventory_transactions_asset",
+    )
+
+    with _patch_db(temp_db):
+        result = check_fn(build_asset_context())
+
+    assert result.passed is True
+
+
 def test_freshness_check_warns_for_no_history(temp_db):
     from dagster import build_asset_context
     from orchestration.connectors.sapo_v2 import assets as sapo_v2_assets
@@ -197,7 +238,7 @@ def test_freshness_check_warns_for_no_history(temp_db):
 
     # No rows for accounts — should return passed=True with WARN description
     assert result.passed is True
-    assert "No successful runs" in result.description
+    assert "No completed runs" in result.description
 
 
 # ---------------------------------------------------------------------------

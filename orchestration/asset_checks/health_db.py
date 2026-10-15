@@ -40,6 +40,27 @@ def last_success(conn: sqlite3.Connection, asset_key: str) -> Optional[datetime]
     return row[0] if row else None
 
 
+# Statuses meaning "the run asked the source and finished without error". `skipped` is written
+# when the load ran but the source had nothing new (no package to load): the data is as fresh as
+# the source, so it counts for freshness. Volume and trend checks keep using `success` only.
+COMPLETED_STATUSES = ("success", "skipped")
+
+
+def last_completed(conn: sqlite3.Connection, asset_key: str) -> Optional[datetime]:
+    """Return run_started_at of the most recent run that completed (success or skipped), or None."""
+    row = conn.execute(
+        f"""
+        SELECT run_started_at
+        FROM ingestion_runs
+        WHERE asset_key = ? AND status IN ({", ".join("?" for _ in COMPLETED_STATUSES)})
+        ORDER BY run_started_at DESC
+        LIMIT 1
+        """,
+        [asset_key, *COMPLETED_STATUSES],
+    ).fetchone()
+    return row[0] if row else None
+
+
 def rows_by_day(
     conn: sqlite3.Connection,
     asset_key: str,

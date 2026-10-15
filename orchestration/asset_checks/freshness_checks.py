@@ -12,7 +12,7 @@ from typing import Any
 
 from dagster import AssetChecksDefinition, AssetCheckResult, AssetCheckSeverity, asset_check
 
-from orchestration.asset_checks.health_db import open_readonly, last_success
+from orchestration.asset_checks.health_db import open_readonly, last_completed
 from orchestration.asset_checks.sla_loader import get_sla
 
 
@@ -38,7 +38,9 @@ def make_freshness_check(
     def _freshness_check(context) -> AssetCheckResult:  # noqa: ANN001
         try:
             with open_readonly() as conn:
-                last = last_success(conn, asset_key_str)
+                # A run that found nothing new (status `skipped`) still proves the source was
+                # checked, so freshness counts it; see health_db.COMPLETED_STATUSES.
+                last = last_completed(conn, asset_key_str)
         except Exception as exc:
             return AssetCheckResult(
                 passed=False,
@@ -50,7 +52,7 @@ def make_freshness_check(
             return AssetCheckResult(
                 passed=True,
                 severity=AssetCheckSeverity.WARN,
-                description="No successful runs recorded yet — check suppressed.",
+                description="No completed runs recorded yet — check suppressed.",
                 metadata={"sla_hours": sla_hours},
             )
 
@@ -65,11 +67,11 @@ def make_freshness_check(
         return AssetCheckResult(
             passed=passed,
             severity=AssetCheckSeverity.ERROR if not passed else AssetCheckSeverity.WARN,
-            description=f"Last success {age_hours:.1f}h ago (SLA={sla_hours}h)",
+            description=f"Last completed run {age_hours:.1f}h ago (SLA={sla_hours}h)",
             metadata={
                 "age_hours": float(round(age_hours, 2)),
                 "sla_hours": float(sla_hours),
-                "last_success_utc": last.isoformat(),
+                "last_completed_utc": last.isoformat(),
             },
         )
 

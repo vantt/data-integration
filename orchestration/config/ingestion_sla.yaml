@@ -1,6 +1,11 @@
 # SLA configuration for ingestion asset checks.
 # Editing this file is the ONLY action needed to tighten or loosen any SLA.
 # Restart the Dagster webserver after changes.
+#
+# freshness_hours: maximum age of the last COMPLETED run, i.e. status `success` or `skipped`
+# (a run that asked the source and found nothing new; orchestration/asset_checks/health_db.py
+# COMPLETED_STATUSES). A source that rarely changes, such as the Sapo product catalogue, stays
+# fresh as long as its runs complete. Volume and trend checks count `success` runs only.
 
 defaults:
   trend_window_days: 7
