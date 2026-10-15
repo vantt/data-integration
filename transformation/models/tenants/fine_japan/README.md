@@ -20,6 +20,20 @@ Bảng giá được sensor `ingest_sheets_modified_sensor` theo dõi (URL ở [
 
 Ba seed lõi đọc (`seed_channel_targets`, `seed_sku_alias_manual`, `seed_sku_regimen_config`) là **bản ghi đè của Fine Japan** cho seed mặc định rỗng của lõi ở [`transformation/seeds/defaults/`](../../../seeds/defaults/README.md). Lõi đọc chúng qua `tenant_ref('<seed>')`: biến dbt `tenant: fine_japan` (`dbt_project.yml`, khớp `tenants:` trong `orchestration/config/modules.yaml`) chọn bản Fine Japan; không có tenant thì lõi đọc bản mặc định 0 dòng. Tiêu đề ba file này phải trùng từng cột với bản mặc định (`check_boundaries.py`, luật `tenant-seed-contract`): thêm hay đổi cột thì sửa cả hai và `+column_types` của bản mặc định. Thiết kế: [docs/architecture/modules.md](../../../../docs/architecture/modules.md) mục 10.
 
+### Bảng nhãn `taxonomy_label` (xem trước, chưa chốt)
+
+`seeds/tenants/fine_japan/taxonomy_label.csv` neo từng nhãn Fine Japan của 5 domain vào mã chuẩn của `seeds/taxonomy/taxonomy_canonical.csv`; lõi đọc qua `tenant_ref('taxonomy_label')` trong 5 model `lbl_<domain>` (cột `*_std`). Đặc tả: [TAXONOMY.md mục 5b](../../../docs/TAXONOMY.md).
+
+| Domain | Nhãn → mã chuẩn |
+|---|---|
+| `channel_format` | Marketplace → MARKETPLACE; Social → SOCIAL; Web → WEB; Retail → RETAIL_STORE; B2B → B2B; Direct → DIRECT_SALES; System → NON_SALES*; CrossBorder Fulfillment → NON_SALES*; Other → OTHER* |
+| `channel_category` | Online-Ecommerce → ONLINE; Offline → OFFLINE; Internal → INTERNAL |
+| `customer_type` | RETAIL → CONSUMER; WHOLESALE → WHOLESALE; PARTNER → TRADE*; STAFF → STAFF; KOL → KOL; CROSSBORDER → OTHER* |
+| `value_group` | VALUE_VIP → TOP; VALUE_GOLD → HIGH; VALUE_SILVER → MID; VALUE_BRONZE → BASE |
+| `customer_lifecycle_stage` | LIFECYCLE_NEW → NEW; LIFECYCLE_ACTIVE → ACTIVE; LIFECYCLE_AT_RISK → AT_RISK; LIFECYCLE_CHURNED → CHURNED |
+
+\* Neo tạm, user chốt 14/10/2026 (cột `note` trong file). Nhãn mới (vd. sau khi đổi `ref_order_sources`) phải thêm dòng ở đây; thiếu thì test `labels_mapped` cảnh báo và gate shadow fail.
+
 ## Hook (lõi phụ thuộc tenant)
 
 - `mart_data_quality` → `fact_us_shipment_economics`: cạnh `ref`, ghi trong `scripts/checks/boundary_allowlist.yaml`.

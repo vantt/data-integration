@@ -127,3 +127,31 @@ seeds:
         effective_from: date
         effective_to: date
         notes: varchar
+
+  - name: taxonomy_canonical
+    description: >
+      Canonical label codes per taxonomy domain (product-owned, preview, not final): code,
+      optional parent_code in the same domain, names. Every domain has the reserved codes UNMAPPED,
+      UNKNOWN, NOT_APPLICABLE and OTHER (is_reserved = true). Labels are anchored to these codes by
+      the tenant's taxonomy_label; read by the lbl_<domain> models' tests.
+    columns:
+      - name: domain
+        data_type: varchar
+        tests: [not_null]
+      - name: code
+        data_type: varchar
+        tests: [not_null]
+      - name: parent_code
+        data_type: varchar
+        description: "Parent code in the same domain (NULL for a root); checked by assert_taxonomy_canonical_parent_exists."
+      - name: name_vi
+        data_type: varchar
+      - name: name_en
+        data_type: varchar
+      - name: is_reserved
+        data_type: boolean
+        tests: [not_null]
+    tests:
+      - dbt_utils.unique_combination_of_columns:
+          arguments:
+            combination_of_columns: [domain, code]

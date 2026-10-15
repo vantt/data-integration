@@ -99,6 +99,7 @@ scripts/shadow/gate.sh S     # phases that rewrite SQL (3, 4)
 | Step | M | S |
 |---|---|---|
 | Build branch on fresh `lake-B` (rolling parquet cleared) | ✓ | ✓ |
+| Every `labels_mapped` test passes on lake-B (`run_results.json`; the test is warn level in dbt so a new label does not red the nightly, but the gate requires `pass`) | ✓ | ✓ |
 | Golden lake-A vs lake-B | ✓ | ✓ |
 | dbt inventory diff | ✓ | ✓ |
 | Compiled SQL diff (what dbt executed, per model) | ✓ | ✓ |
@@ -124,7 +125,7 @@ compare with lake-A. Only the build result decides the step; the printed differe
 reviewed by hand against this list. A table outside it must be explained before the phase is
 accepted.
 
-Expected differences (`{enabled_packs: [], tenant: ""}`, Fine Japan data, 15/10/2026; 143 models and seeds built, 347 tests pass):
+Expected differences (`{enabled_packs: [], tenant: ""}`, Fine Japan data, 15/10/2026; 154 models and seeds built, 384 tests pass, 5 warn):
 
 | Table | Expected difference | Why |
 |---|---|---|
@@ -141,6 +142,10 @@ Expected differences (`{enabled_packs: [], tenant: ""}`, Fine Japan data, 15/10/
 | `mart_product_health` | `realized_margin_pct`, `margin_outlier` NULL, `has_margin_data` false, `health_class` NULL for SKUs with sales | margin columns through `pack_ref('finance', 'mart_sku_economics_monthly')` |
 | `mart_product_action_queue` | `health_class`, `has_margin_data`, `realized_margin_pct` | reads `mart_product_health` |
 | `mart_deadstock_target_queue` | fewer rows (249 → 208) and their values | selects SKUs by `mart_product_health.health_class` (DOG/QUESTION) |
+
+Also expected (not public, so not in the compare): the 5 `lbl_<domain>` models build with every
+label `UNMAPPED` (no tenant, empty `taxonomy_label__default`) and their 5 `labels_mapped` tests
+`warn` (`status: {... 'warn': 5}`).
 
 Row counts that must stay equal to lake-A (velocity is core): `int_product_velocity_trend`,
 `mart_product_health`, `mart_product_action_queue`, `mart_inventory_health`.

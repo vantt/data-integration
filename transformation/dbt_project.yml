@@ -38,6 +38,16 @@ seeds:
           channel_code: varchar
           channel_name: varchar
           channel_group: varchar
+      # Canonical label codes per domain (preview, not final): seeds/taxonomy/README via
+      # transformation/docs/TAXONOMY.md "Lớp ánh xạ nhãn → mã chuẩn".
+      taxonomy_canonical:
+        +column_types:
+          domain: varchar
+          code: varchar
+          parent_code: varchar
+          name_vi: varchar
+          name_en: varchar
+          is_reserved: boolean
     # Product seeds: what each connector provides and which module needs it
     # (seeds/capabilities/README.md). Read by monitoring/mart_capabilities.
     capabilities:
@@ -74,6 +84,12 @@ seeds:
           dose_reduction_buffer: double
           remind_lead_days: integer
           journey_enabled: boolean
+      taxonomy_label__default:
+        +column_types:
+          domain: varchar
+          label: varchar
+          label_std: varchar
+          note: varchar
       seed_sku_alias_manual__default:
         +column_types:
           sapo_pack_sku: varchar
@@ -90,6 +106,12 @@ seeds:
         seed_action_scenario_registry:
           +column_types:
             enabled: boolean
+        taxonomy_label:
+          +column_types:
+            domain: varchar
+            label: varchar
+            label_std: varchar
+            note: varchar
 # Dispatch configuration
 dispatch:
   - macro_namespace: dbt

@@ -1,0 +1,27 @@
+domain,label,label_std,note
+channel_format,Marketplace,MARKETPLACE,
+channel_format,Social,SOCIAL,
+channel_format,Web,WEB,
+channel_format,Retail,RETAIL_STORE,
+channel_format,B2B,B2B,
+channel_format,Direct,DIRECT_SALES,
+channel_format,System,NON_SALES,Neo tạm (user chốt 14/10/2026)
+channel_format,CrossBorder Fulfillment,NON_SALES,Neo tạm (user chốt 14/10/2026)
+channel_format,Other,OTHER,Neo tạm (user chốt 14/10/2026); gồm hàng Unknown của dim_channels
+channel_category,Online-Ecommerce,ONLINE,
+channel_category,Offline,OFFLINE,
+channel_category,Internal,INTERNAL,
+customer_type,RETAIL,CONSUMER,
+customer_type,WHOLESALE,WHOLESALE,
+customer_type,PARTNER,TRADE,"Neo tạm vào nút cha (user chốt 14/10/2026): TYPE_PARTNER và KY_GUI gộp, chưa tách được ký gửi"
+customer_type,STAFF,STAFF,
+customer_type,KOL,KOL,
+customer_type,CROSSBORDER,OTHER,Neo tạm (user chốt 14/10/2026): câu hỏi nghiệp vụ §9 taxonomy-engine-design
+value_group,VALUE_VIP,TOP,
+value_group,VALUE_GOLD,HIGH,
+value_group,VALUE_SILVER,MID,
+value_group,VALUE_BRONZE,BASE,
+customer_lifecycle_stage,LIFECYCLE_NEW,NEW,
+customer_lifecycle_stage,LIFECYCLE_ACTIVE,ACTIVE,
+customer_lifecycle_stage,LIFECYCLE_AT_RISK,AT_RISK,
+customer_lifecycle_stage,LIFECYCLE_CHURNED,CHURNED,

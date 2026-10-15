@@ -129,6 +129,7 @@ Tên `customer_value_tier` và `recency_status` trong bản scout cũ không t�
 - **Thuộc tính bộ máy (đề xuất):** `cardinality=single`, `hit_policy=UNIQUE (một dòng seed mỗi nguồn)`, `stickiness=recompute`, `time_semantics=current`, `versioning=restate`
 - **Giá trị Fine Japan:** Marketplace 28, Social 5, System 3, Other 2, Direct 2, B2B 2, Web 2, CrossBorder Fulfillment 1, Retail 1 (đếm dòng seed).
 - **Mã chuẩn đề xuất (chưa chốt):** MARKETPLACE, SOCIAL, WEB, RETAIL_STORE, B2B, DIRECT_SALES, NON_SALES (thiết kế §5.1; `NON_SALES` có thể bỏ khi có `order_purpose`). **Chưa chốt.**
+- **Mã chuẩn (xem trước):** `lbl_channel_format.channel_format_std` (bảng `taxonomy_label` của Fine Japan, mục 5b): Marketplace → MARKETPLACE; Social → SOCIAL; Web → WEB; Retail → RETAIL_STORE; B2B → B2B; Direct → DIRECT_SALES; System → NON_SALES, CrossBorder Fulfillment → NON_SALES, Other → OTHER (ba neo tạm, user chốt 14/10/2026). Hàng `Unknown` của `dim_channels` mang `Other` nên ra OTHER. **Chưa chốt.**
 - **Giá trị tenant viết cứng:** Toàn bộ nội dung seed là của Fine Japan; `CrossBorder Fulfillment` là khái niệm riêng của nguồn `US`.
 - **Model incremental lưu nhãn:** Không.
 
@@ -209,6 +210,7 @@ Không có khối SQL: luật là dữ liệu (seed), xem ô "Đã là dữ li�
 - **Thuộc tính bộ máy (đề xuất):** `cardinality=single`, `hit_policy=FIRST (ánh xạ một-một, ELSE mặc định)`, `stickiness=recompute`, `time_semantics=current`, `versioning=restate`
 - **Giá trị Fine Japan:** `Online-Ecommerce`, `Offline`, `Internal`.
 - **Mã chuẩn đề xuất (chưa chốt):** ONLINE, OFFLINE, INTERNAL (thiết kế §5.1). `INTERNAL` có thể thôi là kênh mà thành mục đích đơn. **Chưa chốt.**
+- **Mã chuẩn (xem trước):** `lbl_channel_category.channel_category_std` (bảng `taxonomy_label` của Fine Japan, mục 5b): Online-Ecommerce → ONLINE; Offline → OFFLINE; Internal → INTERNAL. **Chưa chốt.**
 - **Giá trị tenant viết cứng:** Ánh xạ định dạng sang hạng mục cấp 1 phản ánh cách Fine Japan chia, kể cả `B2B` và `Direct` là `Offline`.
 - **Model incremental lưu nhãn:** Không (`dim_channels` là `external`).
 
@@ -462,6 +464,7 @@ Không có khối SQL: luật là dữ liệu (seed), xem ô "Đã là dữ li�
 - **Thuộc tính bộ máy (đề xuất):** `cardinality=single`, `hit_policy=PRIORITY (theo giá trị: WHOLESALE > PARTNER > STAFF > KOL > CROSSBORDER > RETAIL)`, `stickiness=manual_wins cần có (hôm nay nhóm khách chỉnh tay ở Sapo là nguồn)`, `time_semantics=current`, `versioning=restate`
 - **Giá trị Fine Japan:** `WHOLESALE`, `PARTNER`, `STAFF`, `KOL`, `CROSSBORDER`, `RETAIL`.
 - **Mã chuẩn đề xuất (chưa chốt):** Cây: CONSUMER; TRADE (WHOLESALE, DEALER, CONSIGNMENT, RESELLER_CTV); INTERNAL (STAFF, RELATED_PARTY); CREATOR (KOL, AFFILIATE); OTHER. `CROSSBORDER` là nhãn riêng; neo vào đâu là quyết định mở (thiết kế §5.2). **Chưa chốt.**
+- **Mã chuẩn (xem trước):** `lbl_customer_type.customer_type_std` (bảng `taxonomy_label` của Fine Japan, mục 5b): RETAIL → CONSUMER; WHOLESALE → WHOLESALE; PARTNER → TRADE (nút cha, neo tạm: `TYPE_PARTNER` và `KY_GUI` gộp, chưa tách được ký gửi); STAFF → STAFF; KOL → KOL; CROSSBORDER → OTHER (neo tạm, câu hỏi nghiệp vụ §9 thiết kế). Theo `dim_customers`, không theo `fact_orders` (Known divergence #1). **Chưa chốt.**
 - **Giá trị tenant viết cứng:** `CTN00014` (mã nhóm cũ của khách nhận hàng hộ), `KY_GUI`, `BANBUON`/`WHOLESALE`, kênh `'US'` (`dim_customers.sql` L35) và tập sáu nhãn. Đầu vào cho tenant overlay.
 - **Model incremental lưu nhãn:** Không có model incremental lưu `customer_type`. `dim_customers_base` là incremental nhưng chỉ lưu blob nhóm thô. Lưu ý: `dim_customers.sql` có nhánh `is_incremental()` nhưng materialization là `external` nên nhánh đó không chạy.
 
@@ -486,6 +489,7 @@ Không có khối SQL: luật là dữ liệu (seed), xem ô "Đã là dữ li�
 - **Thuộc tính bộ máy (đề xuất):** `cardinality=single`, `hit_policy=FIRST (bậc thang từ cao xuống thấp)`, `stickiness=recompute`, `time_semantics=current (tổng lũy kế đến hôm nay)`, `versioning=restate; ảnh chụp tháng ở `mart_customer_status_snapshot_monthly` dùng giá trị hiện tại, không phải giá trị tại thời điểm`
 - **Giá trị Fine Japan:** `VALUE_VIP`, `VALUE_GOLD`, `VALUE_SILVER`, `VALUE_BRONZE`.
 - **Mã chuẩn đề xuất (chưa chốt):** `value_tier`: TOP, HIGH, MID, BASE (thứ tự; tên do doanh nghiệp đặt) (thiết kế §5.2). **Chưa chốt.**
+- **Mã chuẩn (xem trước):** `lbl_value_group.value_group_std` (bảng `taxonomy_label` của Fine Japan, mục 5b): VALUE_VIP → TOP; VALUE_GOLD → HIGH; VALUE_SILVER → MID; VALUE_BRONZE → BASE (thiết kế gọi domain này là `value_tier`). **Chưa chốt.**
 - **Giá trị tenant viết cứng:** Các ngưỡng VND (5 triệu, 20 triệu, 50 triệu) và ngưỡng 20 đơn; tên bốn nhóm.
 - **Model incremental lưu nhãn:** Không.
 
@@ -509,6 +513,7 @@ Không có khối SQL: luật là dữ liệu (seed), xem ô "Đã là dữ li�
 - **Thuộc tính bộ máy (đề xuất):** `cardinality=single`, `hit_policy=FIRST`, `stickiness=recompute`, `time_semantics=current`, `versioning=restate (ảnh chụp cuối tháng cho phân tích xu hướng)`
 - **Giá trị Fine Japan:** `LIFECYCLE_NEW`, `LIFECYCLE_ACTIVE`, `LIFECYCLE_AT_RISK`, `LIFECYCLE_CHURNED`.
 - **Mã chuẩn đề xuất (chưa chốt):** NEW, ACTIVE, AT_RISK, CHURNED, REACTIVATED, NOT_APPLICABLE; mã đề xuất `NOT_APPLICABLE` cho khách chưa mua (thiết kế §5.2). **Chưa chốt.**
+- **Mã chuẩn (xem trước):** `lbl_customer_lifecycle_stage.lifecycle_stage_std` (bảng `taxonomy_label` của Fine Japan, mục 5b): LIFECYCLE_NEW → NEW; LIFECYCLE_ACTIVE → ACTIVE; LIFECYCLE_AT_RISK → AT_RISK; LIFECYCLE_CHURNED → CHURNED (REACTIVATED chưa có nhãn nguồn). **Chưa chốt.**
 - **Giá trị tenant viết cứng:** Ngưỡng 30/2/90/180 ngày.
 - **Model incremental lưu nhãn:** Không.
 
@@ -1184,7 +1189,7 @@ Không có khối SQL: luật là dữ liệu (seed), xem ô "Đã là dữ li�
 
 ## 5. Seed phân loại và ai đọc, ai ghi
 
-Tám seed phân loại nằm ở `transformation/seeds/taxonomy/` (tên seed giữ nguyên nên relation dbt không đổi). Python tìm seed theo tên bằng `seed_path("<tên>")` ở [`ingestion/src/utils/seed_paths.py`](../../ingestion/src/utils/seed_paths.py) (quét `transformation/seeds/**/<tên>.csv`, lỗi nếu không có hoặc có hơn một file). `+column_types` của ba seed có kiểu cột khai trong `dbt_project.yml` được đặt dưới khoá `taxonomy:`.
+Chín seed phân loại nằm ở `transformation/seeds/taxonomy/` (tên seed giữ nguyên nên relation dbt không đổi). Python tìm seed theo tên bằng `seed_path("<tên>")` ở [`ingestion/src/utils/seed_paths.py`](../../ingestion/src/utils/seed_paths.py) (quét `transformation/seeds/**/<tên>.csv`, lỗi nếu không có hoặc có hơn một file). `+column_types` của ba seed có kiểu cột khai trong `dbt_project.yml` được đặt dưới khoá `taxonomy:`.
 
 | Seed | Dòng | Model dbt đọc | Python đọc | Python ghi | Domain |
 |---|---|---|---|---|---|
@@ -1196,8 +1201,43 @@ Tám seed phân loại nằm ở `transformation/seeds/taxonomy/` (tên seed gi�
 | `ref_spend_category` | 27 | (không có) | `gsheet_marketing_spend.py`, `generate_dropdown.py` | | `spend_category` |
 | `ref_tag_categories` | 61 | `int_order_tags` | | | `order_tag` |
 | `ref_gl_accounts` | 53 | `dim_gl_account` (chỉ bổ sung tên tài khoản) | | | `gl_cashflow_line` |
+| `taxonomy_canonical` | 51 | test của lớp nhãn (mục 5b) | | | mã chuẩn của `channel_format`, `channel_category`, `customer_type`, `value_group`, `customer_lifecycle_stage` |
 
 Các seed dữ liệu doanh nghiệp của tenant Fine Japan nằm ở `transformation/seeds/tenants/fine_japan/` (dời ở bước tenant overlay; tên seed và cấu hình không đổi): `seed_action_scenario_registry`, `seed_cash_allocation_policy`, `seed_cashflow_budget`, `seed_channel_targets`, `seed_sku_alias_manual`, `seed_sku_regimen_config`. Model đọc: `dim_action_scenario_registry`, `mart_customer_action_queue`, `mart_customer_sku_action_queue` (pack `sales_playbook`); `fact_cashflow_budget`, `dim_cash_allocation_policy` (pack `finance`); `dim_channel_targets`, `dim_sku_alias`, `int_customer_sku_supply_tracking` (lõi). Hai seed ngân sách (`seed_cashflow_budget`, `seed_cash_allocation_policy`) được job Google Sheet ghi lúc 02:30 qua `ingestion/src/gsheet_budget_sync` (Dagster asset `orchestration/connectors/sheets/assets.py: budget_sheet_sync_asset`), cũng đã chuyển sang `seed_path`. **Chưa có** chỗ nào ghi tự động vào seed phân loại (chỉ `sync_seeds.py` chạy tay).
+
+## 5b. Lớp ánh xạ nhãn → mã chuẩn (xem trước, chưa chốt)
+
+Report chuẩn cần cột `*_std` trước khi có bộ máy luật ([docs/architecture/taxonomy-engine.md](../../docs/architecture/taxonomy-engine.md)). Lớp này chỉ **neo nhãn đang có** vào một mã chuẩn, không đổi nhãn nào và không thêm cột vào mart public; bộ mã là **bản xem trước**, chốt khi có doanh nghiệp thứ hai (quyết định #1 §8 của thiết kế).
+
+```mermaid
+flowchart LR
+    SUBJ["dim_channels / dim_customers<br/>(nhãn hiện có)"] --> LBL["lbl_&lt;domain&gt;<br/>&lt;nhãn&gt;, &lt;nhãn&gt;_std"]
+    TL["seeds/tenants/fine_japan/taxonomy_label.csv<br/>(domain, label → label_std)"] -- "tenant_ref" --> LBL
+    TC["seeds/taxonomy/taxonomy_canonical.csv<br/>(domain, code, parent_code)"] -. "test: label_std có thật" .-> TL
+```
+
+| Thành phần | Vị trí | Chủ sở hữu |
+|---|---|---|
+| Bộ mã chuẩn `taxonomy_canonical` (`domain, code, parent_code, name_vi, name_en, is_reserved`); mỗi domain có thêm 4 mã dành riêng `UNMAPPED`, `UNKNOWN`, `NOT_APPLICABLE`, `OTHER` | `transformation/seeds/taxonomy/taxonomy_canonical.csv` | Sản phẩm |
+| Bảng neo nhãn `taxonomy_label` (`domain, label, label_std, note`) | `transformation/seeds/tenants/fine_japan/taxonomy_label.csv`; bản mặc định rỗng `seeds/defaults/taxonomy_label__default.csv` (không có tenant thì mọi nhãn ra `UNMAPPED`) | Tenant |
+| Macro `label_std_model(domain, subject_model, key, label_column, labels)` | `transformation/macros/labels/label_std_model.sql` | Sản phẩm |
+| 5 model `lbl_channel_format`, `lbl_channel_category` (grain `channel_key`), `lbl_customer_type`, `lbl_value_group`, `lbl_customer_lifecycle_stage` (grain `customer_key`) | `transformation/models/core/marts/labels/`, bảng trong `main_marts` của warehouse, **không lên serving** | Lõi |
+
+Quy tắc của cột `*_std`: nhãn có trong `taxonomy_label` của domain thì lấy `label_std`; nhãn NULL thì `UNKNOWN`; nhãn không có trong bảng thì `UNMAPPED`. So khớp chính xác, phân biệt hoa thường như SQL sinh nhãn. Macro không có khối `CASE ... END AS`, nên `check_taxonomy_inventory.py` không coi đây là luật phân loại mới.
+
+Kiểm tra:
+
+| Test | Mức | Ý nghĩa |
+|---|---|---|
+| `(domain, label)` duy nhất trên `taxonomy_label` và `taxonomy_label__default` | error | Nhãn → mã là hàm |
+| `(domain, code)` duy nhất trên `taxonomy_canonical`; `assert_taxonomy_canonical_parent_exists` | error | Bộ mã hợp lệ, nút cha cùng domain |
+| `assert_taxonomy_label_std_is_canonical` | error | Chỉ neo vào mã có thật |
+| `unique`, `not_null` trên khoá mỗi `lbl_*`; `not_null` trên `*_std` | error | Grain đúng |
+| `labels_mapped` trên `*_std` (không dòng `UNMAPPED`) | **warn** | Nhãn mới (vd. sau khi đổi `ref_order_sources`) không làm đỏ nightly; gate shadow bước 1b đòi `pass` |
+
+Phân bố trên dữ liệu Fine Japan (shadow, 15/10/2026): `channel_format_std` MARKETPLACE 28, RETAIL_STORE 6, SOCIAL 5, NON_SALES 4, OTHER 3, B2B 2, DIRECT_SALES 2, WEB 2; `channel_category_std` ONLINE 35, OFFLINE 10, INTERNAL 7; `customer_type_std` CONSUMER 6 028, OTHER 1 538, WHOLESALE 160, TRADE 11; `value_group_std` BASE 7 111, MID 437, HIGH 96, TOP 93; `lifecycle_stage_std` NEW 4 726, CHURNED 2 815, ACTIVE 132, AT_RISK 64. Không dòng `UNMAPPED`.
+
+**Giới hạn đã biết:** ánh xạ chỉ nhìn nhãn, nên khách chưa mua (đang mang `LIFECYCLE_CHURNED`, `VALUE_BRONZE`) không ra `NOT_APPLICABLE`; việc đó cần luật, để bộ máy làm. Bộ máy sẽ thay phần sinh `lbl_<domain>` nhưng giữ tên model và hai bảng seed.
 
 ## Known divergences
 

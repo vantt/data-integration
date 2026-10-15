@@ -1,0 +1,52 @@
+domain,code,parent_code,name_vi,name_en,is_reserved
+channel_format,MARKETPLACE,,Sàn thương mại điện tử,Marketplace,false
+channel_format,SOCIAL,,Mạng xã hội,Social commerce,false
+channel_format,WEB,,Website,Web store,false
+channel_format,RETAIL_STORE,,Cửa hàng,Retail store,false
+channel_format,B2B,,Bán sỉ doanh nghiệp,B2B,false
+channel_format,DIRECT_SALES,,Bán trực tiếp,Direct sales,false
+channel_format,NON_SALES,,Không phải kênh bán,Non-sales,false
+channel_format,UNMAPPED,,Chưa ánh xạ,Unmapped,true
+channel_format,UNKNOWN,,Không xác định,Unknown,true
+channel_format,NOT_APPLICABLE,,Không áp dụng,Not applicable,true
+channel_format,OTHER,,Khác,Other,true
+channel_category,ONLINE,,Trực tuyến,Online,false
+channel_category,OFFLINE,,Trực tiếp,Offline,false
+channel_category,INTERNAL,,Nội bộ,Internal,false
+channel_category,UNMAPPED,,Chưa ánh xạ,Unmapped,true
+channel_category,UNKNOWN,,Không xác định,Unknown,true
+channel_category,NOT_APPLICABLE,,Không áp dụng,Not applicable,true
+channel_category,OTHER,,Khác,Other,true
+customer_type,CONSUMER,,Người tiêu dùng,Consumer,false
+customer_type,TRADE,,Thương mại,Trade,false
+customer_type,WHOLESALE,TRADE,Bán buôn,Wholesale,false
+customer_type,DEALER,TRADE,Đại lý,Dealer,false
+customer_type,CONSIGNMENT,TRADE,Ký gửi,Consignment,false
+customer_type,RESELLER_CTV,TRADE,Cộng tác viên bán lại,Reseller (CTV),false
+customer_type,INTERNAL,,Nội bộ,Internal,false
+customer_type,STAFF,INTERNAL,Nhân viên,Staff,false
+customer_type,RELATED_PARTY,INTERNAL,Bên liên quan,Related party,false
+customer_type,CREATOR,,Người sáng tạo nội dung,Creator,false
+customer_type,KOL,CREATOR,KOL,KOL,false
+customer_type,AFFILIATE,CREATOR,Tiếp thị liên kết,Affiliate,false
+customer_type,UNMAPPED,,Chưa ánh xạ,Unmapped,true
+customer_type,UNKNOWN,,Không xác định,Unknown,true
+customer_type,NOT_APPLICABLE,,Không áp dụng,Not applicable,true
+customer_type,OTHER,,Khác,Other,true
+value_group,TOP,,Giá trị cao nhất,Top (design domain value_tier),false
+value_group,HIGH,,Giá trị cao,High (design domain value_tier),false
+value_group,MID,,Giá trị trung bình,Mid (design domain value_tier),false
+value_group,BASE,,Giá trị cơ bản,Base (design domain value_tier),false
+value_group,UNMAPPED,,Chưa ánh xạ,Unmapped,true
+value_group,UNKNOWN,,Không xác định,Unknown,true
+value_group,NOT_APPLICABLE,,Không áp dụng,Not applicable,true
+value_group,OTHER,,Khác,Other,true
+customer_lifecycle_stage,NEW,,Mới,New,false
+customer_lifecycle_stage,ACTIVE,,Đang hoạt động,Active,false
+customer_lifecycle_stage,AT_RISK,,Có nguy cơ rời bỏ,At risk,false
+customer_lifecycle_stage,CHURNED,,Đã rời bỏ,Churned,false
+customer_lifecycle_stage,REACTIVATED,,Quay lại,Reactivated,false
+customer_lifecycle_stage,UNMAPPED,,Chưa ánh xạ,Unmapped,true
+customer_lifecycle_stage,UNKNOWN,,Không xác định,Unknown,true
+customer_lifecycle_stage,NOT_APPLICABLE,,Không áp dụng,Not applicable,true
+customer_lifecycle_stage,OTHER,,Khác,Other,true

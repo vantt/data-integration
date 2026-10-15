@@ -12,6 +12,8 @@ references: [docs/reference/taxonomy/shopify.md, docs/reference/taxonomy/china.m
 
 > Đọc cùng [transformation/docs/TAXONOMY.md](../../transformation/docs/TAXONOMY.md) (kiểm kê từng luật đang chạy) và [modules.md](modules.md) §9 (vị trí của module taxonomy). Bộ máy mô tả ở đây **chưa được triển khai**.
 
+> **Đã làm trước bộ máy (15/10/2026, plan `261014-2225-pack-mechanism` phase 8): lớp nhãn dạng dữ liệu của §3.3–3.4.** Hai bảng seed `taxonomy_canonical` (sản phẩm, `seeds/taxonomy/`) và `taxonomy_label` (tenant, `seeds/tenants/<tenant>/`, đọc qua `tenant_ref`) cùng 5 model `lbl_channel_format`, `lbl_channel_category`, `lbl_customer_type`, `lbl_value_group`, `lbl_customer_lifecycle_stage` (cột `<nhãn>_std`). Các model này **chỉ neo nhãn mà SQL hiện tại sinh ra** vào một mã chuẩn (macro `label_std_model`), chưa có luật. Khi bộ máy làm: nó thay phần sinh nhãn trong `lbl_<domain>` bằng luật, **giữ tên model `lbl_<domain>` và hai bảng seed** để người đọc `*_std` không phải đổi. Chi tiết: [TAXONOMY.md mục 5b](../../transformation/docs/TAXONOMY.md).
+
 ## 1. Vấn đề cần giải
 
 Sự khác biệt thật giữa các doanh nghiệp nằm ở **cách phân loại**: cùng là đơn hàng, khách, sản phẩm, nhưng mỗi nơi gọi nhóm khách, nguồn đơn, loại giảm giá theo cách riêng. Hiện nay ở Fine Japan, mỗi luật phân loại là một khối SQL đọc thẳng cột của bảng nào đó (`customer_group LIKE '%CTN00014%'`, `EXISTS ... channel_name = 'US'`). Vì luật có thể đụng bất cứ đâu:

@@ -287,7 +287,7 @@ scripts/shadow/gate.sh S --allow-new --allow-code-change   # thêm model/asset m
 
 ```mermaid
 flowchart TB
-    S1["1. clone lake-B + build nhánh"] --> S2["2. golden lake-A vs lake-B"]
+    S1["1. clone lake-B + build nhánh"] --> S1b["1b. labels_mapped pass"] --> S2["2. golden lake-A vs lake-B"]
     S2 --> S3["3. dbt inventory + compiled SQL"]
     S3 --> S3b["3b. module boundaries (host)"]
     S3b --> S3c["3c. taxonomy inventory (host, chỉ cảnh báo)"]
@@ -306,6 +306,7 @@ flowchart TB
 | Bước | M | S | Thời gian ước tính |
 |---|---|---|---|
 | Build nhánh trên lake-B | ✓ | ✓ | ~25 s |
+| Mọi test `labels_mapped` `pass` trên lake-B (mức `warn` trong dbt, gate đòi `pass`) | ✓ | ✓ | < 1 s |
 | Golden | ✓ | ✓ | ~5 s |
 | dbt inventory + compiled SQL | ✓ | ✓ | ~5 s |
 | Module boundaries | ✓ | ✓ | ~1 s |

@@ -28,3 +28,26 @@ seeds:
     tests:
       - dbt_utils.unique_combination_of_columns:
           combination_of_columns: [action_type, mart]
+
+  - name: taxonomy_label
+    description: >
+      Fine Japan's anchoring of its labels to canonical codes (preview, not final): one row per
+      (domain, label) with label_std, a code of taxonomy_canonical for the domain. Overrides the core
+      default taxonomy_label__default; core reads it through tenant_ref('taxonomy_label') in the
+      lbl_<domain> models. Interim anchors decided by the user 14/10/2026 are noted in `note`.
+    columns:
+      - name: domain
+        data_type: varchar
+        tests: [not_null]
+      - name: label
+        data_type: varchar
+        tests: [not_null]
+      - name: label_std
+        data_type: varchar
+        tests: [not_null]
+      - name: note
+        data_type: varchar
+    tests:
+      - dbt_utils.unique_combination_of_columns:
+          arguments:
+            combination_of_columns: [domain, label]

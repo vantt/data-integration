@@ -73,6 +73,13 @@ connector adds its rows; a new capability adds a catalog row and a probe in `mar
 (probes read connector/cdm models only, never a pack). `mart_capabilities` is a warehouse table,
 not on serving (`seeds/capabilities/README.md`).
 
+Labels: `models/core/marts/labels/lbl_<domain>` anchor existing labels to canonical codes
+(`<label>_std`, preview) with `label_std_model(...)`, codes in `seeds/taxonomy/taxonomy_canonical.csv`,
+mapping in the tenant seed `taxonomy_label` read through `tenant_ref`. A new label value (e.g. a
+new `channel_format` in `ref_order_sources`) needs a row in
+`seeds/tenants/<tenant>/taxonomy_label.csv`: test `labels_mapped` warns in dbt and the shadow gate
+fails until it is mapped (`docs/TAXONOMY.md` §5b).
+
 Before committing, run `scripts/checks/run-all.sh` (dbt parse, boundaries, Dagster definitions,
 pytest). Decisions behind this layout: `docs/decisions/015-module-boundaries.md`,
 `016-taxonomy-module.md`, `017-packs-and-tenants.md`.

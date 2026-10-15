@@ -1,0 +1,91 @@
+version: 2
+
+# Label -> canonical code layer (preview, NOT final: the canonical codes wait for a second business,
+# taxonomy-engine-design §8 decision #1). Tables in the warehouse, not on serving. Macro:
+# macros/labels/label_std_model.sql; mapping: seeds/tenants/<tenant>/taxonomy_label.csv;
+# codes: seeds/taxonomy/taxonomy_canonical.csv; spec: docs/TAXONOMY.md.
+models:
+  - name: lbl_channel_format
+    description: >
+      Preview, not final. One row per channel_key of dim_channels with the channel format of the channel (dim_channels) and channel_format_std, the
+      canonical code (taxonomy_canonical, domain channel_format) its label is anchored to in the tenant's
+      taxonomy_label: UNMAPPED when the label is not in the table, UNKNOWN when the label is NULL;
+      without a tenant every label is UNMAPPED. Not on serving.
+    columns:
+      - name: channel_key
+        tests: [unique, not_null]
+      - name: channel_format
+        description: "Label as produced by dim_channels."
+      - name: channel_format_std
+        description: "Canonical code of the label (preview)."
+        tests:
+          - not_null
+          - labels_mapped
+
+  - name: lbl_channel_category
+    description: >
+      Preview, not final. One row per channel_key of dim_channels with the channel category of the channel (dim_channels) and channel_category_std, the
+      canonical code (taxonomy_canonical, domain channel_category) its label is anchored to in the tenant's
+      taxonomy_label: UNMAPPED when the label is not in the table, UNKNOWN when the label is NULL;
+      without a tenant every label is UNMAPPED. Not on serving.
+    columns:
+      - name: channel_key
+        tests: [unique, not_null]
+      - name: channel_category
+        description: "Label as produced by dim_channels."
+      - name: channel_category_std
+        description: "Canonical code of the label (preview)."
+        tests:
+          - not_null
+          - labels_mapped
+
+  - name: lbl_customer_type
+    description: >
+      Preview, not final. One row per customer_key of dim_customers with the customer type of the customer (dim_customers; differs from fact_orders.customer_type for customers with only the US-channel signal, see TAXONOMY.md Known divergence) and customer_type_std, the
+      canonical code (taxonomy_canonical, domain customer_type) its label is anchored to in the tenant's
+      taxonomy_label: UNMAPPED when the label is not in the table, UNKNOWN when the label is NULL;
+      without a tenant every label is UNMAPPED. Not on serving.
+    columns:
+      - name: customer_key
+        tests: [unique, not_null]
+      - name: customer_type
+        description: "Label as produced by dim_customers."
+      - name: customer_type_std
+        description: "Canonical code of the label (preview)."
+        tests:
+          - not_null
+          - labels_mapped
+
+  - name: lbl_value_group
+    description: >
+      Preview, not final. One row per customer_key of dim_customers with the value group of the customer (dim_customers; domain value_tier in the taxonomy design) and value_group_std, the
+      canonical code (taxonomy_canonical, domain value_group) its label is anchored to in the tenant's
+      taxonomy_label: UNMAPPED when the label is not in the table, UNKNOWN when the label is NULL;
+      without a tenant every label is UNMAPPED. Not on serving.
+    columns:
+      - name: customer_key
+        tests: [unique, not_null]
+      - name: value_group
+        description: "Label as produced by dim_customers."
+      - name: value_group_std
+        description: "Canonical code of the label (preview)."
+        tests:
+          - not_null
+          - labels_mapped
+
+  - name: lbl_customer_lifecycle_stage
+    description: >
+      Preview, not final. One row per customer_key of dim_customers with the lifecycle stage of the customer (dim_customers) and lifecycle_stage_std, the
+      canonical code (taxonomy_canonical, domain customer_lifecycle_stage) its label is anchored to in the tenant's
+      taxonomy_label: UNMAPPED when the label is not in the table, UNKNOWN when the label is NULL;
+      without a tenant every label is UNMAPPED. Not on serving.
+    columns:
+      - name: customer_key
+        tests: [unique, not_null]
+      - name: lifecycle_stage
+        description: "Label as produced by dim_customers."
+      - name: lifecycle_stage_std
+        description: "Canonical code of the label (preview)."
+        tests:
+          - not_null
+          - labels_mapped

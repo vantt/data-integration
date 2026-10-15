@@ -5,6 +5,7 @@
 # Usage: scripts/shadow/gate.sh <M|S> [--allow-new] [--allow-code-change]
 #   M  move-only phases: golden + dbt inventory + compiled SQL + module boundaries + taxonomy inventory (warn only) + dagster inventory
 #      + dagster-run dbt subset + pytest + empty-lake build + bare-core profile build (every pack off)
+#      + every labels_mapped test passes on the branch build (warn level in dbt, required here)
 #   S  SQL-changing phases: M + a second golden pass after --full-refresh of every
 #      incremental model and everything downstream (the incremental branch is exercised
 #      only when rows are reprocessed)
@@ -67,6 +68,18 @@ echo "baseline: $(cat "$SHADOW_ROOT/lake-A/_shadow_meta/code_ref")"
 step "1. build branch on fresh lake-B"
 "$SCRIPT_DIR/clone-lake.sh" lake-B >/dev/null
 "$SCRIPT_DIR/build-lake.sh" "$BRANCH_DIR" lake-B | tail -2; check "${PIPESTATUS[0]}" "dbt build (branch)"
+
+step "1b. label mapping: every labels_mapped test passes (warn level in prod, required here)"
+python3 - "$SHADOW_ROOT/lake-B/_shadow_meta/run_results.json" <<'PY'
+import json, sys
+results = [r for r in json.load(open(sys.argv[1]))["results"] if ".labels_mapped_" in r["unique_id"]]
+bad = [f"{r['unique_id']}: {r['status']} ({(r.get('message') or '').strip()})" for r in results if r["status"] != "pass"]
+print(f"labels_mapped: {len(results)} test(s), {len(bad)} not passing")
+for b in bad:
+    print("  " + b)
+sys.exit(1 if bad else 0)
+PY
+check $? "labels_mapped tests pass"
 
 step "2. golden snapshot lake-A vs lake-B"
 golden_pair lake-A lake-B; check $? "golden"
