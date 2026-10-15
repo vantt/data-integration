@@ -44,6 +44,7 @@ Asset-level SLAs from the operations domain. Status thresholds apply to `ingesti
 | `sapo/ingest_sapov2_webhook_consumer_asset` | 12h | healthy < 12h / warning ≥ 9h / stale ≥ 12h |
 | `sapo/ingest_sapov2_history_log_asset` | 12h | healthy < 12h / warning ≥ 9h / stale ≥ 12h |
 | `sapo/sapo_*_batch_asset` (4 assets) | 28h | healthy < 28h / warning ≥ 21h / stale ≥ 28h |
+| `sapo/ingest_sapo_v2_product_daily_snapshot_asset` (nightly price/stock capture, raw `sapo_v2_raw/product_daily_snapshot`) | 28h | healthy < 28h / warning ≥ 21h / stale ≥ 28h. **Not rebuildable:** a missed night that is not re-run before 06:00 ICT loses that day's prices and stock positions for good |
 | `shopee/shopee_income_file_drop_asset` | 48h | healthy < 48h / warning ≥ 36h / stale ≥ 48h |
 | `sheets/sheets_*_asset` (2 assets) | 48h | healthy < 48h / warning ≥ 36h / stale ≥ 48h |
 | `misa_amis/misa_sales_file_drop_asset` | 192h (8 days) | healthy < 192h / warning ≥ 144h / stale ≥ 192h |
@@ -144,6 +145,14 @@ Dashboard shows unexpected numbers
 - **Action: NEVER delete the text partition.**
 - Some status history and fulfillment timeline data is only available from the ingestion start date, not as a full historical backfill.
 - When querying pre-2025 order status or fulfillment timelines, acknowledge this coverage gap.
+
+## Price and Stock Position History — Nightly Capture
+
+**`sapo_v2_raw/product_daily_snapshot` is the only record of past prices and stock positions** (available, committed, incoming, onway, min/max, `mac` per location). The Sapo API, with the access the connector has, returns current values only, so this history starts with the first capture (October 2026) and cannot be backfilled or rebuilt.
+
+- One capture per night (`pipeline_batch_nightly_job`, ~03:00 ICT); a capture taken before 06:00 ICT counts for the previous day.
+- A night that fails and is not re-run before 06:00 ICT is a permanent gap for prices and stock positions. `on_hand` history stays available from the inventory ledger (`fact_inventory_balance`, since 2021).
+- **Action: NEVER delete or full-refresh this folder.** It is append-only and kept forever.
 
 ---
 

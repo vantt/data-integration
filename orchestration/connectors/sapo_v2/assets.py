@@ -8,7 +8,7 @@ Dagster's multiprocess executor runs each step in an isolated child process.
 NEVER switch these assets to in_process_executor — shared process CWD would
 create races between concurrently executing in-process assets.
 """
-from dagster import asset, Output, MetadataValue
+from dagster import asset, Output, MetadataValue, RetryPolicy
 import sys
 import os
 import time
@@ -34,6 +34,7 @@ try:
     import run_sapo_v2_customers_batch
     import run_sapo_v2_accounts_batch
     import run_sapo_v2_products_batch
+    import run_sapo_v2_product_daily_snapshot
     import run_sapo_v2_inventory_transactions_batch
 except ImportError as e:
     raise ImportError(f"Could not import dlt scripts from {DLT_DIR}. Error: {e}")
@@ -282,6 +283,95 @@ def ingest_sapo_v2_products_batch_asset(context):
                 status=status,
                 rows_written=rows_written,
                 metadata={"full_refresh": is_full_refresh, "load_info": info_dict},
+            )
+        except Exception as _e:
+            context.log.warning(f"ingestion_health record_run failed: {_e}")
+
+
+# A missed night is lost for good (Sapo keeps no price or stock history), so a failed scan
+# is retried inside the same run before the nightly gives up.
+@asset(
+    group_name="sapo_ingestion",
+    key_prefix=["sapo"],
+    retry_policy=RetryPolicy(max_retries=2, delay=120),
+)
+def ingest_sapo_v2_product_daily_snapshot_asset(context):
+    """Nightly full capture of Sapo product prices and stock positions.
+
+    Reads every page of products.json (no cursor, no early stop) and appends one compact row per
+    product to sapo_v2_raw/product_daily_snapshot. That raw table is the only history of prices
+    and stock positions and cannot be rebuilt. Coverage against the Sapo catalogue total is
+    reported in metadata and logged as WARN below 98%; the SLA row-trend check (trend_min_ratio
+    0.98) warns when a night captures fewer products than the 7-day median.
+    Writes to ingestion_health via orchestration.ops.ingestion_health.
+    """
+    asset_key_str = "sapo/ingest_sapo_v2_product_daily_snapshot_asset"
+    started = datetime.now(timezone.utc)
+    context.log.info("Starting Sapo products daily snapshot (full catalogue scan)...")
+    load_dlt_configuration(context.log.info)
+    cwd = os.getcwd()
+    status = "failed"
+    info_dict: dict = {}
+    rows_written = None
+    health_meta: dict = {}
+    try:
+        try:
+            os.chdir(DLT_DIR)
+            result = run_sapo_v2_product_daily_snapshot.run()
+        finally:
+            os.chdir(cwd)
+
+        info_dict = result.load_info.asdict() if hasattr(result.load_info, "asdict") else {}
+        loaded_packages = extract_loaded_packages(info_dict)
+        rows_written = extract_rows_written(info_dict)
+        if not loaded_packages:
+            raise RuntimeError("products daily snapshot scanned the catalogue but loaded no package")
+        status = "success"
+        health_meta = {
+            "capture_run_id": result.capture_run_id,
+            "captured_at": result.captured_at.isoformat(),
+            "products": result.products,
+            "pages": result.pages,
+            "sapo_total": result.sapo_total,
+            "duplicates": result.duplicates,
+            "coverage_ratio": result.coverage_ratio,
+        }
+        for warning in result.warnings:
+            context.log.warning(f"WARN products daily snapshot: {warning}")
+        context.log.info(
+            f"Products daily snapshot finished: {result.products} products, {result.pages} pages, "
+            f"Sapo total {result.sapo_total}, coverage {result.coverage_ratio}"
+        )
+        return Output(
+            value="Products Daily Snapshot Completed",
+            metadata={
+                **_build_metadata(loaded_packages, rows_written),
+                "products": MetadataValue.int(result.products),
+                "pages": MetadataValue.int(result.pages),
+                "sapo_total": (
+                    MetadataValue.int(result.sapo_total)
+                    if result.sapo_total is not None
+                    else MetadataValue.text("unknown")
+                ),
+                "coverage_ratio": (
+                    MetadataValue.float(round(result.coverage_ratio, 4))
+                    if result.coverage_ratio is not None
+                    else MetadataValue.text("unknown")
+                ),
+                "capture_run_id": MetadataValue.text(result.capture_run_id),
+                "captured_at": MetadataValue.text(result.captured_at.isoformat()),
+                "load_info": MetadataValue.text(str(result.load_info)),
+            },
+        )
+    finally:
+        try:
+            _record_health(
+                asset_key=asset_key_str,
+                run_id=context.run_id,
+                run_started_at=started,
+                status=status,
+                rows_written=rows_written,
+                metadata={**health_meta, "load_info": info_dict},
             )
         except Exception as _e:
             context.log.warning(f"ingestion_health record_run failed: {_e}")

@@ -48,6 +48,53 @@ from tenacity import (
 )
 
 
+@retry(
+    stop=stop_after_attempt(3),
+    wait=wait_exponential(multiplier=1, min=2, max=10),
+    retry=retry_if_exception_type(requests.RequestException)
+)
+def fetch_products_page(client, session, page: int, page_size: int) -> Dict[str, Any]:
+    """Fetch one page of products.json (newest `modified_on` first) with exponential backoff retry.
+
+    Refreshes the session once on 401/403 and waits `Retry-After` once on 429. Shared by the
+    incremental batch (`products`) and the nightly full scan (`products_daily_snapshot`).
+    """
+    url = f"{client.base_url}/products.json"
+
+    if client.request_delay > 0:
+        import time
+        time.sleep(client.request_delay)
+
+    params = {
+        "page": page,
+        "limit": page_size,
+        "sort_by": "modified_on",
+        "sort_direction": "desc",
+    }
+
+    response = session.get(url, params=params, timeout=30)
+
+    if response.status_code in (401, 403):
+        print("[~] Session expired, refreshing cookies...")
+        client.refresh_session(session)
+        response = session.get(url, params=params, timeout=30)
+        if response.status_code in (401, 403):
+            raise requests.HTTPError(
+                f"Auth failed after refresh: {response.status_code}",
+                response=response
+            )
+
+    if response.status_code == 429:
+        import time
+        retry_after = int(response.headers.get('Retry-After', 60))
+        print(f"[..] Rate limited (429). Waiting {retry_after}s...")
+        time.sleep(retry_after)
+        response = session.get(url, params=params, timeout=30)
+
+    response.raise_for_status()
+    return response.json()
+
+
 @dlt.source
 def sapo_products_source(
     max_pages: int = 100,
@@ -104,8 +151,6 @@ def products(
         from sapo.client import get_sapo_client
 
     client = get_sapo_client()
-    base_url = client.base_url
-    request_delay = client.request_delay
 
     # State
     page = 1
@@ -120,51 +165,9 @@ def products(
 
     session = client.session
 
-    @retry(
-        stop=stop_after_attempt(3),
-        wait=wait_exponential(multiplier=1, min=2, max=10),
-        retry=retry_if_exception_type(requests.RequestException)
-    )
-    def fetch_page_with_retry(page_num: int, current_session) -> Dict[str, Any]:
-        """Fetch single page with exponential backoff retry."""
-        url = f"{base_url}/products.json"
-
-        if request_delay > 0:
-            import time
-            time.sleep(request_delay)
-
-        params = {
-            "page": page_num,
-            "limit": page_size,
-            "sort_by": "modified_on",
-            "sort_direction": "desc",
-        }
-
-        response = current_session.get(url, params=params, timeout=30)
-
-        if response.status_code in (401, 403):
-            print("[~] Session expired, refreshing cookies...")
-            client.refresh_session(current_session)
-            response = current_session.get(url, params=params, timeout=30)
-            if response.status_code in (401, 403):
-                raise requests.HTTPError(
-                    f"Auth failed after refresh: {response.status_code}",
-                    response=response
-                )
-
-        if response.status_code == 429:
-            import time
-            retry_after = int(response.headers.get('Retry-After', 60))
-            print(f"[..] Rate limited (429). Waiting {retry_after}s...")
-            time.sleep(retry_after)
-            response = current_session.get(url, params=params, timeout=30)
-
-        response.raise_for_status()
-        return response.json()
-
     while page <= max_pages:
         try:
-            data = fetch_page_with_retry(page, session)
+            data = fetch_products_page(client, session, page, page_size)
             consecutive_errors = 0
 
             products_data = data.get("products", [])

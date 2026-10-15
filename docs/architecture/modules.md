@@ -394,7 +394,7 @@ Bỏ một connector khỏi `modules.yaml` chỉ làm mất asset, job, schedule
 
 | Connector | Asset | Job (schedule) | Sensor |
 |---|---|---|---|
-| `sapo_v2` | 7 `ingest_sapo_v2_*` (`sapo/…`) | `pipeline_sapo_v2_realtime_job` (*/3), `…_incremental_job` (*/10), `…_hourly_job` (:25) | — |
+| `sapo_v2` | 8 `ingest_sapo_v2_*` (`sapo/…`) | `pipeline_sapo_v2_realtime_job` (*/3), `…_incremental_job` (*/10), `…_hourly_job` (:25); ingest batch và ảnh chụp giá/tồn chạy trong `pipeline_batch_nightly_job` | — |
 | `shopee` | `shopee_income_file_drop_asset` (multi-asset, 4 output) | `ingest_filedrop_shopee_job` | `ingest_filedrop_shopee_sensor` |
 | `misa_amis` | 2 `misa_*_download_asset`, 2 `misa_*_file_drop_asset` | `ingest_weekly_job`, `ingest_monthly_job` (3 schedule), `ingest_filedrop_misa_job`, `ingest_filedrop_misa_account_ledger_job` | `ingest_filedrop_misa_sensor`, `ingest_filedrop_misa_account_ledger_sensor` |
 | `sheets` | 5 `sheets_*_asset`, `budget_sheet_sync_asset`, `budget_suggestion_writeback_asset` | `ingest_sheets_sync_job`, `budget_sheet_sync_job` (02:30), `budget_suggestion_writeback_job` (1st, 08:00) | `ingest_sheets_modified_sensor` |
@@ -402,7 +402,7 @@ Bỏ một connector khỏi `modules.yaml` chỉ làm mất asset, job, schedule
 
 | Connector | Ingestion | Raw | dbt | Ra cdm |
 |---|---|---|---|---|
-| `sapo_v2` | 7 `run_sapo_v2_*.py`, `src/sapo/` (batch, history log, webhook consumer từ D1) | `sapo_v2_raw/` | `src_sapo_v2_*` (11, incremental), `stg_sapo_v2_*` (16) | `std_orders`, `std_order_items`, `std_customers`, `std_products`, `std_variants`, … |
+| `sapo_v2` | 8 `run_sapo_v2_*.py`, `src/sapo/` (batch, ảnh chụp giá/tồn hằng đêm, history log, webhook consumer từ D1) | `sapo_v2_raw/` | `src_sapo_v2_*` (11, incremental), `stg_sapo_v2_*` (16) | `std_orders`, `std_order_items`, `std_customers`, `std_products`, `std_variants`, … |
 | `shopee` | `run-shopee-income-file-drop.py`, `src/shopee/` | `shopee_raw/` | `src_shopee_*`, `stg_shopee_*` | (đi thẳng `packs/marketplace`) |
 | `misa_amis` | 6 `run-misa-*.py`, `src/misa_amis/` | `misa_raw/` | `src_misa_*`, `stg_misa_sales_lines` | `std_misa_sales_lines`, `std_misa_account_ledger` |
 | `sheets` | `src/gsheet_*.py` (URL từ env `SOURCES__SPREADSHEET_URL__<NAME>`, không mặc định) | `gsheet_raw/` | `stg_targets`, `stg_marketing_spend`, `stg_teams`, `stg_team_members` | `std_targets`, `std_marketing_spend`, `std_teams`, `std_team_members` |
@@ -415,14 +415,23 @@ Bỏ một connector khỏi `modules.yaml` chỉ làm mất asset, job, schedule
 flowchart LR
     API["Sapo API v2"] --> B["batch: orders, customers,<br/>accounts, products,<br/>inventory_transactions"]
     API --> H["history_log (lấp khoảng trống)"]
+    API --> PS["product_daily_snapshot asset<br/>(nightly, quét đủ products.json)"]
     WH["Sapo webhook"] --> CF["Cloudflare Worker + D1"] --> WC["webhook_consumer asset (*/3)"]
     B --> R["sapo_v2_raw/&lt;entity&gt;/ingest_method=batch_sync"]
     H --> R2["ingest_method=history_log"]
     WC --> R3["ingest_method=webhook"]
+    PS --> R4[("sapo_v2_raw/product_daily_snapshot/<br/>ingest_method=daily_snapshot/year=/month=<br/>append-only, KHÔNG dựng lại được")]
     R & R2 & R3 --> SRC["src_sapo_v2_* (incremental, dedup)"]
     SRC --> STG["stg_sapo_v2_* (flatten, unnest)"]
     STG --> STD["cdm/std_* (+ source_system='sapo_v2')"]
 ```
+
+**Ảnh chụp giá và tồn hằng đêm (từ 15/10/2026).** Batch sản phẩm chỉ lấy lại một sản phẩm khi Sapo đổi `modified_on` (lấy theo `modified_on DESC`, dừng sớm), trong khi Sapo đổi tồn kho và đôi khi cả giá mà không đổi `modified_on`. Asset `ingest_sapo_v2_product_daily_snapshot_asset` (nằm trong `pipeline_batch_nightly_job` và `pipeline_batch_fullrefresh_job`, bỏ qua tag `full_refresh`) quét mọi trang `products.json`, không cursor, không dừng sớm, rồi ghi một file parquet mỗi run vào `sapo_v2_raw/product_daily_snapshot/ingest_method=daily_snapshot/year=<năm ICT>/month=<tháng ICT>/` (runner `ingestion/run_sapo_v2_product_daily_snapshot.py`, code `ingestion/src/sapo/products_daily_snapshot.py`).
+
+- Mỗi sản phẩm một dòng: `entity_id`, `captured_at` (UTC lúc bắt đầu run, một giá trị cho cả run), `capture_run_id`, `modified_on`, `payload_hash`, `payload` gọn (`id`, `modified_on`, `variants[].{id, sku, variant_prices, inventories}`), `year`/`month` theo giờ ICT. Sản phẩm trùng giữa hai trang chỉ giữ một, lấy `modified_on` lớn nhất.
+- Tất cả hoặc không có gì: cả danh mục được đọc vào bộ nhớ trước khi giao cho dlt, nên lỗi ở bất kỳ trang nào làm run fail mà không ghi dòng nào. Asset thử lại 2 lần (cách 120 giây) trong cùng run.
+- Theo dõi: metadata asset và `ingestion_health` ghi số sản phẩm, số trang, tổng Sapo và `coverage_ratio`; dưới 0,98 thì log `WARN`. Check theo SLA: freshness 28 giờ và `row_count_within_trend` với `trend_min_ratio: 0.98` (WARN khi số sản phẩm một đêm thấp hơn 98% trung vị 7 ngày). Digest có dòng "Sapo ảnh chụp giá/tồn".
+- Đây là lịch sử **không dựng lại được**: với quyền hiện có, API Sapo không trả lịch sử giá hay vị trí tồn, nên một đêm bị lỡ (và không chạy lại trước 06:00) là mất ngày đó. Runner chỉ append, không có `--full-refresh` hay `--reset-cursor`; không xoá thư mục này khi dọn raw hay khi rollback. Thư mục nằm trong `sapo_v2_raw`, phần được đưa lên off-site hằng ngày.
 
 Code orchestration của connector sapo_v2 không chứa giá trị riêng của Fine Japan (luật `connector-url`). Domain Sapo, `login_url` và worker URL vẫn ở `ingestion/.dlt/config.toml` (user quyết định 14/10/2026), ghi nhận là cấu hình Fine Japan ở [orchestration/tenants/fine_japan/README.md](../../orchestration/tenants/fine_japan/README.md).
 

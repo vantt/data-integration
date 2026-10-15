@@ -9,6 +9,7 @@ from .assets import (
     ingest_sapo_v2_history_log_asset,
     ingest_sapo_v2_inventory_transactions_asset,
     ingest_sapo_v2_orders_batch_asset,
+    ingest_sapo_v2_product_daily_snapshot_asset,
     ingest_sapo_v2_products_batch_asset,
     ingest_sapo_v2_webhook_consumer_asset,
 )
@@ -18,6 +19,7 @@ ASSETS = [
     ingest_sapo_v2_customers_batch_asset,
     ingest_sapo_v2_accounts_batch_asset,
     ingest_sapo_v2_products_batch_asset,
+    ingest_sapo_v2_product_daily_snapshot_asset,
     ingest_sapo_v2_history_log_asset,
     ingest_sapo_v2_inventory_transactions_asset,
     ingest_sapo_v2_webhook_consumer_asset,
@@ -31,6 +33,7 @@ CHECK_ASSET_DEFS = {
     "sapo/ingest_sapo_v2_customers_batch_asset": ingest_sapo_v2_customers_batch_asset,
     "sapo/ingest_sapo_v2_accounts_batch_asset": ingest_sapo_v2_accounts_batch_asset,
     "sapo/ingest_sapo_v2_products_batch_asset": ingest_sapo_v2_products_batch_asset,
+    "sapo/ingest_sapo_v2_product_daily_snapshot_asset": ingest_sapo_v2_product_daily_snapshot_asset,
 }
 
 # Ingest assets pipeline_batch_nightly_job / pipeline_batch_fullrefresh_job run
@@ -39,6 +42,7 @@ NIGHTLY_ASSETS = [
     ingest_sapo_v2_customers_batch_asset,
     ingest_sapo_v2_accounts_batch_asset,
     ingest_sapo_v2_products_batch_asset,
+    ingest_sapo_v2_product_daily_snapshot_asset,
     ingest_sapo_v2_inventory_transactions_asset,
 ]
 
@@ -49,6 +53,7 @@ DIGEST_ASSETS = [
     ("sapo_orders",    "sapo/ingest_sapo_v2_orders_batch_asset",        "recon/sapo_orders_daily"),
     ("sapo_customers", "sapo/ingest_sapo_v2_customers_batch_asset",     "recon/sapo_customers_daily"),
     ("sapo_products",  "sapo/ingest_sapo_v2_products_batch_asset",      None),
+    ("sapo_product_snapshot", "sapo/ingest_sapo_v2_product_daily_snapshot_asset", None),
     ("sapo_accounts",  "sapo/ingest_sapo_v2_accounts_batch_asset",      None),
     ("sapo_inventory", "sapo/ingest_sapo_v2_inventory_transactions_asset", None),
 ]
@@ -59,6 +64,7 @@ DIGEST_DISPLAY: dict[str, tuple[str, str, str]] = {
     "sapo_orders":    ("Sapo đơn hàng (batch)",                   "batch",     "đơn"),
     "sapo_customers": ("Sapo khách hàng",                         "batch",     "khách"),
     "sapo_products":  ("Sapo sản phẩm",                           "batch",     "sản phẩm"),
+    "sapo_product_snapshot": ("Sapo ảnh chụp giá/tồn",            "batch",     "sản phẩm"),
     "sapo_accounts":  ("Sapo tài khoản",                          "batch",     "tài khoản"),
     "sapo_inventory": ("Sapo tồn kho (hourly)",                   "cursor",    "giao dịch"),
 }

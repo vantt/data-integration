@@ -29,6 +29,9 @@ assets:
     freshness_hours: 28
   sapo/ingest_sapo_v2_products_batch_asset:
     freshness_hours: 28
+  sapo/ingest_sapo_v2_product_daily_snapshot_asset:
+    freshness_hours: 28        # nightly full capture; a missed night is lost for good
+    trend_min_ratio: 0.98      # WARN when a night captures < 98% of the 7-day median product count
   shopee/shopee_income_file_drop_asset:
     freshness_hours: 48
     trend_min_ratio: null      # file-drop cadence irregular; skip trend check
