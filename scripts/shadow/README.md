@@ -26,7 +26,7 @@ flowchart LR
     end
     subgraph WT["Worktrees"]
         BL["fg-dw-baseline (main, detached)"]
-        BR["fg-dw-modular (refactor/modularize-suite)"]
+        BR["branch worktree<br/>(e.g. fg-dw-pack, feat/pack-mechanism)"]
     end
     BK --> BASE
     PK --> DEPS
@@ -65,10 +65,10 @@ Checks used by the gate live in `scripts/checks/`:
 
 ```bash
 cd /home/vantt/app/fg-dataware-house
-git worktree add /home/vantt/app/fg-dw-modular -b refactor/modularize-suite main
+git worktree add /home/vantt/app/<branch-worktree> -b <branch> main   # e.g. fg-dw-pack, feat/pack-mechanism
 git worktree add --detach /home/vantt/app/fg-dw-baseline main
 
-cd /home/vantt/app/fg-dw-modular
+cd /home/vantt/app/<branch-worktree>
 scripts/shadow/prepare-shadow.sh 20261013-010341 20261012-060506   # pick two backups with no deploy between them
 scripts/shadow/clone-lake.sh lake-A
 scripts/shadow/build-lake.sh /home/vantt/app/fg-dw-baseline lake-A
@@ -92,8 +92,10 @@ new table appears.
 ## The gate
 
 ```bash
+# run from the branch worktree: BRANCH_DIR defaults to the worktree containing gate.sh
 scripts/shadow/gate.sh M     # phases that only move files (1, 2, 5, 6)
 scripts/shadow/gate.sh S     # phases that rewrite SQL (3, 4)
+BRANCH_DIR=/home/vantt/app/fg-dw-pack scripts/shadow/gate.sh M --allow-new   # explicit branch, new nodes accepted
 ```
 
 | Step | M | S |
@@ -152,7 +154,7 @@ Row counts that must stay equal to lake-A (velocity is core): `int_product_veloc
 
 ## Facts established while building this (2026-10-13)
 
-- dbt build has 633 nodes (76 external models, 16 incremental, 7 tables, 63 views, 14 seeds, 454 tests) and runs in ≈ 18 s on the shadow lake; baseline result `PASS=629 WARN=1` (`assert_overhead_accounts_classified`, also warns in prod).
+- dbt build had 633 nodes on 2026-10-13. On 2026-10-15 (after the pack mechanism) it has 718 nodes (179 models: 76 external, 16 incremental, 14 tables, 73 views; 22 seeds; 517 tests) plus 3 exposures, and runs in ≈ 23 s on the shadow lake; baseline result `PASS=717 WARN=1 NO-OP=3 TOTAL=721` (the warning is `assert_overhead_accounts_classified`, which also warns in prod).
 - `config.location` in the manifest is the unrendered string `{{ get_rolling_location() }}`; rolling models are detected by that string plus `materialized == 'external'` (`stg_marketing_spend` is a view with a stray `location` and writes nothing).
 - External models without a location write `<external_root>/<name>.parquet`; the warehouse view embeds an absolute path, so the golden reads the parquet file relative to the lake.
 - `orchestration/ops/__tests__/test_ingestion_health_retry.py::test_concurrent_writes_no_lock_error` is flaky (SQLite lock timing, about 1 in 4 full-suite runs, on baseline too). The gate re-runs pytest once after a failure and prints `FLAKY` when the re-run passes; a test that fails twice fails the gate.

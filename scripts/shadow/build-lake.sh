@@ -4,7 +4,7 @@
 #
 # Usage: scripts/shadow/build-lake.sh <code_dir> <lake_name> [extra dbt build args...]
 #   e.g. scripts/shadow/build-lake.sh /home/vantt/app/fg-dw-baseline lake-A
-#        scripts/shadow/build-lake.sh /home/vantt/app/fg-dw-modular lake-B --full-refresh --select <models>+
+#        scripts/shadow/build-lake.sh /home/vantt/app/fg-dw-pack lake-B --full-refresh --select <models>+
 #
 # Run clone-lake.sh first. dbt artifacts (manifest.json, run_results.json) and the build
 # start time are copied into <lake>/_shadow_meta/ for golden_snapshot.py and dbt_inventory.py.

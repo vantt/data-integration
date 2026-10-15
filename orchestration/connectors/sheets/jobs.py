@@ -1,7 +1,7 @@
 from dagster import AssetSelection, RunRequest, SkipReason, define_asset_job, schedule
 
 from orchestration.assets import rill, serving
-from orchestration.job_support import SYNC_TAGS, after_serving_selection, has_active_run
+from orchestration.job_support import NIGHTLY_ONLY_ASSETS, SYNC_TAGS, after_serving_selection, has_active_run
 from orchestration.sensors.sheets_modified_sensor import ingest_sheets_modified_sensor
 
 from .assets import (
@@ -38,7 +38,7 @@ ingest_sheets_sync_job = define_asset_job(
         | AssetSelection.assets(serving.build_serving_db)
         | AssetSelection.assets(rill.build_rill_publish)
         | after_serving_selection()
-    ),
+    ) - NIGHTLY_ONLY_ASSETS,
     tags=SYNC_TAGS,
 )
 

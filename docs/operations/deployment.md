@@ -696,11 +696,13 @@ the container runs lets a run start on half-applied files, so the container is s
    ```bash
    git -C /home/vantt/app/fg-dataware-house status --short
    ```
-4. Record the current SHA (rollback point), then fast-forward:
+4. Record the current SHA (rollback point), then fast-forward to the branch that passed the
+   gate (`BRANCH` is a parameter, e.g. `feat/pack-mechanism`; Đợt 1 used `refactor/modularize-suite`):
    ```bash
+   BRANCH=feat/pack-mechanism
    git -C /home/vantt/app/fg-dataware-house rev-parse HEAD > /tmp/deploy-rollback-sha
-   git -C /home/vantt/app/fg-dataware-house rev-parse refactor/modularize-suite > /tmp/deploy-branch-sha
-   git -C /home/vantt/app/fg-dataware-house merge --ff-only refactor/modularize-suite
+   git -C /home/vantt/app/fg-dataware-house rev-parse "$BRANCH" > /tmp/deploy-branch-sha
+   git -C /home/vantt/app/fg-dataware-house merge --ff-only "$BRANCH"
    ```
 5. Start the platform. Its start command re-runs `dbt deps` and `dbt parse` before
    `dagster dev`, so the manifest matches the new code:

@@ -13,13 +13,13 @@
 #   --allow-code-change  accept SQL checksum changes in the dbt inventory (data equality is
 #                        still enforced by the golden snapshot)
 #
-# Env: BRANCH_DIR (default /home/vantt/app/fg-dw-modular), BASELINE_DIR (default
+# Env: BRANCH_DIR (default: the worktree containing this script), BASELINE_DIR (default
 # /home/vantt/app/fg-dw-baseline). Exit code 0 only when every step passes.
 set -uo pipefail
 
 SHADOW_ROOT="${SHADOW_ROOT:-/home/vantt/app/fg-dw-shadow}"
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-BRANCH_DIR="${BRANCH_DIR:-/home/vantt/app/fg-dw-modular}"
+BRANCH_DIR="${BRANCH_DIR:-$(cd "$SCRIPT_DIR/../.." && pwd)}"
 BASELINE_DIR="${BASELINE_DIR:-/home/vantt/app/fg-dw-baseline}"
 M=/app/var/data_lake
 [ "$#" -ge 1 ] || { echo "usage: $0 <M|S> [--allow-new] [--allow-code-change]" >&2; exit 2; }

@@ -34,7 +34,7 @@ Refactor kiểu module hoá (dời 134 model, tách package) có rất nhiều c
 
 ## 2. Component làm gì
 
-**Đầu vào:** một nhánh code (worktree `fg-dw-modular`) và một bản baseline (worktree `fg-dw-baseline`, là `main` chưa sửa).
+**Đầu vào:** một nhánh code (worktree của nhánh, ví dụ `fg-dw-pack` cho `feat/pack-mechanism`; truyền cho gate bằng `BRANCH_DIR`) và một bản baseline (worktree `fg-dw-baseline`, ở commit được chấp nhận gần nhất).
 
 **Đầu ra:** `GATE M: PASS` hoặc `GATE S: PASS` (hoặc `FAIL` kèm danh sách khác biệt chính xác đến bảng, cột, model, job).
 
@@ -64,7 +64,7 @@ flowchart TB
     end
     subgraph WT["Git worktrees"]
         BL["fg-dw-baseline<br/>(main, detached)"]
-        BR["fg-dw-modular<br/>(refactor/modularize-suite)"]
+        BR["worktree nhánh<br/>(vd. fg-dw-pack, feat/pack-mechanism)"]
     end
     subgraph SH["/home/vantt/app/fg-dw-shadow (0700)"]
         BASE[lake-base]
@@ -152,7 +152,7 @@ sequenceDiagram
     Base->>A: clone + xoá parquet rolling
     Note over A: build bằng fg-dw-baseline (main)
     Base->>B: clone + xoá parquet rolling
-    Note over B: build bằng fg-dw-modular (nhánh)
+    Note over B: build bằng worktree nhánh
     A-->>B: so sánh golden, inventory, SQL
 ```
 
@@ -171,7 +171,7 @@ Trước mỗi build, `clone-lake.sh` **xoá toàn bộ file parquet rolling** (
 3. `scripts/provisioning/refresh_rolling.py` (như asset serving).
 4. Lưu `manifest.json`, `run_results.json`, `build_start`, `build.log` vào `<lake>/_shadow_meta/`.
 
-Kết quả baseline hiện tại: 633 node (76 external model, 16 incremental, 7 table, 63 view, 14 seed, 454 test), `PASS=629 WARN=1` (cảnh báo `assert_overhead_accounts_classified` có sẵn trên prod), khoảng 18 giây.
+Kết quả baseline hiện tại (15/10/2026, sau plan cơ chế pack): 718 node (179 model: 76 external, 16 incremental, 14 table, 73 view; 22 seed; 517 test) cùng 3 exposure, `PASS=717 WARN=1 NO-OP=3 TOTAL=721` (cảnh báo `assert_overhead_accounts_classified` có sẵn trên prod), khoảng 23 giây. Ngày 13/10/2026 là 633 node, `PASS=629 WARN=1`.
 
 ## 6. Các phép kiểm tra và cách hoạt động
 
@@ -279,8 +279,8 @@ Hỏi webserver Dagster prod qua GraphQL (truy vấn chỉ đọc) trạng thái
 ## 7. Gate: chạy cả quy trình bằng một lệnh
 
 ```bash
-cd /home/vantt/app/fg-dw-modular
-scripts/shadow/gate.sh M                       # phase chỉ dời file
+cd /home/vantt/app/<worktree-nhánh>        # BRANCH_DIR mặc định là worktree chứa gate.sh
+BRANCH_DIR=$PWD scripts/shadow/gate.sh M       # phase chỉ dời file
 scripts/shadow/gate.sh S                       # phase đổi SQL
 scripts/shadow/gate.sh S --allow-new --allow-code-change   # thêm model/asset mới và đổi SQL có chủ đích
 ```

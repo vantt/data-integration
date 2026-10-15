@@ -18,6 +18,18 @@ SYNC_TAGS = {"concurrency_group": "dbt_rw"}
 # on a fresh deploy fails because the parquet does not yet exist.
 FACT_ORDER_RETURNS = AssetSelection.assets(AssetKey(["marts", "fact_order_returns"]))
 
+# Built only by pipeline_batch_nightly_job / pipeline_batch_fullrefresh_job (user decision
+# 15/10/2026): the connector sync jobs that rebuild serving subtract this selection, so the
+# */3-minute realtime run does not recompute the capability report. Keys are those of the dbt
+# model monitoring/mart_capabilities and its two seeds (seeds/capabilities/); a renamed key fails
+# when the job resolves its selection (test: orchestration/connectors/__tests__/test_after_serving.py).
+NIGHTLY_ONLY_ASSETS = AssetSelection.assets(
+    AssetKey(["mart_capabilities"]),
+    AssetKey(["capability_catalog"]),
+    AssetKey(["connector_capabilities"]),
+)
+
+
 def after_serving_selection() -> AssetSelection:
     """Assets the enabled packs run after build_serving_db in connector sync jobs.
 

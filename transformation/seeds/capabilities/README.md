@@ -51,6 +51,10 @@ Không có trong danh sách: dữ liệu `crm_export.*` (do chính pack `crm` gh
 | `DATA_NOT_DECLARED` | Không cần, không khai báo, nhưng probe có dòng | Dữ liệu còn lại của connector đã tắt; thường bỏ qua |
 | `NOT_NEEDED` | Còn lại (không pack đang bật nào cần) | — |
 
+## Khi nào chạy
+
+`mart_capabilities` và hai seed này chỉ chạy trong `pipeline_batch_nightly_job` và `pipeline_batch_fullrefresh_job` (user chốt 15/10/2026). Các job đồng bộ của connector trừ chúng qua `orchestration/job_support.py` `NIGHTLY_ONLY_ASSETS`; đổi tên model hay seed thì sửa cả danh sách key ở đó (test `orchestration/connectors/__tests__/test_after_serving.py` fail nếu key không còn).
+
 ## Thêm hoặc đổi
 
 - **Connector mới:** thêm khối dòng vào `connector_capabilities.csv` (cùng lúc thêm package, dòng `modules.yaml` và `enabled_connectors`).

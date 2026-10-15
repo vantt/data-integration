@@ -3,7 +3,7 @@
 # prepare-deps.sh) and is put on PYTHONPATH only for this command.
 #
 # Usage: scripts/shadow/pytest-shadow.sh <code_dir> <lake_name> [pytest args...]
-#   e.g. scripts/shadow/pytest-shadow.sh /home/vantt/app/fg-dw-modular lake-B ingestion/tests orchestration scripts/tests -q
+#   e.g. scripts/shadow/pytest-shadow.sh /home/vantt/app/fg-dw-pack lake-B ingestion/tests orchestration scripts/tests -q
 set -euo pipefail
 SHADOW_ROOT="${SHADOW_ROOT:-/home/vantt/app/fg-dw-shadow}"
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"

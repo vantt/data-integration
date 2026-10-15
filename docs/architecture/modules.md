@@ -12,7 +12,7 @@
 | Ma trận phụ thuộc, lõi đọc seed tenant, import chéo (kể cả connector → pack và pack → pack trong orchestration), seed trùng tên, URL/domain cứng trong connector và pack | ✅ Cưỡng chế bằng `scripts/checks/check_boundaries.py` (mục 3, mục 12) |
 | Vi phạm đã biết | 21, sinh từ manifest và import orchestration: 8 cạnh `ref` (tenant hook, pack → pack, pack → connector; không còn pack hook), 0 lõi đọc seed tenant (qua `tenant_ref`), 12 pack đọc source, 1 import pack → pack (`sales_playbook` → `crm`); ghi trong `scripts/checks/boundary_allowlist.yaml` kèm lý do và hướng thoát (mục 3, 10) |
 | Kiểm tra trước commit bằng một lệnh | ✅ `scripts/checks/run-all.sh`: `dbt parse`, `check_boundaries.py`, `dagster definitions validate`, pytest (bắt buộc, ghi trong `AGENTS.md`) |
-| Quyết định kiến trúc | ✅ [ADR-015](../decisions/015-module-boundaries.md) (ranh giới module), [ADR-016](../decisions/016-taxonomy-module.md) (taxonomy), [ADR-017](../decisions/017-packs-and-tenants.md) (pack và tenant) |
+| Quyết định kiến trúc | ✅ [ADR-015](../decisions/015-module-boundaries.md) (ranh giới module), [ADR-016](../decisions/016-taxonomy-module.md) (taxonomy), [ADR-017](../decisions/017-packs-and-tenants.md) (pack và tenant), [ADR-018](../decisions/018-pack-switch-and-core-plug-points.md) (bật/tắt pack, điểm cắm lõi ↔ pack/tenant) |
 | Thư mục dbt theo module `models/<module>/<layer>/` | ✅ Mọi model nằm trong module (connectors, cdm, core, packs, tenants) hoặc `monitoring/`; thư mục cũ `staging/`, `intermediate/`, `marts/` và `models/sources.yml` đã bỏ |
 | Connector package cho orchestration (`orchestration/connectors/<id>/`, bật/tắt qua `config/modules.yaml`) | ✅ 5 connector: `sapo_v2`, `shopee`, `misa_amis`, `sheets`, `hug` (mục 4, 5) |
 | Pack sản phẩm (`models/packs/<id>/`, `orchestration/packs/<id>/`, khai báo trong `config/modules.yaml`) | ✅ 7 pack: `crm`, `hug`, `finance`, `sales_playbook` (thử nghiệm), `marketplace`, `facebook_ads`, `facebook_messenger` (mục 8) |
@@ -170,7 +170,7 @@ flowchart LR
 | Vùng | Owner | Quy tắc |
 |---|---|---|
 | `/home/vantt/app/fg-dw-shadow/` (mode 0700) | Công cụ `scripts/shadow/*` | Chỉ tạo từ backup; chứa PII nên xoá lake nhánh sau mỗi gate, xoá toàn bộ khi đóng plan |
-| Worktree `fg-dw-modular`, `fg-dw-baseline` | Người làm refactor | Không bao giờ mount vào container prod |
+| Worktree của nhánh (vd. `fg-dw-pack`) và `fg-dw-baseline` | Người làm refactor | Không bao giờ mount vào container prod |
 | Checkout prod `/home/vantt/app/fg-dataware-house` | Chỉ runbook deploy | Mọi script shadow từ chối đường dẫn này (`guard_not_prod.py`) |
 
 ## 2b. Bố cục thư mục dbt ✅
@@ -267,7 +267,7 @@ Vi phạm đã biết (21, đúng bằng allowlist):
 | Pack hook (core → pack) | 0 | Không còn: mọi chỗ lõi đọc pack đi qua `pack_ref` với hợp đồng cột (mục 8.1) | — |
 | Tenant hook (core → tenant) | 1 | `mart_data_quality` → `fact_us_shipment_economics` | Dời check US vào `tenants/fine_japan` |
 | Lõi đọc seed tenant (`dbt-seed`) | 0 | Không còn: `dim_channel_targets`, `int_customer_sku_supply_tracking`, `dim_sku_alias` đọc ba seed qua `tenant_ref` (mục 10) | — |
-| Pack → pack (khai báo) | 5 | `mart_hug_attribution` (hug) → `fact_order_economics` (finance); `fact_order_economics` (finance) → `int_shopee_order_fees` (marketplace); `mart_customer_action_queue` → `stg_crm__last_contact`, `int_crm_party_tag_flags`; `mart_customer_sku_action_queue` → `stg_crm__last_contact` (sales_playbook → crm) | Khai báo phụ thuộc pack + `pack_ref` sau Đợt 1 |
+| Pack → pack (khai báo) | 5 | `mart_hug_attribution` (hug) → `fact_order_economics` (finance); `fact_order_economics` (finance) → `int_shopee_order_fees` (marketplace); `mart_customer_action_queue` → `stg_crm__last_contact`, `int_crm_party_tag_flags`; `mart_customer_sku_action_queue` → `stg_crm__last_contact` (sales_playbook → crm) | Vẫn `ref()` thẳng: tắt pack đích khi pack này bật thì `dbt parse` lỗi rõ (mục 8.1). Lối ra: danh sách phụ thuộc pack khai báo được |
 | Pack → connector ngoài `pack_connectors` | 2 | `fact_order_costs` → `stg_shopee_order_revenue`, `stg_shopee_order_service_fees` | Chuyển phần phí sàn sang `pack:marketplace`. Chọn allowlist thay vì thêm `shopee` vào `pack_connectors` của finance để luật vẫn chặt |
 | Pack đọc source | 12 | 11 mục từ 10 model `stg_crm__*` (gồm `stg_crm__hug_voucher` của hug; `stg_crm__party_tag` đọc hai bảng) → `crm_export.*`; `stg_overhead_account_classification` → `gsheet_raw.overhead_account_classification_raw` | Khai báo source thuộc pack (hoặc connector crm); dời staging overhead sang connector gsheet |
 | Import orchestration (`orch-import`) | 1 | `sales_playbook` → `crm` (deps `crm_cache_refresh`). Bốn import connector → `orchestration.packs.crm` đã đóng 15/10/2026: job connector chọn `crm_cache_refresh` qua `job_support.after_serving_selection()` (mục 4) | Khai báo phụ thuộc pack → pack |
@@ -310,6 +310,7 @@ flowchart TB
 |---|---|
 | `SYNC_TAGS` (`job_support.py`) và `duckdb_lock` (khoá ghi DuckDB) | Mọi job ghi warehouse |
 | `has_active_run`, `long_dbt_rw_holder` (`job_support.py`) | Schedule của connector (bỏ tick khi run trước còn chạy hoặc nightly đang giữ `dbt_rw`) |
+| `NIGHTLY_ONLY_ASSETS` (`job_support.py`): asset chỉ chạy trong job nightly/full refresh (hôm nay `mart_capabilities` và hai seed khả năng) | 6 job đồng bộ của connector trừ selection này (mục 11b) |
 | `after_serving_selection()` (`job_support.py`): hợp `AFTER_SERVING_ASSETS` của các pack đang bật (đọc `modules.yaml` qua `orchestration.packs.load_enabled()`, import pack trong thân hàm để không vòng import) | Job đồng bộ của connector có `build_serving_db` (6 job của `sapo_v2`, `shopee`, `misa_amis`, `sheets`): đuôi sau serving, hôm nay là `crm_cache_refresh` của pack `crm`; rỗng khi không pack nào khai báo |
 | `make_file_drop_sensor(...)` (`sensors/file_drop_sensors.py`) | Connector shopee, misa_amis (sensor theo dõi thư mục thả file .xlsx) |
 | `load_dlt_configuration`, `DLT_DIR` (`assets/utils.py`) | Mọi `assets.py` của connector: đường dẫn script ingestion lấy từ `DLT_DIR`, không tính theo `__file__` nên package dời được |
@@ -707,12 +708,12 @@ flowchart LR
 
 Danh sách đầy đủ là `scripts/checks/boundary_allowlist.yaml`, sinh từ `depends_on` của manifest (`check_boundaries.py --write-allowlist`), không viết tay. Bảng tổng hợp ở mục 3.
 
-| Loại | Cạnh | Hướng xử lý (sau Đợt 1) |
+| Loại | Cạnh | Hướng xử lý |
 |---|---|---|
 | Tenant hook (core → tenant) | `mart_data_quality` → `fact_us_shipment_economics` | Dời check US vào tenant |
 | Lõi đọc seed tenant (`dbt-seed`) | Đã đóng 14–15/10/2026: `dim_channel_targets`, `int_customer_sku_supply_tracking`, `dim_sku_alias` đọc qua `tenant_ref` | — |
 | Pack hook (core → pack) | Đã đóng 14/10/2026: lõi đọc pack qua `pack_ref` (mục 8.1); `mart_sku_economics_monthly` tách nửa doanh thu thành `int_sku_sales_monthly` (mục 7) | — |
-| Pack → pack (khai báo) | `mart_hug_attribution` → `fact_order_economics`; `fact_order_economics` → `int_shopee_order_fees`; `sales_playbook` → `crm` (3 cạnh) | `pack_ref` |
+| Pack → pack (khai báo) | `mart_hug_attribution` → `fact_order_economics`; `fact_order_economics` → `int_shopee_order_fees`; `sales_playbook` → `crm` (3 cạnh) | Danh sách phụ thuộc pack khai báo được (ngoài plan cơ chế pack, ADR-018) |
 
 **Logic hook (không phải cạnh `ref`, checker không thấy):** nhánh `CROSSBORDER` của `customer_type` trong `dim_customers` dùng mã nhóm viết cứng `TYPE_CROSSBORDER`/`CTN00014` và tín hiệu "có đơn không huỷ trên kênh `US`" viết trong SQL. Đây là logic riêng Fine Japan nằm trong lõi; không có trong allowlist. Chi tiết và hai biến thể: [TAXONOMY.md](../../transformation/docs/TAXONOMY.md) (domain `customer_type`, `is_us_gift_recipient`, mục 6). Hướng xử lý: quyết định nghiệp vụ + bộ máy phân loại.
 
@@ -763,7 +764,7 @@ flowchart LR
 | `observed_rows`, `last_observed_date`, `is_observed` | Probe có dòng (probe chỉ đọc connector/cdm, không đọc pack) |
 | `status` | `OK` (cần, khai báo, có dữ liệu); `DECLARED_NO_DATA` (cần, khai báo, chưa có dòng); `PACK_ON_NO_SOURCE` (cần, không connector đang bật nào khai báo, kể cả khi còn dữ liệu cũ); `DATA_NOT_DECLARED` (không cần, không khai báo, nhưng có dòng); `NOT_NEEDED` (còn lại) |
 
-Đo trên shadow (dữ liệu Fine Japan, 15/10/2026): mọi pack và connector bật thì 19/19 khả năng `OK`; tắt connector `misa_amis` (`enabled_connectors: [sapo_v2, shopee, sheets, hug]`) thì `gl`, `cogs_accounting` ra `PACK_ON_NO_SOURCE` ("bật finance nhưng chưa có nguồn"); lõi trần thì 7 khả năng chỉ pack cần ra `NOT_NEEDED`, 12 khả năng lõi `OK`. Model chạy 0,4 s, nằm trong mọi job dbt có `build_serving_db` (realtime */3 phút cũng chọn nó).
+Đo trên shadow (dữ liệu Fine Japan, 15/10/2026): mọi pack và connector bật thì 19/19 khả năng `OK`; tắt connector `misa_amis` (`enabled_connectors: [sapo_v2, shopee, sheets, hug]`) thì `gl`, `cogs_accounting` ra `PACK_ON_NO_SOURCE` ("bật finance nhưng chưa có nguồn"); lõi trần thì 7 khả năng chỉ pack cần ra `NOT_NEEDED`, 12 khả năng lõi `OK`. Model chạy 0,4 s. **Chỉ chạy trong `pipeline_batch_nightly_job` và `pipeline_batch_fullrefresh_job`** (user chốt 15/10/2026): 6 job đồng bộ của connector có `build_serving_db` (`pipeline_sapo_v2_realtime_job`, `…_incremental_job`, `ingest_filedrop_shopee_job`, `ingest_filedrop_misa_job`, `ingest_filedrop_misa_account_ledger_job`, `ingest_sheets_sync_job`) trừ selection `job_support.NIGHTLY_ONLY_ASSETS` (asset key `mart_capabilities`, `capability_catalog`, `connector_capabilities`), nên báo cáo khả năng cập nhật mỗi đêm, không theo nhịp */3 phút. Asset key, check và job nightly không đổi; test `orchestration/connectors/__tests__/test_after_serving.py` kiểm cả hai phía và kiểm key còn tồn tại.
 
 ## 12. Ranh giới Python và container ✅
 
