@@ -57,7 +57,7 @@ if [ "$FRESH" -eq 1 ] && [ -f "$SHADOW_ROOT/lake-A/_shadow_meta/golden.json" ]; 
   echo "=== golden lake-A vs $LAKE_NAME (informational)"
   "$SCRIPT_DIR/run-shadow.sh" "$CODE_DIR" "$SHADOW_ROOT" sh -c "
     python scripts/checks/golden_snapshot.py capture --lake $M/$LAKE_NAME --models $MODELS --out $M/$LAKE_NAME/_shadow_meta/golden.json | tail -1
-    python scripts/checks/golden_snapshot.py compare $M/lake-A/_shadow_meta/golden.json $M/$LAKE_NAME/_shadow_meta/golden.json | tail -40" \
+    python scripts/checks/golden_snapshot.py compare $M/lake-A/_shadow_meta/golden.json $M/$LAKE_NAME/_shadow_meta/golden.json" \
     || true
 fi
 

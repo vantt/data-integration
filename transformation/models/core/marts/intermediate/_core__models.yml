@@ -262,3 +262,58 @@ models:
           - unique
           - not_null
 
+
+  - name: int_sku_sales_monthly
+    description: >
+      Core sales per SKU-month: volume, revenue, velocity, returns and top channel.
+      Grain: one row per (product_key, snapshot_month) with at least one valid sale; rolling 24
+      completed months; excludes cancelled orders, non-sales channels, the Unknown product and
+      zero-revenue lines. Revenue half of the former mart_sku_economics_monthly: pack finance's
+      mart_sku_economics_monthly reads every column of this model unchanged (same row set) and adds
+      COGS and margin. Core readers: int_product_velocity_trend, mart_inventory_health,
+      mart_product_action_queue, mart_product_health. Materialized as TABLE in the warehouse (no
+      rolling parquet, not on serving).
+    tests:
+      - dbt_utils.unique_combination_of_columns:
+          arguments:
+            combination_of_columns: [product_key, snapshot_month]
+    columns:
+      - name: product_key
+        description: "Foreign key to dim_products."
+        tests: [not_null]
+      - name: product_code
+        description: "Sapo SKU code of the product variant (dim_products.sku)."
+      - name: product_name
+        description: "Display name of the product."
+      - name: snapshot_month
+        description: "First day of the reporting month (month-start DATE)."
+        tests: [not_null]
+      - name: units_sold
+        description: "Units sold in the month across non-cancelled orders on sales channels."
+        tests: [not_null]
+      - name: net_revenue
+        description: "VAT-exclusive net revenue of the SKU in the month (fact_sales.net_revenue)."
+        tests: [not_null]
+      - name: order_count
+        description: "Distinct orders containing the SKU in the month."
+        tests: [not_null]
+      - name: daily_velocity
+        description: "Units sold per selling day (units_sold / days with a sale), rounded to 4 decimals."
+      - name: return_count
+        description: "Distinct returns attributed to the SKU in the month (int_return_sku_lines); 0 when none."
+      - name: return_quantity
+        description: "Returned quantity attributed to the SKU in the month; 0 when none."
+      - name: refund_amount_allocated
+        description: "Refund amount allocated to the SKU by line revenue; 0 when none."
+      - name: return_rate
+        description: "return_count / order_count, rounded to 4 decimals."
+      - name: days_since_last_sale
+        description: "Days from the month's last day to the SKU's last sale in that month."
+      - name: is_slow_mover
+        description: "No sale in the month's final 14 days AND revenue below the month's top-200 threshold (velocity proxy, no stock data)."
+      - name: revenue_share_pct
+        description: "SKU revenue as % of all SKU revenue in the month, rounded to 4 decimals."
+      - name: top_channel_name
+        description: "Channel with the highest revenue for the SKU in the month."
+      - name: top_channel_revenue_pct
+        description: "Share of the SKU's monthly revenue from the top channel, rounded to 2 decimals."

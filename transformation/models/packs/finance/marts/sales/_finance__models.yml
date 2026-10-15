@@ -139,6 +139,7 @@ models:
       - dbt_utils.unique_combination_of_columns:
           arguments:
             combination_of_columns: [product_key, snapshot_month]
+      - pack_contract   # columns core reads (mart_product_health): macros/packs/pack_contracts.sql
     columns:
       - name: product_key
         description: "Foreign key to dim_products."

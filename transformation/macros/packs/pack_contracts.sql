@@ -20,6 +20,11 @@
                             automatic VTS -> VCS alias (manual seed aliases only).
     fact_order_economics    mart_data_quality: order count and has_cogs / has_platform_fees.
                             Finance off: total_orders 0, cogs/platform-fee rates NULL.
+    mart_sku_economics_monthly
+                            mart_product_health: the 4 margin columns of the latest month,
+                            joined on (product_key, snapshot_month) to core int_sku_sales_monthly
+                            (same row set). Finance off: margin columns NULL, has_margin_data
+                            false, health_class NULL.
   Types: DESCRIBE of the built relation (shadow lake), checked by the pack_contract test.
 #}
 {% macro pack_contracts() %}
@@ -47,5 +52,12 @@
     'fact_order_economics': {'pack': 'finance', 'columns': {
         'has_cogs': 'BOOLEAN',
         'has_platform_fees': 'BOOLEAN'}},
+    'mart_sku_economics_monthly': {'pack': 'finance', 'columns': {
+        'product_key': 'VARCHAR',
+        'snapshot_month': 'DATE',
+        'realized_margin_pct': 'DOUBLE',
+        'cogs_variance_pct': 'DOUBLE',
+        'margin_outlier': 'BOOLEAN',
+        'cogs_source': 'VARCHAR'}},
   }) }}
 {% endmacro %}

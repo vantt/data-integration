@@ -9,10 +9,11 @@
 -- Centerpiece product-health model. 1 row per product_key (current state).
 -- Synthesis layer: velocity × margin × inventory × lifecycle.
 -- Analog of dim_customers — replaces ad-hoc multi-join queries across
--- mart_sku_economics_monthly, mart_inventory_health, and int models.
+-- int_sku_sales_monthly (core sales) + mart_sku_economics_monthly (pack finance, margin via pack_ref),
+-- mart_inventory_health, and int models.
 --
 -- SOURCES:
---   mart_sku_economics_monthly (latest month: economics primitives)
+--   int_sku_sales_monthly (latest month: sales primitives) + mart_sku_economics_monthly (margin)
 --   mart_inventory_health      (latest snapshot: inventory flags, aggregated across locations)
 --   int_product_velocity_trend (velocity_90d, momentum, lifecycle dates)
 --   int_product_discount_dependency (discount_dependency, discount_share)
@@ -32,23 +33,28 @@ WITH
 
 -- ── Latest month economics ──────────────────────────────────────────────────
 latest_econ AS (
+    -- Sales from core; margin columns from pack finance (NULL when finance is off, so
+    -- has_margin_data is false and the SKU is not health-ranked: caveat 1).
     SELECT
-        product_key,
-        product_code                        AS sku,
-        product_name,
-        units_sold,
-        net_revenue,
-        daily_velocity,
-        days_since_last_sale,
-        revenue_share_pct,
-        realized_margin_pct,
-        cogs_variance_pct,
-        margin_outlier,
-        cogs_source,
-        (realized_margin_pct IS NOT NULL)   AS has_margin_data
-    FROM {{ ref('mart_sku_economics_monthly') }}
-    WHERE snapshot_month = (
-        SELECT MAX(snapshot_month) FROM {{ ref('mart_sku_economics_monthly') }}
+        s.product_key,
+        s.product_code                      AS sku,
+        s.product_name,
+        s.units_sold,
+        s.net_revenue,
+        s.daily_velocity,
+        s.days_since_last_sale,
+        s.revenue_share_pct,
+        f.realized_margin_pct,
+        f.cogs_variance_pct,
+        f.margin_outlier,
+        f.cogs_source,
+        (f.realized_margin_pct IS NOT NULL)   AS has_margin_data
+    FROM {{ ref('int_sku_sales_monthly') }} s
+    LEFT JOIN {{ pack_ref('finance', 'mart_sku_economics_monthly') }} f
+           ON f.product_key = s.product_key
+          AND f.snapshot_month = s.snapshot_month
+    WHERE s.snapshot_month = (
+        SELECT MAX(snapshot_month) FROM {{ ref('int_sku_sales_monthly') }}
     )
 ),
 
@@ -58,7 +64,7 @@ abc_base AS (
         product_key,
         SUM(net_revenue)                                    AS total_revenue,
         SUM(SUM(net_revenue)) OVER ()                       AS grand_total
-    FROM {{ ref('mart_sku_economics_monthly') }}
+    FROM {{ ref('int_sku_sales_monthly') }}
     GROUP BY product_key
 ),
 

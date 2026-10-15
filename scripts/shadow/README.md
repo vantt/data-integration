@@ -43,7 +43,7 @@ flowchart LR
 | `clone-lake.sh <name> [--empty-rolling]` | Copy `lake-base` and delete rolling parquet files (or the whole `rolling/` tree) so every rolling model must be rebuilt. |
 | `run-shadow.sh <code_dir> <lake_dir> <cmd...>` | Run a command in a one-off container from the prod image: `--network none`, current uid, env allowlist, code mounted per subdirectory exactly like `docker-compose.yml`. Refuses any path under the prod checkout. |
 | `build-lake.sh <code_dir> <lake> [dbt args]` | Production build sequence: `ensure_dbt_directories.py`, `dbt parse`, `dbt build`, `refresh_rolling.py`. Saves `manifest.json`, `run_results.json`, `build_start` to `<lake>/_shadow_meta/`. |
-| `build-profile.sh <code_dir> '<dbt vars>' [lake]` | Build a lake (default `lake-P`, rolling tree emptied) with a non-default dbt profile, e.g. packs off (`'{enabled_packs: []}'`); print the `run_results` summary, or the parse/compile error when dbt built nothing, and the golden compare with lake-A for information. Exit code = dbt build. Deletes the lake unless `KEEP=1`. |
+| `build-profile.sh <code_dir> '<dbt vars>' [lake]` | Build a lake (default `lake-P`, rolling tree emptied) with a non-default dbt profile, e.g. packs off (`'{enabled_packs: []}'`); print the `run_results` summary, or the parse/compile error when dbt built nothing, and the full golden compare with lake-A for information. Exit code = dbt build. Deletes the lake unless `KEEP=1`. Used by gate step 6b. |
 | `pytest-shadow.sh <code_dir> <lake> [args]` | pytest in the shadow container (pytest is not in the prod image). |
 | `gate.sh <M\|S> [--allow-new] [--allow-code-change]` | The refactor gate (below). |
 | `move_models.py --manifest M --buckets <patterns> [--dry-run]` | Move dbt models to `models/<module>/<layer>/` from `scripts/checks/model_buckets.yaml`, splitting properties YAML by text blocks (comments kept) and moving connector sources. |
@@ -108,12 +108,41 @@ scripts/shadow/gate.sh S     # phases that rewrite SQL (3, 4)
 | dbt subset run through Dagster (`marts/fact_order_returns`, the `_fact_order_returns` job selection) | ✓ | ✓ |
 | pytest `ingestion/tests orchestration scripts/tests` | ✓ | ✓ |
 | Empty-rolling lake build + golden (catches directory pre-creation bugs) | ✓ | ✓ |
+| Bare-core profile: `build-profile.sh` with every pack off (`'{enabled_packs: [], tenant: ""}'`, lake-P); fails only when the build fails, prints the differences with lake-A for review (below) | ✓ | ✓ |
 | `--full-refresh` on baseline (lake-AF) and branch (lake-BF) + golden | | ✓ |
 
 The gate first checks that lake-A was built today (ICT) and rebuilds it from the baseline worktree otherwise, because models compute date-relative values. A full S gate takes about 2–3 minutes (dbt build ≈ 20 s per lake). Branch lakes are deleted at
 the end. `--allow-new` accepts added nodes/assets and grown job selections (printed as INFO);
 `--allow-code-change` accepts SQL checksum changes in the dbt inventory while data equality is
 still enforced by the golden snapshot.
+
+## Bare-core profile
+
+Gate step 6b builds the branch with every pack turned off
+([docs/architecture/modules.md §8.1](../../docs/architecture/modules.md)) and prints the golden
+compare with lake-A. Only the build result decides the step; the printed differences are
+reviewed by hand against this list. A table outside it must be explained before the phase is
+accepted.
+
+Expected differences (Fine Japan data, 14/10/2026; 140 models and seeds built, 347 tests pass):
+
+| Table | Expected difference | Why |
+|---|---|---|
+| 30 pack tables (`fact_order_economics`, `mart_sku_economics_monthly`, `mart_crm_*`, `mart_customer_*_action_queue`, `mart_cashflow_*`, `int_shopee_order_*`, ...) | absent (`only in A`, capture errors `not rebuilt`) | pack folders disabled |
+| `int_customer_economics`, `mart_hug_optin`, `int_crm_outreach_effort_events` | captured from stale lake-base files, never rebuilt | pack tables (finance, hug, crm) |
+| `dim_customers` | the 10 columns read from finance NULL | `pack_ref('finance', 'int_customer_economics')`, no COALESCE when off |
+| `mart_customer_tier` | `lifetime_contribution_margin` NULL | passes through `dim_customers` |
+| `dim_staff` | `crm_user_id` NULL | `pack_ref('crm', 'stg_crm__app_user')` |
+| `dim_sku_alias` | fewer rows (174 → 137): no automatic VTS → VCS alias | `INNER JOIN` on MISA product codes of finance |
+| `dim_products` | `misa_join_key` | reads `dim_sku_alias` |
+| `mart_data_quality` | `total_orders` 0, `cogs_rate_pct`, `platform_fees_rate_pct` NULL | `pack_ref('finance', 'fact_order_economics')` |
+| `mart_product_health` | `realized_margin_pct`, `margin_outlier` NULL, `has_margin_data` false, `health_class` NULL for SKUs with sales | margin columns through `pack_ref('finance', 'mart_sku_economics_monthly')` |
+| `mart_product_action_queue` | `health_class`, `has_margin_data`, `realized_margin_pct` | reads `mart_product_health` |
+| `mart_deadstock_target_queue` | fewer rows (249 → 208) and their values | selects SKUs by `mart_product_health.health_class` (DOG/QUESTION) |
+
+Row counts that must stay equal to lake-A (velocity is core): `int_product_velocity_trend`,
+`mart_product_health`, `mart_product_action_queue`, `mart_inventory_health`.
+`int_customer_sku_supply_tracking` reads `dim_sku_alias` but showed no difference on this data.
 
 ## Facts established while building this (2026-10-13)
 

@@ -533,7 +533,7 @@ models:
     description: >
       Derived inventory health signals. Grain: 1 row per (variant_id, location_id, snapshot_date).
       Full rebuild — joins fact_inventory_snapshot (all dates) × latest velocity from
-      mart_sku_economics_monthly. Boolean health flags: is_oos, is_low_stock, is_overstock,
+      int_sku_sales_monthly (core). Boolean health flags: is_oos, is_low_stock, is_overstock,
       is_slow_mover, is_dead_stock. Velocity sourced from last completed month per SKU.
     columns:
       - name: inventory_snapshot_key
@@ -577,7 +577,7 @@ models:
               arguments:
                 values: [true, false]
       - name: is_dead_stock
-        description: "true when no sale in last 90 days (proxy via mart_sku_economics_monthly)"
+        description: "true when no sale in last 90 days (proxy via int_sku_sales_monthly)"
         tests:
           - not_null
           - accepted_values:
@@ -586,7 +586,7 @@ models:
       - name: days_of_supply
         description: "on_hand / daily_velocity. NULL when no sales history. 0 when on_hand <= 0"
       - name: daily_velocity
-        description: "Units/day from last completed month in mart_sku_economics_monthly. NULL for new/unsold SKUs"
+        description: "Units/day from last completed month in int_sku_sales_monthly. NULL for new/unsold SKUs"
       - name: stock_value_at_mac
         description: "Inherited from fact_inventory_snapshot"
       - name: committed_value_at_mac

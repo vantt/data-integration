@@ -260,6 +260,10 @@ dagster asset materialize -f orchestration/definitions.py --select "marts/fact_o
 
 `clone-lake.sh lake-E --empty-rolling` xoá cả cây thư mục `rolling/`. Build phải tự tạo lại thư mục (DuckDB `COPY TO` lỗi nếu thư mục cha không tồn tại) và cho golden giống baseline. Phép thử này mô phỏng cài mới hoặc dựng lại volume, và bắt lỗi kiểu "code tạo thư mục đang quét theo tên thư mục cũ".
 
+### 6.6b Profile lõi trần (mọi pack tắt)
+
+`build-profile.sh <nhánh> '{enabled_packs: [], tenant: ""}' lake-P` build nhánh trên lake mới (cây `rolling/` bị xoá) với mọi pack tắt (công tắc pack: [docs/architecture/modules.md §8.1](../architecture/modules.md)). Bước này chứng minh lõi không còn phụ thuộc pack nào: một `ref()` thẳng từ lõi vào model pack làm `dbt parse` lỗi (`depends on a node named ... which is disabled`), một `JOIN` inner vào dữ liệu pack thì làm bảng lõi mất dòng. Gate chỉ fail theo kết quả build; khác biệt so với lake-A (bảng pack vắng, cột lấy từ pack thành NULL) được in ra để người làm đối chiếu với danh sách dự kiến trong [scripts/shadow/README.md](../../scripts/shadow/README.md#bare-core-profile). Bảng khác ngoài danh sách phải giải thích trước khi chấp nhận phase. lake-P bị xoá ngay sau bước này.
+
 ### 6.7 Full-refresh pass (chỉ gate S)
 
 Build `lake-AF` (baseline, cache lại) và `lake-BF` (nhánh) với `dbt build --full-refresh`, rồi so golden. Lý do: model incremental chỉ xử lý dòng mới; nếu một thay đổi SQL làm sai logic incremental, các dòng cũ không được tính lại và lỗi chỉ lộ ra dần trên prod. Tính lại toàn bộ trên cả hai bên rồi so sẽ phơi bày ngay.
@@ -291,10 +295,11 @@ flowchart TB
     S4 --> S4b["4b. dbt subset qua Dagster (lake-D)"]
     S4b --> S5["5. pytest (+1 lần chạy lại)"]
     S5 --> S6["6. lake-E: xoá rolling, build, golden"]
-    S6 --> Q{"gate S?"}
+    S6 --> S6b["6b. lake-P: lõi trần (mọi pack tắt), build phải xanh"]
+    S6b --> Q{"gate S?"}
     Q -- có --> S7["7. full refresh lake-AF vs lake-BF"]
     Q -- không --> CL
-    S7 --> CL["dọn lake-B, D, E, BF (PII)"]
+    S7 --> CL["dọn lake-B, D, E, BF (PII); lake-P xoá ở 6b"]
     CL --> R["GATE M|S: PASS / FAIL"]
 ```
 
@@ -309,6 +314,7 @@ flowchart TB
 | Dagster subset run | ✓ | ✓ | ~15 s |
 | pytest | ✓ | ✓ | ~5 s |
 | Empty-lake build + golden | ✓ | ✓ | ~30 s |
+| Profile lõi trần (build + golden để xem) | ✓ | ✓ | ~40 s |
 | Full refresh (lake-AF lần đầu, lake-BF) | | ✓ | ~60 s |
 
 Gate M khoảng 2 phút, gate S khoảng 2–3 phút. Mọi bước đều chạy dù bước trước fail, để một lần chạy cho thấy toàn bộ vấn đề.

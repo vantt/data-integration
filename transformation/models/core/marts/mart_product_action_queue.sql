@@ -30,9 +30,9 @@ avg_unit_price AS (
     SELECT
         product_key,
         net_revenue / NULLIF(units_sold, 0) AS avg_unit_price
-    FROM {{ ref('mart_sku_economics_monthly') }}
+    FROM {{ ref('int_sku_sales_monthly') }}
     WHERE snapshot_month = (
-        SELECT MAX(snapshot_month) FROM {{ ref('mart_sku_economics_monthly') }}
+        SELECT MAX(snapshot_month) FROM {{ ref('int_sku_sales_monthly') }}
     )
 ),
 

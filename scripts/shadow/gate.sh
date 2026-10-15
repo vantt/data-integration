@@ -4,7 +4,7 @@
 #
 # Usage: scripts/shadow/gate.sh <M|S> [--allow-new] [--allow-code-change]
 #   M  move-only phases: golden + dbt inventory + compiled SQL + module boundaries + taxonomy inventory (warn only) + dagster inventory
-#      + dagster-run dbt subset + pytest + empty-lake build
+#      + dagster-run dbt subset + pytest + empty-lake build + bare-core profile build (every pack off)
 #   S  SQL-changing phases: M + a second golden pass after --full-refresh of every
 #      incremental model and everything downstream (the incremental branch is exercised
 #      only when rows are reprocessed)
@@ -118,6 +118,12 @@ step "6. empty-lake build (rolling directories deleted)"
 "$SCRIPT_DIR/clone-lake.sh" lake-E --empty-rolling >/dev/null
 "$SCRIPT_DIR/build-lake.sh" "$BRANCH_DIR" lake-E | tail -1; check "${PIPESTATUS[0]}" "dbt build on empty rolling"
 golden_pair lake-A lake-E | tail -1; check "${PIPESTATUS[0]}" "golden on empty-rolling lake"
+
+step "6b. bare-core profile (no pack, no tenant): the build must pass; differences with lake-A are printed for review"
+# Expected differences: scripts/shadow/README.md "Bare-core profile". Only the build result decides.
+"$SCRIPT_DIR/build-profile.sh" "$BRANCH_DIR" '{enabled_packs: [], tenant: ""}' lake-P 2>&1 \
+  | grep -vE "^DIFF \[B capture error\]|only in A$" | sed -n '/=== run_results/,$p'
+check "${PIPESTATUS[0]}" "bare-core profile build"
 
 if [ "$LEVEL" = "S" ]; then
   step "7. full-refresh pass for incremental models and downstream"

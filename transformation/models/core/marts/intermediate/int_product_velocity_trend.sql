@@ -4,17 +4,17 @@
 ) }}
 
 -- Product-level velocity trend and lifecycle dates.
--- Grain: one row per product_key (all SKUs present in mart_sku_economics_monthly).
+-- Grain: one row per product_key (all SKUs present in int_sku_sales_monthly).
 -- velocity_90d  = avg daily_velocity over the trailing 3 monthly snapshots (approx. 90 days).
 -- velocity_30d  = daily_velocity of the single latest snapshot month.
 -- velocity_momentum = comparison of 30d vs 90d rate; NULL when < 3 trailing months are available.
--- Source: mart_sku_economics_monthly (24-month rolling window, grain: product_key × snapshot_month).
+-- Source: int_sku_sales_monthly (core; 24-month rolling window, grain: product_key × snapshot_month).
 -- Downstream: mart_product_health (G3 momentum + G4 lifecycle inputs).
 
 WITH latest_month AS (
     -- Determine the most-recent snapshot month at query time — never hardcode a date.
     SELECT MAX(snapshot_month) AS max_month
-    FROM {{ ref('mart_sku_economics_monthly') }}
+    FROM {{ ref('int_sku_sales_monthly') }}
 ),
 
 -- Trailing 3 months = latest_month − 2 months through latest_month (≈ 90 calendar days).
@@ -24,7 +24,7 @@ trailing_3m AS (
         m.product_key,
         m.snapshot_month,
         m.daily_velocity
-    FROM {{ ref('mart_sku_economics_monthly') }} m
+    FROM {{ ref('int_sku_sales_monthly') }} m
     CROSS JOIN latest_month lm
     WHERE m.snapshot_month >= lm.max_month - INTERVAL 2 MONTH
 ),
@@ -56,7 +56,7 @@ first_sale AS (
         product_key,
         MIN(snapshot_month)                                                  AS first_sale_month,
         COUNT(CASE WHEN units_sold > 0 THEN 1 END)::INT                     AS months_active
-    FROM {{ ref('mart_sku_economics_monthly') }}
+    FROM {{ ref('int_sku_sales_monthly') }}
     GROUP BY product_key
 )
 

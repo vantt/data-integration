@@ -7,6 +7,10 @@
 -- MART: SKU Economics Monthly
 -- =============================================================================
 -- Single source of truth for SKU-level economics at monthly grain.
+-- Split (pack mechanism): the sales, velocity, return and channel columns are computed in core
+-- (core/marts/intermediate/int_sku_sales_monthly, same row set) and read here unchanged; this
+-- model adds only COGS and margin. Core reads the margin columns back through
+-- pack_ref('finance', 'mart_sku_economics_monthly') (mart_product_health).
 -- Replaces ad-hoc joins of int_misa_sales_lines + fact_sales + int_return_sku_lines
 -- scattered across product_performance, product_profitability, and finance blueprints.
 --
@@ -56,25 +60,15 @@
 -- =============================================================================
 
 -- ----------------------------------------------------------------------------
--- Snapshot months: rolling 24 completed months (exclude current open month)
--- Same pattern as mart_customer_status_snapshot_monthly
+-- Sales per (product_key, snapshot_month) from core: the row set of this mart.
 -- ----------------------------------------------------------------------------
-WITH snapshot_months AS (
-    SELECT
-        DATE_TRUNC('month', gs.month_start)::date AS snapshot_month
-    FROM (
-        SELECT unnest(generate_series(
-            (DATE_TRUNC('month', current_date) - INTERVAL '24 months')::timestamp,
-            (DATE_TRUNC('month', current_date) - INTERVAL '1 month')::timestamp,
-            INTERVAL '1 month'
-        )) AS month_start
-    ) gs
+WITH sales_agg AS (
+    SELECT * FROM {{ ref('int_sku_sales_monthly') }}
 ),
 
 -- ----------------------------------------------------------------------------
--- Product dimension: product_key + denormalized attributes + alias lookup for MISA
+-- Product dimension: alias lookup for MISA
 -- ----------------------------------------------------------------------------
--- product_code = Sapo SKU (preserved for output column compatibility).
 -- misa_join_key  = effective key for MISA invoice lookup (= sku for base SKUs,
 --                  = base/parent SKU for pack variants via dim_sku_alias).
 -- misa_qty_multiplier = units per pack (1 for base, e.g. 30 for Metabo hộp).
@@ -88,104 +82,6 @@ products AS (
         COALESCE(misa_qty_multiplier, 1)                   AS misa_qty_multiplier
     FROM {{ ref('dim_products') }}
     WHERE product_key != {{ dbt_utils.generate_surrogate_key(["'Unknown'"]) }}
-),
-
--- ----------------------------------------------------------------------------
--- Sales lines from fact_sales (Sapo order items)
--- Excludes: cancelled/voided orders, internal channels, Unknown products
--- Joined to snapshot_months to assign each sale line to its snapshot month
--- ----------------------------------------------------------------------------
-valid_channels AS (
-    SELECT channel_key
-    FROM {{ ref('dim_channels') }}
-    WHERE is_sales_channel = true
-),
-
-sales_base AS (
-    SELECT
-        fs.product_key,
-        fs.order_id,
-        fs.channel_key,
-        DATE_TRUNC('month', fs.ordered_at)::date AS snapshot_month,
-        DATE(fs.ordered_at)                       AS sale_date,
-        fs.quantity,
-        fs.net_revenue                               AS line_revenue
-    FROM {{ ref('fact_sales') }} fs
-    -- Only sales channels (no internal / system)
-    INNER JOIN valid_channels vc ON fs.channel_key = vc.channel_key
-    -- Date range: 24 months back (match snapshot_months window)
-    WHERE fs.ordered_at >= DATE_TRUNC('month', current_date) - INTERVAL '24 months'
-      AND fs.ordered_at <  DATE_TRUNC('month', current_date)
-      -- Exclude Unknown product
-      AND fs.product_key != {{ dbt_utils.generate_surrogate_key(["'Unknown'"]) }}
-      -- Revenue > 0 excludes gift/promo items at fact_sales level
-      AND fs.net_revenue > 0
-),
-
--- Order-level status filter: exclude cancelled orders
-valid_orders AS (
-    SELECT order_id
-    FROM {{ ref('fact_orders') }}
-    WHERE status != 'CANCELLED'
-),
-
-sales_filtered AS (
-    SELECT sb.*
-    FROM sales_base sb
-    INNER JOIN valid_orders vo ON sb.order_id = vo.order_id
-),
-
--- ----------------------------------------------------------------------------
--- CTE 1: Sales aggregates per (product_key, snapshot_month)
--- ----------------------------------------------------------------------------
-sales_agg AS (
-    SELECT
-        product_key,
-        snapshot_month,
-
-        -- Volume
-        SUM(quantity)                                           AS units_sold,
-        SUM(line_revenue)                                       AS net_revenue,
-        COUNT(DISTINCT order_id)                                AS order_count,
-
-        -- Velocity inputs
-        COUNT(DISTINCT sale_date)                               AS days_with_sales,
-        MAX(sale_date)                                          AS last_sale_date
-    FROM sales_filtered
-    GROUP BY product_key, snapshot_month
-),
-
--- ----------------------------------------------------------------------------
--- CTE 2: Total monthly revenue across all SKUs (for revenue_share_pct)
--- ----------------------------------------------------------------------------
-monthly_totals AS (
-    SELECT
-        snapshot_month,
-        SUM(net_revenue) AS total_month_revenue
-    FROM sales_agg
-    GROUP BY snapshot_month
-),
-
--- ----------------------------------------------------------------------------
--- CTE 2b: Top-200 revenue threshold per month (for is_slow_mover)
--- Precomputed to avoid correlated subquery in final CTE
--- ----------------------------------------------------------------------------
-top200_threshold AS (
-    SELECT
-        snapshot_month,
-        MIN(net_revenue) AS threshold_revenue
-    FROM (
-        SELECT
-            snapshot_month,
-            net_revenue,
-            ROW_NUMBER() OVER (
-                PARTITION BY snapshot_month
-                ORDER BY net_revenue DESC
-            ) AS rn
-        FROM sales_agg
-    ) ranked
-    WHERE rn <= 200
-    GROUP BY snapshot_month
 ),
 
 -- ----------------------------------------------------------------------------
@@ -289,89 +185,21 @@ cogs_trailing AS (
 ),
 
 -- ----------------------------------------------------------------------------
--- CTE 5: Returns from int_return_sku_lines, aggregated to (product_key, month)
--- ----------------------------------------------------------------------------
-returns_agg AS (
-    SELECT
-        r.product_key,
-        DATE_TRUNC('month', r.return_date)::date               AS snapshot_month,
-
-        COUNT(DISTINCT r.return_id)                             AS return_count,
-        SUM(r.sold_quantity)                                    AS return_quantity,
-        SUM(r.refund_amount_allocated)                          AS refund_amount_allocated
-    FROM {{ ref('int_return_sku_lines') }} r
-    WHERE r.return_date >= DATE_TRUNC('month', current_date) - INTERVAL '24 months'
-      AND r.return_date <  DATE_TRUNC('month', current_date)
-    GROUP BY r.product_key, DATE_TRUNC('month', r.return_date)::date
-),
-
--- ----------------------------------------------------------------------------
--- CTE 6: Top channel per (product_key, snapshot_month)
--- "Top" = channel with highest revenue within that SKU-month
--- ----------------------------------------------------------------------------
-channel_revenue AS (
-    SELECT
-        sf.product_key,
-        sf.snapshot_month,
-        sf.channel_key,
-        SUM(sf.line_revenue) AS channel_revenue
-    FROM sales_filtered sf
-    GROUP BY sf.product_key, sf.snapshot_month, sf.channel_key
-),
-
-channel_ranked AS (
-    SELECT
-        cr.product_key,
-        cr.snapshot_month,
-        cr.channel_key,
-        cr.channel_revenue,
-        ROW_NUMBER() OVER (
-            PARTITION BY cr.product_key, cr.snapshot_month
-            ORDER BY cr.channel_revenue DESC
-        ) AS rn,
-        SUM(cr.channel_revenue) OVER (
-            PARTITION BY cr.product_key, cr.snapshot_month
-        ) AS total_sku_channel_revenue
-    FROM channel_revenue cr
-),
-
-top_channel AS (
-    SELECT
-        cr.product_key,
-        cr.snapshot_month,
-        dc.channel_name                                         AS top_channel_name,
-        ROUND(
-            cr.channel_revenue * 100.0
-            / NULLIF(cr.total_sku_channel_revenue, 0),
-            2
-        )                                                       AS top_channel_revenue_pct
-    FROM channel_ranked cr
-    LEFT JOIN {{ ref('dim_channels') }} dc ON cr.channel_key = dc.channel_key
-    WHERE cr.rn = 1
-),
-
--- ----------------------------------------------------------------------------
--- Final assembly: cross-join products × snapshot_months as spine,
--- then left-join each component CTE
--- Note: only snapshot_months where the SKU has at least one sale are included
--- (inner join on sales_agg, not cross-join, to keep table lean)
+-- Final assembly: sales columns straight from core (not recomputed), COGS/margin here
 -- ----------------------------------------------------------------------------
 final AS (
     SELECT
         -- ── Identity ─────────────────────────────────────────────────────────
         sa.product_key,
-        p.product_code,
-        p.product_name,
+        sa.product_code,
+        sa.product_name,
         sa.snapshot_month,
 
-        -- ── Revenue & Volume ─────────────────────────────────────────────────
+        -- ── Revenue & Volume (core) ──────────────────────────────────────────
         sa.units_sold,
         sa.net_revenue,
         sa.order_count,
-        ROUND(
-            sa.units_sold::double / NULLIF(sa.days_with_sales, 0),
-            4
-        )                                                       AS daily_velocity,
+        sa.daily_velocity,
 
         -- ── COGS & Margin (MISA preferred; sapo_mac fallback for bundles/untracked SKUs) ─
         COALESCE(mc.cogs_amount, smac.sapo_mac_cogs_amount)     AS cogs_amount,
@@ -425,15 +253,11 @@ final AS (
             ELSE NULL
         END                                                     AS cogs_variance_pct,
 
-        -- ── Returns ───────────────────────────────────────────────────────────
-        COALESCE(ra.return_count, 0)                            AS return_count,
-        COALESCE(ra.return_quantity, 0)                         AS return_quantity,
-        COALESCE(ra.refund_amount_allocated, 0)                 AS refund_amount_allocated,
-        ROUND(
-            COALESCE(ra.return_count, 0)::double
-            / NULLIF(sa.order_count, 0),
-            4
-        )                                                       AS return_rate,
+        -- ── Returns (core; already COALESCE'd to 0) ──────────────────────────
+        sa.return_count,
+        sa.return_quantity,
+        sa.refund_amount_allocated,
+        sa.return_rate,
 
         -- ── Return-Adjusted Margin (WORST CASE — see caveat #3) ──────────────
         -- Uses COALESCE gross_profit (misa preferred, sapo_mac fallback).
@@ -441,20 +265,20 @@ final AS (
         CASE
             WHEN COALESCE(mc.gross_profit, sa.net_revenue - smac.sapo_mac_cogs_amount) IS NOT NULL
             THEN COALESCE(mc.gross_profit, sa.net_revenue - smac.sapo_mac_cogs_amount)
-                 - COALESCE(ra.refund_amount_allocated, 0)
+                 - sa.refund_amount_allocated
             ELSE NULL
         END                                                     AS return_adjusted_gross_profit,
         CASE
             WHEN mc.gross_profit IS NOT NULL AND mc.misa_revenue_net > 0
             THEN ROUND(
-                (mc.gross_profit - COALESCE(ra.refund_amount_allocated, 0))
+                (mc.gross_profit - sa.refund_amount_allocated)
                 * 100.0
                 / NULLIF(mc.misa_revenue_net, 0),
                 4
             )
             WHEN smac.sapo_mac_cogs_amount IS NOT NULL AND sa.net_revenue > 0
             THEN ROUND(
-                (sa.net_revenue - smac.sapo_mac_cogs_amount - COALESCE(ra.refund_amount_allocated, 0))
+                (sa.net_revenue - smac.sapo_mac_cogs_amount - sa.refund_amount_allocated)
                 * 100.0
                 / NULLIF(sa.net_revenue, 0),
                 4
@@ -462,28 +286,10 @@ final AS (
             ELSE NULL
         END                                                     AS return_adjusted_margin_pct,
 
-        -- ── Operational ───────────────────────────────────────────────────────
-        -- days_since_last_sale: days from snapshot month-end to last observed sale
-        DATE_DIFF(
-            'day',
-            sa.last_sale_date,
-            (sa.snapshot_month + INTERVAL '1 month' - INTERVAL '1 day')::date
-        )                                                       AS days_since_last_sale,
-        -- is_slow_mover: no sale in final 14 days of month AND not a top-200 SKU
-        -- Proxy without fact_inventory — see caveat #5
-        (
-            DATE_DIFF(
-                'day',
-                sa.last_sale_date,
-                (sa.snapshot_month + INTERVAL '1 month' - INTERVAL '1 day')::date
-            ) > 14
-            AND sa.net_revenue < COALESCE(t200.threshold_revenue, 0)
-        )                                                       AS is_slow_mover,
-        ROUND(
-            sa.net_revenue * 100.0
-            / NULLIF(mt.total_month_revenue, 0),
-            4
-        )                                                       AS revenue_share_pct,
+        -- ── Operational (core) ───────────────────────────────────────────────
+        sa.days_since_last_sale,
+        sa.is_slow_mover,
+        sa.revenue_share_pct,
         CASE
             WHEN mc.cogs_amount IS NOT NULL
             THEN mc.gross_profit * 100.0 / NULLIF(mc.misa_revenue_net, 0) < 10
@@ -493,24 +299,17 @@ final AS (
             ELSE FALSE
         END                                                     AS margin_outlier,
 
-        -- ── Channel Concentration ─────────────────────────────────────────────
-        tc.top_channel_name,
-        tc.top_channel_revenue_pct
+        -- ── Channel Concentration (core) ─────────────────────────────────────
+        sa.top_channel_name,
+        sa.top_channel_revenue_pct
 
     FROM sales_agg sa
-    INNER JOIN products p          ON sa.product_key = p.product_key
     LEFT  JOIN misa_cogs mc        ON sa.product_key = mc.product_key
                                   AND sa.snapshot_month = mc.snapshot_month
     LEFT  JOIN sapo_mac_cogs smac  ON sa.product_key = smac.product_key
                                   AND sa.snapshot_month = smac.snapshot_month
     LEFT  JOIN cogs_trailing ct    ON sa.product_key = ct.product_key
                                   AND sa.snapshot_month = ct.snapshot_month
-    LEFT  JOIN returns_agg ra      ON sa.product_key = ra.product_key
-                                  AND sa.snapshot_month = ra.snapshot_month
-    LEFT  JOIN monthly_totals mt   ON sa.snapshot_month = mt.snapshot_month
-    LEFT  JOIN top200_threshold t200 ON sa.snapshot_month = t200.snapshot_month
-    LEFT  JOIN top_channel tc      ON sa.product_key = tc.product_key
-                                  AND sa.snapshot_month = tc.snapshot_month
 )
 
 SELECT

@@ -38,7 +38,7 @@ def test_repoint_through_pass_through_is_accepted(tmp_path, capsys):
     rc = _diff(tmp_path, BASE, new, allow_new=True, allow_code_change=True)
     out = capsys.readouterr().out
     assert rc == 0
-    assert "INFO core: repointed dependency kept upstream: stg -> via std" in out
+    assert "INFO core: repointed dependency: stg -> via std" in out
 
 
 def test_removed_dependency_no_longer_upstream_is_rejected(tmp_path, capsys):
@@ -93,3 +93,42 @@ def test_added_test_on_a_node_needs_allow_new(tmp_path, capsys):
     assert _diff(tmp_path, a, b) == 1
     assert _diff(tmp_path, a, b, allow_new=True) == 0
     assert _diff(tmp_path, b, a, allow_new=True) == 1    # a removed test is always a difference
+
+
+def test_changed_description_needs_allow_code_change(tmp_path):
+    a = {"m": {**_node(), "description": "Reads mart_x."}}
+    b = {"m": {**_node(), "description": "Reads int_y."}}
+    assert _diff(tmp_path, a, b) == 1
+    assert _diff(tmp_path, a, b, allow_new=True) == 1
+    assert _diff(tmp_path, a, b, allow_code_change=True) == 0
+
+
+SPLIT_BASE = {"fact": _node(), "mart": _node("fact"), "reader": _node("mart")}
+
+
+def test_reader_moved_to_the_split_off_part_is_accepted(tmp_path, capsys):
+    """mart is split: its sales half becomes int_sales, which mart now reads; reader reads int_sales."""
+    new = {"fact": _node(), "int_sales": _node("fact"), "mart": _node("int_sales"), "reader": _node("int_sales")}
+    rc = _diff(tmp_path, SPLIT_BASE, new, allow_new=True, allow_code_change=True)
+    out = capsys.readouterr().out
+    assert rc == 0
+    assert "INFO reader: repointed dependency: mart -> split into int_sales" in out
+
+
+def test_swap_to_a_node_the_removed_one_does_not_read_is_rejected(tmp_path, capsys):
+    new = {"fact": _node(), "other": _node("fact"), "mart": _node("fact"), "reader": _node("other")}
+    rc = _diff(tmp_path, SPLIT_BASE, new, allow_new=True, allow_code_change=True)
+    assert rc == 1
+    assert "DIFF reader: depends_on" in capsys.readouterr().out
+
+
+def test_split_without_allow_code_change_is_rejected(tmp_path):
+    new = {"fact": _node(), "int_sales": _node("fact"), "mart": _node("int_sales"), "reader": _node("int_sales")}
+    assert _diff(tmp_path, SPLIT_BASE, new, allow_new=True) == 1
+
+
+def test_removed_dependency_still_upstream_through_other_deps_is_described(tmp_path, capsys):
+    a = {"mart": _node(), "health": _node("mart"), "queue": _node("mart", "health")}
+    b = {"mart": _node(), "health": _node("mart"), "queue": _node("health")}
+    assert _diff(tmp_path, a, b, allow_code_change=True) == 0
+    assert "queue: repointed dependency: mart -> still upstream through unchanged dependencies" in capsys.readouterr().out

@@ -10,11 +10,13 @@ explicit ignore list), dependencies, code checksum and the number of attached te
 anything that changes a relation, a materialization, a tag used for selection,
 `on_schema_change`, seed `column_types`, or a ref is.
 
-`--allow-code-change` reports SQL checksum changes as information (phases that rewrite SQL
-prove data equality with the golden snapshot instead) and, with it, a changed `depends_on`
-whose every removed dependency is still an ancestor of the node in the new graph (a model
-repointed to a pass-through keeps its lineage to the original source; reported as INFO with the
-new dependency it now goes through). `--allow-new` accepts added nodes, added dependencies and
+`--allow-code-change` reports SQL checksum and model description changes as information (phases
+that rewrite SQL prove data equality with the golden snapshot instead, and update the model's
+documentation with it) and, with it, a changed `depends_on`
+whose every removed dependency is either still an ancestor of the node in the new graph (a model
+repointed to a pass-through keeps its lineage to the original source) or now reads one of the
+added dependencies (a model split in two: the reader moved to the extracted upstream part).
+Both are reported as INFO with the route. `--allow-new` accepts added nodes, added dependencies and
 added tests on an existing node.
 
   compiled-diff A_manifest.json B_manifest.json [--allow-code-change]
@@ -105,14 +107,28 @@ def _ancestors(inv: dict, uid: str) -> set[str]:
 
 
 def _repoint_info(a: dict, b: dict, uid: str) -> str | None:
-    """Describe a dependency change that keeps every removed dependency upstream; None otherwise."""
+    """Describe an accepted dependency change; None when it is not accepted.
+
+    Every removed dependency r must either stay upstream of the node (repointed through a
+    pass-through: r -> via d) or have been split, i.e. an added dependency d is now upstream of r
+    (the part of r the node used moved into d, which r now reads: r -> split into d).
+    """
     old, new = set(a[uid].get("depends_on") or []), set(b[uid].get("depends_on") or [])
     removed, added = old - new, new - old
-    upstream = _ancestors(b, uid)
-    if not removed or not removed <= upstream:
+    if not removed:
         return None
-    via = {r: sorted(d for d in added if r in _ancestors(b, d)) for r in removed}
-    return "; ".join(f"{r} -> via {', '.join(v)}" for r, v in sorted(via.items()))
+    upstream = _ancestors(b, uid)
+    parts = []
+    for r in sorted(removed):
+        if r in upstream:
+            via = sorted(d for d in added if r in _ancestors(b, d))
+            parts.append(f"{r} -> via {', '.join(via)}" if via else f"{r} -> still upstream through unchanged dependencies")
+            continue
+        split = sorted(d for d in added if d in _ancestors(b, r))
+        if not split:
+            return None
+        parts.append(f"{r} -> split into {', '.join(split)}")
+    return "; ".join(parts)
 
 
 def cmd_diff(args: argparse.Namespace) -> int:
@@ -128,12 +144,12 @@ def cmd_diff(args: argparse.Namespace) -> int:
             if fa.get(key) == fb.get(key):
                 continue
             msg = f"{uid}: {key}: {fa.get(key)!r} -> {fb.get(key)!r}"
-            if key == "checksum" and args.allow_code_change:
+            if key in ("checksum", "description") and args.allow_code_change:
                 info.append(msg)
             elif key in ("depends_on", "tests") and args.allow_new and set(fa.get(key) or []) <= set(fb.get(key) or []):
                 info.append(msg)
             elif key == "depends_on" and args.allow_code_change and (via := _repoint_info(a, b, uid)):
-                info.append(f"{uid}: repointed dependency kept upstream: {via}")
+                info.append(f"{uid}: repointed dependency: {via}")
             else:
                 problems.append(msg)
     for m in info:

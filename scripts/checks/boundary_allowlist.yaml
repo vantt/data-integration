@@ -17,11 +17,6 @@ allow:
   reason: 'Pack -> pack (finance -> marketplace), declared: order economics takes Shopee fees from int_shopee_order_fees. Exit - move fee legs to pack marketplace; finance reads them via pack_ref(''marketplace'',
     ...) after Đợt 1.'
 - rule: dbt-ref
-  subject: int_product_velocity_trend
-  target: mart_sku_economics_monthly [core -> pack:finance]
-  reason: 'Pack hook (core -> finance): uses only the sales velocity of mart_sku_economics_monthly. Exit - split mart_sku_economics_monthly into a core SKU sales/velocity part and a finance cost/margin
-    part; margin columns via pack_ref after Đợt 1.'
-- rule: dbt-ref
   subject: mart_customer_action_queue
   target: int_crm_party_tag_flags [pack:sales_playbook -> pack:crm]
   reason: 'Pack -> pack (sales_playbook -> crm), declared: the action queue reads CRM contact state and tag flags. Exit - declare sales_playbook as depending on crm and read via pack_ref(''crm'', ...) after
@@ -44,21 +39,6 @@ allow:
   subject: mart_hug_attribution
   target: fact_order_economics [pack:hug -> pack:finance]
   reason: 'Pack -> pack (hug -> finance), declared: HUG attribution reports the margin of attributed orders from fact_order_economics. Exit - read via pack_ref(''finance'', ...) after Đợt 1.'
-- rule: dbt-ref
-  subject: mart_inventory_health
-  target: mart_sku_economics_monthly [core -> pack:finance]
-  reason: 'Pack hook (core -> finance): uses only the sales velocity of mart_sku_economics_monthly. Exit - split mart_sku_economics_monthly into a core SKU sales/velocity part and a finance cost/margin
-    part; margin columns via pack_ref after Đợt 1.'
-- rule: dbt-ref
-  subject: mart_product_action_queue
-  target: mart_sku_economics_monthly [core -> pack:finance]
-  reason: 'Pack hook (core -> finance): uses realized_margin_pct, cogs_variance_pct, margin_outlier of mart_sku_economics_monthly. Exit - split mart_sku_economics_monthly into a core SKU sales/velocity
-    part and a finance cost/margin part; margin columns via pack_ref after Đợt 1.'
-- rule: dbt-ref
-  subject: mart_product_health
-  target: mart_sku_economics_monthly [core -> pack:finance]
-  reason: 'Pack hook (core -> finance): uses realized_margin_pct, cogs_variance_pct, margin_outlier of mart_sku_economics_monthly. Exit - split mart_sku_economics_monthly into a core SKU sales/velocity
-    part and a finance cost/margin part; margin columns via pack_ref after Đợt 1.'
 - rule: dbt-seed
   subject: dim_channel_targets
   target: seed_channel_targets [core -> tenant:fine_japan]

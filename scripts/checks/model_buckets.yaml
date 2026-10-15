@@ -138,6 +138,7 @@ buckets:
   int_return_sku_lines: core
   int_sapo_inventories: core
   int_sku_gift_profile: core
+  int_sku_sales_monthly: core
   mart_cohort_retention: core
   mart_customer_status_snapshot_monthly: core
   mart_customer_tier: core

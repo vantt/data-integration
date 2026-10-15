@@ -431,7 +431,7 @@ models:
               arguments:
                 values: ['A', 'B', 'C']
       - name: health_class
-        description: "BCG-style velocity×margin class. NULL when no margin data."
+        description: "BCG-style velocity×margin class. NULL when no margin data (SKUs with sales in the latest month); inventory-only SKUs fall to BALANCED. Pack finance off: no SKU has margin data."
         tests:
           - accepted_values:
               arguments:
@@ -441,5 +441,5 @@ models:
       - name: velocity_momentum
         description: "ACCELERATING/STABLE/DECELERATING (NULL if <3 months history)."
       - name: has_margin_data
-        description: "TRUE when SKU has COGS-based margin (~42 SKU); FALSE → health_class NULL."
+        description: "TRUE when SKU has COGS-based margin (~42 SKU); FALSE → health_class NULL. Margin columns come from pack finance (mart_sku_economics_monthly via pack_ref): FALSE for every SKU khi tắt pack finance."
 

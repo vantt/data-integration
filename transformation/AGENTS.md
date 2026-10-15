@@ -32,7 +32,11 @@ Packs can be switched off (design: `docs/architecture/modules.md` §8.1):
   `{{ pack_ref('<pack>', '<model>') }}` (optionally a third argument, a subset of the contract
   columns). `check_boundaries.py` accepts a core -> pack edge only for that spelling, only when
   the model has no direct `ref('<model>')` and only when the model has a contract. Never add a
-  direct `ref()` from core to a pack model; the 4 left (to `mart_sku_economics_monthly`) are allowlisted until they move.
+  direct `ref()` from core to a pack model (none is allowlisted any more). A core model that needs
+  only revenue reads core (e.g. `int_sku_sales_monthly`, the revenue half of the finance mart
+  `mart_sku_economics_monthly`), not the pack.
+- Gate step 6b (`scripts/shadow/gate.sh`) builds the project with every pack off; it must stay
+  green.
 - **The contract lives in `pack_contracts()`** (`macros/packs/pack_contracts.sql`): one entry
   `'<model>': {'pack': '<pack>', 'columns': {'<column>': '<DuckDB type>', ...}}` per pack model
   core reads, listing only the columns core uses. Attach `data_tests: - pack_contract` to that

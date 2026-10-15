@@ -9,21 +9,21 @@
 -- Grain: 1 row per (variant_id, location_id, snapshot_date)
 -- Materialization: external parquet (full rebuild — small table, fast)
 --
--- Health signals derived from fact_inventory_snapshot + mart_sku_economics_monthly:
+-- Health signals derived from fact_inventory_snapshot + int_sku_sales_monthly:
 --   is_oos             — on_hand <= 0 (out of stock)
 --   is_low_stock       — 0 < on_hand <= min_value (reorder threshold breached)
 --   is_overstock       — on_hand > max_value (when max threshold set)
 --   days_of_supply     — on_hand / daily_velocity from last completed month
 --   is_slow_mover      — days_of_supply > 90 OR no sales in 30 days
---   is_dead_stock      — no sales in 90 days (proxy via mart_sku_economics_monthly)
+--   is_dead_stock      — no sales in 90 days (proxy via int_sku_sales_monthly)
 --   stock_value_at_mac — on_hand × mac (capital tied up)
 --   committed_value_at_mac — committed × mac (already sold, pending fulfillment)
 --
 -- CAVEATS:
---   1. daily_velocity sourced from last completed month in mart_sku_economics_monthly.
+--   1. daily_velocity sourced from last completed month in int_sku_sales_monthly.
 --      SKUs with no sales history get NULL daily_velocity → days_of_supply = NULL.
 --   2. is_slow_mover and is_dead_stock are proxies based on sales recency in
---      mart_sku_economics_monthly (rolling 24 months). SKUs outside that window
+--      int_sku_sales_monthly (rolling 24 months). SKUs outside that window
 --      appear as dead stock regardless of actual inventory movement.
 --   3. Location-level velocity is not available — daily_velocity is SKU-level
 --      aggregate across all channels. Per-location sell-through rates require
@@ -64,7 +64,7 @@ WITH snapshot AS (
     FROM {{ ref('fact_inventory_snapshot') }}
 ),
 
--- Latest completed month velocity from mart_sku_economics_monthly
+-- Latest completed month velocity from int_sku_sales_monthly
 -- Use the most recent snapshot_month available per SKU for days_of_supply calc
 velocity AS (
     SELECT
@@ -77,7 +77,7 @@ velocity AS (
             PARTITION BY product_key
             ORDER BY snapshot_month DESC
         ) AS rn
-    FROM {{ ref('mart_sku_economics_monthly') }}
+    FROM {{ ref('int_sku_sales_monthly') }}
     WHERE daily_velocity IS NOT NULL
 ),
 

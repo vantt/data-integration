@@ -41,21 +41,21 @@ Mart dùng ở Metabase (`docs/analytics-handbook/domains/finance.md`, blueprint
 
 Lõi chỉ đọc pack qua `pack_ref('finance', '<model>')`; danh sách cột và kiểu là hợp đồng trong `pack_contracts()` ([transformation/macros/packs/pack_contracts.sql](../../../macros/packs/pack_contracts.sql)), mỗi model gắn test `pack_contract` nên đổi tên hay kiểu một cột trong hợp đồng làm build lỗi. Thiết kế và giá trị khi tắt pack: [docs/architecture/modules.md](../../../../docs/architecture/modules.md) mục 7 và 8.1.
 
+`mart_sku_economics_monthly` đọc doanh số SKU-tháng từ model lõi `int_sku_sales_monthly` (cùng tập dòng, giữ nguyên giá trị) và chỉ tính giá vốn/biên; doanh số, tốc độ bán và trả hàng thuộc lõi nên vẫn có khi tắt finance.
+
 | Model của pack | Lõi đọc | Cột | Khi tắt finance |
 |---|---|---|---|
 | `int_customer_economics` | `dim_customers` | 10 cột lợi nhuận/giá vốn/trả hàng + `customer_key` | Các cột đó NULL (không `COALESCE` về 0) |
 | `int_misa_sales_lines` | `dim_sku_alias` | `product_code`, `is_promo_line`, `is_service_line` | Không có alias tự động VTS → VCS |
 | `fact_order_economics` | `mart_data_quality` | `has_cogs`, `has_platform_fees` (và số đơn) | `total_orders` 0, hai tỷ lệ NULL |
-| `mart_sku_economics_monthly` | 4 model sản phẩm/tồn kho | — | Còn `ref()` thẳng (allowlist), phase 4 tách |
+| `mart_sku_economics_monthly` | `mart_product_health` | `product_key`, `snapshot_month`, `realized_margin_pct`, `cogs_variance_pct`, `margin_outlier`, `cogs_source` | 4 cột biên NULL, `has_margin_data` FALSE, `health_class` NULL |
 
 ## Phụ thuộc chéo (ghi trong `scripts/checks/boundary_allowlist.yaml`)
 
 | Cạnh | Loại |
 |---|---|
-| `int_product_velocity_trend`, `mart_inventory_health` → `mart_sku_economics_monthly` (chỉ tốc độ bán) | Pack hook |
-| `mart_product_health`, `mart_product_action_queue` → `mart_sku_economics_monthly` (`realized_margin_pct`, `cogs_variance_pct`, `margin_outlier`) | Pack hook |
 | `fact_order_economics` → `int_shopee_order_fees` (pack `marketplace`) | Pack → pack |
 | `mart_hug_attribution` (pack `hug`) → `fact_order_economics` | Pack → pack |
 | `fact_order_costs` → `stg_shopee_order_revenue`, `stg_shopee_order_service_fees` | Pack → connector ngoài `pack_connectors` |
 
-Hướng thoát sau Đợt 1: tách `mart_sku_economics_monthly` thành phần doanh số/tốc độ bán (lõi) và phần chi phí/biên (finance); cột biên đọc qua `pack_ref`. Ghi lại, chưa sửa: `fact_order_costs` đang coi giảm giá là một dòng chi phí, về nghĩa thuộc phía doanh thu.
+Ghi lại, chưa sửa: `fact_order_costs` đang coi giảm giá là một dòng chi phí, về nghĩa thuộc phía doanh thu.
