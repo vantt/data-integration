@@ -1,9 +1,0 @@
-# User unit (systemctl --user) for the weekly cold copy of the Metabase H2 database.
-# Install: scripts/backup/README.md, section "Metabase".
-[Unit]
-Description=Cold copy of the Metabase H2 database (stops Metabase for 1-2 minutes)
-
-[Service]
-Type=oneshot
-ExecStart=/home/vantt/app/fg-dataware-house/scripts/backup/metabase_cold_backup.sh weekly
-TimeoutStartSec=900

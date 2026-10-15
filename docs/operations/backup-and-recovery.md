@@ -2,7 +2,7 @@
 
 Tài liệu sống về backup, khôi phục và dựng lại hệ thống. Quyết định và lý do: [ADR-019](../decisions/019-offsite-backup-and-recovery.md).
 
-> **Trạng thái (15/10/2026):** đang xây dựng. Hôm nay chỉ có các backup **cục bộ**, nằm cùng ổ với dữ liệu: bản đêm `backup.sh`, bản chép nguội Metabase H2 và bản CRM. Chưa có bản ngoài máy. Các mục dưới đây được điền dần, mỗi mục cùng commit với phần code của nó. Mục "Phạm vi dữ liệu" đã chốt.
+> **Trạng thái (15/10/2026):** đang xây dựng. Hôm nay chỉ có các backup **cục bộ**, nằm cùng ổ với dữ liệu: bản đêm `backup.sh`, bản chép nguội Metabase H2 và bản CRM. Chưa có bản ngoài máy. Các mục dưới đây được điền dần, mỗi mục cùng commit với phần code của nó. Đã viết: "Phạm vi dữ liệu", "Lịch" (phần cục bộ), "Chụp nhất quán", quyền file secret trong "Khoá và bàn giao".
 >
 > Hướng dẫn đang dùng cho backup cục bộ: [`scripts/backup/README.md`](../../scripts/backup/README.md), [`deployment.md` mục "Metabase: backup and restore"](./deployment.md#metabase-backup-and-restore), [`crm/docs/backup-restore-runbook.md`](../../crm/docs/backup-restore-runbook.md).
 
@@ -38,9 +38,9 @@ Phân loại mọi thành phần có trạng thái. Kích thước đo ngày 15/
 | Ảnh chụp tay Sapo 13/04 | `app_data/data_lake/backup` | 21 MB | Lưu trữ | Có | Không có writer |
 | File nhập tay | `app_data/input_source` | 50 MB | Nguồn sự thật | Có | |
 | Sổ MISA xlsx dùng backfill | `app_data/analysis` | 1,1 MB | Nguồn sự thật | **Không** | Chỉ trên host, không mount vào container |
-| Bảng `main.monitor_taxonomy_parity_log` | trong `app_data/data_lake/sapo_warehouse.duckdb` | 82 dòng | Không dựng lại được | Chép nóng cả file DuckDB | Append-only (`full_refresh=false`), đếm số đêm parity của bộ máy phân loại. Off-site xuất ra parquet |
-| Lịch sử vận hành `ingestion_health.db` | named volume `monitoring_db` (`/app/var/data_lake/monitoring`) | 84 MB | Không dựng lại được | Có (`cp -a` nóng một file SQLite WAL) | Bảng `ingestion_runs`, giữ 90 ngày; check freshness, row_trend, recon, KPI và digest đọc bảng này |
-| Trạng thái schedule/sensor Dagster | named volume `dagster_home`, `schedules/schedules.db` | 321 MB | Trạng thái điều phối | Có (`cp -a` nóng) | Bật/tắt và cursor của schedule/sensor |
+| Bảng `main.monitor_taxonomy_parity_log` | trong `app_data/data_lake/sapo_warehouse.duckdb` | 82 dòng | Không dựng lại được | Có (parquet trong `exports/warehouse/`) | Append-only (`full_refresh=false`), đếm số đêm parity của bộ máy phân loại. Off-site xuất ra parquet |
+| Lịch sử vận hành `ingestion_health.db` | named volume `monitoring_db` (`/app/var/data_lake/monitoring`) | 84 MB | Không dựng lại được | Có (SQLite backup API) | Bảng `ingestion_runs`, giữ 90 ngày; check freshness, row_trend, recon, KPI và digest đọc bảng này |
+| Trạng thái schedule/sensor Dagster | named volume `dagster_home`, `schedules/schedules.db` | 321 MB | Trạng thái điều phối | Có (SQLite backup API) | Bật/tắt và cursor của schedule/sensor |
 | Metabase H2 | `app_data/metabase_data/metabase.db.mv.db` | 85 MB | Nguồn sự thật | Chép nguội + JSON qua API | Dashboard, card, collection, user, quyền |
 | CRM `crm.db`, `hug.db`, `cache.db` | named volume `crm_data` → `crm_backups` | 67 MB/bản | Nguồn sự thật | Có (SQLite API + gate, 7 bản) | `cache.db` tái tạo được |
 | Seed dbt | `transformation/seeds/` | — | Trong git, nhưng budget sync 02:30 ghi đè 2 file của tenant | Không | Lên off-site cả cây, kèm `git diff` |
@@ -66,19 +66,48 @@ Phân loại mọi thành phần có trạng thái. Kích thước đo ngày 15/
 
 ## Lịch
 
-Hiện có:
+Phần cục bộ (giờ Asia/Ho_Chi_Minh):
 
-| Giờ | Việc | Tình trạng |
+| Giờ | Việc | Cách chạy |
 |---|---|---|
-| ~01:04 | Backup cục bộ (`maintain_backup_platform_job`); lịch dự phòng 06:05 | Đang chạy |
-| CN 00:30 | Chép nguội Metabase | Đang chạy. Sẽ chuyển sang hằng đêm |
-| 09:00 | CRM backup và diễn tập CRM | Đang chạy. Cron `0 2 * * *` thiếu timezone nên chạy theo UTC; sẽ sửa về 02:00 |
+| Hằng đêm 00:30 | Chép nguội Metabase H2 + xuất JSON (Metabase dừng ~20 giây) | Timer user `metabase-cold-backup.timer`, sinh bởi `scripts/backup/install-units.sh` |
+| ~01:04 | Backup cục bộ `backup.sh` | Sensor `trigger_backup_after_purge` sau purge 01:00; lịch dự phòng 06:05 |
+| 02:00 | CRM backup và diễn tập CRM | `crm_backup_schedule` (đã đặt `execution_timezone`; trước đó chạy 09:00 vì cron tính theo UTC) |
 
-Lịch đầy đủ sau khi triển khai: [ADR-019](../decisions/019-offsite-backup-and-recovery.md).
+Lịch hằng đêm của Metabase và giờ 02:00 của CRM có hiệu lực từ lần deploy kèm thay đổi này (cài lại unit, khởi động lại `data_platform`). Lịch đầy đủ, gồm off-site và diễn tập: [ADR-019](../decisions/019-offsite-backup-and-recovery.md).
 
 ## Chụp nhất quán
 
-Chưa viết. Mục này sẽ mô tả cách chụp từng thành phần (SQLite backup API, `COPY` DuckDB, chép nguội H2), định dạng `manifest.json` và các file `status/*.json`.
+Mỗi thành phần có trạng thái được chụp ở nơi sở hữu nó, theo cách cho ra một bản tự nhất quán, rồi ghi vào manifest.
+
+| Thành phần | Ai chụp | Kỹ thuật | Bằng chứng nhất quán |
+|---|---|---|---|
+| Raw lake, `input_source` | `backup.sh` (trong `data_platform`, op giữ `duckdb_lock`) | Chép nóng `cp -a` | File chỉ được thêm; lớp off-site và diễn tập đọc lại mọi file |
+| `sapo_warehouse.duckdb`, `serving/` | `backup.sh` | Chép nóng, `role: accelerator` | Không bảo đảm: chỉ dùng khi mở được, không thì `dbt build` |
+| `ingestion_health.db` (volume `monitoring_db`) | `backup.sh` → `scripts/backup/sqlite_snapshot.py` | SQLite online backup API, bản chụp chuyển `journal_mode=DELETE` | `PRAGMA integrity_check` = ok, số dòng từng bảng, sha256 |
+| `dagster_home/schedules/schedules.db` | `backup.sh` → `sqlite_snapshot.py` | Như trên; kèm `dagster.yaml`. Không chụp `history/`, `storage/` | Như trên |
+| `main.monitor_taxonomy_parity_log` | `backup.sh` → `scripts/backup/duckdb_snapshot.py` | Mở `read_only`, trong một giao dịch: đếm dòng, `COPY` ra parquet, đọc lại parquet để so số dòng. File bị khoá ghi (writer chạy tay ngoài `duckdb_lock`) thì thử lại 3 → 30 giây, tối đa 180 giây | Số dòng nguồn = số dòng parquet, sha256 |
+| Metabase H2 | Host, `scripts/backup/metabase_cold_backup.sh` | Dừng Metabase, chép, khởi động lại; khi healthy thì xuất JSON qua API vào `<bản chép>.export/` | Kích thước bằng nhau; số collection/card/dashboard lúc chép (`.export/manifest.json`) |
+| CRM | `crm/ops/backup_crm.py` | SQLite backup API + gate | Gate A/B của diễn tập CRM |
+
+**`manifest.json`** (mỗi thư mục `app_data/backups/<YYYYmmdd-HHMMSS>/`, `scripts/backup/backup_manifest.py`): `format`, `created_at`, `git_sha` (từ `BACKUP_GIT_SHA` nếu được đặt), và `components`. Mỗi thành phần có `component`, `kind` (`tree`, `sqlite`, `duckdb_export`), `role` (`source_of_truth`, `accelerator`, `copy`), `state` (`ok`, `skipped` khi nguồn không có, `error`). `tree` ghi số file và byte; `sqlite` ghi `path`, `bytes`, `sha256`, `integrity_check`, số dòng từng bảng; `duckdb_export` ghi từng bảng với `rows`, `bytes`, `sha256` và danh sách bảng vắng mặt (`skipped_tables`).
+
+Kiểm lại một bản theo manifest:
+
+```bash
+docker exec data_platform python3 /app/scripts/backup/backup_manifest.py verify /app/var/backups/<YYYYmmdd-HHMMSS>
+```
+
+**File trạng thái** trong `app_data/backups/status/`, mỗi file ghi qua file tạm rồi đổi tên:
+
+| File | Ai ghi | Nội dung |
+|---|---|---|
+| `local.json` | `backup.sh`, kể cả khi lỗi | `ok`, `state` (`ok`, `partial` khi bản chép dữ liệu xong nhưng một bước chụp hỏng, `failed`), `ts`, `duration_s`, `backup_dir`, trạng thái từng thành phần, `errors` |
+| `metabase_cold.json` | `metabase_cold_backup.sh`, kể cả khi lỗi | `ok`, `state`, `kind`, `ts`, `duration_s`, `copy_ok`, `healthy`, `export` (`ok`, `failed`, `skipped`), `copy`, `counts` |
+
+Khi `partial`, job Dagster vẫn xanh; thành phần hỏng nằm trong `errors`. Thư mục `status/` thuộc chủ của `app_data/backups` để cả container (root) lẫn script trên host ghi được.
+
+Thời lượng đo trên bản sao cỡ prod (lake 1,4 GB, `schedules.db` 321 MB, `ingestion_health.db` 83 MB): 6 giây, so với 17–24 giây của bản chép cũ (bỏ `dagster_home/storage/`).
 
 ## Off-site
 
@@ -105,6 +134,37 @@ Hôm nay `maintain_backup_platform_job` gửi Lark khi xong, và failure sensor 
 
 Chưa viết. Mục này sẽ là runbook dựng lại trên máy mới, có thời gian mục tiêu và nhật ký diễn tập.
 
+Ngoài phạm vi: công cụ shadow nội bộ của FG (`scripts/shadow/prepare-shadow.sh`, `scripts/shadow/prepare-deps.sh`) còn đường dẫn `/home/vantt` cứng; chúng không được cài cho khách nên không thuộc đường dựng lại. Mọi script và unit của backup thì không còn đường dẫn cứng (unit sinh từ template bằng `scripts/backup/install-units.sh`).
+
 ## Khoá và bàn giao
 
-Chưa viết. Mục này sẽ gồm: ba khoá restic, Recovery Sheet, biên bản bàn giao, và runbook đổi quyền file secret trên host (0600, hoặc chỉ đọc cho đúng uid của container dùng file).
+Chưa viết phần khoá restic, Recovery Sheet và biên bản bàn giao.
+
+### Quyền file secret trên host
+
+Chủ và quyền mà container dùng file vẫn đọc được (quyết định 15/10/2026):
+
+| File | Container đọc | Chủ | Quyền |
+|---|---|---|---|
+| `app_data/secrets/gsheets-service-account.json` | `data_platform` (chạy root) | giữ nguyên (`vantt`) | `0600` |
+| Credentials Cloudflare tunnel (`<tunnel-id>.json`, `cert.pem`, `config.yml` trong thư mục `config/` của stack `cloudflared`) | `cloudflared` (uid `65532`) | `65532:65532` | `0400` |
+
+Áp trong giờ được duyệt, ngoài 02:30–04:00:
+
+```bash
+TUN=/home/vantt/cloudflared-tunnel/config          # thư mục credentials của tunnel trên máy này
+SA=app_data/secrets/gsheets-service-account.json   # từ thư mục gốc của checkout
+docker inspect -f '{{.Config.User}}' cloudflared   # phải là 65532:65532; khác thì dùng uid đó
+stat -c '%U:%G %a %n' "$SA" "$TUN"/*               # ghi lại để hoàn tác
+chmod 0600 "$SA"
+sudo chown 65532:65532 "$TUN"/*.json "$TUN"/cert.pem "$TUN"/config.yml
+sudo chmod 0400 "$TUN"/*.json "$TUN"/cert.pem "$TUN"/config.yml
+docker restart cloudflared                         # chứng minh tunnel đọc được credentials
+docker logs --since 2m cloudflared 2>&1 | grep -i -E 'registered|error' | tail -5
+curl -s -o /dev/null -w '%{http_code}\n' https://bi.fwg.vn/api/health
+curl -s -o /dev/null -w '%{http_code}\n' https://crm.fwg.vn/
+```
+
+Mã 530 hoặc 502 từ Cloudflare nghĩa là tunnel chưa nối lại; mã khác (200, hoặc 302/403 của Cloudflare Access) là tunnel đã chạy.
+
+Kiểm key Google bằng một lần chạy xanh của một asset `sheets_*` trong Dagster. Hoàn tác: `chmod`/`chown` lại theo kết quả `stat` đã ghi, rồi `docker restart cloudflared`. Sau khi đổi, `vantt` không đọc được credentials tunnel nếu không có `sudo`; backup ngoài máy đọc chúng bằng container chạy root.

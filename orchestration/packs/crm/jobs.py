@@ -16,6 +16,8 @@ crm_backup_schedule = ScheduleDefinition(
     name="crm_backup_schedule",
     job=crm_backup_job,
     cron_schedule="0 2 * * *",  # 02:00 ICT daily (outside the 03:00-06:00 maintenance window)
+    # Without it Dagster reads the cron in UTC and the job ran at 09:00 ICT.
+    execution_timezone="Asia/Ho_Chi_Minh",
     default_status=DefaultScheduleStatus.RUNNING,  # auto-enable (schedules in defs are off by default — L49)
 )
 

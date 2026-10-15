@@ -1,0 +1,9 @@
+# User unit (systemctl --user) for the nightly cold copy of the Metabase H2 database.
+# Template: scripts/backup/install-units.sh renders @FG_PROJECT_ROOT@ and installs it.
+[Unit]
+Description=Cold copy of the Metabase H2 database (stops Metabase for ~20 seconds)
+
+[Service]
+Type=oneshot
+ExecStart=@FG_PROJECT_ROOT@/scripts/backup/metabase_cold_backup.sh nightly
+TimeoutStartSec=900

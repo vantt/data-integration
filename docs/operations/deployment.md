@@ -819,7 +819,7 @@ it, so Metabase has two backup layers of its own.
 | Layer | What | When | Where |
 |---|---|---|---|
 | API export | JSON of collections, cards, dashboards (+ users, groups, permission graphs, subscriptions when the API key may read them). Readable record, **not** a full restore: ids, passwords, settings and history are missing | Nightly, step of `backup.sh` (`scripts/backup/metabase_export.py`); a failure is a warning only | `app_data/backups/<timestamp>/metabase_export/`, rotated with the backup (7) |
-| Cold H2 copy | The H2 file copied while Metabase is stopped: the full restore point | Weekly, Sunday 00:30 (user systemd timer `metabase-cold-backup.timer`), and by hand before every deploy that writes to Metabase | `app_data/backups/metabase/metabase-<weekly\|pre-deploy>-<timestamp>.mv.db`, 7 kept per kind; log `cold-backup.log` |
+| Cold H2 copy | The H2 file copied while Metabase is stopped (~20 s): the full restore point. Right after Metabase is healthy again the same API export is written next to the copy; its `manifest.json` holds the counts that the copy must show when restored | Nightly 00:30 (user systemd timer `metabase-cold-backup.timer`), and by hand before every deploy that writes to Metabase | `app_data/backups/metabase/metabase-<nightly\|pre-deploy>-<timestamp>.mv.db` + `.export/`, 7 kept per kind; log `cold-backup.log`; last result `app_data/backups/status/metabase_cold.json` |
 
 Both copies live on the same disk as the data; an off-machine copy is not set up yet.
 
@@ -829,7 +829,7 @@ Any change that creates, edits or deletes dashboards or cards (blueprint deploys
 `manage` scripts, a Metabase upgrade):
 
 ```bash
-scripts/backup/metabase_cold_backup.sh pre-deploy   # Metabase down 1-2 minutes; exit 0 = copy OK and healthy
+scripts/backup/metabase_cold_backup.sh pre-deploy   # Metabase down ~20 seconds; exit 0 = copy OK and healthy
 ```
 
 ### Check the backups
@@ -837,6 +837,7 @@ scripts/backup/metabase_cold_backup.sh pre-deploy   # Metabase down 1-2 minutes;
 ```bash
 systemctl --user list-timers metabase-cold-backup.timer      # next run
 tail -5 app_data/backups/metabase/cold-backup.log            # last cold copies
+cat app_data/backups/status/metabase_cold.json               # last result + counts at copy time
 cat app_data/backups/$(ls app_data/backups | grep -E '^[0-9]{8}-' | sort | tail -1)/metabase_export/manifest.json
 ```
 
@@ -850,9 +851,10 @@ docker start metabase
 curl -sf http://127.0.0.1:3001/api/health && echo healthy   # then open a dashboard
 ```
 
-Everything made in Metabase after the chosen copy is lost; look it up in the newer nightly API
+Then compare the counts of collections, cards and dashboards with `<chosen copy>.export/manifest.json`
+(same API calls as `scripts/backup/metabase_export.py`). Everything made in Metabase after the chosen copy is lost; look it up in the newer nightly API
 exports (`cards/<id>.json`, `dashboards/<id>.json`) and recreate it by hand or with the
 blueprint scripts (`.skills/metabase-automation/`).
 
-The weekly timer is installed from `scripts/backup/systemd/`; install and change steps are in
-[scripts/backup/README.md](../../scripts/backup/README.md#metabase).
+The nightly timer is generated from `scripts/backup/systemd/*.in` by `scripts/backup/install-units.sh`;
+install and change steps are in [scripts/backup/README.md](../../scripts/backup/README.md#metabase).
