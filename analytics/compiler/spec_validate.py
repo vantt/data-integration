@@ -199,9 +199,12 @@ def check_catalog(reg: Registry, catalog: dict[str, Any], catalog_path: Path, re
             error(here, f"metrics must equal the union of metric_ref in the spec: {sorted(facts['metrics'])}")
         if report["cost_sensitive"] != facts["cost_sensitive"]:
             error(here, f"cost_sensitive must be {facts['cost_sensitive']} (derived from the metrics)")
+        kinds = {c["card_id"]: c["kind"] for _, _, c in iter_cards(spec)}
         for tile in report["kpi_tiles"]:
             if tile not in facts["cards"]:
                 error(here, f"kpi_tile '{tile}' is not a card_id of the spec")
+            elif kinds[tile] not in ("kpi_compare", "derived"):
+                error(here, f"kpi_tile '{tile}' is a {kinds[tile]} card; a tile must be a single-value card")
         for pname, profile in profiles.items():
             areas = {a["id"]: a for a in (profile.get("access") or {}).get("areas", [])}
             if not areas:
@@ -218,4 +221,16 @@ def check_catalog(reg: Registry, catalog: dict[str, Any], catalog_path: Path, re
                         error(f"{where}#{card['card_id']}",
                               f"required card shows costs but area '{area['id']}' of profile '{pname}' cannot view costs")
         summaries.append(f"{report['id']}: {facts['inline_cards']}/{facts['data_cards']} data cards use inline_sql")
+    for pname, profile in profiles.items():
+        message = profile.get("message") or {}
+        channels = {c["id"] for c in message.get("channels", [])}
+        engines = {r["id"]: r["engine"] for r in catalog["reports"]}
+        for entry in message.get("reports", []):
+            if entry["report"] not in engines:
+                error(pname, f"message.reports: '{entry['report']}' is not in the catalog")
+            elif engines[entry["report"]] != "evidence":
+                error(pname, f"message.reports: '{entry['report']}' is not built by the report site (engine evidence)")
+            for ch in entry["channels"]:
+                if ch not in channels:
+                    error(pname, f"message.reports: channel '{ch}' is not declared in message.channels")
     return summaries

@@ -27,6 +27,15 @@ tenant_params:
   detailview_url_template: "https://detailview.lan.fwg.vn/orders/{order_code}"
 
 access:                                # khu vực quyền: mỗi khu vực một bản build Evidence, đăng nhập theo đường dẫn
+  site_url: https://evidence.lan.fwg.vn  # chỉ LAN + Tailscale, không mở ra Internet
   areas:
     - {id: dieu-hanh, title: Điều hành, functions: [EXE], can_view_cost: true}
     - {id: legacy, title: Trang cũ (viết tay), functions: [], can_view_cost: true, legacy: true}
+
+message:                               # tin tóm tắt sau mỗi lần build thành công (Lark)
+  channels:
+    # Nhóm Lark ban lãnh đạo, được xem lợi nhuận/biên (user chốt 14/10). Tên nhóm chưa xác nhận;
+    # webhook và secret chỉ nằm trong .env.docker (không vào git).
+    - {id: lanh_dao, env_webhook: LARK_REPORT_LEADERSHIP_WEBHOOK, env_secret: LARK_REPORT_LEADERSHIP_SECRET, can_view_cost: true}
+  reports:
+    - {report: ceo_weekly_pulse, channels: [lanh_dao], weekdays: [mon], not_before: "07:00"}

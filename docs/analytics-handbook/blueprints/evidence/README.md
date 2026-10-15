@@ -51,7 +51,7 @@ last_modified: YYYY-MM-DD
 1. Add/verify source `.sql` files in `evidence/sources/datalake/` for every mart table referenced.
 2. Copy the blueprint's "Page Body" section into `evidence/pages/<slug>/index.md`.
 3. Add a link from `evidence/pages/index.md`.
-4. `docker compose restart evidence` (rebuild: cp → sources → build → preview).
+4. Request a build: `docker exec evidence bash /app/scripts/build-areas.sh --once` or Dagster `report_site_build_job` (a restart no longer rebuilds; see `evidence/README.md`).
 5. Verify at `http://evidence.lan.fwg.vn/<slug>` (basic_auth; the container has no host port).
 
 ## Limitations vs Metabase (apply to every Evidence blueprint)

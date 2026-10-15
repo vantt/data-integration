@@ -33,7 +33,7 @@ scripts/checks/run-all.sh <worktree>      # or another worktree; the prod checko
 | 3. `dagster definitions validate -f orchestration/definitions.py` | shadow container | the Dagster code location does not load |
 | 4. `pytest ingestion/tests orchestration scripts/tests` | shadow container | a test fails twice (one re-run, printed as `FLAKY` when it passes) |
 | 5. `dbt build --select +tag:taxonomy_selftest --indirect-selection cautious --vars '{taxonomy_selftest: true}'` | shadow container | a unit test of the classification engine macro fails (`models/core/intermediate/taxonomy/selftest/`, [taxonomy-engine.md §4b](../../docs/architecture/taxonomy-engine.md#4b-hiện-thực-mvp)); compiles to a scratch target path, so the manifest of step 1 stays the default one |
-| 6. `check_analytics_registry.py` + `pytest analytics/tests` | prod image, worktree mounted read-only, no network | the registry has an ERROR (WARN lines do not fail) or an analytics test fails |
+| 6. `check_analytics_registry.py` + `pytest analytics/tests evidence/tests` | prod image, worktree mounted read-only, no network | the registry has an ERROR (WARN lines do not fail) or an analytics or report site test fails |
 
 The container steps go through `scripts/shadow/run-shadow.sh` (prod image, `--network none`, no
 secrets, no `SOURCES__*` variables) on an **empty** scratch lake created under `$SHADOW_ROOT`

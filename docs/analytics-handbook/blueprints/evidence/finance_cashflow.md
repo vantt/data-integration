@@ -36,7 +36,7 @@ cards render but show the low-confidence caveat until history lands.
 **Deploy command**
 
 ```bash
-docker compose restart evidence
+docker exec evidence bash /app/scripts/build-areas.sh --once   # or Dagster report_site_build_job
 ```
 
 ## Deviations From the Metabase Blueprint

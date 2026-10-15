@@ -21,6 +21,8 @@ Một chỉ tiêu được định nghĩa **một lần** trong registry; SQL c�
 | `compiler/cards.py` | Biên dịch từng card của spec thành một câu SQL (KPI, nhóm theo chiều/ngày, so kỳ, `inline_sql`) và câu meta |
 | `renderers/docs.py` | Sinh `docs/analytics-handbook/semantic/metric-registry.md` và `glossary.md` |
 | `renderers/evidence.py` | Sinh project Evidence cho từng khu vực quyền: `evidence/areas/<area>/` |
+| `renderers/site.py` | Sinh `evidence/site/Caddyfile` (đăng nhập theo khu vực) |
+| `renderers/message.py` | Dựng tin tóm tắt từ `kpi_tiles` |
 | `tests/` | pytest: schema, validator, golden SQL |
 | `../tenants/<t>/analytics/profile.yml` | Hồ sơ khách: múi giờ, tham số doanh thu ghi tường minh, ràng buộc phân đoạn |
 
@@ -87,6 +89,11 @@ Report đầu tiên: `ceo_weekly_pulse` (`EXE-W`, `engine: evidence`, `area: die
 
 Card dùng chỉ tiêu `cost_sensitive` (hoặc `inline_sql` có `cost_sensitive: true`) không được render vào khu vực `can_view_cost: false`: SQL không được ghi, trang thay bằng "Cần quyền xem chi phí". Viz chưa có component Evidence tương ứng được thay (`gauge` → số + nhãn mức, `donut` → cột ngang, `progress-toward-goal` → số + % mục tiêu). Render hai lần ra byte giống hệt; mọi file có banner GENERATED và hash đầu vào (spec + registry + hồ sơ). Kết quả spike Evidence: `evidence/README.md`.
 
+## Renderer site và tin tóm tắt
+
+- `python3 -m analytics render site [--check]` sinh `evidence/site/Caddyfile` cho container `report_site` từ `access.areas`: mỗi khu vực một đường dẫn `/<area>/` với `basic_auth` riêng (tài khoản từng người trong `app_data/secrets/report_site/<area>.caddy`), khu vực `legacy` ở các đường dẫn gốc, không có `legacy` thì 404.
+- `renderers/message.py`: tin tóm tắt của report = các thẻ `kpi_tiles` (chỉ card một giá trị) biên dịch với `as_of` của bản build, định dạng kiểu Việt Nam, kèm link `access.site_url/<area>/<report>/`; thẻ chi phí bị bỏ với kênh `can_view_cost: false`. Gửi và lịch nằm ở `orchestration/reports/` (kênh, lịch trong `message` của hồ sơ khách).
+
 ## Thời gian: `as_of` và cửa sổ
 
 Mọi SQL nhận `as_of` (ngày tham chiếu, kiểu DATE) ở hai dạng: literal (`--as-of 2026-10-11`, dùng cho so số và test) hoặc biểu thức lúc chạy (`--as-of runtime` → `CAST(timezone('<tz>', now()) AS DATE) - 1`, tức "đến hết hôm qua" theo múi giờ của khách). Ranh giới ngày được chuyển sang `TIMESTAMPTZ` bằng `timezone('<tz>', ...)` với múi giờ trong hồ sơ khách, nên kết quả không phụ thuộc múi giờ phiên DuckDB.
@@ -115,6 +122,7 @@ python3 scripts/checks/check_analytics_registry.py        # validator (cũng ch�
 python3 -m analytics validate [--manifest transformation/target/manifest.json]
 python3 -m analytics compile --metric net_sales --window wtd --as-of 2026-10-11 [--compare prev_week_full]
 python3 -m analytics render evidence [--check]   # sinh lại evidence/areas/<area>/
+python3 -m analytics render site [--check]       # sinh lại evidence/site/Caddyfile
 python3 -m analytics docs           # sinh lại metric-registry.md, glossary.md
 python3 -m analytics docs --check   # exit 1 nếu file sinh ra lệch registry
 ```

@@ -42,6 +42,7 @@ from orchestration.sensors.failure_alerting import health_alert_failure_sensor
 from orchestration.sensors.stuck_run_alerter import health_alert_stuckrun_sensor
 from orchestration.sensors.concurrency_pool_janitor import health_concurrency_pool_janitor
 from orchestration.sensors.health_db_watchdog_sensor import health_db_watchdog_sensor
+from orchestration import reports as report_site
 
 # Load all assets — directory setup runs once at container startup
 # (docker-compose.yml command: `python scripts/ensure_dbt_directories.py && ...`).
@@ -108,6 +109,10 @@ pipeline_batch_nightly_job = define_asset_job(
 
 # 3b. Full Refresh Job — manual trigger only, resets all batch cursors
 # Launch from Dagster UI when data gaps are suspected.
+# Report site (Evidence): build request after the nightly run, build monitoring, summary messages
+# (orchestration/reports/README.md).
+_report_site = report_site.definitions(pipeline_batch_nightly_job)
+
 pipeline_batch_fullrefresh_job = define_asset_job(
     name="pipeline_batch_fullrefresh_job",
     selection=_nightly_batch_selection,
@@ -397,6 +402,8 @@ defs = Definitions(
         maintain_cleanup_job,
         # per pack (crm: crm_backup_job)
         *(j for p in pack_jobs for j in p.JOBS),
+        # report_* (report site build request, summary message)
+        *_report_site["jobs"],
     ],
     schedules=[
         # ingest_* (per connector; add assets to a connector's jobs, not new schedules here)
@@ -426,6 +433,8 @@ defs = Definitions(
         trigger_backup_after_purge,
         # per pack
         *(sen for p in pack_jobs for sen in p.SENSORS),
+        # report_site_* (build after nightly, build status + summary)
+        *_report_site["sensors"],
     ],
     resources={
         "dbt": DbtCliResource(

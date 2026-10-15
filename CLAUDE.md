@@ -27,13 +27,13 @@ Shared skills live in `.skills/` and are available as slash commands via `.claud
 
 | Command | Purpose |
 | --- | --- |
-| `/deploy-evidence-page` | Generate Evidence.dev page(s) from a playbook and rebuild container |
+| `/deploy-evidence-page` | Generate Evidence.dev page(s) from a playbook and request a report site build |
 
 - **Evidence Skill**: `.skills/evidence-automation/SKILL.md`
 - **Evidence Pages**: `evidence/pages/`
 - **Evidence Source Config**: `evidence/sources/datalake/connection.yaml`
-- **Deploy**: `docker compose restart evidence` (rebuilds static site on each restart)
-- **URL**: http://evidence.lan.fwg.vn (Caddy basic_auth; no host port, see `evidence/README.md`)
+- **Deploy**: after the change is live, launch `report_site_build_job` in Dagster (or `docker exec evidence bash /app/scripts/build-areas.sh --once`); a restart no longer rebuilds. Product reports are generated: `python3 -m analytics render evidence`
+- **URL**: https://evidence.lan.fwg.vn (LAN + Tailscale; container `report_site`, one account per person and area via `evidence/site/report-users.sh`, see `evidence/README.md`)
 
 ### Metabase Debugging
 

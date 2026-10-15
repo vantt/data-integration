@@ -13,6 +13,7 @@
 7. [Refactor deploys (shadow-verified)](#refactor-deploys-shadow-verified)
 8. [Classification rule changes (restate)](#classification-rule-changes-restate)
 9. [Metabase: backup and restore](#metabase-backup-and-restore)
+10. [Report site (Evidence)](#report-site-evidence)
 
 ---
 
@@ -858,3 +859,56 @@ blueprint scripts (`.skills/metabase-automation/`).
 
 The nightly timer is generated from `scripts/backup/systemd/*.in` by `scripts/backup/install-units.sh`;
 install and change steps are in [scripts/backup/README.md](../../scripts/backup/README.md#metabase).
+
+## Report site (Evidence)
+
+Static report pages at https://evidence.lan.fwg.vn (LAN and Tailscale only). Three parts
+(`evidence/README.md`):
+
+| Container | Role |
+|---|---|
+| `evidence` | Builder: `evidence/scripts/build-areas.sh` builds every area into `app_data/report_site/<area>/builds/<id>/` and switches `current`; serves nothing, no network to Caddy |
+| `report_site` | Caddy: one path per area, `basic_auth` per area with one account per person (`app_data/secrets/report_site/<area>.caddy`); the only route to the pages |
+| `data_platform` | Dagster `orchestration/reports/`: requests a build after the nightly run, alerts on failure, sends summary messages |
+
+### Build on request
+
+The nightly success writes `app_data/data_lake/report_build/request.json`; the builder builds all
+areas once per request and writes `status.json`. A restart of `evidence` does not rebuild (only an
+area without any build is built at start). Build by hand: launch `report_site_build_job` in Dagster,
+or `docker exec evidence bash /app/scripts/build-areas.sh --once`. Never between 02:30 and 04:00.
+
+### Accounts
+
+Add, change, revoke and list with `evidence/site/report-users.sh add|remove|list <area> <user>`,
+then `evidence/site/report-users.sh reload`. The password is read without echo and only its bcrypt
+hash is stored. Every request is logged with the user name in `docker compose logs report_site`.
+
+### First deploy
+
+1. On the branch: `scripts/checks/run-all.sh` passes; `python3 -m analytics render evidence --check`
+   and `python3 -m analytics render site --check` exit 0.
+2. Create the directories (owner the deploy user, group-writable for the builder, uid 1001 gid 1000):
+   `mkdir -p app_data/report_site app_data/data_lake/report_build app_data/secrets/report_site &&
+   chmod 2775 app_data/report_site app_data/data_lake/report_build && chmod 700 app_data/secrets/report_site`.
+3. The user creates at least one account per area (`report-users.sh add dieu-hanh <user>`,
+   `report-users.sh add legacy <user>`); without them `report_site` does not start (fail-closed).
+4. Deploy the code for `data_platform` with the [refactor runbook](#refactor-deploys-shadow-verified)
+   (stop, fast-forward, start, instigator diff: only `report_site_build_job`, `report_summary_message_job`
+   and their two sensors are new).
+5. `docker compose up -d evidence report_site` (recreate; no image rebuild). The first start of
+   `evidence` builds every area (about 1 minute per area).
+6. Check: `cat app_data/data_lake/report_build/status.json` is ok; `curl -s -o /dev/null -w '%{http_code}'
+   https://evidence.lan.fwg.vn/dieu-hanh/ceo_weekly_pulse` is 401 without login, 401 with an account of
+   another area, 200 with the right one; same for `/ceo-weekly-pulse/` with a `legacy` account;
+   `docker compose restart evidence` logs "current exists ... waiting".
+7. Messages stay dry-run until the Lark group is confirmed: set `LARK_REPORT_LEADERSHIP_WEBHOOK`
+   (and `_SECRET`) and `REPORT_MESSAGE_DRY_RUN=0` in `.env.docker`, then recreate `data_platform`.
+
+### Rollback
+
+Pages: point `app_data/report_site/<area>/current` back to an older build (see `evidence/README.md`).
+Whole change: `docker compose stop report_site && docker compose rm -f report_site`, revert the commits
+(refactor runbook for `data_platform`), `docker compose up -d evidence` with the previous compose (the old
+container builds at start and needs `EVIDENCE_BASIC_AUTH_USER`/`EVIDENCE_BASIC_AUTH_HASH` in `.env`).
+`app_data/report_site/` can stay for comparison.

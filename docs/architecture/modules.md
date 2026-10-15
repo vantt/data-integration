@@ -22,7 +22,7 @@
 | Tenant overlay Fine Japan | ✅ Tối thiểu: US shipment (dbt), `seeds/tenants/fine_japan/`, `orchestration/tenants/fine_japan/config.py` (endpoint CRM); 6 URL Google Sheet chỉ ở biến môi trường `SOURCES__SPREADSHEET_URL__*`, không còn URL mặc định trong code (mục 10) |
 | Khả năng của connector (khai báo / cần / quan sát được) | ✅ Seed `seeds/capabilities/` (`connector_capabilities`, `capability_catalog`), biến `enabled_connectors`, model `monitoring/mart_capabilities` (bảng trong warehouse, chưa lên serving) (mục 5.1, 11b) |
 | Bộ máy phân loại (luật thành dữ liệu) | ⏳ Plan riêng sau Đợt 1 (mục 9) |
-| Analytics (report): registry chỉ tiêu, spec, renderer | ⏳ Plan `261014-2225-report-productization`: ✅ bảng so sánh định nghĩa nhóm Weekly Pulse; ✅ registry tối thiểu (25 chỉ tiêu Weekly Pulse), compiler, validator; ✅ spec v2 + catalog (1 report: CEO Weekly Pulse); ✅ renderer Evidence (khu vực `dieu-hanh`, chưa phục vụ); ⏳ build theo lịch, đăng nhập (mục 13) |
+| Analytics (report): registry chỉ tiêu, spec, renderer | ⏳ Plan `261014-2225-report-productization`: ✅ bảng so sánh định nghĩa nhóm Weekly Pulse; ✅ registry tối thiểu (25 chỉ tiêu Weekly Pulse), compiler, validator; ✅ spec v2 + catalog (1 report: CEO Weekly Pulse); ✅ renderer Evidence (khu vực `dieu-hanh`); ✅ build theo yêu cầu sau nightly, đăng nhập theo khu vực/người, tin tóm tắt (code; chờ deploy) (mục 13) |
 
 Các mục dưới đây mô tả trạng thái đích; chỗ nào đã khớp code được đánh dấu ✅.
 
@@ -749,7 +749,7 @@ flowchart LR
     BS --> OLAP[("serving/olap.duckdb<br/>main.&lt;name&gt; + main_marts.&lt;name&gt;")]
     ROLL --> RP["publish_rill_assets.py<br/>(allowlist 11 bảng)"] --> RILLF["RILL_EXPORT_ROOT/&lt;name&gt;.parquet"] --> RL[Rill]
     OLAP --> MB["Metabase (~50 bảng)"]
-    OLAP --> EV["Evidence (9 bảng)"]
+    OLAP --> EV["Evidence builder (theo yêu cầu sau nightly)"] --> RS["report_site (Caddy, đăng nhập theo khu vực)"]
     OLAP --> DV["detailView"]
     OLAP --> CRMAPP["CRM app"]
     WH[("sapo_warehouse.duckdb<br/>model non-rolling")] -. "cần xác minh cách đọc" .-> CRMAPP
@@ -758,7 +758,8 @@ flowchart LR
 | Người tiêu thụ | Đọc từ | Quyền |
 |---|---|---|
 | Metabase | `serving/olap.duckdb` (`main_marts.*`) | read-only |
-| Evidence | `evidence/sources/datalake/connection.yaml` → serving | read-only |
+| Evidence (builder) | bản sao `serving/olap.duckdb` trong project tạm của từng khu vực; ghi `app_data/report_site/<area>/` và `report_build/status.json`; không build khi restart | read-only với serving |
+| report_site | `app_data/report_site/<area>/current` (`:ro`), tài khoản `app_data/secrets/report_site/` | read-only |
 | Rill | `RILL_EXPORT_ROOT/<name>.parquet` | read-only |
 | detailView | `serving/olap.duckdb` (`read_only=True`) | read-only |
 | CRM | `serving/olap.duckdb` read-only, theo tên relation (`crm/sync/duckdb_reader.py`, `crm/src/adapters/outbound/duckdb/`); gồm model của lõi, `finance`, `sales_playbook`, `hug` và tenant | read-only với warehouse; ghi SQLite riêng |
@@ -802,7 +803,8 @@ flowchart TB
     end
     subgraph OTHER["container khác"]
         MBC[metabase]
-        EVC[evidence]
+        EVC["evidence (builder)"]
+        RSC["report_site (Caddy)"]
         RLC[rill]
         DVC[detail_view]
     end
@@ -814,6 +816,9 @@ flowchart TB
     ORCH -->|"đọc SQLite (writeback)"| CRMDB
     CRMSRC -. "❌ cấm import orchestration/ingestion/transformation" .-x ORCH
     DVC -. "❌ cấm import" .-x ORCH
+    ORCH -->|"import (chỉ đọc)" | ANA["analytics/ (mount :ro)"]
+    ORCH -->|"request.json"| EVC
+    EVC -->|"status.json, builds"| RSC
 ```
 
 | Quy tắc | Cưỡng chế |
@@ -825,6 +830,7 @@ flowchart TB
 | `orchestration/connectors/**` và `orchestration/packs/**` không chứa URL/domain cứng (luật `connector-url`, `pack-url`); giá trị tenant đọc qua `orchestration.tenants.setting()` | `check_boundaries.py` |
 | Connector không import pack; pack không import pack khác (luật `orch-import`, 1 mục allowlist: `sales_playbook` → `crm`) | `check_boundaries.py` (ast) |
 | Giao tiếp CRM ↔ orchestration chỉ qua HTTP và file export | Review + quy tắc import |
+| `orchestration/reports` được import `analytics` (không ngược lại); orchestration ↔ builder Evidence chỉ qua file `report_build/request.json` và `status.json` | `check_boundaries.py` (`analytics` không import orchestration) + review |
 
 ## 13. Analytics (report)
 
@@ -854,7 +860,9 @@ flowchart TB
 | `analytics/specs/<report_id>.yml`, `analytics/catalog/catalog.yml` | Spec v2 (định dạng do `.skills/analytics-design` sở hữu) và catalog report; hiện có `ceo_weekly_pulse` (`EXE-W`, `engine: evidence`, khu vực `dieu-hanh`, `status: pilot`) | người, qua review | validator, renderer |
 | `tenants/fine_japan/analytics/profile.yml` | Múi giờ, tham số doanh thu ghi tường minh, ràng buộc phân đoạn `in_sales_scope`, `tenant_params` (mục tiêu GMV tháng, mẫu link trang chi tiết đơn) | người | compiler (qua `--tenant`), renderer |
 | `docs/analytics-handbook/semantic/metric-registry.md`, `glossary.md` | **Sinh ra** từ registry (`python3 -m analytics docs`) | renderer docs | người |
-| `evidence/areas/<area>/` | **Sinh ra** (`python3 -m analytics render evidence`): mỗi khu vực quyền một project Evidence (`basePath /<area>`), mỗi card một file SQL trích chỉ chứa kết quả card | renderer Evidence | builder Evidence (phase sau); hiện chưa được build hay phục vụ trên prod |
+| `evidence/areas/<area>/` | **Sinh ra** (`python3 -m analytics render evidence`): mỗi khu vực quyền một project Evidence (`basePath /<area>`), mỗi card một file SQL trích chỉ chứa kết quả card | renderer Evidence | builder Evidence (container `evidence`) |
+| `evidence/site/Caddyfile` | **Sinh ra** (`python3 -m analytics render site`): mỗi khu vực một đường dẫn, `basic_auth` riêng nhập từ `app_data/secrets/report_site/<area>.caddy` (mỗi người một tài khoản, `evidence/site/report-users.sh`) | renderer site | `report_site` |
+| `orchestration/reports/` | Yêu cầu build sau nightly, theo dõi build, tin tóm tắt (thẻ `kpi_tiles` + link; kênh và lịch trong `message` của hồ sơ khách) | Dagster | — |
 
 Phụ thuộc cho phép: `analytics/` → `pyyaml`, `jsonschema` (có sẵn trên host và trong image `data_platform`, không thêm phụ thuộc); đọc `manifest.json` của dbt (chỉ đọc, để kiểm cột). Kiểm trước commit: bước 5 của `scripts/checks/run-all.sh` chạy `scripts/checks/check_analytics_registry.py` và `pytest analytics/tests` trong image prod, worktree mount chỉ đọc, không mạng.
 
@@ -864,3 +872,4 @@ Phụ thuộc cho phép: `analytics/` → `pyyaml`, `jsonschema` (có sẵn trê
 
 **Bước 0: so sánh định nghĩa (đã làm cho nhóm Weekly Pulse).** Trước khi viết registry, mỗi chỉ tiêu được đối chiếu ở ba nguồn trên cột mart thật; mỗi chỗ lệch được đo số mẫu trên bản chụp chỉ đọc của `serving/olap.duckdb` (kỳ đã đóng: tuần và tháng gần nhất) và ghi thành một quyết định riêng chờ user, không ai tự chọn. Kết quả: `plans/261014-2225-report-productization/definitions-comparison.md` (bảng so sánh, ánh xạ 30 question của blueprint CEO Weekly Pulse; dashboard đang chạy có 28) và `definition-decisions.md` (17 quyết định, mỗi chỗ lệch một dòng). Cho tới khi user chốt, registry tái tạo đúng dashboard đang chạy (SQL trùng blueprint, đã chụp chỉ đọc 15/10/2026); quyết định đổi số chỉ áp sau thí điểm, qua gate S.
 
+**Report site (phục vụ, đăng nhập, tin tóm tắt).** Luồng: nightly thành công → `report_site_build_after_nightly_sensor` ghi `app_data/data_lake/report_build/request.json` → container `evidence` (builder, không phục vụ HTTP) build tuần tự từng khu vực vào `app_data/report_site/<area>/builds/<id>/`, đổi symlink `current` nguyên tử, giữ 3 bản, ghi `status.json` → `report_site` (Caddy) phục vụ `/<area>/*` sau `basic_auth` của khu vực; khu vực `legacy` (trang viết tay) ở các đường dẫn gốc → `report_site_build_status_sensor` cảnh báo khi lỗi/trễ và chạy `report_summary_message_job` khi tin đến hạn. Truy cập chỉ LAN + Tailscale; không container nào mở cổng host. Thiếu file tài khoản thì Caddy không khởi động, file rỗng thì mọi yêu cầu 401 (fail-closed). Runbook: `docs/operations/deployment.md` "Report site (Evidence)".

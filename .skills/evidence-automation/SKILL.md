@@ -7,7 +7,7 @@ description: Generate and deploy Evidence.dev dashboard pages from Design Specs 
 
 > **Location**: `.skills/evidence-automation/` — Evidence.dev page generator.
 > Input: Design Spec (Phase 0-6 output) or Playbook. Output: Evidence `.md` page files in `evidence/pages/`.
-> Deploy: `docker compose restart evidence` (CMD = cp → sources → build → preview on every restart).
+> Deploy: request a build (Dagster `report_site_build_job`, or `docker exec evidence bash /app/scripts/build-areas.sh --once`); a container restart no longer rebuilds. Served by `report_site` behind per-area login (`evidence/README.md`).
 
 ## Product reports are generated, not hand-written
 
@@ -31,22 +31,22 @@ Evidence has **two separate DuckDB contexts**. Confusing them causes silent quer
 ```
 olap.duckdb (container mount at /app/var/data_lake/serving/)
   │
-  └── cp → /app/sources/datalake/olap-serving.duckdb      [CMD step 1]
+  └── cp → <scratch project>/sources/datalake/olap-serving.duckdb  [builder step 1]
               │
-              └── npm run sources                          [CMD step 2]
+              └── evidence sources                         [builder step 2]
                     ↓
                   Node.js @duckdb/node-api connector
                   runs each .sql file in sources/datalake/
                   writes results as parquet → static/data/main_marts/
                     │
-                    └── npm run build                      [CMD step 3]
+                    └── evidence build                     [builder step 3]
                           ↓
                         WASM DuckDB (@duckdb/duckdb-wasm)
                         loads parquets → creates views main_marts.*
                         prerenders all page SQL inline queries
                           │
-                          └── npm run preview              [CMD step 4]
-                                serves static build on port 3000
+                          └── switch app_data/report_site/<area>/current  [builder step 4]
+                                served by container report_site (Caddy, per-area login)
 ```
 
 **Key constraint:** Page inline SQL (`\`\`\`sql block\`\`\``) runs against WASM DuckDB, which only knows tables from precomputed parquets — NOT from `olap-serving.duckdb` directly.
@@ -206,17 +206,14 @@ Evidence uses the `ssf` package (SpreadSheet Formatter). Use Excel format string
 ## Deploy Commands
 
 ```bash
-# First deploy (build image):
-docker compose up -d --build evidence
+# After editing pages or SQL source files (a restart does NOT rebuild):
+docker exec evidence bash /app/scripts/build-areas.sh --once   # or Dagster job report_site_build_job
 
-# After editing pages or SQL source files (triggers full rebuild):
-docker compose restart evidence
+# State of the last build, per area:
+cat app_data/data_lake/report_build/status.json
 
-# View logs:
-docker compose logs -f evidence
-
-# Check sources manifest (verify parquets were generated):
-docker exec evidence cat /app/.evidence/template/static/data/manifest.json
+# Builder log:
+docker compose logs --tail 50 evidence
 ```
 
 **Build time estimate:** ~2-3 min (sources step: ~15s per mart table, build: ~60-90s).
@@ -226,7 +223,7 @@ docker exec evidence cat /app/.evidence/template/static/data/manifest.json
 1. Identify which mart tables are needed
 2. Check `sources/datalake/` — add `.sql` files for any missing tables
 3. Create `evidence/pages/<dashboard-slug>/index.md` (and additional tab pages)
-4. `docker compose restart evidence`
+4. Request a build: `docker exec evidence bash /app/scripts/build-areas.sh --once` (or Dagster `report_site_build_job`)
 
 ## Existing Dashboards
 

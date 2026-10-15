@@ -10,6 +10,7 @@ from .compiler.loader import RegistryError, load_profile, load_registry, profile
 from .compiler.sql import AsOf, CompileError, compile_kpi
 from .compiler.loader import CATALOG_FILE, load_catalog
 from .renderers import evidence as evidence_renderer
+from .renderers import site as site_renderer
 from .renderers.docs import render_all
 
 DOCS_DIR = validate_mod.DEFAULT_DOCS_DIR
@@ -46,10 +47,18 @@ def cmd_docs(args: argparse.Namespace) -> int:
 
 
 def cmd_render(args: argparse.Namespace) -> int:
-    if args.engine != "evidence":
-        print(f"error: renderer '{args.engine}' does not exist yet", file=sys.stderr)
-        return 2
     path = args.profile if args.profile else profile_path(args.tenant)
+    if args.engine == "site":
+        content = site_renderer.render_caddyfile(load_profile(path))
+        if args.check:
+            current = site_renderer.OUT_FILE.read_text(encoding="utf-8") if site_renderer.OUT_FILE.exists() else None
+            if current != content:
+                print("out of date: evidence/site/Caddyfile (run `python3 -m analytics render site`)")
+                return 1
+            return 0
+        if site_renderer.write(content):
+            print("wrote evidence/site/Caddyfile")
+        return 0
     rendered = evidence_renderer.render_tenant(load_registry(), load_profile(path), path,
                                                load_catalog(CATALOG_FILE), CATALOG_FILE)
     if args.check:
@@ -76,7 +85,7 @@ def main(argv: list[str] | None = None) -> int:
     g.add_argument("--tenant", default="fine_japan", help="tenant id (default: %(default)s)")
     g.add_argument("--profile", type=Path, help="explicit profile path")
     r = sub.add_parser("render", help="generate report files for an engine (evidence/areas/<area>/)")
-    r.add_argument("engine", choices=["evidence"])
+    r.add_argument("engine", choices=["evidence", "site"], help="evidence: area projects; site: report_site Caddyfile")
     rg = r.add_mutually_exclusive_group()
     rg.add_argument("--tenant", default="fine_japan", help="tenant id (default: %(default)s)")
     rg.add_argument("--profile", type=Path, help="explicit profile path")

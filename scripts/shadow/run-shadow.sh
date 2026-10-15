@@ -38,6 +38,10 @@ code_mounts=()
 for d in transformation ingestion orchestration scripts webhook_consumer; do
   [ -d "$CODE_DIR/$d" ] && code_mounts+=(-v "$CODE_DIR/$d:/app/$d")
 done
+# Read by orchestration/reports (report summaries); read-only in compose too.
+for d in analytics tenants; do
+  [ -d "$CODE_DIR/$d" ] && code_mounts+=(-v "$CODE_DIR/$d:/app/$d:ro")
+done
 
 # Explicit env allowlist. Values are the non-secret path settings from
 # .env.docker.example and the compose `environment:` block; .env.docker is never read.

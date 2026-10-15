@@ -1,12 +1,24 @@
 # Evidence (static report pages)
 
-Evidence builds the static report pages served at http://evidence.lan.fwg.vn, behind Caddy
-basic_auth. The container has no host port: the pages bundle customer data and order economics.
-Pages live in `pages/`, SQL sources in `sources/datalake/`, and the image is defined by
-`Dockerfile.evidence` at the repository root. The container copies
-`app_data/data_lake/serving/olap.duckdb` into `sources/datalake/`, runs `evidence sources` and
-`evidence build`, then serves the static build. `docker compose restart evidence` rebuilds the
-site from the current serving database; it does not reinstall packages.
+The report site https://evidence.lan.fwg.vn is a set of static Evidence builds, one per
+**permission area**, served by the container `report_site` (Caddy) behind a login per area and per
+person. It is reachable on the LAN and through Tailscale only, never from the Internet; no
+container publishes a host port.
+
+- **Builder** — container `evidence` (image `Dockerfile.evidence`) runs
+  [`scripts/build-areas.sh`](scripts/build-areas.sh). It serves nothing. It builds every area into
+  `app_data/report_site/<area>/builds/<id>/` and switches the symlink `current` atomically; it builds
+  once per request that Dagster writes after the nightly run, and at start only areas without a
+  build: **`docker compose restart evidence` no longer rebuilds**.
+- **Areas** — generated projects in `areas/<area>/` (product reports, `python3 -m analytics render
+  evidence`), plus the `legacy` area: the hand-written `pages/` and `sources/` of this folder,
+  served at the root paths (`/`, `/ceo-weekly-pulse/`, `/finance-cashflow/`).
+- **Serving and login** — container `report_site` with the generated [`site/Caddyfile`](site/Caddyfile)
+  (`python3 -m analytics render site`); accounts in `app_data/secrets/report_site/<area>.caddy`,
+  managed with [`site/report-users.sh`](site/report-users.sh).
+
+Runbook: [Report site](#report-site) below and `docs/operations/deployment.md` ("Report site
+(Evidence)").
 
 ## Memory
 
@@ -16,24 +28,15 @@ host swap was full.
 
 ## Access
 
-The only way in is the Caddy route `evidence.lan.fwg.vn` (container `caddy-global`), which asks for
-a user name and password (`basic_auth`). The credentials are compose variables in the root `.env`
-(not `.env.docker`, which only reaches the container): `EVIDENCE_BASIC_AUTH_USER` and
-`EVIDENCE_BASIC_AUTH_HASH` (bcrypt). `docker compose` refuses to start any service while either is
-missing, so a route without auth never reaches `caddy-global`.
+One account per person and per area (Caddy `basic_auth`, bcrypt). A person who may see two areas has
+an account line in both area files. Every request is logged by `report_site` with the user name
+(`user_id` in its JSON access log), so you can see who opened what.
 
-Set or change the password without it appearing on screen or in shell history:
-
-```bash
-read -rs -p 'Evidence password: ' P; echo
-H=$(printf '%s\n' "$P" | docker exec -i caddy-global caddy hash-password); unset P
-sed -i '/^EVIDENCE_BASIC_AUTH_/d' .env
-printf "EVIDENCE_BASIC_AUTH_USER=%s\nEVIDENCE_BASIC_AUTH_HASH='%s'\n" "<user name>" "$H" >> .env; unset H
-docker compose up -d evidence    # recreate the container so caddy-global reads the new labels
-```
-
-Check: `curl -s -o /dev/null -w '%{http_code}' https://evidence.lan.fwg.vn/` answers 401 without
-credentials.
+Fail-closed: the Caddyfile imports `/etc/caddy/users/<area>.caddy` for every area. A missing file
+stops Caddy (caddy-global then answers 502); an empty file (last account removed) answers 401 to
+everyone. Nothing is ever served without login. (Until the report site is deployed, the old single
+account from `EVIDENCE_BASIC_AUTH_USER`/`EVIDENCE_BASIC_AUTH_HASH` protects the old container; those
+variables are no longer used afterwards.)
 
 ## Areas and generated pages
 
@@ -55,8 +58,40 @@ drift from the spec, registry or profile. A card that shows cost, margin or prof
 its SQL not written) in an area with `can_view_cost: false`; the page shows "Cần quyền xem chi phí".
 
 The hand-written pages in `pages/` (`index`, `ceo-weekly-pulse`, `finance-cashflow`, `theme-mvp`) form the
-`legacy` area: unchanged, still built by the container command below until the scheduled builder
-(next step of the report plan) replaces it. Nothing serves `areas/` yet.
+`legacy` area: their content is unchanged; the builder builds them like any area (without base
+path) and `report_site` serves them at the root paths behind the `legacy` accounts.
+
+## Report site
+
+### Accounts (one per person)
+
+Run in a terminal on the server, from the repository root. The password is typed twice without
+echo, hashed by `caddy hash-password` and only the hash is stored (file mode 600, directory 700);
+nothing is printed or written to the shell history.
+
+```bash
+evidence/site/report-users.sh add <area> <user>      # create or change a password
+evidence/site/report-users.sh remove <area> <user>   # revoke
+evidence/site/report-users.sh list                   # who has access to which area (names only)
+evidence/site/report-users.sh reload                 # apply: caddy reload in report_site
+```
+
+Areas are the paths of `site/Caddyfile` (today `dieu-hanh` and `legacy`). User names are lower case
+`[a-z0-9._-]`, passwords at least 12 characters.
+
+### Builds
+
+| Task | Command |
+|---|---|
+| State of the last build | `cat app_data/data_lake/report_build/status.json` (per area: ok, build id, duration, error) |
+| Builder log | `docker compose logs --tail 50 evidence` |
+| Build now (after a page or spec change is deployed) | launch `report_site_build_job` in Dagster, or `docker exec evidence bash /app/scripts/build-areas.sh --once` |
+| Roll an area back to the previous build | `ls app_data/report_site/<area>/builds/`, then `ln -sfn builds/<older id> app_data/report_site/<area>/current.new && mv -Tf app_data/report_site/<area>/current.new app_data/report_site/<area>/current` (3 builds are kept) |
+| Add an area | add it to `access.areas` in the tenant profile, `python3 -m analytics render evidence` and `render site`, create its account file, deploy, `report-users.sh reload` |
+
+A failed area keeps its previous build and Dagster alerts on the Lark alert channel; a build not
+finished 2 hours after the request is alerted too. Do not start builds between 02:30 and 04:00 (nightly
+window): a build needs about 3.5 GiB.
 
 ## Spike results (14/10/2026, test container, Evidence 40.1.8)
 
@@ -72,9 +107,9 @@ removed afterwards.
 | S4 | Time and memory | Area `dieu-hanh` (CEO Weekly Pulse): sources 9 s, build 44 s, 25 extracts = **12.6 KB** (legacy build: 9 whole-table extracts ≈ 1.1 MB, `fact_orders` and `dim_customers` included). Peak memory of `evidence build` ≈ 3.5–3.7 GiB for both legacy and the small area (the Vite build, not the data): with `--memory 2g` and no swap the build is **OOM-killed** (2/2 legacy, 1/1 area) |
 | S5 | Future of Evidence | npm `@evidence-dev/evidence` latest = 40.1.8 (published 2026-02-06), no release since; `@evidence-dev/duckdb` 2.0.1 same day; docs still document a local DuckDB file source. Whether a newer Evidence product reads a local DuckDB file could not be verified. Decision: stay on the pinned 40.1.8 until there is a reason to move; spec v2 is engine-independent, so a new engine needs only a new renderer |
 
-Consequences for the scheduled builder: build each area sequentially with a timeout; give the build
-≥ 4 GiB (or verify swap); `npx serve` used by the current container command is not in the locked
-`node_modules` (it is fetched at start), so serving should move to Caddy `file_server`.
+Consequences, now applied: the builder builds areas sequentially with a timeout (`AREA_TIMEOUT`,
+default 1200 s) in a container with 4 GiB, and `report_site` serves the builds with Caddy
+`file_server` (the `serve` package is no longer used at run time).
 
 ## Why the versions are pinned
 

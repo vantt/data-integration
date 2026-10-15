@@ -18,14 +18,19 @@ Read `.skills/evidence-automation/SKILL.md` for full syntax reference, SQL rules
    - Schema-qualify all tables: `main_marts.fact_orders`, etc.
    - Use `scope_sales AND is_active_order` filters from `fact_orders`
    - Combine WoW KPIs into one query per time window
-5. **Rebuild the container**:
+5. **Product reports are not hand-written**: a report in `analytics/catalog/catalog.yml` with
+   `engine: evidence` is a spec (`analytics/specs/`), rendered with `python3 -m analytics render evidence`.
+   Hand-written pages (this command) are legacy pages in `evidence/pages/` (area `legacy`).
+6. **Request a build** once the change is live (a container restart does not rebuild):
+   launch `report_site_build_job` in Dagster, or
    ```bash
-   docker compose restart evidence
+   docker exec evidence bash /app/scripts/build-areas.sh --once
    ```
-6. **Verify at** http://evidence.lan.fwg.vn (or http://localhost:3006)
-7. **Check logs if build fails**:
+7. **Verify** at https://evidence.lan.fwg.vn (login with a `legacy` account; no host port) and
+   `cat app_data/data_lake/report_build/status.json`
+8. **Check logs if the build fails**:
    ```bash
-   docker compose logs evidence
+   docker compose logs --tail 50 evidence
    ```
 
 ## Dashboard URL Pattern
