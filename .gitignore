@@ -42,6 +42,8 @@ _tmp_*.sh
 check_*.py
 !scripts/checks/check_boundaries.py
 !scripts/checks/check_taxonomy_inventory.py
+!scripts/checks/check_taxonomy_rules.py
+!scripts/checks/check_analytics_registry.py
 
 # Rill temp artifacts
 rill/tmp/
