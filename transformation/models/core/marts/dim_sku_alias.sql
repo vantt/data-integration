@@ -133,7 +133,7 @@ manual_aliases AS (
         CAST(misa_qty_multiplier AS INTEGER)                        AS misa_qty_multiplier,
         'MANUAL_OVERRIDE'                                           AS alias_source,
         notes
-    FROM {{ ref('seed_sku_alias_manual') }}
+    FROM {{ tenant_ref('seed_sku_alias_manual') }}
 ),
 
 -- ---------------------------------------------------------------------------

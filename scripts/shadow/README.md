@@ -124,7 +124,7 @@ compare with lake-A. Only the build result decides the step; the printed differe
 reviewed by hand against this list. A table outside it must be explained before the phase is
 accepted.
 
-Expected differences (Fine Japan data, 14/10/2026; 140 models and seeds built, 347 tests pass):
+Expected differences (`{enabled_packs: [], tenant: ""}`, Fine Japan data, 15/10/2026; 143 models and seeds built, 347 tests pass):
 
 | Table | Expected difference | Why |
 |---|---|---|
@@ -133,8 +133,10 @@ Expected differences (Fine Japan data, 14/10/2026; 140 models and seeds built, 3
 | `dim_customers` | the 10 columns read from finance NULL | `pack_ref('finance', 'int_customer_economics')`, no COALESCE when off |
 | `mart_customer_tier` | `lifetime_contribution_margin` NULL | passes through `dim_customers` |
 | `dim_staff` | `crm_user_id` NULL | `pack_ref('crm', 'stg_crm__app_user')` |
-| `dim_sku_alias` | fewer rows (174 → 137): no automatic VTS → VCS alias | `INNER JOIN` on MISA product codes of finance |
-| `dim_products` | `misa_join_key` | reads `dim_sku_alias` |
+| `dim_sku_alias` | fewer rows (174 → 120): only `AUTO_PACKSIZE` aliases left | no automatic VTS → VCS alias (`INNER JOIN` on MISA codes of finance) and no manual alias (`tenant_ref('seed_sku_alias_manual')` reads the empty default) |
+| `dim_products` | `misa_join_key`, `misa_qty_multiplier` | reads `dim_sku_alias` |
+| `dim_channel_targets` | 108 → 1 row (one all-NULL row) | `tenant_ref('seed_channel_targets')` reads the empty default; dbt-duckdb writes an empty `external` model as a parquet file with one all-NULL row to keep the schema (the warehouse view filters it, golden and serving read the file) |
+| `int_customer_sku_supply_tracking` | 6 815 → 0 rows | `tenant_ref('seed_sku_regimen_config')` reads the empty default |
 | `mart_data_quality` | `total_orders` 0, `cogs_rate_pct`, `platform_fees_rate_pct` NULL | `pack_ref('finance', 'fact_order_economics')` |
 | `mart_product_health` | `realized_margin_pct`, `margin_outlier` NULL, `has_margin_data` false, `health_class` NULL for SKUs with sales | margin columns through `pack_ref('finance', 'mart_sku_economics_monthly')` |
 | `mart_product_action_queue` | `health_class`, `has_margin_data`, `realized_margin_pct` | reads `mart_product_health` |
@@ -142,7 +144,6 @@ Expected differences (Fine Japan data, 14/10/2026; 140 models and seeds built, 3
 
 Row counts that must stay equal to lake-A (velocity is core): `int_product_velocity_trend`,
 `mart_product_health`, `mart_product_action_queue`, `mart_inventory_health`.
-`int_customer_sku_supply_tracking` reads `dim_sku_alias` but showed no difference on this data.
 
 ## Facts established while building this (2026-10-13)
 

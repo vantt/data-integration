@@ -9,7 +9,7 @@
 -- metric_type enum: 'NET_REVENUE' (VND), 'NET_MARGIN_PCT' (%), 'ORDER_COUNT' (count).
 
 WITH seed AS (
-    SELECT * FROM {{ ref('seed_channel_targets') }}
+    SELECT * FROM {{ tenant_ref('seed_channel_targets') }}
 ),
 
 dim_channel AS (

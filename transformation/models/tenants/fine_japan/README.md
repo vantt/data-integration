@@ -18,6 +18,8 @@ Bảng giá được sensor `ingest_sheets_modified_sensor` theo dõi (URL ở [
 
 `transformation/seeds/tenants/fine_japan/` chứa dữ liệu doanh nghiệp mà pack và lõi dùng: `seed_action_scenario_registry` (pack `sales_playbook`), `seed_cashflow_budget`, `seed_cash_allocation_policy` (pack `finance`, do job Google Sheet ghi qua `seed_path`), `seed_channel_targets`, `seed_sku_alias_manual`, `seed_sku_regimen_config` (lõi). `+column_types` của `seed_action_scenario_registry` nằm dưới khoá `tenants: fine_japan:` trong `dbt_project.yml`.
 
+Ba seed lõi đọc (`seed_channel_targets`, `seed_sku_alias_manual`, `seed_sku_regimen_config`) là **bản ghi đè của Fine Japan** cho seed mặc định rỗng của lõi ở [`transformation/seeds/defaults/`](../../../seeds/defaults/README.md). Lõi đọc chúng qua `tenant_ref('<seed>')`: biến dbt `tenant: fine_japan` (`dbt_project.yml`, khớp `tenants:` trong `orchestration/config/modules.yaml`) chọn bản Fine Japan; không có tenant thì lõi đọc bản mặc định 0 dòng. Tiêu đề ba file này phải trùng từng cột với bản mặc định (`check_boundaries.py`, luật `tenant-seed-contract`): thêm hay đổi cột thì sửa cả hai và `+column_types` của bản mặc định. Thiết kế: [docs/architecture/modules.md](../../../../docs/architecture/modules.md) mục 10.
+
 ## Hook (lõi phụ thuộc tenant)
 
 - `mart_data_quality` → `fact_us_shipment_economics`: cạnh `ref`, ghi trong `scripts/checks/boundary_allowlist.yaml`.

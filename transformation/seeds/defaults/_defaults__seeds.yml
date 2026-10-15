@@ -1,0 +1,89 @@
+version: 2
+
+# Core defaults of the tenant seeds core reads through tenant_ref (macros/tenants/tenant_ref.sql).
+# Header only (0 rows); types in dbt_project.yml `seeds: sapo_warehouse: defaults:`. A tenant
+# overrides each with seeds/tenants/<tenant>/<seed>.csv (same columns, same order). README.md.
+seeds:
+  - name: seed_channel_targets__default
+    description: >
+      Core default (empty) of the tenant seed seed_channel_targets: monthly targets per sales
+      channel and metric. Read by dim_channel_targets through tenant_ref; with no tenant the
+      dimension is empty.
+    columns:
+      - name: channel_name
+        data_type: varchar
+        description: "Sales channel name (dim_channels.channel_name)."
+      - name: period_month
+        data_type: date
+        description: "Month-start date of the target period."
+      - name: metric_type
+        data_type: varchar
+        description: "NET_REVENUE (VND), NET_MARGIN_PCT (%) or ORDER_COUNT."
+      - name: target_value
+        data_type: double
+        description: "Target value in the unit of metric_type."
+      - name: target_source
+        data_type: varchar
+        description: "Where the target comes from (e.g. budget sheet)."
+      - name: notes
+        data_type: varchar
+        description: "Free text."
+
+  - name: seed_sku_regimen_config__default
+    description: >
+      Core default (empty) of the tenant seed seed_sku_regimen_config: supply/reminder settings per
+      consumable SKU. Read by int_customer_sku_supply_tracking through tenant_ref; with no tenant no
+      SKU is tracked.
+    columns:
+      - name: sku
+        data_type: varchar
+        description: "Sapo SKU."
+      - name: product_group
+        data_type: varchar
+        description: "Product group of the SKU."
+      - name: display_name
+        data_type: varchar
+        description: "Name shown in reminders."
+      - name: supply_days_per_unit
+        data_type: integer
+        description: "Days one unit lasts at the standard dose."
+      - name: dose_reduction_buffer
+        data_type: double
+        description: "Multiplier on supply days (> 1: customers use slower than standard)."
+      - name: remind_lead_days
+        data_type: integer
+        description: "Days before estimated depletion to remind the customer."
+      - name: journey_enabled
+        data_type: boolean
+        description: "Whether the reminder journey runs for this SKU."
+
+  - name: seed_sku_alias_manual__default
+    description: >
+      Core default (empty) of the tenant seed seed_sku_alias_manual: manual Sapo pack SKU -> base
+      SKU / MISA aliases. Read by dim_sku_alias through tenant_ref; with no tenant only automatic
+      aliases remain.
+    columns:
+      - name: sapo_pack_sku
+        data_type: varchar
+        description: "Sapo SKU of the pack variant."
+      - name: sapo_pack_unit
+        data_type: varchar
+        description: "Unit of the pack variant."
+      - name: sapo_base_sku
+        data_type: varchar
+        description: "Sapo SKU of the base product."
+      - name: sapo_base_unit
+        data_type: varchar
+        description: "Unit of the base product."
+      - name: units_per_pack
+        data_type: integer
+        description: "Base units in one pack."
+      - name: misa_join_key
+        data_type: varchar
+        description: "MISA product code used for COGS lookup."
+      - name: misa_qty_multiplier
+        data_type: integer
+        description: "MISA units per Sapo unit (1 when MISA records in the pack unit)."
+      - name: notes
+        data_type: varchar
+        description: "Free text."

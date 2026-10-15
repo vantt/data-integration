@@ -21,9 +21,15 @@ Rules (design: docs/architecture/modules.md §2b, §3 and §12):
                   Other core -> packs and core -> tenants edges are hooks: allowlist only.
   dbt-source      only connector:* and tenant:* models read dbt sources.
   dbt-seed        a tenant seed (transformation/seeds/tenants/<t>/) is business data: only
-                  packs, monitoring and tenant:<t> itself may ref it; core, cdm and connectors
-                  may not (exit: an empty seed with the same columns in core, overridden by the
-                  tenant, together with pack_ref after Đợt 1).
+                  packs, monitoring and tenant:<t> itself may ref it; core only through
+                  tenant_ref('<seed>') (raw SQL calls it literally, no direct ref('<seed>'));
+                  cdm and connectors may not.
+  tenant-seed-contract
+                  every seed core reads through tenant_ref('<seed>') has a core default
+                  transformation/seeds/defaults/<seed>__default.csv whose header equals the
+                  enabled tenant's seeds/tenants/<tenant>/<seed>.csv header, and a
+                  `+column_types` entry for each of its columns in dbt_project.yml
+                  (seeds: sapo_warehouse: defaults: <seed>__default:).
   seed-duplicate  no two seed CSVs under transformation/seeds/ share a basename (dbt would
                   fail to parse and the container would not start).
   connector-url   no hard-coded http(s) URL in orchestration/connectors/**, and no domain
@@ -34,8 +40,9 @@ Rules (design: docs/architecture/modules.md §2b, §3 and §12):
                   orchestration/config/modules.yaml == `vars.enabled_packs` in
                   transformation/dbt_project.yml; every folder under transformation/models/packs/
                   has `+enabled` with exactly that default list; pack_ids() in
-                  transformation/macros/packs/pack_enabled.sql lists the pack folders. Never
-                  allowlisted; the check prints the block to paste.
+                  transformation/macros/packs/pack_enabled.sql lists the pack folders;
+                  `tenants:` in modules.yaml has at most one id and equals `vars.tenant` ("" for
+                  none). Never allowlisted; the check prints the block to paste.
 
 Disabled models (dbt `config.enabled = false`, e.g. a pack turned off) still need a bucket and
 the right folder, but their dependencies are not checked: dbt does not resolve them. Run the check
@@ -74,6 +81,7 @@ MODULES_FILE = os.path.join(ROOT, "orchestration", "config", "modules.yaml")
 DBT_PROJECT_FILE = os.path.join(ROOT, "transformation", "dbt_project.yml")
 PACK_MODELS_DIR = os.path.join(ROOT, "transformation", "models", "packs")
 PACK_MACROS_DIR = os.path.join(ROOT, "transformation", "macros", "packs")
+SEEDS_DIR = os.path.join(ROOT, "transformation", "seeds")
 
 PY_RULES = [
     ("crm", {"orchestration", "ingestion", "transformation"}),
@@ -195,6 +203,8 @@ TENANT_SEED_RE = re.compile(r"^seeds/tenants/([^/]+)/")
 PACK_REF_RE = re.compile(r"""pack_ref\(\s*(['"])(\w+)\1\s*,\s*(['"])(\w+)\3""")
 # ref('<model>' not preceded by a word character, so pack_ref( does not count.
 DIRECT_REF_RE = re.compile(r"""(?<!\w)ref\(\s*['"](\w+)['"]""")
+# tenant_ref('<seed>') — the one accepted spelling.
+TENANT_REF_RE = re.compile(r"""tenant_ref\(\s*(['"])(\w+)\1\s*\)""")
 # An entry of pack_contracts(): '<model>': {'pack': '<pack>'
 CONTRACT_RE = re.compile(r"""['"](\w+)['"]\s*:\s*\{\s*['"]pack['"]\s*:\s*['"](\w+)['"]""")
 
@@ -219,6 +229,48 @@ def _seed_reader_allowed(src_bucket: str, tenant: str) -> bool:
     """Packs consume tenant data by design; core, cdm and connectors must not depend on it."""
     return (src_bucket.startswith("pack:") or src_bucket == "monitoring"
             or src_bucket == f"tenant:{tenant}")
+
+
+def _tenant_ref_allowed(raw_code: str, seed: str) -> bool:
+    """Core reads a tenant seed only through tenant_ref('<seed>') and never through ref('<seed>')."""
+    calls = {m.group(2) for m in TENANT_REF_RE.finditer(raw_code or "")}
+    return seed in calls and seed not in set(DIRECT_REF_RE.findall(raw_code or ""))
+
+
+def _csv_header(path: str) -> list[str] | None:
+    if not os.path.exists(path):
+        return None
+    with open(path, encoding="utf-8") as fh:
+        return [c.strip() for c in fh.readline().strip().split(",")]
+
+
+def tenant_seed_contract_violations(manifest: dict) -> list[tuple[str, str, str]]:
+    """Each seed read through tenant_ref has a typed core default with the tenant seed's header."""
+    out = []
+    seeds = set()
+    for n in manifest["nodes"].values():
+        if n["resource_type"] == "model" and _enabled(n):
+            seeds |= {m.group(2) for m in TENANT_REF_RE.finditer(n.get("raw_code") or "")}
+    tenants = (yaml.safe_load(open(MODULES_FILE)) or {}).get("tenants") or []
+    project = yaml.safe_load(open(DBT_PROJECT_FILE)) or {}
+    defaults_cfg = (((project.get("seeds") or {}).get(project.get("name", ""), {}) or {}).get("defaults") or {})
+    for seed in sorted(seeds):
+        default = _csv_header(os.path.join(SEEDS_DIR, "defaults", f"{seed}__default.csv"))
+        if default is None:
+            out.append(("tenant-seed-contract", seed, f"no seeds/defaults/{seed}__default.csv"))
+            continue
+        types = ((defaults_cfg.get(f"{seed}__default") or {}).get("+column_types") or {})
+        untyped = [c for c in default if c not in types]
+        if untyped or set(types) - set(default):
+            out.append(("tenant-seed-contract", f"{seed}__default",
+                        f"+column_types {sorted(types)} != header {default} (every column needs a type)"))
+        for t in tenants:
+            header = _csv_header(os.path.join(SEEDS_DIR, "tenants", t, f"{seed}.csv"))
+            if header is None:
+                out.append(("tenant-seed-contract", seed, f"tenant {t} has no seeds/tenants/{t}/{seed}.csv"))
+            elif header != default:
+                out.append(("tenant-seed-contract", seed, f"tenant {t} header {header} != default {default}"))
+    return out
 
 
 def _enabled(node: dict) -> bool:
@@ -266,6 +318,8 @@ def dbt_violations(manifest: dict, spec: dict, contracts: dict[str, str] | None 
                     continue
                 if dst_b and not _allowed(src_b, dst_b, pack_connectors):
                     out.append(("dbt-ref", name, f"{dep_name} [{src_b} -> {dst_b}]"))
+            elif dep in tenant_seeds and src_b == "core" and _tenant_ref_allowed(n.get("raw_code", ""), dep_name):
+                continue
             elif dep in tenant_seeds and not _seed_reader_allowed(src_b, tenant_seeds[dep]):
                 out.append(("dbt-seed", name, f"{dep_name} [{src_b} -> tenant:{tenant_seeds[dep]}]"))
     return out
@@ -280,13 +334,14 @@ def _yaml_list(ids: list[str]) -> str:
     return "[" + ", ".join(ids) + "]"
 
 
-def expected_pack_config(modules_packs: list[str], folders: list[str]) -> str:
+def expected_pack_config(modules_packs: list[str], folders: list[str], tenant: str = "") -> str:
     """The dbt side of the pack switch for `modules_packs`, ready to paste."""
     default = repr(list(modules_packs))
     lines = ["# transformation/dbt_project.yml, under models: sapo_warehouse: packs: <pack>:"]
     lines += [f"      {p}:\n        +enabled: \"{ENABLED_TEMPLATE.format(pack=p, default=default)}\"" for p in folders]
     lines += ["# transformation/dbt_project.yml, under vars:",
               f"  enabled_packs: {_yaml_list(modules_packs)}",
+              "  tenant: " + (tenant or '""'),
               "# transformation/macros/packs/pack_enabled.sql, macro pack_ids():",
               f"  {{{{ return({repr(list(folders))}) }}}}"]
     return "\n".join(lines)
@@ -314,12 +369,18 @@ def module_config_violations() -> tuple[list[tuple[str, str, str]], str]:
                         "missing" if got is None else f"{got!r} is not the expected switch"))
     for p in sorted(set(pack_cfg) - set(folders)):
         out.append(("module-config", f"models.packs.{p}", "configured in dbt_project.yml but no folder"))
+    tenants = (yaml.safe_load(open(MODULES_FILE)) or {}).get("tenants") or []
+    tenant_var = (project.get("vars") or {}).get("tenant")
+    if len(tenants) > 1:
+        out.append(("module-config", "modules.yaml tenants", f"{tenants}: at most one tenant per deployment"))
+    elif tenant_var != (tenants[0] if tenants else ""):
+        out.append(("module-config", "vars.tenant", f"{tenant_var!r} != modules.yaml tenants {tenants}"))
     macro_path = os.path.join(PACK_MACROS_DIR, "pack_enabled.sql")
     m = PACK_IDS_RE.search(open(macro_path, encoding="utf-8").read()) if os.path.exists(macro_path) else None
     ids = re.findall(r"['\"](\w+)['\"]", m.group(1)) if m else None
     if ids is None or sorted(ids) != folders:
         out.append(("module-config", "pack_ids()", f"{ids} != pack folders {folders}"))
-    return out, (expected_pack_config(modules, folders) if out else "")
+    return out, (expected_pack_config(modules, folders, tenants[0] if len(tenants) == 1 else "") if out else "")
 
 
 # ------------------------------------------------------------------ files
@@ -376,6 +437,7 @@ def main() -> int:
              + dbt_violations(manifest, spec, pack_contract_models())
              + seed_violations() + url_violations())
     config_problems, expected_block = module_config_violations()
+    config_problems += tenant_seed_contract_violations(manifest)
     found_keys = {(r, s, t) for r, s, t in found}
 
     allow = yaml.safe_load(open(ALLOWLIST_FILE)) if os.path.exists(ALLOWLIST_FILE) else {}
@@ -415,7 +477,7 @@ def main() -> int:
         by_rule[r] += 1
     print(f"boundaries: {len(found_keys)} known ({dict(sorted(by_rule.items()))}), "
           f"{len(new)} new violation(s), {len(stale)} stale allowlist entr(y/ies), "
-          f"{len(config_problems)} module-config problem(s)")
+          f"{len(config_problems)} module-config/tenant-seed-contract problem(s)")
     return 1 if new or stale or config_problems else 0
 
 

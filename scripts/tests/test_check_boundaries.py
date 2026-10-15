@@ -286,7 +286,7 @@ def _pack_tree(tmp_path, monkeypatch, modules, enabled_var, folders, defaults=No
     packs_cfg = {p: {"+enabled": cb.ENABLED_TEMPLATE.format(pack=p, default=repr(list(defaults)))} for p in folders}
     _write(tmp_path / "dbt_project.yml", _yaml({
         "name": "sapo_warehouse", "models": {"sapo_warehouse": {"packs": packs_cfg}},
-        "vars": {"external_root": "x", "enabled_packs": enabled_var}}))
+        "vars": {"external_root": "x", "enabled_packs": enabled_var, "tenant": ""}}))
     for p in folders:
         (tmp_path / "packs" / p).mkdir(parents=True)
     _write(tmp_path / "macros" / "pack_enabled.sql",
@@ -341,3 +341,95 @@ def test_module_config_problem_fails_main(tmp_path, monkeypatch, capsys):
     out = capsys.readouterr().out
     assert "VIOLATION [module-config] vars.enabled_packs" in out
     assert "Expected pack switch" in out and "enabled_packs: [crm, finance]" in out
+
+
+
+# ------------------------------------------------------------------ tenant_ref and tenant seed contracts
+def _core_reading_seed(raw_code, bucket="core", path="models/core/marts/dim_t.sql"):
+    node = _model("dim_t", ["seed.p.seed_targets"], path)
+    node["raw_code"] = raw_code
+    return {"nodes": {
+        "seed.p.seed_targets": _seed("seed_targets", "seeds/tenants/fine_japan/seed_targets.csv"),
+        "model.p.dim_t": node,
+    }, "disabled": {}}, {"buckets": {"dim_t": bucket}, "pack_connectors": {}}
+
+
+@pytest.mark.parametrize("raw_code,bucket,ok", [
+    ("SELECT * FROM {{ tenant_ref('seed_targets') }}", "core", True),
+    ('SELECT * FROM {{ tenant_ref("seed_targets") }}', "core", True),
+    ("SELECT * FROM {{ ref('seed_targets') }}", "core", False),                       # direct ref
+    ("{{ tenant_ref('seed_targets') }} UNION ALL {{ ref('seed_targets') }}", "core", False),  # mixed
+    ("SELECT * FROM {{ tenant_ref(seed='seed_targets') }}", "core", False),           # other spelling
+    ("SELECT * FROM {{ tenant_ref('seed_targets') }}", "cdm", False),                 # only core may
+])
+def test_core_reads_a_tenant_seed_only_through_tenant_ref(raw_code, bucket, ok):
+    path = "models/core/marts/dim_t.sql" if bucket == "core" else "models/cdm/staging/dim_t.sql"
+    manifest, spec = _core_reading_seed(raw_code, bucket, path)
+    found = [f for f in cb.dbt_violations(manifest, spec, {}) if f[0] == "dbt-seed"]
+    assert (found == []) is ok
+
+
+def _seed_tree(tmp_path, monkeypatch, default_header="a,b", tenant_header="a,b", types=("a", "b"),
+               tenants=("fine_japan",), with_default=True, with_tenant=True):
+    seeds = tmp_path / "seeds"
+    if with_default:
+        _write(seeds / "defaults" / "seed_x__default.csv", default_header + "\n")
+    if with_tenant:
+        for t in tenants:
+            _write(seeds / "tenants" / t / "seed_x.csv", tenant_header + "\n1,2\n")
+    _write(tmp_path / "modules.yaml", _yaml({"packs": [], "tenants": list(tenants)}))
+    _write(tmp_path / "dbt_project.yml", _yaml({"name": "sapo_warehouse", "seeds": {"sapo_warehouse": {
+        "defaults": {"seed_x__default": {"+column_types": {c: "varchar" for c in types}}}}}}))
+    monkeypatch.setattr(cb, "SEEDS_DIR", str(seeds))
+    monkeypatch.setattr(cb, "MODULES_FILE", str(tmp_path / "modules.yaml"))
+    monkeypatch.setattr(cb, "DBT_PROJECT_FILE", str(tmp_path / "dbt_project.yml"))
+    node = _model("dim_x", [], "models/core/marts/dim_x.sql")
+    node["raw_code"] = "SELECT * FROM {{ tenant_ref('seed_x') }}"
+    return {"nodes": {"model.p.dim_x": node}, "disabled": {}}
+
+
+def test_tenant_seed_contract_in_sync(tmp_path, monkeypatch):
+    assert cb.tenant_seed_contract_violations(_seed_tree(tmp_path, monkeypatch)) == []
+
+
+@pytest.mark.parametrize("kwargs,needle", [
+    ({"with_default": False}, "no seeds/defaults/seed_x__default.csv"),
+    ({"default_header": "a"}, "header ['a', 'b'] != default ['a']"),
+    ({"with_tenant": False}, "tenant fine_japan has no seeds/tenants/fine_japan/seed_x.csv"),
+    ({"types": ("a",)}, "every column needs a type"),
+    ({"types": ("a", "b", "c")}, "every column needs a type"),
+])
+def test_tenant_seed_contract_violations(tmp_path, monkeypatch, kwargs, needle):
+    found = cb.tenant_seed_contract_violations(_seed_tree(tmp_path, monkeypatch, **kwargs))
+    assert any(needle in t for _, _, t in found), found
+
+
+def test_no_tenant_only_needs_the_typed_default(tmp_path, monkeypatch):
+    manifest = _seed_tree(tmp_path, monkeypatch, tenants=(), with_tenant=False)
+    assert cb.tenant_seed_contract_violations(manifest) == []
+
+
+@pytest.mark.parametrize("tenants,tenant_var,ok", [
+    (["fine_japan"], "fine_japan", True),
+    ([], "", True),
+    (["fine_japan"], "", False),
+    ([], "fine_japan", False),
+    (["fine_japan", "acme"], "fine_japan", False),
+])
+def test_module_config_checks_the_tenant(tmp_path, monkeypatch, tenants, tenant_var, ok):
+    _pack_tree(tmp_path, monkeypatch, ["crm"], ["crm"], ["crm"])
+    doc = yaml.safe_load((tmp_path / "dbt_project.yml").read_text())
+    doc["vars"]["tenant"] = tenant_var
+    (tmp_path / "dbt_project.yml").write_text(_yaml(doc))
+    (tmp_path / "modules.yaml").write_text(_yaml({"packs": ["crm"], "tenants": tenants}))
+    problems, _ = cb.module_config_violations()
+    assert (problems == []) is ok, problems
+
+
+def test_committed_tenant_seed_contracts_hold():
+    """Every tenant_ref seed of this checkout has a typed default matching the tenant seed."""
+    import glob
+    nodes = {}
+    for i, path in enumerate(glob.glob(str(Path(cb.ROOT) / "transformation" / "models" / "**" / "*.sql"), recursive=True)):
+        nodes[f"model.p.m{i}"] = {"resource_type": "model", "raw_code": open(path, encoding="utf-8").read(), "config": {}}
+    assert cb.tenant_seed_contract_violations({"nodes": nodes}) == []

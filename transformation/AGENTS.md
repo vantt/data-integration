@@ -55,11 +55,16 @@ Packs can be switched off (design: `docs/architecture/modules.md` §8.1):
   are; scripts reading `manifest.nodes` must skip `config.enabled = false`.
 
 Seeds: every module may read `seeds/taxonomy/`. A tenant seed (`seeds/tenants/<tenant>/`) may be
-read by packs, `monitoring` and that tenant only; core, `cdm` and connectors may not (rule
-`dbt-seed`). Three core models still read Fine Japan seeds and are allowlisted with their exit
-(an empty seed with the same columns in core, overridden by the tenant, with `pack_ref` after
-Đợt 1): `dim_channel_targets` (`seed_channel_targets`), `dim_sku_alias` (`seed_sku_alias_manual`),
-`int_customer_sku_supply_tracking` (`seed_sku_regimen_config`). Do not add a fourth.
+read by packs, `monitoring` and that tenant only; `cdm` and connectors may not, and **core only
+through `{{ tenant_ref('<seed>') }}`** (written literally; rule `dbt-seed`). `tenant_ref` reads the
+tenant's seed when the dbt variable `tenant` is set (Fine Japan: `fine_japan`, equal to `tenants:`
+in `orchestration/config/modules.yaml`) and the core default `seeds/defaults/<seed>__default.csv`
+(header only, 0 rows) when it is empty. Today: `dim_channel_targets` (`seed_channel_targets`),
+`dim_sku_alias` (`seed_sku_alias_manual`), `int_customer_sku_supply_tracking`
+(`seed_sku_regimen_config`). A new seed read by core needs a default with the same header and a
+`+column_types` entry for **every** column under `seeds: sapo_warehouse: defaults:` (an untyped
+header-only CSV loads as INTEGER); a new tenant must ship every seed core reads, header copied
+from the default (rule `tenant-seed-contract`; `seeds/defaults/README.md`).
 
 Before committing, run `scripts/checks/run-all.sh` (dbt parse, boundaries, Dagster definitions,
 pytest). Decisions behind this layout: `docs/decisions/015-module-boundaries.md`,

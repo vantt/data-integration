@@ -39,7 +39,7 @@
 -- =============================================================================
 
 WITH RECURSIVE config AS (
-    SELECT * FROM {{ ref('seed_sku_regimen_config') }}
+    SELECT * FROM {{ tenant_ref('seed_sku_regimen_config') }}
 ),
 
 -- Static per-(customer_key, sku) fact: has this customer EVER bought this SKU
