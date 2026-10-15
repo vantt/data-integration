@@ -8,7 +8,7 @@
 
 | Hạng mục | Trạng thái |
 |---|---|
-| Bucket của mọi dbt model (197 model: 183 đang bật, 14 đang tắt) | ✅ Khai báo trong `scripts/checks/model_buckets.yaml` |
+| Bucket của mọi dbt model (200 model: 186 đang bật, 14 đang tắt) | ✅ Khai báo trong `scripts/checks/model_buckets.yaml` |
 | Ma trận phụ thuộc, lõi đọc seed tenant, import chéo (kể cả connector → pack và pack → pack trong orchestration), seed trùng tên, URL/domain cứng trong connector và pack | ✅ Cưỡng chế bằng `scripts/checks/check_boundaries.py` (mục 3, mục 12) |
 | Vi phạm đã biết | 21, sinh từ manifest và import orchestration: 8 cạnh `ref` (tenant hook, pack → pack, pack → connector; không còn pack hook), 0 lõi đọc seed tenant (qua `tenant_ref`), 12 pack đọc source, 1 import pack → pack (`sales_playbook` → `crm`); ghi trong `scripts/checks/boundary_allowlist.yaml` kèm lý do và hướng thoát (mục 3, 10) |
 | Kiểm tra trước commit bằng một lệnh | ✅ `scripts/checks/run-all.sh`: `dbt parse`, `check_boundaries.py`, `dagster definitions validate`, pytest (bắt buộc, ghi trong `AGENTS.md`) |
@@ -246,7 +246,7 @@ flowchart TB
 
 ⚠ = chỉ được qua một mục trong `scripts/checks/boundary_allowlist.yaml` kèm lý do và hướng thoát; ma trận không bao giờ cho phép core → tenants. **Core → pack** hợp lệ khi và chỉ khi đi qua macro `pack_ref('<pack>', '<model>')` (mục 8): `check_boundaries.py` (luật `dbt-ref`) chấp nhận cạnh core → `pack:<p>` tới model `m` chỉ khi `raw_code` của model lõi gọi đúng dạng `pack_ref('<p>', '<m>'` (vị trí, nháy đơn hoặc kép), không có `ref('<m>')` thẳng, và `m` có hợp đồng của pack `<p>` trong `pack_contracts()`. Cạnh core → pack bằng `ref()` thẳng là vi phạm; từ 14/10/2026 allowlist không còn mục nào loại này. `check_boundaries.py` fail khi có cạnh mới ngoài ma trận, và cả khi một mục allowlist không còn xảy ra (để allowlist không phình). Allowlist được **sinh từ manifest** (`depends_on` của model đang bật; model tắt vẫn phải có bucket và nằm đúng thư mục, nhưng dbt không phân giải ref của nó nên không kiểm cạnh) và từ import Python của `orchestration/connectors/**`, `orchestration/packs/**` (`--write-allowlist`), không viết tay. Đọc source dbt chỉ dành cho connector và tenant (luật `dbt-source`). Cột seeds: seed dùng chung (`seeds/taxonomy/`, ...) ai cũng đọc; seed tenant (`seeds/tenants/<t>/`) chỉ pack, `monitoring` và chính tenant `<t>` được đọc, lõi chỉ qua `tenant_ref('<seed>')` (luật `dbt-seed`, mục 10).
 
-Số model theo bucket (`model_buckets.yaml`, 197 model gồm 14 đang tắt):
+Số model theo bucket (`model_buckets.yaml`, 200 model gồm 14 đang tắt):
 
 | Bucket | Model | Bucket | Model |
 |---|---|---|---|
@@ -258,7 +258,7 @@ Số model theo bucket (`model_buckets.yaml`, 197 model gồm 14 đang tắt):
 | connector:facebook_ads (tắt) | 3 | pack:sales_playbook | 3 |
 | connector:facebook_messenger (tắt) | 2 | pack:marketplace | 3 |
 | tenant:fine_japan | 3 | pack:facebook_ads (tắt), pack:facebook_messenger (tắt) | 2 + 2 |
-| monitoring | 3 | | |
+| monitoring | 6 | | |
 
 Vi phạm đã biết (21, đúng bằng allowlist):
 
@@ -632,6 +632,8 @@ flowchart TB
     FEAT["core/intermediate/taxonomy/<br/>feat_customer_profile, feat_customer_orders"] --> MAC
     MAC --> LBLE["lbl_customer_type, lbl_customer_type__group_blob<br/>(core/marts/labels, chưa nối mart)"]
     LBLE --> EL["monitoring/entity_labels<br/>(view, không model lõi/pack nào đọc)"]
+    LBLE --> MONP["monitoring/monitor_taxonomy_parity (+ _log)<br/>monitor_taxonomy_unmapped"]
+    LBLE -. "var taxonomy_engine_customer_type<br/>(mặc định tắt)" .-> MARTS["dim_customers, fact_orders,<br/>int_customer_benchmarks"]
     RULE & RT & TL -- "ref / tenant_ref" --> MAC
     TL["seeds/tenants/fine_japan/taxonomy_label<br/>(nhãn → mã, tenant)"] -- "tenant_ref" --> LBL
     TC -. "test" .-> TL
@@ -656,6 +658,7 @@ flowchart TB
 | Registry `vars.taxonomy` (`transformation/dbt_project.yml`) | Danh mục đặc trưng và domain của bộ máy, đọc lúc compile (chưa có domain) | [taxonomy-engine.md §4b](taxonomy-engine.md#4b-hiện-thực-mvp) |
 | Bảng luật hai lớp: `seeds/taxonomy/taxonomy_rule_product.csv` (sản phẩm), `seeds/tenants/fine_japan/taxonomy_rule_tenant.csv` (tenant, lõi sẽ đọc qua `tenant_ref`; bản mặc định rỗng `seeds/defaults/taxonomy_rule_tenant__default.csv`) | Luật phân loại dạng dữ liệu, một dòng một điều kiện; hiện chỉ có dòng tiêu đề | như trên |
 | `transformation/macros/taxonomy/` | Macro bộ máy: `taxonomy_label_model` (thân model `lbl_<domain>`: hai lớp, logic ba giá trị, FIRST/UNIQUE/COLLECT, `UNMAPPED`/`UNKNOWN`, `matched__*`, `ruleset_version`), `taxonomy_entity_labels`, registry, điều kiện, luật; selftest ở `models/core/intermediate/taxonomy/selftest/` (bước 5 của `run-all.sh`) | [taxonomy-engine.md §4b](taxonomy-engine.md#4b-hiện-thực-mvp) |
+| `models/monitoring/monitor_taxonomy_parity`, `monitor_taxonomy_parity_log`, `monitor_taxonomy_unmapped` | Đối chiếu bộ máy với bản sao nguyên văn khối SQL cũ (mỗi khách, cờ `is_diff`), lịch sử mỗi lần chạy (incremental, `full_refresh=false`), danh sách giá trị thô chưa có luật riêng kèm doanh thu | [taxonomy-engine.md §4b](taxonomy-engine.md#4b-hiện-thực-mvp) |
 | `scripts/checks/check_taxonomy_rules.py` | Validator luật trước khi nạp (domain, đặc trưng, toán tử theo kiểu, giá trị, nhãn, `rule_id`/priority, luật tắt); thoát 1 khi sai; chạy trong pytest của `run-all.sh` và shadow gate | [scripts/checks/README.md](../../scripts/checks/README.md#check_taxonomy_rulespy) |
 
 Ai ghi seed nào: `sync_seeds.py` (chạy tay) thêm dòng vào `ref_order_sources` và `ref_branch_locations`; không writer tự động nào ghi seed phân loại. Job Google Sheet 02:30 (`budget_sheet_sync_asset` gọi `gsheet_budget_sync`) ghi hai seed ngân sách của tenant (`seed_cashflow_budget`, `seed_cash_allocation_policy`, ở `transformation/seeds/tenants/fine_japan/`), cũng qua `seed_path`. Bảng đầy đủ đọc/ghi: [TAXONOMY.md mục 5](../../transformation/docs/TAXONOMY.md#5-seed-phân-loại-và-ai-đọc-ai-ghi).
@@ -730,7 +733,7 @@ Danh sách đầy đủ là `scripts/checks/boundary_allowlist.yaml`, sinh từ 
 | Pack hook (core → pack) | Đã đóng 14/10/2026: lõi đọc pack qua `pack_ref` (mục 8.1); `mart_sku_economics_monthly` tách nửa doanh thu thành `int_sku_sales_monthly` (mục 7) | — |
 | Pack → pack (khai báo) | `mart_hug_attribution` → `fact_order_economics`; `fact_order_economics` → `int_shopee_order_fees`; `sales_playbook` → `crm` (3 cạnh) | Danh sách phụ thuộc pack khai báo được (ngoài plan cơ chế pack, ADR-018) |
 
-**Logic hook (không phải cạnh `ref`, checker không thấy):** nhánh `CROSSBORDER` của `customer_type` trong `dim_customers` dùng mã nhóm viết cứng `TYPE_CROSSBORDER`/`CTN00014` và tín hiệu "có đơn không huỷ trên kênh `US`" viết trong SQL. Đây là logic riêng Fine Japan nằm trong lõi; không có trong allowlist. Chi tiết và hai biến thể: [TAXONOMY.md](../../transformation/docs/TAXONOMY.md) (domain `customer_type`, `is_us_gift_recipient`, mục 6). Hướng xử lý: quyết định nghiệp vụ + bộ máy phân loại.
+**Logic hook (không phải cạnh `ref`, checker không thấy):** nhánh `CROSSBORDER` của `customer_type` trong `dim_customers` dùng mã nhóm viết cứng `TYPE_CROSSBORDER`/`CTN00014` và tín hiệu "có đơn không huỷ trên kênh `US`" viết trong SQL. Đây là logic riêng Fine Japan nằm trong lõi; không có trong allowlist. Chi tiết và hai biến thể: [TAXONOMY.md](../../transformation/docs/TAXONOMY.md) (domain `customer_type`, `is_us_gift_recipient`, mục 6). Hướng xử lý: quyết định nghiệp vụ + bộ máy phân loại. **Hai đường (15/10/2026):** biến dbt `taxonomy_engine_customer_type` (mặc định `false`) chọn giữa khối SQL cũ và bộ máy (`lbl_customer_type`, luật ở `seeds/tenants/fine_japan/taxonomy_rule_tenant.csv`); khi bật, literal Fine Japan của nhánh này chỉ còn là dữ liệu tenant. Bộ máy **chưa bật** trên prod ([taxonomy-engine.md §4b](taxonomy-engine.md#4b-hiện-thực-mvp)).
 
 Literal Fine Japan khác trong các khối `CASE` của core (`KY_GUI`, `'Đại Lý'`, tên thương hiệu, từ khoá giảm giá) cũng không phải cạnh `ref`; danh sách ở [TAXONOMY.md mục 6](../../transformation/docs/TAXONOMY.md#6-giá-trị-tenant-viết-cứng-trong-sql), chuyển vào tenant cùng bộ máy phân loại.
 

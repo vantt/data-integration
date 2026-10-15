@@ -158,7 +158,7 @@ Phạm vi MVP ở §7. Mục này ghi **cái đã có trong repo**; mỗi bướ
 | Registry `vars.taxonomy`, ba seed luật (rỗng), validator `check_taxonomy_rules.py` | Đã có (15/10/2026). Chưa domain thật nào, chưa luật nào |
 | Macro bộ máy `macros/taxonomy/` (FIRST/UNIQUE/COLLECT, logic ba giá trị, hai lớp, `ruleset_version`) và selftest (3 domain selftest, 24 unit test) | Đã có (15/10/2026). Chưa model thật nào gọi macro; model selftest chỉ bật khi chạy selftest |
 | Hai domain pilot `customer_type`, `customer_type__group_blob` (đặc trưng, 24 luật Fine Japan, 21 unit test với luật thật), view `entity_labels` | Đã có (15/10/2026). **Chưa nối mart**: mart vẫn chạy khối `CASE` cũ; đối chiếu shadow 0 khác biệt trên hai bộ dữ liệu |
-| Nối mart sau `var`, giám sát đối chiếu và giá trị chưa phân loại | Chưa có |
+| Nối mart sau biến `taxonomy_engine_customer_type` (mặc định `false`), ba model giám sát | Đã có (15/10/2026). Gate với biến tắt: compiled SQL mart như cũ; gate với biến bật (bản nháp): golden 83/83 0 khác biệt. Prod chưa bật |
 
 ```mermaid
 flowchart LR
@@ -307,6 +307,32 @@ Mỗi vế `OR` của một nhánh `CASE` là một luật riêng cùng nhãn, p
 Test lúc build (`core/marts/labels/_labels__models.yml`): `customer_key` `unique`, `not_null`; số dòng bằng `dim_customers_base` (`equal_rowcount`); `customer_type` `not_null` và thuộc bộ nhãn hoặc mã dành riêng (`taxonomy_label_declared`), mức error; `customer_type` không phải `UNMAPPED`/`UNKNOWN` và `labels_mapped` trên `customer_type_std`, mức warn. Unit test với **luật thật** (`core/intermediate/taxonomy/_taxonomy__models.yml`, 21 test: `_` wildcard, phân biệt hoa thường, thứ tự nhánh, WHOLESALE thắng CROSSBORDER, chỉ có đơn US, cờ NULL/FALSE, code NULL, sentinel `Unknown`, blob khớp ở trường khác, blob NULL, khách không có đơn, `CTN00014`, cột luật và mã chuẩn, và đặc trưng `feat_customer_orders` loại đơn huỷ). Fixture luật là bản sao đúng từng byte của seed (`scripts/tests/test_taxonomy_fixtures.py`).
 
 Đo trên shadow 15/10/2026: bốn model mới và `entity_labels` build tổng khoảng 0,2 giây; 21 unit test tổng khoảng 3,1 giây (cộng thời gian các luồng); cả `dbt build` từ 20,9 lên 23,3–24,4 giây.
+
+### Nối mart: hai đường sau một biến
+
+Biến dbt `taxonomy_engine_customer_type` (`dbt_project.yml`, mặc định `false`) chọn đường của ba model đang tính `customer_type`:
+
+| Model | Biến `false` (mặc định) | Biến `true` |
+|---|---|---|
+| `dim_customers` | khối `CASE` cũ (`customer_type`) và biểu thức cũ (`is_us_gift_recipient`) | `LEFT JOIN` một truy vấn con trên `lbl_customer_type` (cột đổi tên `lbl_*` để không đụng tên cột không tiền tố của `SELECT`); `customer_type` = nhãn, `is_us_gift_recipient` = `matched__crossborder` |
+| `fact_orders` | CTE `customer_type_info` với khối `CASE` trên blob | CTE `customer_type_info` đọc `lbl_customer_type__group_blob`; tên CTE, alias `cu2`, `scope_*` không đổi |
+| `int_customer_benchmarks` | khối `CASE` trong CTE `base` | `LEFT JOIN lbl_customer_type__group_blob ctb`, `customer_type` = `ctb.customer_type` |
+
+Hai nhánh viết bằng `{% if var('taxonomy_engine_customer_type') %} ... {% else %} <khối cũ nguyên văn> {% endif %}`, mỗi thẻ trên một dòng riêng: với biến tắt, SQL biên dịch chỉ khác bản cũ ở khoảng trắng (bước so compiled SQL của gate chuẩn hoá khoảng trắng nên coi là giống hệt; dbt inventory vẫn báo checksum file đổi). Vì dbt chỉ ghi `ref()` của nhánh được render, **khi tắt, `lbl_*` không là tổ tiên của ba mart**: lỗi build hay test `error` của bộ máy không thể làm SKIP mart trong thời gian chạy song song (đã kiểm trên manifest; khi bật thì có cạnh `ref`). CTE `us_channel_customers` của `dim_customers` vẫn nằm ở cả hai đường (DuckDB bỏ CTE không dùng) cho tới khi xoá đường cũ.
+
+Chạy gate với biến bật: tạo một worktree tạm từ nhánh (không commit), đổi mặc định thành `true` trong `dbt_project.yml` của worktree đó, rồi `BRANCH_DIR=<worktree tạm> scripts/shadow/gate.sh S --allow-new --allow-code-change`; xoá worktree tạm sau gate. Golden phải 0 khác biệt.
+
+**Chưa giải quyết (trước khi biến mặc định `true`):** không có tenant thì không có luật `customer_type` nào, mọi khách là `UNMAPPED` thay vì `RETAIL` mà đường SQL cũ có sẵn trong `ELSE` của lõi; `int_customer_benchmarks` không xếp hạng ai và test mức error `assert_int_customer_benchmarks_rankable_count_sane` fail, nên profile lõi trần (gate bước 6b) không build được khi biến bật (đã thấy trên shadow 15/10/2026; Fine Japan không bị ảnh hưởng). Cần quyết định: luật mặc định ở lớp sản phẩm (cùng câu hỏi nhãn của luật lớp sản phẩm), hay chỉ dùng bộ máy khi có tenant, hay cách khác.
+
+### Giám sát (`models/monitoring/`, bucket `monitoring`, không model lõi/pack nào đọc)
+
+| Model | Nội dung |
+|---|---|
+| `monitor_taxonomy_parity` (view) | Mỗi khách một dòng mỗi domain: nhãn và cờ của bộ máy, nhãn và cờ của **bản sao nguyên văn** ba khối cũ (`customer_type` và `is_us_gift_recipient` của `dim_customers`, `customer_type` của `fact_orders`), `is_label_diff`, `is_flag_diff`, `is_diff` (`IS DISTINCT FROM`), `is_legacy_else`, `is_engine_default`. Bản sao giữ đúng tên CTE và cột của file gốc nên hai khối `CASE` có cùng sha256 với khối gốc trong `taxonomy_inventory.yaml` (bản sao biểu thức là một dòng `expr` riêng); khối gốc đổi thì inventory cảnh báo. Test `NOT is_diff` mức warn. Vẫn đối chiếu được sau khi mart chuyển sang bộ máy |
+| `monitor_taxonomy_parity_log` (incremental, `full_refresh=false`) | Mỗi lần chạy thêm một dòng mỗi domain: `run_at`, `run_date` (giờ Việt Nam), `domain`, `ruleset_version`, `n_entities`, `n_label_diff`, `n_flag_diff`, `n_legacy_else`, `n_engine_default`, `n_unmapped`, `n_unknown`. Mọi `dbt build` chọn nó đều thêm dòng (cả job chạy mỗi vài phút), nên đọc một dòng mỗi `run_date` và domain (ví dụ lần chạy cuối của đêm) |
+| `monitor_taxonomy_unmapped` (view) | Với mỗi domain có `survey`: giá trị thô của `survey.features` (JSON) của các khách không luật riêng nào phân loại (`UNMAPPED`, `UNKNOWN`, hoặc luật không điều kiện), số khách, tổng `order_count`, `revenue` từ `survey.metrics_model`, sắp theo doanh thu giảm dần. Sinh bằng macro `taxonomy_unmapped_survey` |
+
+Trên shadow 15/10/2026: `monitor_taxonomy_parity` 0 dòng `is_diff` cho cả hai domain (7 738 khách); số khách rơi vào `ELSE` của SQL cũ bằng số khách khớp luật mặc định (6 029 với `customer_type`, 6 394 với biến thể blob), 0 `UNMAPPED`/`UNKNOWN` (điều kiện dừng số 6 không chạm); ba model build tổng khoảng 0,1 giây.
 
 ### Selftest của bộ máy
 

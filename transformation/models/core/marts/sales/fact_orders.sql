@@ -105,6 +105,11 @@ channel_scope AS (
 
 -- Use dim_customers_base (not dim_customers) to avoid cycle: dim_customers → int_customer_metrics → fact_orders
 customer_type_info AS (
+{% if var('taxonomy_engine_customer_type') %}
+    -- classification engine (domain customer_type__group_blob; docs/architecture/taxonomy-engine.md §4b)
+    SELECT customer_key, customer_type
+    FROM {{ ref('lbl_customer_type__group_blob') }}
+{% else %}
     SELECT
         customer_key,
         CASE
@@ -116,6 +121,7 @@ customer_type_info AS (
             ELSE 'RETAIL'
         END AS customer_type
     FROM {{ ref('dim_customers_base') }}
+{% endif %}
 )
 
 SELECT

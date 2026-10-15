@@ -212,6 +212,10 @@ SELECT
     -- Sapo 'US' channel, auto-assigned at ingestion — catches gift recipients whose
     -- group tag hasn't (yet) been (re-)applied. Additive only: never overrides a
     -- higher-precedence branch above (WHOLESALE/PARTNER/STAFF/KOL still win).
+{% if var('taxonomy_engine_customer_type') %}
+    -- classification engine (lbl_customer_type, domain customer_type; docs/architecture/taxonomy-engine.md §4b)
+    lbl.lbl_customer_type AS customer_type,
+{% else %}
     CASE
         WHEN customer_group_code LIKE '%WHOLESALE%' OR customer_group_name LIKE '%WHOLESALE%'
             THEN 'WHOLESALE'                                    -- TYPE_WHOLESALE + legacy BANBUON
@@ -228,6 +232,7 @@ SELECT
             THEN 'CROSSBORDER'  -- US giao hàng hộ (người nhận VN); group-tag OR has US-channel order
         ELSE 'RETAIL'  -- Default: TYPE_RETAIL/BANLE, Selly (end-consumers), untagged
     END as customer_type,
+{% endif %}
 
     -- value_group: Customer value tier based on lifetime spend (Auto)
     CASE
@@ -327,9 +332,14 @@ SELECT
     -- still gets this flag TRUE, since it describes the shipment relationship, not the account type).
     -- Flag exposes the segment for filtering without requiring a self-join on customer_type.
     -- Refactored 2026-07-06 (phase-00) — matches parsed customer_group_code/name, not raw JSON.
+{% if var('taxonomy_engine_customer_type') %}
+    -- classification engine: OR of the CROSSBORDER rules, three-valued (matched__crossborder)
+    lbl.lbl_matched__crossborder AS is_us_gift_recipient,
+{% else %}
     (customer_group_code LIKE '%TYPE_CROSSBORDER%' OR customer_group_name LIKE '%TYPE_CROSSBORDER%'
       OR customer_group_code LIKE '%CTN00014%' OR customer_group_name LIKE '%CTN00014%'
       OR EXISTS (SELECT 1 FROM us_channel_customers uc WHERE uc.customer_key = joined_data.customer_key)) AS is_us_gift_recipient,
+{% endif %}
 
     -- source_contact_quality: immutable — reflects whether the contact value is usable.
     -- '*' in phone = already obfuscated by source (relay/masked number from marketplace etc.).
@@ -409,6 +419,15 @@ SELECT
     last_modified_at
 
 FROM joined_data
+{% if var('taxonomy_engine_customer_type') %}
+LEFT JOIN (
+    SELECT
+        customer_key AS lbl_customer_key,
+        customer_type AS lbl_customer_type,
+        matched__crossborder AS lbl_matched__crossborder
+    FROM {{ ref('lbl_customer_type') }}
+) lbl ON lbl.lbl_customer_key = joined_data.customer_key
+{% endif %}
 
 {% if is_incremental() %}
 -- Use source_updated_at (not last_modified_at) as watermark.

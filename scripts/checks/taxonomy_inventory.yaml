@@ -75,7 +75,7 @@ domains:
       snippet: s.platform || ' - ' || l.name as channel_name,
       sha256: 3a58bea5b191e0aa213480b985690ca45c016345a5ddece6f23cbca8ec864767
     - file: transformation/models/core/marts/sales/fact_orders.sql
-      line: 148
+      line: 154
       alias: channel_key
       kind: case
       sha256: e85d8a30b54c12fe285e581f5eac6ff54be6dfe2311edd68e03e2269ebaad102
@@ -108,33 +108,45 @@ domains:
   customer_type:
     columns:
     - customer_type
+    - monitor_taxonomy_parity.sql:legacy_customer_type
+    - monitor_taxonomy_parity.sql:legacy_customer_type_blob
     blocks:
     - file: transformation/models/core/marts/sales/fact_orders.sql
-      line: 110
+      line: 115
       alias: customer_type
       kind: case
       sha256: cd3b4336145ee07d392dcf3f77a39ad998e75d60e0f701aef2429010f03b5a21
     - file: transformation/models/core/marts/intermediate/int_customer_benchmarks.sql
-      line: 47
+      line: 51
       alias: customer_type
       kind: case
       sha256: cdba7656ddd12c6e2a23820121ccc0840fc46e9c0b5143603a7d8fd55d07032a
     - file: transformation/models/core/marts/dim_customers.sql
-      line: 215
+      line: 219
       alias: customer_type
       kind: case
       sha256: 50f92d1d6276b72775e62cfc50fa3de10d98c75b8d248e2f0ba816d0f9b350cd
+    - file: transformation/models/monitoring/monitor_taxonomy_parity.sql
+      line: 26
+      alias: legacy_customer_type
+      kind: case
+      sha256: 50f92d1d6276b72775e62cfc50fa3de10d98c75b8d248e2f0ba816d0f9b350cd
+    - file: transformation/models/monitoring/monitor_taxonomy_parity.sql
+      line: 51
+      alias: legacy_customer_type_blob
+      kind: case
+      sha256: cd3b4336145ee07d392dcf3f77a39ad998e75d60e0f701aef2429010f03b5a21
   value_group:
     columns:
     - value_group
     blocks:
     - file: transformation/models/core/marts/dim_customers.sql
-      line: 233
+      line: 238
       alias: value_group
       kind: case
       sha256: c348e384807653eb6cbffef11b1e2e239660643d6543f3f323ddc476b512a4b0
     - file: transformation/models/core/marts/intermediate/int_customer_benchmarks.sql
-      line: 56
+      line: 61
       alias: value_group
       kind: case
       sha256: 679d2fa2d5ac16a64bb0f3beaf97d1fa9c842b78eb5892339826ea16b388d0d6
@@ -143,7 +155,7 @@ domains:
     - dim_customers.sql:lifecycle_stage
     blocks:
     - file: transformation/models/core/marts/dim_customers.sql
-      line: 241
+      line: 246
       alias: lifecycle_stage
       kind: case
       sha256: 6f17c964bd9f06326a3352e967efcd30fb4939a75b41278315f608e3ace6816c
@@ -182,7 +194,7 @@ domains:
     - next_purchase_signal
     blocks:
     - file: transformation/models/core/marts/dim_customers.sql
-      line: 279
+      line: 284
       alias: next_purchase_signal
       kind: case
       sha256: f81570a5bd72156f72e8e60c2e8303b28dad208caeb59f4fe709403617ee99b4
@@ -223,7 +235,7 @@ domains:
     - geo_region
     blocks:
     - file: transformation/models/core/marts/dim_customers.sql
-      line: 287
+      line: 292
       alias: geo_region
       kind: case
       sha256: 20c90a8c4938dbe91e33351035e6fcdf2baefd9ee77c3d5a2aae31407f980a7f
@@ -252,7 +264,7 @@ domains:
       snippet: SELECT DISTINCT fo.customer_key FROM {{ ref('fact_orders') }} fo JOIN {{ ref('dim_channels') }} ch ON fo.channel_key = ch.channel_key WHERE ch.channel_name = 'US' AND fo.status != 'CANCELLED'
       sha256: c35a15945492eb7b6298850f8dd1534d0e7b7d4a98c5caeb5e4d720748707a8b
     - file: transformation/models/core/marts/dim_customers.sql
-      line: 330
+      line: 339
       alias: is_us_gift_recipient
       kind: expr
       snippet: (customer_group_code LIKE '%TYPE_CROSSBORDER%' OR customer_group_name LIKE '%TYPE_CROSSBORDER%' OR customer_group_code LIKE '%CTN00014%' OR customer_group_name LIKE '%CTN00014%' OR EXISTS (SELECT 1 FROM us_channel_customers uc WHERE uc.customer_key = joined_data.customer_key)) AS is_us_gift_recipient,
@@ -263,12 +275,18 @@ domains:
       kind: expr
       snippet: WHERE ch.channel_name = 'US'
       sha256: ede2b4d67d93ea04d55c31e15e609c4bea3dbc5d7cdeb611d0ab2cb4c89bee1b
+    - file: transformation/models/monitoring/monitor_taxonomy_parity.sql
+      line: 42
+      alias: legacy_is_us_gift_recipient
+      kind: expr
+      snippet: (customer_group_code LIKE '%TYPE_CROSSBORDER%' OR customer_group_name LIKE '%TYPE_CROSSBORDER%' OR customer_group_code LIKE '%CTN00014%' OR customer_group_name LIKE '%CTN00014%' OR EXISTS (SELECT 1 FROM us_channel_customers uc WHERE uc.customer_key = joined_data.customer_key)) AS legacy_is_us_gift_recipient
+      sha256: 90c7e9e88dd73ca19669710eb726de59b0a86fedff250b2ef2509ea1e27c2340
   benchmark_status:
     columns:
     - benchmark_status
     blocks:
     - file: transformation/models/core/marts/intermediate/int_customer_benchmarks.sql
-      line: 75
+      line: 83
       alias: benchmark_status
       kind: case
       sha256: 4d7094bf04cc83a1380098fe56dffeeb5f9fef7a2c7c8b0f94c3ca58f29194fa
@@ -278,12 +296,12 @@ domains:
     - contact_quality
     blocks:
     - file: transformation/models/core/marts/dim_customers.sql
-      line: 337
+      line: 347
       alias: source_contact_quality
       kind: case
       sha256: f371e21c795ab4d4f96e946a173d68bde0bc5dfa518f6841b1df3c38bc81f5f1
     - file: transformation/models/core/marts/dim_customers.sql
-      line: 344
+      line: 354
       alias: contact_quality
       kind: case
       sha256: 07c889918edd086a5405ba7697a4db940a10d79102d4f98c41d021d7cfc586ea
@@ -388,7 +406,7 @@ domains:
     - discount_dependency
     blocks:
     - file: transformation/models/core/marts/dim_customers.sql
-      line: 271
+      line: 276
       alias: discount_sensitivity
       kind: case
       sha256: 26f23fb0a24c3dba9cf7f866c823f4ba21f82442aba987c379e714287f1b073e

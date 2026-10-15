@@ -290,7 +290,7 @@ Không có khối SQL: luật là dữ liệu (seed), xem ô "Đã là dữ li�
 | `models/connectors/sapo_v2/staging/stg_sapo_v2_orders.sql:26` | `final_source_id` | biểu thức | `a67cf65a0b7fae94` |
 | `models/connectors/sapo_v2/staging/stg_sapo_v2_orders.sql:34` | `mapping_tag_join` | biểu thức | `cce2782c98ebe0ec` |
 | `models/core/marts/dim_channels.sql:66` | `generic_channel_name` | biểu thức | `3a58bea5b191e0aa` |
-| `models/core/marts/sales/fact_orders.sql:148` | `channel_key` | CASE | `e85d8a30b54c12fe` |
+| `models/core/marts/sales/fact_orders.sql:154` | `channel_key` | CASE | `e85d8a30b54c12fe` |
 | `models/core/marts/sales/fact_sales.sql:44` | `channel_key` | CASE | `8519e9ecf4d47bdd` |
 
 ##### Đơn Shopee về từ hai nguồn
@@ -474,9 +474,11 @@ Không có khối SQL: luật là dữ liệu (seed), xem ô "Đã là dữ li�
 
 | Vị trí (file:dòng, gốc `transformation/`) | Khối | Loại | sha256 (16 ký tự đầu) |
 |---|---|---|---|
-| `models/core/marts/sales/fact_orders.sql:110` | `customer_type` | CASE | `cd3b4336145ee07d` |
-| `models/core/marts/intermediate/int_customer_benchmarks.sql:47` | `customer_type` | CASE | `cdba7656ddd12c6e` |
-| `models/core/marts/dim_customers.sql:215` | `customer_type` | CASE | `50f92d1d6276b727` |
+| `models/core/marts/sales/fact_orders.sql:115` | `customer_type` | CASE | `cd3b4336145ee07d` |
+| `models/core/marts/intermediate/int_customer_benchmarks.sql:51` | `customer_type` | CASE | `cdba7656ddd12c6e` |
+| `models/core/marts/dim_customers.sql:219` | `customer_type` | CASE | `50f92d1d6276b727` |
+| `models/monitoring/monitor_taxonomy_parity.sql:26` | `legacy_customer_type` (bản sao nguyên văn khối `dim_customers`, cùng hash) | CASE | `50f92d1d6276b727` |
+| `models/monitoring/monitor_taxonomy_parity.sql:51` | `legacy_customer_type_blob` (bản sao nguyên văn khối `fact_orders`, cùng hash) | CASE | `cd3b4336145ee07d` |
 
 #### `value_group`
 
@@ -499,8 +501,8 @@ Không có khối SQL: luật là dữ liệu (seed), xem ô "Đã là dữ li�
 
 | Vị trí (file:dòng, gốc `transformation/`) | Khối | Loại | sha256 (16 ký tự đầu) |
 |---|---|---|---|
-| `models/core/marts/dim_customers.sql:233` | `value_group` | CASE | `c348e384807653eb` |
-| `models/core/marts/intermediate/int_customer_benchmarks.sql:56` | `value_group` | CASE | `679d2fa2d5ac16a6` |
+| `models/core/marts/dim_customers.sql:238` | `value_group` | CASE | `c348e384807653eb` |
+| `models/core/marts/intermediate/int_customer_benchmarks.sql:61` | `value_group` | CASE | `679d2fa2d5ac16a6` |
 
 #### `customer_lifecycle_stage`
 
@@ -523,7 +525,7 @@ Không có khối SQL: luật là dữ liệu (seed), xem ô "Đã là dữ li�
 
 | Vị trí (file:dòng, gốc `transformation/`) | Khối | Loại | sha256 (16 ký tự đầu) |
 |---|---|---|---|
-| `models/core/marts/dim_customers.sql:241` | `lifecycle_stage` | CASE | `6f17c964bd9f0632` |
+| `models/core/marts/dim_customers.sql:246` | `lifecycle_stage` | CASE | `6f17c964bd9f0632` |
 
 #### `customer_status`
 
@@ -569,7 +571,7 @@ Không có khối SQL: luật là dữ liệu (seed), xem ô "Đã là dữ li�
 
 | Vị trí (file:dòng, gốc `transformation/`) | Khối | Loại | sha256 (16 ký tự đầu) |
 |---|---|---|---|
-| `models/core/marts/dim_customers.sql:279` | `next_purchase_signal` | CASE | `f81570a5bd72156f` |
+| `models/core/marts/dim_customers.sql:284` | `next_purchase_signal` | CASE | `f81570a5bd72156f` |
 | `models/core/marts/customer/mart_customer_status_snapshot_monthly.sql:121` | `next_purchase_signal` | CASE | `fca9a17cf1819ae5` |
 
 #### `channel_preference`
@@ -658,7 +660,7 @@ Không có khối SQL: luật là dữ liệu (seed), xem ô "Đã là dữ li�
 
 | Vị trí (file:dòng, gốc `transformation/`) | Khối | Loại | sha256 (16 ký tự đầu) |
 |---|---|---|---|
-| `models/core/marts/dim_customers.sql:287` | `geo_region` | CASE | `20c90a8c4938dbe9` |
+| `models/core/marts/dim_customers.sql:292` | `geo_region` | CASE | `20c90a8c4938dbe9` |
 
 #### `acquisition_source`
 
@@ -705,7 +707,8 @@ Không có khối SQL: luật là dữ liệu (seed), xem ô "Đã là dữ li�
 | Vị trí (file:dòng, gốc `transformation/`) | Khối | Loại | sha256 (16 ký tự đầu) |
 |---|---|---|---|
 | `models/core/marts/dim_customers.sql:32` | `us_channel_customers` | biểu thức | `c35a15945492eb7b` |
-| `models/core/marts/dim_customers.sql:330` | `is_us_gift_recipient` | biểu thức | `28ea72d7e8d0d2d8` |
+| `models/core/marts/dim_customers.sql:339` | `is_us_gift_recipient` | biểu thức | `28ea72d7e8d0d2d8` |
+| `models/monitoring/monitor_taxonomy_parity.sql:42` | `legacy_is_us_gift_recipient` (bản sao của khối ở `dim_customers.sql`, chỉ khác alias) | biểu thức | `90c7e9e88dd73ca1` |
 | `models/tenants/fine_japan/intermediate/us_shipment/int_us_shipment_line_prices.sql:25` | `us_channel_filter` | biểu thức | `ede2b4d67d93ea04` |
 
 #### `benchmark_status`
@@ -728,7 +731,7 @@ Không có khối SQL: luật là dữ liệu (seed), xem ô "Đã là dữ li�
 
 | Vị trí (file:dòng, gốc `transformation/`) | Khối | Loại | sha256 (16 ký tự đầu) |
 |---|---|---|---|
-| `models/core/marts/intermediate/int_customer_benchmarks.sql:75` | `benchmark_status` | CASE | `4d7094bf04cc83a1` |
+| `models/core/marts/intermediate/int_customer_benchmarks.sql:83` | `benchmark_status` | CASE | `4d7094bf04cc83a1` |
 
 #### `contact_quality`
 
@@ -750,8 +753,8 @@ Không có khối SQL: luật là dữ liệu (seed), xem ô "Đã là dữ li�
 
 | Vị trí (file:dòng, gốc `transformation/`) | Khối | Loại | sha256 (16 ký tự đầu) |
 |---|---|---|---|
-| `models/core/marts/dim_customers.sql:337` | `source_contact_quality` | CASE | `f371e21c795ab4d4` |
-| `models/core/marts/dim_customers.sql:344` | `contact_quality` | CASE | `07c889918edd086a` |
+| `models/core/marts/dim_customers.sql:347` | `source_contact_quality` | CASE | `f371e21c795ab4d4` |
+| `models/core/marts/dim_customers.sql:354` | `contact_quality` | CASE | `07c889918edd086a` |
 
 #### `strategic_tier`
 
@@ -941,7 +944,7 @@ Không có khối SQL: luật là dữ liệu (seed), xem ô "Đã là dữ li�
 
 | Vị trí (file:dòng, gốc `transformation/`) | Khối | Loại | sha256 (16 ký tự đầu) |
 |---|---|---|---|
-| `models/core/marts/dim_customers.sql:271` | `discount_sensitivity` | CASE | `26f23fb0a24c3dba` |
+| `models/core/marts/dim_customers.sql:276` | `discount_sensitivity` | CASE | `26f23fb0a24c3dba` |
 | `models/core/marts/intermediate/int_product_discount_dependency.sql:30` | `discount_dependency` | CASE | `016e2d47d4df10cd` |
 
 ### Nhóm: Sản phẩm
@@ -1278,10 +1281,10 @@ Chỉ ghi, **không sửa số** trong phase này. Mọi thống nhất đều l
 
 | Literal | Ý nghĩa | Vị trí |
 |---|---|---|
-| `CTN00014` | Mã nhóm cũ của khách nhận hàng hộ | `dim_customers.sql` L226, L331; `fact_orders.sql` L115; `int_customer_benchmarks.sql` L52. Ở `dim_customers` đây là **logic hook** của tenant (cùng tín hiệu kênh `US`): không phải cạnh `ref` nên không có trong `boundary_allowlist.yaml`; ghi ở `docs/architecture/modules.md` mục 10 |
-| `KY_GUI` | Nhóm Ký gửi (PARTNER); `_` là wildcard | `dim_customers.sql` L219; `fact_orders.sql` L112; `int_customer_benchmarks.sql` L49 |
-| `%WHOLESALE%`, `TYPE_PARTNER`, `TYPE_STAFF`, `TYPE_KOL`, `TYPE_CROSSBORDER` | Mã nhóm khách của Sapo (kể cả nhóm cũ BANBUON tên `WHOLESALE`) | ba khối `customer_type`; `is_us_gift_recipient` |
-| Kênh `'US'` | Nguồn Sapo giao hàng hộ từ Mỹ | `dim_customers.sql` L35; `int_us_shipment_line_prices.sql` L25 |
+| `CTN00014` | Mã nhóm cũ của khách nhận hàng hộ | `dim_customers.sql` L230, L340; `fact_orders.sql` L120; `int_customer_benchmarks.sql` L56 (nhánh SQL cũ, chạy khi `taxonomy_engine_customer_type` tắt); bản sao trong `monitor_taxonomy_parity.sql`; **đồng thời** là dòng luật `ct_crossborder_3/4`, `ctb_crossborder_2` của `seeds/tenants/fine_japan/taxonomy_rule_tenant.csv` (đường bộ máy). Ở `dim_customers` đây là **logic hook** của tenant (cùng tín hiệu kênh `US`): không phải cạnh `ref` nên không có trong `boundary_allowlist.yaml`; ghi ở `docs/architecture/modules.md` mục 10 |
+| `KY_GUI` | Nhóm Ký gửi (PARTNER); `_` là wildcard | `dim_customers.sql` L223; `fact_orders.sql` L117; `int_customer_benchmarks.sql` L53 (nhánh SQL cũ); bản sao trong `monitor_taxonomy_parity.sql`; luật `ct_partner_3/4`, `ctb_partner_2` (seed tenant) |
+| `%WHOLESALE%`, `TYPE_PARTNER`, `TYPE_STAFF`, `TYPE_KOL`, `TYPE_CROSSBORDER` | Mã nhóm khách của Sapo (kể cả nhóm cũ BANBUON tên `WHOLESALE`) | ba khối `customer_type`, `is_us_gift_recipient` (nhánh SQL cũ) và bản sao của chúng trong `monitor_taxonomy_parity.sql`; ở đường bộ máy chỉ còn là dòng của `seeds/tenants/fine_japan/taxonomy_rule_tenant.csv` |
+| Kênh `'US'` | Nguồn Sapo giao hàng hộ từ Mỹ | `dim_customers.sql` L35 (nhánh SQL cũ); `monitor_taxonomy_parity.sql` (bản sao); luật `ct_crossborder_5` (seed tenant, đường bộ máy); `int_us_shipment_line_prices.sql` L25 |
 | `'Đại Lý'` | Tên nguồn Sapo của đại lý | `int_customer_benchmarks.sql` L79; `mart_deadstock_target_queue.sql` L203 |
 | `'Fine Japan Vietnam'`, `'FG Care'`, `'Fine Care'` | Ba thương hiệu có nhãn `product_affinity` riêng | `int_customer_metrics.sql` L291-293 |
 | Từ khoá giảm giá tiếng Việt: `mẫu`, `tặng`, `đại lý`, `hợp đồng`, `nhà thuốc`, `mỹ`, `us`, `ctkm`, `father`, `mascot`, `nhân viên`, `ctv`, `hoa hồng` | Lý do giảm giá | `fact_orders.sql` L48-62; bản chép `fact_order_costs.sql` L118-140 |

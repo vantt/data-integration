@@ -44,6 +44,10 @@ WITH base AS (
     SELECT
         c.customer_key,
         -- customer_type logic mirrors dim_customers.sql exactly (no circular dep)
+{% if var('taxonomy_engine_customer_type') %}
+        -- classification engine (domain customer_type__group_blob)
+        ctb.customer_type AS customer_type,
+{% else %}
         CASE
             WHEN c.customer_group LIKE '%WHOLESALE%' THEN 'WHOLESALE'
             WHEN c.customer_group LIKE '%TYPE_PARTNER%' OR c.customer_group LIKE '%KY_GUI%' THEN 'PARTNER'
@@ -52,6 +56,7 @@ WITH base AS (
             WHEN c.customer_group LIKE '%TYPE_CROSSBORDER%' OR c.customer_group LIKE '%CTN00014%' THEN 'CROSSBORDER'
             ELSE 'RETAIL'
         END AS customer_type,
+{% endif %}
         -- value_group mirrors dim_customers.sql (needed for in_value_group frame)
         CASE
             WHEN COALESCE(m.monetary_value, 0) >= 50000000 OR COALESCE(m.frequency, 0) >= 20 THEN 'VALUE_VIP'
@@ -65,6 +70,9 @@ WITH base AS (
         m.acquisition_source
     FROM {{ ref('dim_customers_base') }} c
     LEFT JOIN {{ ref('int_customer_metrics') }} m ON c.customer_key = m.customer_key
+{% if var('taxonomy_engine_customer_type') %}
+    LEFT JOIN {{ ref('lbl_customer_type__group_blob') }} ctb ON ctb.customer_key = c.customer_key
+{% endif %}
 ),
 
 -- Classify every customer into benchmark_status before computing any window functions.

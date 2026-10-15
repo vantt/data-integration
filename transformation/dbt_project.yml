@@ -334,3 +334,8 @@ vars:
   # 5: dbt build --select +tag:taxonomy_selftest --vars '{taxonomy_selftest: true}'). Off in every
   # real build: no selftest table is ever created in the warehouse.
   taxonomy_selftest: false
+  # Which customer_type path the marts use (docs/architecture/taxonomy-engine.md §4b): false = the
+  # legacy CASE blocks in dim_customers, fact_orders, int_customer_benchmarks (lbl_* are then not
+  # ancestors of these marts); true = the classification engine (lbl_customer_type,
+  # lbl_customer_type__group_blob).
+  taxonomy_engine_customer_type: false

@@ -74,3 +74,76 @@ models:
         description: "Layer of that rule: tenant or product."
       - name: ruleset_version
         description: "md5 of every rule row of the domain."
+
+  - name: monitor_taxonomy_parity
+    description: >
+      Classification engine vs the legacy customer_type SQL, one row per customer and domain
+      (customer_type: dim_customers logic and is_us_gift_recipient; customer_type__group_blob:
+      fact_orders / int_customer_benchmarks logic). Holds verbatim copies of the legacy blocks
+      (same sha256 in scripts/checks/taxonomy_inventory.yaml) so parity keeps being measured after
+      the marts switch to the engine. docs/architecture/taxonomy-engine.md §4b.
+    tests:
+      - dbt_utils.expression_is_true:
+          arguments:
+            expression: "NOT is_diff"
+          config:
+            severity: warn
+    columns:
+      - name: domain
+      - name: customer_key
+      - name: engine_label
+        description: "Label of lbl_<domain>."
+      - name: legacy_label
+        description: "Label of the verbatim copy of the legacy CASE."
+      - name: engine_flag
+        description: "lbl_customer_type.matched__crossborder (NULL for the blob domain)."
+      - name: legacy_flag
+        description: "Verbatim copy of dim_customers.is_us_gift_recipient (NULL for the blob domain)."
+      - name: engine_rule_id
+      - name: ruleset_version
+      - name: is_label_diff
+      - name: is_flag_diff
+      - name: is_diff
+        description: "Label or flag differs (IS DISTINCT FROM, so NULL vs FALSE counts)."
+      - name: is_legacy_else
+        description: "The legacy block fell into its ELSE (RETAIL)."
+      - name: is_engine_default
+        description: "The engine label came from an unconditional (default) rule."
+
+  - name: monitor_taxonomy_parity_log
+    description: >
+      Append-only history of monitor_taxonomy_parity: one row per dbt run and domain with the
+      counts below (full_refresh=false). Used to count consecutive nights without difference before
+      the marts switch to the engine, and for 30 days after. Read one row per run_date and domain.
+    columns:
+      - name: run_at
+      - name: run_date
+        description: "Date of the run in Asia/Ho_Chi_Minh."
+      - name: domain
+      - name: ruleset_version
+      - name: n_entities
+      - name: n_label_diff
+      - name: n_flag_diff
+      - name: n_legacy_else
+        description: "Customers the legacy block put in its ELSE (RETAIL)."
+      - name: n_engine_default
+        description: "Customers labelled by the engine's unconditional (default) rule."
+      - name: n_unmapped
+      - name: n_unknown
+
+  - name: monitor_taxonomy_unmapped
+    description: >
+      For every classification engine domain with a survey: raw values of the survey features of
+      the customers no specific rule classified (UNMAPPED, UNKNOWN, or the default rule), with
+      customers, orders (int_customer_metrics.frequency) and revenue (monetary_value), sorted by
+      revenue. The list to write new rules from.
+    columns:
+      - name: domain
+      - name: label
+      - name: reason
+        description: "unmapped, unknown or default_rule."
+      - name: raw_values
+        description: "JSON object of the survey feature values."
+      - name: n_entities
+      - name: order_count
+      - name: revenue

@@ -160,9 +160,12 @@ buckets:
   mart_product_action_queue: core
   mart_product_health: core
   mart_retention_waterfall_monthly: core
-  # --- monitoring (3)
+  # --- monitoring (6)
   entity_labels: monitoring
   mart_capabilities: monitoring
+  monitor_taxonomy_parity: monitoring
+  monitor_taxonomy_parity_log: monitoring
+  monitor_taxonomy_unmapped: monitoring
   monitor_uncategorized_tags: monitoring
   # --- pack:crm (14)
   int_crm_outreach_effort_events: pack:crm

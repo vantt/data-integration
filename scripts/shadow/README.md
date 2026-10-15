@@ -127,7 +127,7 @@ compare with lake-A. Only the build result decides the step; the printed differe
 reviewed by hand against this list. A table outside it must be explained before the phase is
 accepted.
 
-Expected differences (`{enabled_packs: [], tenant: ""}`, Fine Japan data, 15/10/2026 with the classification engine pilot; 161 models and seeds built, 404 tests pass, 8 warn; the engine selftest models and the Fine Japan pilot unit tests are disabled in this profile):
+Expected differences (`{enabled_packs: [], tenant: ""}`, Fine Japan data, 15/10/2026 with the classification engine pilot and its monitors, `taxonomy_engine_customer_type` off; 164 models and seeds built, 404 tests pass, 9 warn; the engine selftest models and the Fine Japan pilot unit tests are disabled in this profile):
 
 | Table | Expected difference | Why |
 |---|---|---|
@@ -147,10 +147,17 @@ Expected differences (`{enabled_packs: [], tenant: ""}`, Fine Japan data, 15/10/
 
 Also expected (not public, so not in the compare): the 6 `lbl_<domain>` models build with every
 label `UNMAPPED` (no tenant: empty `taxonomy_label__default`, and for the two `customer_type` models
-of the classification engine no rule, `taxonomy_rule_tenant__default` being empty) and 8 tests
-`warn` (`status: {... 'warn': 8}`): their 6 `labels_mapped` tests and the two
+of the classification engine no rule, `taxonomy_rule_tenant__default` being empty) and 9 tests
+`warn` (`status: {... 'warn': 9}`): their 6 `labels_mapped` tests, the two
 `customer_type NOT IN ('UNMAPPED', 'UNKNOWN')` checks of `lbl_customer_type` and
-`lbl_customer_type__group_blob`.
+`lbl_customer_type__group_blob`, and `NOT is_diff` on `monitor_taxonomy_parity` (the engine says
+`UNMAPPED` without rules, the legacy SQL copy says `RETAIL`).
+
+With `taxonomy_engine_customer_type: true` the bare-core profile does **not** build today: without
+a tenant there is no `customer_type` rule, every customer is `UNMAPPED` instead of the legacy
+`RETAIL`, no customer is ranked in `int_customer_benchmarks`, and the error-level test
+`assert_int_customer_benchmarks_rankable_count_sane` fails (`dim_customers` and its children are
+skipped). Open decision before the variable defaults to true (docs/architecture/taxonomy-engine.md §4b).
 
 Row counts that must stay equal to lake-A (velocity is core): `int_product_velocity_trend`,
 `mart_product_health`, `mart_product_action_queue`, `mart_inventory_health`.
