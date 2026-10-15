@@ -104,6 +104,15 @@ adding such a rule, and update it in the same change.
   spec, or reuse the existing rule. The shadow gate prints these warnings in step 3c.
 - Do not change a classification rule while moving files; a rule change alters numbers and goes
   through the S gate with the impact stated.
+- Classification engine (being implemented; `docs/architecture/taxonomy-engine.md` §4b): a new
+  rule is **rows** of a rule seed, not a `CASE` block. Product default layer:
+  `seeds/taxonomy/taxonomy_rule_product.csv`; tenant layer (evaluated first):
+  `seeds/tenants/<tenant>/taxonomy_rule_tenant.csv`, read by core through
+  `tenant_ref('taxonomy_rule_tenant')` (empty default in `seeds/defaults/`). One row = one
+  condition; rows sharing a `rule_id` are ANDed. Domains and feature columns are declared in
+  `vars.taxonomy` of `dbt_project.yml` (read at compile time). After editing rules or the registry
+  run `python3 scripts/checks/check_taxonomy_rules.py` (exit 1 on any invalid rule; also run by the
+  pytest step of `scripts/checks/run-all.sh` and the shadow gate).
 
 ## Core Mandates
 

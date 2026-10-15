@@ -1189,7 +1189,7 @@ Không có khối SQL: luật là dữ liệu (seed), xem ô "Đã là dữ li�
 
 ## 5. Seed phân loại và ai đọc, ai ghi
 
-Chín seed phân loại nằm ở `transformation/seeds/taxonomy/` (tên seed giữ nguyên nên relation dbt không đổi). Python tìm seed theo tên bằng `seed_path("<tên>")` ở [`ingestion/src/utils/seed_paths.py`](../../ingestion/src/utils/seed_paths.py) (quét `transformation/seeds/**/<tên>.csv`, lỗi nếu không có hoặc có hơn một file). `+column_types` của ba seed có kiểu cột khai trong `dbt_project.yml` được đặt dưới khoá `taxonomy:`.
+Mười seed phân loại nằm ở `transformation/seeds/taxonomy/` (tên seed giữ nguyên nên relation dbt không đổi). Python tìm seed theo tên bằng `seed_path("<tên>")` ở [`ingestion/src/utils/seed_paths.py`](../../ingestion/src/utils/seed_paths.py) (quét `transformation/seeds/**/<tên>.csv`, lỗi nếu không có hoặc có hơn một file). `+column_types` của các seed có kiểu cột khai trong `dbt_project.yml` được đặt dưới khoá `taxonomy:`.
 
 | Seed | Dòng | Model dbt đọc | Python đọc | Python ghi | Domain |
 |---|---|---|---|---|---|
@@ -1202,8 +1202,19 @@ Chín seed phân loại nằm ở `transformation/seeds/taxonomy/` (tên seed gi
 | `ref_tag_categories` | 61 | `int_order_tags` | | | `order_tag` |
 | `ref_gl_accounts` | 53 | `dim_gl_account` (chỉ bổ sung tên tài khoản) | | | `gl_cashflow_line` |
 | `taxonomy_canonical` | 51 | test của lớp nhãn (mục 5b) | | | mã chuẩn của `channel_format`, `channel_category`, `customer_type`, `value_group`, `customer_lifecycle_stage` |
+| `taxonomy_rule_product` | 0 (chỉ tiêu đề) | chưa có (bộ máy phân loại sẽ đọc qua `ref`) | `scripts/checks/check_taxonomy_rules.py` (validator) | | lớp luật mặc định của sản phẩm, mọi domain của bộ máy |
 
 Các seed dữ liệu doanh nghiệp của tenant Fine Japan nằm ở `transformation/seeds/tenants/fine_japan/` (dời ở bước tenant overlay; tên seed và cấu hình không đổi): `seed_action_scenario_registry`, `seed_cash_allocation_policy`, `seed_cashflow_budget`, `seed_channel_targets`, `seed_sku_alias_manual`, `seed_sku_regimen_config`. Model đọc: `dim_action_scenario_registry`, `mart_customer_action_queue`, `mart_customer_sku_action_queue` (pack `sales_playbook`); `fact_cashflow_budget`, `dim_cash_allocation_policy` (pack `finance`); `dim_channel_targets`, `dim_sku_alias`, `int_customer_sku_supply_tracking` (lõi). Hai seed ngân sách (`seed_cashflow_budget`, `seed_cash_allocation_policy`) được job Google Sheet ghi lúc 02:30 qua `ingestion/src/gsheet_budget_sync` (Dagster asset `orchestration/connectors/sheets/assets.py: budget_sheet_sync_asset`), cũng đã chuyển sang `seed_path`. **Chưa có** chỗ nào ghi tự động vào seed phân loại (chỉ `sync_seeds.py` chạy tay).
+
+**Bảng luật của bộ máy phân loại** (đang hiện thực; schema, toán tử, thứ tự lớp: [taxonomy-engine.md §4b](../../docs/architecture/taxonomy-engine.md#4b-hiện-thực-mvp)). Hai lớp cùng schema `rule_id, domain, priority, label, feature, op, value, value_to, enabled, note`, một dòng một điều kiện, hôm nay chỉ có dòng tiêu đề; chưa model nào đọc:
+
+| Seed | Lớp | Ai đọc | Ai ghi |
+|---|---|---|---|
+| `seeds/taxonomy/taxonomy_rule_product.csv` | mặc định sản phẩm | `check_taxonomy_rules.py`; sau này `lbl_<domain>` qua `ref` | người, qua git + gate |
+| `seeds/tenants/fine_japan/taxonomy_rule_tenant.csv` | riêng Fine Japan (xét trước lớp sản phẩm) | `check_taxonomy_rules.py`; sau này `lbl_<domain>` qua `tenant_ref` | người, qua git + gate (luật `customer_type` của Fine Japan sẽ nằm ở đây) |
+| `seeds/defaults/taxonomy_rule_tenant__default.csv` | lớp tenant khi không có tenant (rỗng) | như trên | không ai (chỉ tiêu đề) |
+
+Không writer tự động nào ghi ba file này. Sửa luật: thêm/sửa dòng, chạy `python3 scripts/checks/check_taxonomy_rules.py`, rồi gate; đổi luật đã chạy là đổi số.
 
 ## 5b. Lớp ánh xạ nhãn → mã chuẩn (xem trước, chưa chốt)
 

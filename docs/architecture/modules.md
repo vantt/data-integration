@@ -610,7 +610,7 @@ Giá trị khi tắt pack: mục 7.
 
 ## 9. Taxonomy module
 
-**Trạng thái:** phần đã làm là **đặc tả, seed, công cụ kiểm tra và lớp nhãn chuẩn dạng dữ liệu** (thiết kế §3.3–3.4: `taxonomy_canonical` của sản phẩm, `taxonomy_label` của tenant, 5 model `lbl_<domain>` với cột `*_std`; chi tiết [TAXONOMY.md mục 5b](../../transformation/docs/TAXONOMY.md)). Bộ máy luật chưa có: các khối `CASE` phân loại vẫn nằm trong SQL của core, lớp nhãn chỉ neo nhãn chúng sinh ra vào mã chuẩn (bản xem trước). `lbl_*` là bảng trong warehouse, chưa lên serving (user chốt 14/10/2026: chờ plan report). Bộ máy phân loại (luật thành dữ liệu, mỗi domain một model sinh từ macro chung) là **plan riêng sau Đợt 1**, thiết kế đã duyệt ở [taxonomy-engine.md](taxonomy-engine.md), bộ mã chuẩn của nó **chưa chốt**.
+**Trạng thái:** phần đã làm là **đặc tả, seed, công cụ kiểm tra và lớp nhãn chuẩn dạng dữ liệu** (thiết kế §3.3–3.4: `taxonomy_canonical` của sản phẩm, `taxonomy_label` của tenant, 5 model `lbl_<domain>` với cột `*_std`; chi tiết [TAXONOMY.md mục 5b](../../transformation/docs/TAXONOMY.md)). Bộ máy luật chưa có: các khối `CASE` phân loại vẫn nằm trong SQL của core, lớp nhãn chỉ neo nhãn chúng sinh ra vào mã chuẩn (bản xem trước). `lbl_*` là bảng trong warehouse, chưa lên serving (user chốt 14/10/2026: chờ plan report). Bộ máy phân loại (luật thành dữ liệu, mỗi domain một model sinh từ macro chung) là **plan riêng sau Đợt 1**, thiết kế đã duyệt ở [taxonomy-engine.md](taxonomy-engine.md), bộ mã chuẩn của nó **chưa chốt**. Plan bộ máy (`plans/261014-2225-taxonomy-engine/`) đã thêm phần nền: registry domain `vars.taxonomy` trong `dbt_project.yml`, hai lớp bảng luật (seed rỗng) và validator luật `check_taxonomy_rules.py`; chưa domain nào, chưa model nào đọc chúng ([taxonomy-engine.md §4b](taxonomy-engine.md#4b-hiện-thực-mvp)).
 
 ```mermaid
 flowchart TB
@@ -621,7 +621,12 @@ flowchart TB
         SP["ingestion/src/utils/seed_paths.py<br/>seed_path(name) → Path"]
         TC["seeds/taxonomy/taxonomy_canonical<br/>(bộ mã chuẩn, xem trước)"]
         LBL["core/marts/labels/lbl_&lt;domain&gt;<br/>nhãn + *_std (5 domain)"]
+        REG["dbt_project.yml vars.taxonomy<br/>(registry: features, domains; rỗng)"]
+        RULE["seeds/taxonomy/taxonomy_rule_product<br/>(lớp luật sản phẩm, rỗng)"]
+        VAL["scripts/checks/check_taxonomy_rules.py<br/>(validator luật, chặn khi sai)"]
     end
+    RT["seeds/tenants/fine_japan/taxonomy_rule_tenant<br/>(lớp luật tenant, rỗng)"]
+    REG & RULE & RT & TL --> VAL
     TL["seeds/tenants/fine_japan/taxonomy_label<br/>(nhãn → mã, tenant)"] -- "tenant_ref" --> LBL
     TC -. "test" .-> TL
     DOC <-. "hash khớp (test)" .-> INV
@@ -637,11 +642,14 @@ flowchart TB
 | Thành phần | Vai trò | Tài liệu |
 |---|---|---|
 | `transformation/docs/TAXONOMY.md` | Đặc tả: mọi luật phân loại (file:dòng, sha256, biến thể, ngữ nghĩa, tenant literal), đã là dữ liệu hay còn là SQL, Known divergences. Là **đặc tả đầu vào** của bộ máy | chính nó |
-| `docs/architecture/taxonomy-engine.md` | Thiết kế bộ máy phân loại (v2, đã duyệt hướng, chưa triển khai) | [taxonomy-engine.md](taxonomy-engine.md) |
+| `docs/architecture/taxonomy-engine.md` | Thiết kế bộ máy phân loại (v2, đã duyệt hướng); phần đã hiện thực ở §4b | [taxonomy-engine.md](taxonomy-engine.md) |
 | `docs/reference/taxonomy/` | Bốn tài liệu tham chiếu bên ngoài (Shopify, Trung Quốc, nguồn TMĐT Việt Nam, chuẩn liên ngành) | [reference/taxonomy/](../reference/taxonomy/) |
 | `scripts/checks/check_taxonomy_inventory.py`, `taxonomy_inventory.yaml` | Cảnh báo khi khối đã kiểm kê đổi hash hoặc có `CASE` mới gán cột taxonomy; shadow gate bước 3c | [scripts/checks/README.md](../../scripts/checks/README.md#check_taxonomy_inventorypy) |
 | `ingestion/src/utils/seed_paths.py` | `seed_path(name)` tra thư mục thật của seed (quét `transformation/seeds/**/<name>.csv`, lỗi nếu không có hoặc trùng) | docstring của module |
-| `transformation/seeds/taxonomy/` | 9 seed phân loại (8 seed luật + bộ mã chuẩn `taxonomy_canonical`); `+column_types` đặt dưới khoá `taxonomy:` trong `dbt_project.yml` | `transformation/AGENTS.md` |
+| `transformation/seeds/taxonomy/` | 10 seed phân loại (8 seed ánh xạ/dò mẫu cũ, bộ mã chuẩn `taxonomy_canonical`, lớp luật sản phẩm `taxonomy_rule_product`); `+column_types` đặt dưới khoá `taxonomy:` trong `dbt_project.yml` | `transformation/AGENTS.md` |
+| Registry `vars.taxonomy` (`transformation/dbt_project.yml`) | Danh mục đặc trưng và domain của bộ máy, đọc lúc compile (chưa có domain) | [taxonomy-engine.md §4b](taxonomy-engine.md#4b-hiện-thực-mvp) |
+| Bảng luật hai lớp: `seeds/taxonomy/taxonomy_rule_product.csv` (sản phẩm), `seeds/tenants/fine_japan/taxonomy_rule_tenant.csv` (tenant, lõi sẽ đọc qua `tenant_ref`; bản mặc định rỗng `seeds/defaults/taxonomy_rule_tenant__default.csv`) | Luật phân loại dạng dữ liệu, một dòng một điều kiện; hiện chỉ có dòng tiêu đề | như trên |
+| `scripts/checks/check_taxonomy_rules.py` | Validator luật trước khi nạp (domain, đặc trưng, toán tử theo kiểu, giá trị, nhãn, `rule_id`/priority, luật tắt); thoát 1 khi sai; chạy trong pytest của `run-all.sh` và shadow gate | [scripts/checks/README.md](../../scripts/checks/README.md#check_taxonomy_rulespy) |
 
 Ai ghi seed nào: `sync_seeds.py` (chạy tay) thêm dòng vào `ref_order_sources` và `ref_branch_locations`; không writer tự động nào ghi seed phân loại. Job Google Sheet 02:30 (`budget_sheet_sync_asset` gọi `gsheet_budget_sync`) ghi hai seed ngân sách của tenant (`seed_cashflow_budget`, `seed_cash_allocation_policy`, ở `transformation/seeds/tenants/fine_japan/`), cũng qua `seed_path`. Bảng đầy đủ đọc/ghi: [TAXONOMY.md mục 5](../../transformation/docs/TAXONOMY.md#5-seed-phân-loại-và-ai-đọc-ai-ghi).
 

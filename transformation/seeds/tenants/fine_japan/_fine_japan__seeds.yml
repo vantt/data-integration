@@ -51,3 +51,53 @@ seeds:
       - dbt_utils.unique_combination_of_columns:
           arguments:
             combination_of_columns: [domain, label]
+
+  - name: taxonomy_rule_tenant
+    description: >
+      Classification rules of Fine Japan, tenant layer (evaluated before the product layer
+      taxonomy_rule_product; same columns). Overrides the core default taxonomy_rule_tenant__default;
+      core reads it through tenant_ref('taxonomy_rule_tenant'). Validated before load by scripts/checks/check_taxonomy_rules.py (the hard check; the not_null tests here only warn). Schema: docs/architecture/taxonomy-engine.md "Hiện thực MVP".
+    columns:
+      - name: rule_id
+        data_type: varchar
+        description: "Rule key, unique within the layer. Several rows with the same rule_id are conditions joined by AND; domain, priority, label and enabled must be equal across them."
+        tests:
+          - not_null:
+              config:
+                severity: warn
+      - name: domain
+        data_type: varchar
+        description: "Domain declared in vars.taxonomy.domains (dbt_project.yml)."
+        tests:
+          - not_null:
+              config:
+                severity: warn
+      - name: priority
+        data_type: integer
+        description: "Lower is evaluated first, within the layer."
+      - name: label
+        data_type: varchar
+        description: "Tenant label, declared in taxonomy_label for the domain's label_set. Empty only on a row that disables a rule of another layer."
+        tests:
+          - not_null:
+              config:
+                severity: warn
+                where: "enabled or feature is not null"
+      - name: feature
+        data_type: varchar
+        description: "Feature column declared for the domain. Empty = unconditional rule (always true, used as the default)."
+      - name: op
+        data_type: varchar
+        description: "like, eq, in, not_in, between, starts_with, contains, regex, is_null, has."
+      - name: value
+        data_type: varchar
+        description: "Operand, cast to the feature type; in/not_in split on '|'; is_null takes empty (IS NULL) or false (IS NOT NULL)."
+      - name: value_to
+        data_type: varchar
+        description: "Upper bound of between, exclusive: [value, value_to); an empty bound is open."
+      - name: enabled
+        data_type: boolean
+        description: "false disables the rule with this rule_id in every layer (how the tenant layer turns off an inherited rule)."
+      - name: note
+        data_type: varchar
+        description: "Free text for readers, not used in evaluation."

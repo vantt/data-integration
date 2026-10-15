@@ -48,6 +48,21 @@ seeds:
           name_vi: varchar
           name_en: varchar
           is_reserved: boolean
+      # Classification rules, product default layer (one row = one condition; schema and
+      # semantics: docs/architecture/taxonomy-engine.md "Hiện thực MVP"). Every column typed:
+      # an untyped value column would be inferred as a number and lose text such as '_'.
+      taxonomy_rule_product:
+        +column_types:
+          rule_id: varchar
+          domain: varchar
+          priority: integer
+          label: varchar
+          feature: varchar
+          op: varchar
+          value: varchar
+          value_to: varchar
+          enabled: boolean
+          note: varchar
     # Product seeds: what each connector provides and which module needs it
     # (seeds/capabilities/README.md). Read by monitoring/mart_capabilities.
     capabilities:
@@ -90,6 +105,18 @@ seeds:
           label: varchar
           label_std: varchar
           note: varchar
+      taxonomy_rule_tenant__default:
+        +column_types:
+          rule_id: varchar
+          domain: varchar
+          priority: integer
+          label: varchar
+          feature: varchar
+          op: varchar
+          value: varchar
+          value_to: varchar
+          enabled: boolean
+          note: varchar
       seed_sku_alias_manual__default:
         +column_types:
           sapo_pack_sku: varchar
@@ -111,6 +138,19 @@ seeds:
             domain: varchar
             label: varchar
             label_std: varchar
+            note: varchar
+        # Classification rules, tenant layer (same columns as taxonomy_rule_product).
+        taxonomy_rule_tenant:
+          +column_types:
+            rule_id: varchar
+            domain: varchar
+            priority: integer
+            label: varchar
+            feature: varchar
+            op: varchar
+            value: varchar
+            value_to: varchar
+            enabled: boolean
             note: varchar
 # Dispatch configuration
 dispatch:
@@ -223,3 +263,12 @@ vars:
   # none). tenant_ref('<seed>') reads seeds/tenants/<tenant>/<seed>.csv when set, the core default
   # seeds/defaults/<seed>__default.csv (0 rows) when empty.
   tenant: fine_japan
+  # Classification engine registry, read at compile time (docs/architecture/taxonomy-engine.md
+  # "Hiện thực MVP"): `features` maps a feature model to its subject, key and typed columns (the
+  # public feature catalog); `domains` declares each lbl_<domain> (subject, cardinality,
+  # hit_policy, features, label_set, required_features, matched_flags, survey, selftest). Rules
+  # are rows of the seeds taxonomy_rule_product / taxonomy_rule_tenant, never here.
+  # scripts/checks/check_taxonomy_rules.py validates the rules against this registry.
+  taxonomy:
+    features: {}
+    domains: {}

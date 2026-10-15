@@ -8,9 +8,9 @@ references: [docs/reference/taxonomy/shopify.md, docs/reference/taxonomy/china.m
 
 # Thiết kế bộ máy phân loại
 
-> **v2 (14/10/2026).** User duyệt hướng thiết kế sau 4 bản phản biện (tổng hợp phản biện nằm ở hồ sơ plan, không nằm trong repo). Chưa có gì được triển khai. Bộ mã chuẩn ở §5 là đề xuất, **chưa chốt** cho tới khi có dữ liệu của một doanh nghiệp thứ hai (hiện chưa có). Quyết định đã chốt ở §8.
+> **v2 (14/10/2026).** User duyệt hướng thiết kế sau 4 bản phản biện (tổng hợp phản biện nằm ở hồ sơ plan, không nằm trong repo). Đang hiện thực MVP: phần đã có ở §4b. Bộ mã chuẩn ở §5 là đề xuất, **chưa chốt** cho tới khi có dữ liệu của một doanh nghiệp thứ hai (hiện chưa có). Quyết định đã chốt ở §8.
 
-> Đọc cùng [transformation/docs/TAXONOMY.md](../../transformation/docs/TAXONOMY.md) (kiểm kê từng luật đang chạy) và [modules.md](modules.md) §9 (vị trí của module taxonomy). Bộ máy mô tả ở đây **chưa được triển khai**.
+> Đọc cùng [transformation/docs/TAXONOMY.md](../../transformation/docs/TAXONOMY.md) (kiểm kê từng luật đang chạy) và [modules.md](modules.md) §9 (vị trí của module taxonomy). Bộ máy đang được hiện thực theo từng bước; phần đã có nằm ở [§4b](#4b-hiện-thực-mvp), phần còn lại của tài liệu là thiết kế.
 
 > **Đã làm trước bộ máy (15/10/2026, plan `261014-2225-pack-mechanism` phase 8): lớp nhãn dạng dữ liệu của §3.3–3.4.** Hai bảng seed `taxonomy_canonical` (sản phẩm, `seeds/taxonomy/`) và `taxonomy_label` (tenant, `seeds/tenants/<tenant>/`, đọc qua `tenant_ref`) cùng 5 model `lbl_channel_format`, `lbl_channel_category`, `lbl_customer_type`, `lbl_value_group`, `lbl_customer_lifecycle_stage` (cột `<nhãn>_std`). Các model này **chỉ neo nhãn mà SQL hiện tại sinh ra** vào một mã chuẩn (macro `label_std_model`), chưa có luật. Khi bộ máy làm: nó thay phần sinh nhãn trong `lbl_<domain>` bằng luật, **giữ tên model `lbl_<domain>` và hai bảng seed** để người đọc `*_std` không phải đổi. Chi tiết: [TAXONOMY.md mục 5b](../../transformation/docs/TAXONOMY.md).
 
@@ -148,6 +148,99 @@ Mỗi lớp dùng một dải `priority` riêng để thứ tự trộn xác đ�
 - Domain phụ thuộc domain khác thì `ref()` model đó; dbt tự chặn vòng.
 - Test theo domain: kết quả nằm trong bộ mã chuẩn; `single` thì một dòng mỗi đối tượng; `UNIQUE` thì không có hai luật khớp; độ phủ (% `UNMAPPED`) dưới ngưỡng thì cảnh báo; nhãn → mã chuẩn là hàm; gán tay mồ côi.
 - Nơi nhập luật: giai đoạn đầu là seed CSV trong thư mục tenant (mình cấu hình hộ, qua gate); Google Sheet làm giao diện cho nghiệp vụ là bước sau, bắt buộc có bước kiểm tra cú pháp (kiểu, toán tử, nhãn đã khai báo, đặc trưng tồn tại) trước khi nạp. **[Quyết định]** ở mục 8.
+
+## 4b. Hiện thực MVP
+
+Phạm vi MVP ở §7. Mục này ghi **cái đã có trong repo**; mỗi bước hiện thực cập nhật mục này cùng commit với code.
+
+| Thành phần | Trạng thái |
+|---|---|
+| Registry `vars.taxonomy`, ba seed luật (rỗng), validator `check_taxonomy_rules.py` | Đã có (15/10/2026). Chưa domain nào, chưa luật nào, chưa model nào đọc |
+| Macro bộ máy, model `lbl_<domain>` sinh từ luật, nối mart, giám sát | Chưa có |
+
+```mermaid
+flowchart LR
+    REG["dbt_project.yml<br/>vars.taxonomy<br/>(features, domains)"]
+    RP["seeds/taxonomy/<br/>taxonomy_rule_product.csv<br/>(lớp sản phẩm)"]
+    RT["seeds/tenants/&lt;tenant&gt;/<br/>taxonomy_rule_tenant.csv<br/>(lớp doanh nghiệp)"]
+    RD["seeds/defaults/<br/>taxonomy_rule_tenant__default.csv<br/>(rỗng, khi không có tenant)"]
+    TL["taxonomy_label<br/>(nhãn → mã chuẩn)"]
+    V["scripts/checks/check_taxonomy_rules.py<br/>(trước khi nạp)"]
+    REG & RP & RT & RD & TL --> V
+    REG -. "đọc lúc compile" .-> ENG["macro bộ máy → lbl_&lt;domain&gt;<br/>(chưa có)"]
+    RP -- "ref()" --> ENG
+    RT -- "tenant_ref()" --> ENG
+```
+
+### Registry (`vars.taxonomy` trong `transformation/dbt_project.yml`)
+
+Registry là YAML đọc lúc compile, không phải seed (§6): seed rỗng trên lake trống và không đọc được trong `dbt parse`. Jinja của dbt không đọc được file YAML tuỳ ý, còn khối `vars:` của `dbt_project.yml` có sẵn lúc parse trong ngữ cảnh model, nên các `ref()` mà macro sinh ra từ registry được ghi vào DAG. Validator Python đọc cùng file. Hiện tại `features: {}` và `domains: {}`.
+
+```yaml
+taxonomy:
+  features:                      # danh mục đặc trưng: hợp đồng công khai, thêm được, đổi nghĩa phải qua phiên bản
+    <feature_model>: {subject: customer, key: customer_key, columns: {<cột>: <kiểu DuckDB>}}
+  domains:
+    <domain>:
+      subject: customer
+      cardinality: single        # single | multi
+      hit_policy: FIRST          # FIRST | UNIQUE | COLLECT
+      features: [<feature_model>, ...]   # khai báo tĩnh; model đầu tiên là tập đối tượng đầy đủ
+      label_set: <domain>        # giá trị cột `domain` của taxonomy_label (biến thể của một domain dùng chung bộ nhãn)
+      required_features: []      # đặc trưng bắt buộc; trống thì nhãn UNKNOWN
+      matched_flags: []          # nhãn cần cột matched__<nhãn> ba giá trị
+      survey: {features: [...], metrics_model: ..., order_count: ..., revenue: ...}   # truy vấn giá trị thô chưa phân loại
+      selftest: false
+```
+
+Ràng buộc validator kiểm trên registry: `hit_policy` thuộc FIRST/UNIQUE/COLLECT; COLLECT đi với `multi`, FIRST/UNIQUE với `single`; mọi model trong `features` của domain đã khai báo và cùng `subject`; tên cột đặc trưng không trùng giữa các model của một domain (luật chỉ ghi tên cột); kiểu cột là kiểu DuckDB được hỗ trợ (chuỗi, số, ngày/giờ, boolean, danh sách `<kiểu>[]`); `required_features`, `survey.features` là cột đặc trưng của domain; `matched_flags` thuộc bộ nhãn.
+
+### Bảng luật
+
+Ba seed cùng một schema (một dòng là một điều kiện); mọi cột khai kiểu trong `dbt_project.yml` (`varchar`, trừ `priority` integer và `enabled` boolean), vì cột không khai kiểu bị suy thành số và mất ký tự như `_`.
+
+| Seed | Lớp | Chủ sở hữu | Lõi đọc qua |
+|---|---|---|---|
+| `seeds/taxonomy/taxonomy_rule_product.csv` | mặc định sản phẩm | Sản phẩm | `ref('taxonomy_rule_product')` |
+| `seeds/tenants/<tenant>/taxonomy_rule_tenant.csv` | riêng doanh nghiệp | Doanh nghiệp (mình cấu hình hộ qua git + gate) | `tenant_ref('taxonomy_rule_tenant')` |
+| `seeds/defaults/taxonomy_rule_tenant__default.csv` | lớp doanh nghiệp khi `vars.tenant` rỗng | Sản phẩm (chỉ dòng tiêu đề) | như trên |
+
+| Cột | Kiểu | Ý nghĩa |
+|---|---|---|
+| `rule_id` | varchar | Khoá luật. Nhiều dòng cùng `rule_id` trong một lớp là các điều kiện nối bằng AND; `domain`, `priority`, `label`, `enabled` phải giống nhau giữa các dòng đó. Một `rule_id` chỉ được định nghĩa ở một lớp |
+| `domain` | varchar | Domain trong registry |
+| `priority` | integer | Số nhỏ xét trước, trong cùng lớp |
+| `label` | varchar | Nhãn riêng của doanh nghiệp, phải có trong `taxonomy_label` với `domain` = `label_set` của domain |
+| `feature` | varchar | Cột đặc trưng của domain. **Trống** = luật không điều kiện (luôn đúng), dùng làm mặc định (vd. `RETAIL` của Fine Japan); khi đó luật chỉ có đúng dòng này |
+| `op` | varchar | Toán tử, bảng dưới |
+| `value`, `value_to` | varchar | Toán hạng, ép về kiểu của đặc trưng. `in`/`not_in` tách bằng `\|`. `value_to` chỉ dùng cho `between` |
+| `enabled` | boolean | Bắt buộc `true`/`false`. `false` tắt luật có `rule_id` này ở **mọi lớp** |
+| `note` | varchar | Ghi chú, không dùng khi tính |
+
+| Toán tử | Kiểu đặc trưng | Nghĩa |
+|---|---|---|
+| `like` | chuỗi | `LIKE` thật của SQL (`_` và `%` là wildcard), giữ ngữ nghĩa các khối `CASE` cũ |
+| `eq` | chuỗi, số, ngày/giờ, boolean | Bằng |
+| `in`, `not_in` | chuỗi, số, ngày/giờ | Thuộc / không thuộc danh sách `a\|b\|c` |
+| `between` | số, ngày/giờ | `[value, value_to)`; ô trống là không chặn đầu đó, nhưng phải có ít nhất một đầu; có cả hai thì `value < value_to` |
+| `starts_with`, `contains` | chuỗi | Bắt đầu bằng / chứa chuỗi (không wildcard) |
+| `regex` | chuỗi | Biểu thức chính quy (validator chỉ kiểm cú pháp bằng Python; DuckDB dùng RE2, tránh lookaround và backreference) |
+| `is_null` | mọi kiểu | `value` trống: IS NULL; `false`: IS NOT NULL |
+| `has` | danh sách | Danh sách chứa phần tử `value` (vd. đặc trưng `channels_ordered_on` có `US`) |
+
+**Tắt luật kế thừa.** Lớp doanh nghiệp tắt một luật của lớp sản phẩm bằng một dòng cùng `rule_id`, cùng `domain`, `enabled=false`, để trống `label`, `feature`, `op`, `value` (dòng "tắt"). Muốn thay luật thì tắt luật cũ rồi thêm luật mới với `rule_id` khác.
+
+### Thứ tự lớp và hit policy
+
+- Lớp doanh nghiệp xét trước lớp sản phẩm; trong một lớp theo `priority` tăng dần, rồi `rule_id` (tất định khi hoà, nhưng validator không cho hoà ở FIRST/UNIQUE).
+- FIRST: nhãn của luật khớp đầu tiên theo thứ tự trên. UNIQUE: quá một luật khớp là lỗi. COLLECT: mọi luật khớp, mỗi luật một nhãn (domain `multi`; luật không điều kiện bị cấm vì sẽ gắn nhãn cho mọi đối tượng).
+- Điều kiện đánh giá theo logic SQL ba giá trị, không `bool_and` (§6); cách xử lý luật có điều kiện NULL và cột `matched__<nhãn>` được ghi ở đây khi làm macro.
+
+### Kiểm tra luật trước khi nạp
+
+`python3 scripts/checks/check_taxonomy_rules.py` (stdlib + PyYAML) đọc registry, `vars.tenant`, hai lớp luật của tenant đang bật (không có tenant thì bản mặc định) và `taxonomy_label` tương ứng; thoát 1 và in từng lỗi `file:dòng` khi luật sai (danh sách lỗi: [scripts/checks/README.md](../../scripts/checks/README.md#check_taxonomy_rulespy)). Test `scripts/tests/test_check_taxonomy_rules.py` chạy cả validator trên seed đã commit, nên `scripts/checks/run-all.sh` (bước pytest) và shadow gate (bước pytest) đều chặn luật sai. Test `not_null` mức `warn` trên seed chỉ là lưới phụ khi nạp.
+
+**Seed luật và image.** Khi prod chạy từ image cố định (Đợt 2), thư mục seed của tenant (gồm `taxonomy_rule_tenant.csv`) phải mount từ ngoài image, nếu không đổi luật phải build lại image.
 
 ## 5. Danh mục domain ban đầu và bộ mã chuẩn đề xuất
 

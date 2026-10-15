@@ -9,6 +9,7 @@ true in code. The shadow gate ([scripts/shadow/README.md](../shadow/README.md)) 
 | `run-all.sh` | pre-commit | dbt parse + `check_boundaries.py` + `dagster definitions validate` + pytest, in one command |
 | `check_boundaries.py` | rule check | Module dependency matrix (core reads packs only through `pack_ref`), core reading tenant seeds, cross-component imports, duplicate seeds, hard-coded URLs in connectors and packs, pack switch declared consistently (`module-config`) |
 | `check_taxonomy_inventory.py`, `taxonomy_inventory.yaml` | warn-only check + data | Classification `CASE` blocks and expressions still in dbt SQL match the inventory (hash per block); a new `CASE` assigning a known taxonomy column is reported |
+| `check_taxonomy_rules.py` | rule check | Classification engine rules (seeds `taxonomy_rule_product`, `taxonomy_rule_tenant`) are valid against the registry `vars.taxonomy` and the label sets before they are loaded |
 | `model_buckets.yaml` | data | Bucket (module) of every dbt model; `pack_connectors` for packs |
 | `boundary_allowlist.yaml` | data | Known violations, each with a reason and an exit |
 | `golden_snapshot.py`, `public_models.yaml` | data equality | Public tables identical before/after a change |
@@ -68,6 +69,37 @@ can load it). Each domain lists its `columns` and its `blocks`:
 
 It only warns: classification rules may change on purpose, but never silently. The shadow gate prints the
 result in step 3c. Tests: `scripts/tests/test_check_taxonomy_inventory.py`.
+
+## check_taxonomy_rules.py
+
+```bash
+python3 scripts/checks/check_taxonomy_rules.py              # exit 0: every rule valid; exit 1: prints ERROR <file:line> ...
+python3 scripts/checks/check_taxonomy_rules.py --repo <dir> # another checkout or worktree
+```
+
+Validates the rule tables of the classification engine before they are loaded (design and
+column semantics: [docs/architecture/taxonomy-engine.md §4b](../../docs/architecture/taxonomy-engine.md#4b-hiện-thực-mvp)).
+It reads `vars.taxonomy` and `vars.tenant` from `transformation/dbt_project.yml`, the product
+layer `seeds/taxonomy/taxonomy_rule_product.csv`, the tenant layer
+`seeds/tenants/<tenant>/taxonomy_rule_tenant.csv` (no tenant: `seeds/defaults/taxonomy_rule_tenant__default.csv`)
+and the label sets in the matching `taxonomy_label`. Stdlib + PyYAML, no dbt and no data.
+
+| Error | Example |
+|---|---|
+| Header differs from `rule_id,domain,priority,label,feature,op,value,value_to,enabled,note`; a core default rule seed has rows | a column renamed |
+| Registry inconsistent: unknown `hit_policy`/`cardinality`, COLLECT without `multi` (or FIRST/UNIQUE without `single`), undeclared feature model or different `subject`, a feature column declared by two models of a domain, unsupported DuckDB type, `required_features`/`survey.features` not a feature of the domain, `matched_flags` not in the label set | `hit_policy: PRIORITY` (not in the MVP) |
+| `domain` not in the registry; `feature` not a column of the domain's feature models | a typo in `group_code` |
+| `op` not allowed for the feature type (`like`/`starts_with`/`contains`/`regex` on strings, `between` on numbers and dates, `has` on lists, `is_null` on any) or unknown | `between` on a varchar |
+| `value` not castable to the feature type (each `\|` item for `in`/`not_in`), empty value, invalid regex, `value_to` outside `between`, `is_null` value other than empty/`true`/`false` | `eq abc` on a double |
+| `between` without either bound, or `value >= value_to` | both cells empty |
+| `label` empty or not in `taxonomy_label` for the domain's `label_set` | a label not anchored yet |
+| Rows of one `rule_id` disagree on `domain`, `priority`, `label` or `enabled`; `priority` not an integer; `enabled` not `true`/`false`; empty `rule_id`/`domain`; an unconditional row (no `feature`) mixed with conditions | two priorities for one rule |
+| Two effective `rule_id`s share `(domain, layer, priority)` in a FIRST/UNIQUE domain (disabled rules do not count) | order would depend on `rule_id` |
+| An unconditional rule in a COLLECT domain | it would label every subject |
+| A disable row (`enabled=false`, no label) has a feature/op/value, points to a `rule_id` no layer defines, or to a rule of another domain; one `rule_id` defined in two layers | disabling a rule that was renamed |
+
+Tests: `scripts/tests/test_check_taxonomy_rules.py`, one planted case per error and the committed
+seeds, so the pytest step of `run-all.sh` and of the shadow gate fails on an invalid committed rule.
 
 ## check_boundaries.py
 
