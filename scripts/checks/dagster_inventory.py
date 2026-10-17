@@ -101,6 +101,11 @@ def cmd_export(args: argparse.Namespace) -> int:
 def cmd_diff(args: argparse.Namespace) -> int:
     a, b = json.load(open(args.a)), json.load(open(args.b))
     problems, info = [], []
+    # dbt nodes the baseline already resolves (assets and job selections): an existing asset that
+    # starts to stand for a dbt node outside this set (e.g. an ingest asset mapped to a newly added
+    # dbt source through DBT_SOURCE_KEYS) is an addition, not a change of what it was.
+    known_uids = {v.get("dbt_unique_id") for v in a.get("assets", {}).values()} | {
+        u for j in a.get("jobs", {}).values() for u in j.get("dbt_unique_ids", [])}
     for section in ("assets", "jobs", "schedules", "sensors", "sla"):
         sa, sb = a.get(section, {}), b.get(section, {})
         for name in sorted(set(sa) - set(sb)):
@@ -110,6 +115,14 @@ def cmd_diff(args: argparse.Namespace) -> int:
         for name in sorted(set(sa) & set(sb)):
             if sa[name] == sb[name]:
                 continue
+            if section == "assets" and args.allow_new:
+                xa, xb = sa[name], sb[name]
+                uid = xb.get("dbt_unique_id")
+                if (xa.get("dbt_unique_id") is None and uid is not None and uid not in known_uids
+                        and {k: v for k, v in xa.items() if k != "dbt_unique_id"}
+                        == {k: v for k, v in xb.items() if k != "dbt_unique_id"}):
+                    info.append(f"assets.{name}: now stands for new dbt node {uid}")
+                    continue
             if section == "jobs" and args.allow_new:
                 xa, xb = sa[name], sb[name]
                 grown = set(xa["assets"]) <= set(xb["assets"]) and set(xa["dbt_unique_ids"]) <= set(xb["dbt_unique_ids"])

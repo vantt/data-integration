@@ -27,7 +27,7 @@ echo "[prepare] pinned pytest for shadow-only test runs (never installed into th
 IMAGE="${SHADOW_IMAGE:-fg-dataware-house-data_platform:latest}"
 mkdir -p "$DEPS/wheels"
 docker run --rm --user "$(id -u):$(id -g)" -e HOME=/tmp -v "$DEPS/wheels:/w" "$IMAGE" \
-  pip download "pytest==8.3.3" -d /w -q --disable-pip-version-check
+  pip download "pytest==8.3.3" "pluggy==1.6.0" "iniconfig==2.3.1" -d /w -q --disable-pip-version-check
 docker run --rm --network none --user "$(id -u):$(id -g)" -e HOME=/tmp -v "$DEPS/wheels:/w" \
   -v "$DEPS/home:/shadow-home" "$IMAGE" pip install --no-index --no-deps --find-links /w \
   --target /shadow-home/pylib -q --disable-pip-version-check pytest==8.3.3 pluggy==1.6.0 iniconfig==2.3.1
