@@ -129,6 +129,13 @@ tables:
     unique_id: model.sapo_warehouse.fact_inventory_movements
     key:
     - inventory_movement_id
+  fact_inventory_position_daily:
+    kind: rolling
+    unique_id: model.sapo_warehouse.fact_inventory_position_daily
+    key:
+    - variant_id
+    - location_id
+    - as_of_date
   fact_inventory_snapshot:
     kind: rolling
     unique_id: model.sapo_warehouse.fact_inventory_snapshot
@@ -179,6 +186,20 @@ tables:
     unique_id: model.sapo_warehouse.fact_us_shipment_economics
     key:
     - order_id
+  fact_variant_price_changes:
+    kind: rolling
+    unique_id: model.sapo_warehouse.fact_variant_price_changes
+    key:
+    - variant_id
+    - price_list_id
+    - valid_from_at
+  fact_variant_price_daily:
+    kind: rolling
+    unique_id: model.sapo_warehouse.fact_variant_price_daily
+    key:
+    - variant_id
+    - price_list_id
+    - as_of_date
   fact_variant_prices_snapshot:
     kind: rolling
     unique_id: model.sapo_warehouse.fact_variant_prices_snapshot
