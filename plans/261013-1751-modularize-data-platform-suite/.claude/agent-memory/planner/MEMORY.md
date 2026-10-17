@@ -1,0 +1,1 @@
+- [Report productization conventions](project_report_productization.md) — Vietnamese plans, mandatory doc header, prod-safety rules, where the report plan lives

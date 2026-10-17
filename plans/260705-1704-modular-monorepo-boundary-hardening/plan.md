@@ -1,6 +1,8 @@
 # Modular Monorepo — Boundary Hardening + GHCR + Dev/Prod Split
 
 **Status:** DRAFT — awaiting approval
+
+> **Cập nhật 14/10/2026.** Plan `261013-1751-modularize-data-platform-suite` (Đợt 1) đã thay ba phase của plan này: phase 2 (cắt import crm → orchestration: luật `py-import` của `scripts/checks/check_boundaries.py`), phase 3 (kiểm tra import: `check_boundaries.py` với các luật `py-import`, `orch-import`, `dbt-ref`, `dbt-seed`, ... chạy trong `scripts/checks/run-all.sh` trước mỗi commit) và phase 6 (tài liệu ranh giới: `docs/architecture/modules.md`, ADR-015/016/017). Các phase này **không làm nữa**. Phase 0, 1, 4, 5 (đóng gói image, GHCR, tách dev/prod) là **Đợt 2** trong roadmap của plan 261013 và là bước tiếp theo; khi làm, dựa trên bố cục module hiện có (`orchestration/config/modules.yaml`, `orchestration/{connectors,packs,tenants}/`, `transformation/models/<module>/`) và các ADR trên. Lưu ý thêm từ Đợt 1: Evidence đã ghim phiên bản (main `c2915881`); Metabase đã có backup (main `82368d21`); luật phân loại và hồ sơ khách phải nằm ngoài image.
 **Created:** 2026-07-05
 **Goal:** Giữ monorepo nhưng cưỡng chế ranh giới component bằng máy móc (build context, import-linter, per-component versioned images trên GHCR), chuẩn bị chạy 2 máy Dev/Prod. Không tách repo — nhưng mọi bước đều là đường một chiều về phía tách repo sau này nếu cần.
 
@@ -20,11 +22,11 @@
 |---|---|---|---|
 | 0 | Đánh giá + tái cơ cấu data storage: bind mount → named volume (benchmark trước, migrate chọn lọc; code-as-volume loại trừ — code prod đi bằng image) | [phase-00](phase-00-data-volume-restructure.md) | [runtime inventory](../reports/prod-runtime-inventory-260705-2000-containers-data-locations-report.md) |
 | 1 | Component self-containment (di chuyển Dockerfiles, thu hẹp build context) | [phase-01](phase-01-dockerfile-relocation.md) | Prereq A |
-| 2 | Cắt import crm → orchestration (inline Lark alert) | [phase-02](phase-02-cut-crm-orchestration-import.md) | — |
-| 3 | Cưỡng chế boundary bằng import-linter + CI | [phase-03](phase-03-import-linter-enforcement.md) | Phase 2 |
+| 2 | **[superseded bởi 261013-1751]** Cắt import crm → orchestration (inline Lark alert) | [phase-02](phase-02-cut-crm-orchestration-import.md) | — |
+| 3 | **[superseded bởi 261013-1751]** Cưỡng chế boundary bằng import-linter + CI | [phase-03](phase-03-import-linter-enforcement.md) | Phase 2 |
 | 4 | GHCR publish + per-component versioning | [phase-04](phase-04-ghcr-publish-versioning.md) | Phase 1 |
 | 5 | Dev/Prod compose split — **2 stacks cùng máy** (base = prod images, override = dev build+mounts, parameterize names/ports/hostnames) | [phase-05](phase-05-dev-prod-compose-split.md) | Phase 4, [runtime inventory](../reports/prod-runtime-inventory-260705-2000-containers-data-locations-report.md) |
-| 6 | Boundary doc + cập nhật docs/AGENTS.md | [phase-06](phase-06-boundary-doc.md) | Phase 1–5 |
+| 6 | **[superseded bởi 261013-1751]** Boundary doc + cập nhật docs/AGENTS.md | [phase-06](phase-06-boundary-doc.md) | Phase 1–5 |
 
 Phase 0 chạy TRƯỚC TIÊN (ổn định tầng data trước khi các phase khác sửa compose; phase-05 seed script phụ thuộc kết quả Phase 0). Sau đó Phase 2+3 độc lập với 1+4+5, có thể làm song song. Phase 6 chốt cuối.
 

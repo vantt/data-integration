@@ -1,12 +1,14 @@
 ---
 title: "Warehouse Pipeline DR — Verified Restore (parquet-first)"
 description: ""
-status: pending
+status: cancelled
 priority: P2
 created: 2026-06-24
 ---
 
 # Warehouse Pipeline DR — Verified Restore (parquet-first)
+
+> **Cancelled (15/10/2026):** thay bởi [plans/261015-1140-backup-restore-dr](../261015-1140-backup-restore-dr/plan.md) (design §13), kế thừa quyết định parquet-first. Không thực thi plan này.
 
 ## Overview
 

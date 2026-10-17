@@ -1,12 +1,14 @@
 ---
 title: "Tool-Agnostic Design Spec"
-status: active — Not started
+status: superseded — 2026-10-14 by plans/261013-1751-modularize-data-platform-suite/report-product-design.md (kế thừa D1–D8)
 # (updated 2026-06-24: untouched by 260623 audit work; all phases not_started; decisions locked but no implementation begun)
 created: 2026-05-28
 updated: 2026-05-28
 ---
 
 # Tool-Agnostic Design Spec
+
+> **Superseded (14/10/2026):** thay bởi [report-product-design.md](../261013-1751-modularize-data-platform-suite/report-product-design.md) §10, kế thừa quyết định D1–D8. Không thực thi plan này.
 
 **Goal**: Tách dashboard "intent" khỏi BI tool. Design Spec = tool-agnostic source of truth; mỗi tool có deployer riêng đọc spec → gọi tool API trực tiếp.
 
