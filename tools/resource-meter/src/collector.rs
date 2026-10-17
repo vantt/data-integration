@@ -5,6 +5,9 @@
 //!   run-related processes sampled;
 //! - every 250 ms while a dbt process is alive: dbt processes sampled;
 //! - every 60 s: a `self` row with the meter's own RSS, CPU and disk use.
+//!
+//! Exited run processes go to the attributor, which writes `steps-*.tsv` and
+//! `models-*.tsv` (see `attribution`).
 
 use std::collections::HashMap;
 use std::fs;
@@ -12,8 +15,10 @@ use std::path::PathBuf;
 use std::thread;
 use std::time::{Duration, Instant};
 
+use crate::attribution::{Attributor, Line, Output, Settings, MODELS_HEADER, STEPS_HEADER};
 use crate::clock::{day_stamp, local_day, now_epoch};
 use crate::containers::{self, Scope};
+use crate::http::Endpoint;
 use crate::procfs::{ProcFs, CLK_TCK};
 use crate::tracker::{Limits, Proc, Role, Tracker};
 use crate::tsv::{housekeeping, DailyWriter, Row};
@@ -40,6 +45,10 @@ pub struct Config {
     pub utc_offset_hours: i32,
     /// Processes outside a Dagster run are written only when their RSS reached this.
     pub rss_threshold_kb: u64,
+    /// Dagster GraphQL on a loopback address; `None` writes steps without job and step key.
+    pub graphql: Option<Endpoint>,
+    /// Host path of the dbt project's target directory; `None` disables model rows.
+    pub dbt_target_dir: Option<PathBuf>,
 }
 
 /// Prints an error, but the same message at most once per `ERROR_REPEAT_EVERY`.
@@ -81,6 +90,9 @@ struct Collector {
     watched: Vec<Scope>,
     containers_out: DailyWriter,
     processes_out: DailyWriter,
+    steps_out: DailyWriter,
+    models_out: DailyWriter,
+    attributor: Attributor,
     day: i64,
     errors: ErrorLog,
     dropped_reported: u64,
@@ -95,6 +107,8 @@ pub fn run(cfg: Config) -> Result<(), String> {
         c.cfg.track.join(",")
     );
     c.run_loop();
+    let out = c.attributor.drain(now_epoch());
+    c.write_attribution(out);
     c.close_writers();
     Ok(())
 }
@@ -113,6 +127,12 @@ impl Collector {
             watched: Vec::new(),
             containers_out: DailyWriter::new(&cfg.out_dir, "containers", CONTAINERS_HEADER),
             processes_out: DailyWriter::new(&cfg.out_dir, "processes", PROCESSES_HEADER),
+            steps_out: DailyWriter::new(&cfg.out_dir, "steps", STEPS_HEADER),
+            models_out: DailyWriter::new(&cfg.out_dir, "models", MODELS_HEADER),
+            attributor: Attributor::new(Settings {
+                graphql: cfg.graphql.clone(),
+                dbt_target_dir: cfg.dbt_target_dir.clone(),
+            }),
             day: local_day(now_epoch(), cfg.utc_offset_hours),
             errors: ErrorLog::default(),
             dropped_reported: 0,
@@ -138,6 +158,7 @@ impl Collector {
             self.roll_day(epoch);
 
             let mut exited = Vec::new();
+            let mut attribute = false;
             if now >= next_container {
                 exited.extend(self.container_tick(epoch));
                 advance(&mut next_container, CONTAINER_EVERY, now);
@@ -146,6 +167,7 @@ impl Collector {
                 exited.extend(self.process_tick(epoch));
                 advance(&mut next_process, PROCESS_EVERY, now);
                 next_dbt = now + DBT_EVERY;
+                attribute = true;
             } else if now >= next_dbt {
                 exited.extend(self.tracker.sample(epoch, |r| r == Role::Dbt));
                 advance(&mut next_dbt, DBT_EVERY, now);
@@ -154,7 +176,11 @@ impl Collector {
                 self.write_self_row(epoch);
                 advance(&mut next_self, SELF_EVERY, now);
             }
-            self.write_exits(&exited);
+            self.write_exits(exited, epoch);
+            if attribute {
+                let out = self.attributor.poll(epoch);
+                self.write_attribution(out);
+            }
             self.flush_writers();
 
             let mut wake = next_container.min(next_process).min(next_self);
@@ -287,7 +313,8 @@ impl Collector {
         exited
     }
 
-    fn write_exits(&mut self, exited: &[Proc]) {
+    /// Writes process rows, then hands the processes to the attributor.
+    fn write_exits(&mut self, exited: Vec<Proc>, epoch: f64) {
         for p in exited {
             if !(p.role.is_run_related() || p.rss_max_kb >= self.cfg.rss_threshold_kb) {
                 continue;
@@ -313,7 +340,34 @@ impl Collector {
             if let Err(e) = self.processes_out.write_row(day, &line) {
                 self.errors.report(format!("write processes: {e}"));
             }
+            self.attributor.on_exit(p, epoch);
         }
+    }
+
+    fn write_attribution(&mut self, out: Output) {
+        let offset = self.cfg.utc_offset_hours;
+        for (kind, lines, writer) in [
+            ("steps", out.steps, &mut self.steps_out),
+            ("models", out.models, &mut self.models_out),
+        ] {
+            for Line { ts, text } in lines {
+                if let Err(e) = writer.write_row(local_day(ts, offset), &text) {
+                    self.errors.report(format!("write {kind}: {e}"));
+                }
+            }
+        }
+        for e in out.errors {
+            self.errors.report(e);
+        }
+    }
+
+    fn writers(&mut self) -> [(&'static str, &mut DailyWriter); 4] {
+        [
+            ("containers", &mut self.containers_out),
+            ("processes", &mut self.processes_out),
+            ("steps", &mut self.steps_out),
+            ("models", &mut self.models_out),
+        ]
     }
 
     fn write_self_row(&mut self, epoch: f64) {
@@ -349,25 +403,21 @@ impl Collector {
     }
 
     fn flush_writers(&mut self) {
-        for (name, w) in [
-            ("containers", &mut self.containers_out),
-            ("processes", &mut self.processes_out),
-        ] {
-            if let Err(e) = w.flush() {
-                self.errors.report(format!("flush {name}: {e}"));
-            }
-        }
+        let failed: Vec<String> = self
+            .writers()
+            .into_iter()
+            .filter_map(|(name, w)| w.flush().err().map(|e| format!("flush {name}: {e}")))
+            .collect();
+        failed.into_iter().for_each(|e| self.errors.report(e));
     }
 
     fn close_writers(&mut self) {
-        for (name, w) in [
-            ("containers", &mut self.containers_out),
-            ("processes", &mut self.processes_out),
-        ] {
-            if let Err(e) = w.close() {
-                self.errors.report(format!("close {name}: {e}"));
-            }
-        }
+        let failed: Vec<String> = self
+            .writers()
+            .into_iter()
+            .filter_map(|(name, w)| w.close().err().map(|e| format!("close {name}: {e}")))
+            .collect();
+        failed.into_iter().for_each(|e| self.errors.report(e));
     }
 }
 
@@ -410,6 +460,8 @@ mod tests {
             retention_days: 90,
             utc_offset_hours: 7,
             rss_threshold_kb: 256 * 1024,
+            graphql: None,
+            dbt_target_dir: None,
         }
     }
 
@@ -504,7 +556,7 @@ mod tests {
         );
         let exited = c.process_tick(now + 1.0);
         assert_eq!(exited.len(), 3);
-        c.write_exits(&exited);
+        c.write_exits(exited, now + 1.0);
         c.write_self_row(now + 1.0);
         c.flush_writers();
 

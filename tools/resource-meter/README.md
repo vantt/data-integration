@@ -2,11 +2,12 @@
 
 A single static binary that runs on the host, outside every container. It shows how much
 RAM, CPU and disk each container uses, each process inside `data_platform`, and (from the
-Dagster process tree) each run and step. It only reads numbers the kernel already keeps:
-cgroup v2 files and `/proc`. It never writes to a cgroup, sends a signal, calls the Docker
-API, opens DuckDB, or writes anywhere except its own output directory.
+Dagster process tree) each run, step and dbt model. It reads numbers the kernel already
+keeps (cgroup v2 files and `/proc`), Dagster's own run events (read-only GraphQL on
+loopback), and dbt's `run_results.json`. It never writes to a cgroup, sends a signal, calls
+the Docker API, opens DuckDB, or writes anywhere except its own output directory.
 
-Status: the collector (`run`) is built. Step and dbt-model attribution, `report`,
+Status: `run` (collection and attribution to steps and models) is built. `report`,
 `compare`, `status`, the systemd unit and the install script come next. Until the unit
 exists, run the binary only by hand, as below.
 
@@ -18,14 +19,16 @@ cargo test && cargo clippy --all-targets -- -D warnings
 cargo build --release          # static-pie binary (glibc linked statically, see .cargo/config.toml)
 ```
 
-The crate has two dependencies: `flate2` (pure-Rust backend) for gzip and `serde_json` for
-JSON. It is separate from the Docker builds and uses no async runtime and no threads.
+The crate has two dependencies: `flate2` (pure-Rust backend) for gzip and `serde_json` (with
+`raw_value`) for JSON. HTTP is a small built-in client over `std::net`. The crate is separate
+from the Docker builds and uses no async runtime and no threads.
 
 ## Run
 
 ```bash
 resource-meter run [--out-dir DIR] [--track data_platform] [--duration SECS]
                    [--retention-days 90] [--utc-offset-hours 7] [--rss-threshold-mb 256]
+                   [--dagster-graphql 127.0.0.1:3000] [--dbt-target-dir DIR]
                    [--cgroup-root /sys/fs/cgroup] [--proc-root /proc] [--docker-root /var/lib/docker]
 ```
 
@@ -36,6 +39,14 @@ resource-meter run [--out-dir DIR] [--track data_platform] [--duration SECS]
   which only root can read. Without root, pass the id prefix
   (`docker inspect -f '{{.Id}}' data_platform | cut -c1-12`).
 - `--duration`: stop after N seconds. Without it, the meter runs until it is stopped.
+  Before stopping, the meter attributes the runs and dbt invocations that have already
+  ended. Runs still in progress are dropped.
+- `--dagster-graphql`: Dagster's GraphQL endpoint, given as a loopback `IP:PORT[/path]`
+  (default `127.0.0.1:3000`, the `data_platform` webserver). Only loopback addresses are
+  accepted. Use `off` to write steps without job and step key.
+- `--dbt-target-dir`: the host path of the dbt target directory that `data_platform`
+  bind-mounts (default: `transformation/` + `target` under the production checkout
+  `/home/vantt/app/fg-dataware-house`). Use `off` to skip models.
 
 ### Root or not
 
@@ -69,6 +80,12 @@ How a process is placed in the Dagster tree (Dagster 1.13, `DefaultRunLauncher`)
 - A step that ends before its `tail` is first seen (short asset checks, about 2 s) still gets
   the run id from its run worker. Its `file_key` stays empty. A step is matched to its step
   key later through `ns_pid`, the PID that Dagster's own events report.
+
+When no `tail` was ever seen for a run (all its steps were shorter than one pass, as for a
+run that waited in the queue and then finished in seconds), the run id is looked up in
+Dagster instead. The candidates are runs updated since the worker started, and one is
+accepted only if its "Started process for run (pid: N)" event names this worker's container
+PID.
 
 Full command lines are never stored. Processes get a short, path-free name (`dbt build`,
 `mp-spawn`, `refresh_rolling.py`, `dagster_webserver`). The dbt `--select` list in
@@ -130,6 +147,54 @@ Per-second samples of run processes stay in memory (at most 4,096 per process, a
 2,000 tracked processes). They are kept for attribution to steps and dbt models and are
 not written to disk.
 
+### `steps-YYYYMMDD.tsv` (rows written when a run ends)
+
+| Column | Meaning |
+|---|---|
+| `run_id`, `job` | Dagster run id and job name |
+| `step_key` | Dagster step key (comma-separated if one process ran several). `*` = the whole run under the in-process executor. `(run_worker)` = the run worker's own process under the multiprocess executor, without its steps. Empty when Dagster could not be asked. |
+| `executor` | `multiprocess` or `in_process` |
+| `ts_start`, `ts_end` | start of the step process (2–3 s before Dagster's `STEP_START`, because of Python start-up) and last time it was seen alive |
+| `ns_pid` | container PID of the step process |
+| `rss_peak_tree_kb` | peak of the summed RSS of the step process and its descendants (dbt included), per whole second |
+| `cpu_s`, `read_bytes`, `write_bytes` | summed over the same processes |
+
+How the attribution works:
+
+1. Processes of one run are kept in memory under their run worker until the worker exits.
+2. Ten seconds later, Dagster GraphQL is asked once for the run (`runOrError`: job name)
+   and for its events (`logsForRun`, 1,000 per page). Only queries are sent, never mutations.
+3. Each step process is matched to its `LogsCapturedEvent` by container PID, or else by
+   compute-log key.
+4. If GraphQL fails, the request is retried every 5 minutes. After 12 hours, the rows are
+   written without job and step key. A run Dagster does not know is written without keys
+   at once.
+
+At most one run is looked up per second, and a lookup costs about 0.1 s.
+
+### `models-YYYYMMDD.tsv` (rows written when a `dbt build` process exits)
+
+| Column | Meaning |
+|---|---|
+| `run_id` | Dagster run of the build |
+| `unique_id`, `status` | from `run_results.json` (`model.`, `seed.` and `snapshot.` nodes; tests are skipped) |
+| `ts_start`, `ts_end` | the node's `execute` timing |
+| `exec_s` | `execution_time` from `run_results.json` |
+| `rss_peak_kb`, `rss_delta_kb`, `cpu_s` | memory and CPU of the dbt process during `execute`, from its 250 ms samples. `rss_delta_kb` is the peak minus the RSS just before the model started, and can be negative. Empty when the model took less than 1 s. |
+| `rows_affected` | `adapter_response.rows_affected` when dbt-duckdb reports it (rarely) |
+
+dagster-dbt runs each invocation in `<target dir>/<op>-<run_id[:7]>-<7 hex>/`, and the
+cleanup loop of `data_platform` deletes these directories after about 24 hours. The meter
+reads `run_results.json` right after the build exits, retrying for up to one minute. Among
+the run's directories, it picks the one whose `generated_at` falls within the process
+lifetime. The file is parsed lazily (`serde_json::value::RawValue`): `compiled_code` and
+`args` (which holds the full command line) are never decoded or copied.
+
+dbt runs with `threads: 1`, so the process's samples during a model's `execute` window
+belong to that model. In the realtime and incremental jobs, every model takes under 1 s,
+so only time is recorded for them. Models that run longer, in the nightly or a full
+refresh, also get memory and CPU.
+
 ## Cost (measured)
 
 A 200-second manual run on the host on 17/10/2026, as a normal user, with 21 containers and
@@ -141,3 +206,13 @@ Dagster realtime runs active, measured:
 
 Projected for one day: about 18 MB raw `containers` plus about 2.4 MB raw `processes`,
 which is about 3 MB/day after gzip.
+
+With attribution, a 360-second run (5 runs, 3 dbt builds, 18 GraphQL lookups) measured:
+
+- peak RSS 3.9 MB (`run_results.json`, about 2 MB, is read once per build);
+- CPU 0.20 s (0.06% of one core).
+
+A dbt build of the realtime or incremental job adds 209 rows (about 27 KB raw, 3.2 KB
+gzipped) to `models`. At about 620 builds a day, that is about 17 MB raw, or 2 MB gzipped.
+With the other files, the total is about 38 MB raw and **about 5 MB gzipped per day**. Only
+the current day stays uncompressed.

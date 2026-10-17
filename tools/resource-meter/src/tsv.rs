@@ -53,6 +53,14 @@ impl Row {
         self
     }
 
+    pub fn signed(mut self, v: impl Into<Option<i64>>) -> Self {
+        self.sep();
+        if let Some(v) = v.into() {
+            let _ = write!(self.line, "{v}");
+        }
+        self
+    }
+
     /// Decimal with fixed precision; empty when `None` or not finite.
     pub fn dec(mut self, v: impl Into<Option<f64>>, places: usize) -> Self {
         self.sep();
@@ -228,6 +236,7 @@ mod tests {
             .finish();
         assert_eq!(line, "5\ta b c\t\t1.235\t\t\n");
         assert_eq!(Row::new().text("").int(7u64).finish(), "\t7\n");
+        assert_eq!(Row::new().signed(-3i64).signed(None).finish(), "-3\t\n");
     }
 
     #[test]

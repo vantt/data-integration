@@ -3,6 +3,11 @@ use std::process::ExitCode;
 use std::time::Duration;
 
 use resource_meter::collector::{self, Config};
+use resource_meter::http::Endpoint;
+
+const DEFAULT_GRAPHQL: &str = "127.0.0.1:3000";
+/// Host path of the production checkout's dbt target directory (bind-mounted into data_platform).
+const DEFAULT_DBT_TARGET_DIR: &str = "/home/vantt/app/fg-dataware-house/transformation/target";
 
 const USAGE: &str = "\
 usage: resource-meter run [options]
@@ -17,6 +22,10 @@ options:
   --retention-days N      delete files older than N days (default 90)
   --utc-offset-hours H    offset of the local day used to split files (default 7)
   --rss-threshold-mb N    also record non-Dagster processes whose RSS reached N MiB (default 256)
+  --dagster-graphql ADDR  read-only Dagster GraphQL: loopback IP:PORT[/path], or \"off\"
+                          (default 127.0.0.1:3000)
+  --dbt-target-dir DIR    host path of the dbt target directory, or \"off\"
+                          (default /home/vantt/app/fg-dataware-house/transformation/target)
   --cgroup-root DIR       (default /sys/fs/cgroup)
   --proc-root DIR         (default /proc)
   --docker-root DIR       read only for container names (default /var/lib/docker)
@@ -33,6 +42,8 @@ fn parse_run(args: &[String]) -> Result<Config, String> {
         retention_days: 90,
         utc_offset_hours: 7,
         rss_threshold_kb: 256 * 1024,
+        graphql: Some(Endpoint::parse_loopback(DEFAULT_GRAPHQL)?),
+        dbt_target_dir: Some(PathBuf::from(DEFAULT_DBT_TARGET_DIR)),
     };
     let mut it = args.iter();
     while let Some(flag) = it.next() {
@@ -81,6 +92,18 @@ fn parse_run(args: &[String]) -> Result<Config, String> {
                     .parse()
                     .map_err(|_| "--rss-threshold-mb must be a number".to_string())?;
                 cfg.rss_threshold_kb = mb.saturating_mul(1024);
+            }
+            "--dagster-graphql" => {
+                let v = value()?;
+                cfg.graphql = if v == "off" {
+                    None
+                } else {
+                    Some(Endpoint::parse_loopback(&v)?)
+                };
+            }
+            "--dbt-target-dir" => {
+                let v = value()?;
+                cfg.dbt_target_dir = if v == "off" { None } else { Some(PathBuf::from(v)) };
             }
             other => return Err(format!("unknown option {other}")),
         }

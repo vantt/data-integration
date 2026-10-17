@@ -70,6 +70,10 @@ pub struct Proc {
     pub name: String,
     pub run_id: Option<String>,
     pub file_key: Option<String>,
+    /// Host PID of the run worker this process belongs to (itself for a run worker).
+    pub worker_pid: Option<u32>,
+    /// Host PID of the step this process belongs to (itself for a step).
+    pub step_pid: Option<u32>,
     pub hwm_kb: Option<u64>,
     pub rss_max_kb: u64,
     pub cpu_ticks: u64,
@@ -173,6 +177,7 @@ impl Tracker {
         for (mut p, first_rss) in fresh {
             let pid = p.host_pid;
             p.role = self.resolve_role(&p.kind, p.ppid);
+            (p.worker_pid, p.step_pid) = self.owners(pid, p.role, p.ppid);
             push_sample(&mut p, first_rss, now, self.limits.max_samples);
             p.ns_ppid = self.procs.get(&p.ppid).and_then(|parent| parent.ns_pid);
             if p.run_id.is_none() {
@@ -255,6 +260,8 @@ impl Tracker {
             name: classified.name,
             run_id: None,
             file_key: None,
+            worker_pid: None,
+            step_pid: None,
             hwm_kb: None,
             rss_max_kb: 0,
             cpu_ticks: 0,
@@ -295,6 +302,10 @@ impl Tracker {
                 p.name = classified.name;
                 p.role = role;
             }
+            let owners = self.owners(pid, role, stat.ppid);
+            if let Some(p) = self.procs.get_mut(&pid) {
+                (p.worker_pid, p.step_pid) = owners;
+            }
         }
         if let Some(p) = self.procs.get_mut(&pid) {
             apply_reading(p, &status, stat.utime + stat.stime, io, now);
@@ -333,6 +344,18 @@ impl Tracker {
             next = (p.ppid != pid).then_some(p.ppid);
             Some(p)
         })
+    }
+
+    /// Run worker and step that own a process with this role and parent.
+    fn owners(&self, pid: u32, role: Role, ppid: u32) -> (Option<u32>, Option<u32>) {
+        let find = |want: Role| {
+            if role == want {
+                Some(pid)
+            } else {
+                self.ancestors(ppid).find(|a| a.role == want).map(|a| a.host_pid)
+            }
+        };
+        (find(Role::RunWorker), find(Role::Step))
     }
 
     fn has_run_ancestor(&self, ppid: u32) -> bool {
@@ -537,6 +560,14 @@ mod tests {
         assert_eq!(tr.get(40).unwrap().run_id.as_deref(), Some(RUN));
         assert_eq!(tr.get(40).unwrap().name, "dbt build");
         assert_eq!(tr.get(11).unwrap().run_id, None);
+        let owners = |pid| {
+            let p = tr.get(pid).unwrap();
+            (p.worker_pid, p.step_pid)
+        };
+        assert_eq!(owners(20), (Some(20), None));
+        assert_eq!(owners(30), (Some(20), Some(30)));
+        assert_eq!(owners(40), (Some(20), Some(30)));
+        assert_eq!(owners(11), (None, None));
         // Start time comes from btime + start ticks / CLK_TCK.
         assert!((tr.get(30).unwrap().start_epoch - 1051.0).abs() < 1e-9);
     }
