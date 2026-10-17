@@ -115,7 +115,7 @@ BRANCH_DIR=/home/vantt/app/fg-dw-pack scripts/shadow/gate.sh M --allow-new   # e
 | `--full-refresh` on baseline (lake-AF) and branch (lake-BF) + golden | | ✓ |
 
 The gate first checks that lake-A was built today (ICT) and rebuilds it from the baseline worktree otherwise, because models compute date-relative values. A full S gate takes about 2–3 minutes (dbt build ≈ 20 s per lake). Branch lakes are deleted at
-the end. `--allow-new` accepts added nodes/assets and grown job selections (printed as INFO);
+the end. `--allow-new` accepts added nodes/assets, grown job selections and an existing asset that starts to stand for a newly added dbt node (an ingest asset mapped to a new dbt source; printed as INFO);
 `--allow-code-change` accepts SQL checksum changes in the dbt inventory while data equality is
 still enforced by the golden snapshot.
 

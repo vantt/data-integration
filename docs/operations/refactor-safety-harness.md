@@ -244,7 +244,7 @@ Nạp `orchestration.definitions.defs` trong container shadow và ghi lại:
 - schedule: cron, job, timezone, trạng thái mặc định; sensor: target, trạng thái mặc định, interval;
 - SLA đã resolve cho từng asset key trong `ingestion_sla.yaml`.
 
-`export` trả lỗi nếu một job có asset dbt mà tập `unique_id` rỗng. `diff --allow-new` chấp nhận asset mới và job có selection **lớn thêm** (vd. thêm view `std_*` upstream), nhưng không chấp nhận selection bị mất phần tử.
+`export` trả lỗi nếu một job có asset dbt mà tập `unique_id` rỗng. `diff --allow-new` chấp nhận asset mới, job có selection **lớn thêm** (vd. thêm view `std_*` upstream), và một asset có sẵn bắt đầu đại diện cho một node dbt **mới** (`dbt_unique_id` từ trống thành node không có ở baseline, vd. asset ingest được `DBT_SOURCE_KEYS` gắn vào source dbt vừa thêm). Không chấp nhận selection bị mất phần tử, hay asset đổi sang node dbt mà baseline đã có. Test: `scripts/tests/test_dagster_inventory.py`.
 
 ### 6.5 Dagster subset run
 
