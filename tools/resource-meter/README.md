@@ -7,9 +7,42 @@ keeps (cgroup v2 files and `/proc`), Dagster's own run events (read-only GraphQL
 loopback), and dbt's `run_results.json`. It never writes to a cgroup, sends a signal, calls
 the Docker API, opens DuckDB, or writes anywhere except its own output directory.
 
-Status: `run` (collection and attribution to steps and models) is built. `report`,
-`compare`, `status`, the systemd unit and the install script come next. Until the unit
-exists, run the binary only by hand, as below.
+Commands: `run` (the collector, started by the systemd unit), and `report`, `compare` and
+`status` to read the results. Install and uninstall: [Install](#install-and-uninstall).
+Operations summary: [docs/operations/resource-meter.md](../../docs/operations/resource-meter.md).
+
+## Reading the results
+
+These commands need no root and nothing else installed. They read the TSV files of
+`--dir` (default `/var/lib/resource-meter`) directly, `.gz` included. On a full day, a
+command takes about 0.1 s.
+
+```bash
+resource-meter status                         # running? own RSS/CPU, unit limits hit, data size
+resource-meter report                         # today
+resource-meter report --date 2026-10-18 --top 10
+resource-meter report --job pipeline_batch_nightly_job
+resource-meter report --container data_platform
+resource-meter compare --base 2026-10-18 --date 2026-10-25           # what got heavier
+resource-meter compare --base 2026-10-18 --job pipeline_batch_nightly_job --threshold-pct 20
+```
+
+- **`report`** prints four parts:
+  - **Containers**, sorted by peak RAM. RAM means `anon`, the processes' own memory.
+    `+CACHE PEAK` is `memory.current`, which includes page cache and is the number
+    `memory.peak` reports. The rest are increases over the day: `HIT LIMIT` (times
+    `memory.max` was reached), `OOM KILL`, `CPU-S`, `THROTTLED-S` and disk bytes.
+  - **Heaviest Dagster steps**, by peak RSS of the step's process tree.
+  - **Heaviest dbt models**, by total execute time.
+  - **The meter's own cost.**
+- **`compare`** takes, for each step (`job / step_key`) and each model, the per-run
+  median of time, peak RSS and CPU seconds on each day. It flags a metric that grew by
+  more than `--threshold-pct` (default 10%), as long as the absolute growth is at least
+  0.5 s or 8 MB, so tiny models are not flagged. It also lists steps and models that
+  appear on only one of the two days.
+- **`status`** exits 0 when the meter wrote its `self` row in the last 150 s, and exits 3
+  otherwise. It also prints the unit's memory peak, how often `MemoryMax` was reached,
+  OOM kills, and the share of CPU periods throttled, all read from the unit's cgroup.
 
 ## Build
 
@@ -177,7 +210,7 @@ At most one run is looked up per second, and a lookup costs about 0.1 s.
 | Column | Meaning |
 |---|---|
 | `run_id` | Dagster run of the build |
-| `unique_id`, `status` | from `run_results.json` (`model.`, `seed.` and `snapshot.` nodes; tests are skipped) |
+| `unique_id`, `status` | from `run_results.json` (`model.`, `seed.` and `snapshot.` nodes whose `execute` took at least 0.1 s; tests, skipped nodes and shorter nodes get no row) |
 | `ts_start`, `ts_end` | the node's `execute` timing |
 | `exec_s` | `execution_time` from `run_results.json` |
 | `rss_peak_kb`, `rss_delta_kb`, `cpu_s` | memory and CPU of the dbt process during `execute`, from its 250 ms samples. `rss_delta_kb` is the peak minus the RSS just before the model started, and can be negative. Empty when the model took less than 1 s. |
@@ -194,6 +227,46 @@ dbt runs with `threads: 1`, so the process's samples during a model's `execute` 
 belong to that model. In the realtime and incremental jobs, every model takes under 1 s,
 so only time is recorded for them. Models that run longer, in the nightly or a full
 refresh, also get memory and CPU.
+
+## Install and uninstall
+
+The unit [`resource-meter.service`](resource-meter.service) runs `resource-meter run` as
+root, with these limits:
+
+- resources: `MemoryMax=32M`, `CPUQuota=2%`, `Nice=19`, `IOSchedulingClass=idle`;
+- read-only filesystem except `/var/lib/resource-meter`;
+- cgroups read-only;
+- only `CAP_SYS_PTRACE` (to read `/proc/<pid>/io`) and `CAP_DAC_READ_SEARCH` (to read
+  `run_results.json` under `/home/vantt`);
+- network limited to loopback, for the Dagster GraphQL endpoint.
+
+Installing touches no container and restarts nothing else. The script refuses to run
+between 02:30 and 04:00 unless `--force` is given.
+
+```bash
+# 1. as your user: build (root has no Rust toolchain)
+cd tools/resource-meter && cargo build --release
+# 2. install or upgrade, then start
+sudo tools/resource-meter/install.sh
+# 3. check after one minute, and again after 15 minutes
+resource-meter status
+resource-meter report
+```
+
+To uninstall:
+
+```bash
+sudo tools/resource-meter/install.sh --uninstall            # keeps /var/lib/resource-meter
+sudo tools/resource-meter/install.sh --uninstall --purge    # also deletes the data
+```
+
+This is equivalent to `systemctl disable --now resource-meter`, then removing
+`/usr/local/bin/resource-meter`, `/etc/systemd/system/resource-meter.service` and (with
+`--purge`) `/var/lib/resource-meter`. Logs: `journalctl -u resource-meter`.
+
+If `read_bytes`/`write_bytes` stay empty in `processes-*.tsv` after the install, the
+capability set was too narrow for `/proc/<pid>/io` on this kernel. Remove the
+`CapabilityBoundingSet=` line from the unit and install again.
 
 ## Cost (measured)
 
@@ -212,7 +285,7 @@ With attribution, a 360-second run (5 runs, 3 dbt builds, 18 GraphQL lookups) me
 - peak RSS 3.9 MB (`run_results.json`, about 2 MB, is read once per build);
 - CPU 0.20 s (0.06% of one core).
 
-A dbt build of the realtime or incremental job adds 209 rows (about 27 KB raw, 3.2 KB
-gzipped) to `models`. At about 620 builds a day, that is about 17 MB raw, or 2 MB gzipped.
-With the other files, the total is about 38 MB raw and **about 5 MB gzipped per day**. Only
-the current day stays uncompressed.
+Model rows are written only for nodes whose `execute` took at least 0.1 s. In a realtime
+or incremental build, that keeps about 25 of the 209 nodes (12%), so `models` adds about
+2 MB raw a day. With the other files, the total is about 23 MB raw and **about 3.3 MB
+gzipped per day**. Only the current day stays uncompressed.

@@ -20,6 +20,9 @@ use crate::tracker::Sample;
 pub const MAX_RUN_RESULTS_BYTES: u64 = 24 * 1024 * 1024;
 /// Models shorter than this get a duration but no memory or CPU figures.
 pub const MIN_MODEL_SECONDS: f64 = 1.0;
+/// Nodes whose `execute` window is shorter than this (or missing, e.g. skipped nodes) are
+/// not written at all, to keep the models file small.
+pub const MIN_WRITTEN_SECONDS: f64 = 0.1;
 /// Result kinds written to the models file.
 const NODE_PREFIXES: [&str; 3] = ["model.", "seed.", "snapshot."];
 

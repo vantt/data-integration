@@ -1,0 +1,63 @@
+# resource-meter: read-only resource meter for containers, Dagster steps and dbt models.
+# Installed by tools/resource-meter/install.sh (see tools/resource-meter/README.md).
+#
+# Runs as root only to read /proc/<pid>/io of container processes and Docker's container
+# names; everything else is readable by any user. The limits below keep it from taking
+# resources from the data platform: if it ever exceeds 32 MiB it is killed alone and
+# restarted, and it never gets more than 2% of one CPU.
+
+[Unit]
+Description=resource-meter (read-only resource meter for containers, Dagster steps, dbt models)
+After=docker.service
+
+[Service]
+Type=simple
+ExecStart=/usr/local/bin/resource-meter run --out-dir /var/lib/resource-meter
+Restart=always
+RestartSec=10
+TimeoutStopSec=10
+
+# Resource limits.
+MemoryMax=32M
+MemorySwapMax=0
+CPUQuota=2%
+Nice=19
+IOSchedulingClass=idle
+
+# Output directory (created by systemd, readable by users so `resource-meter report` works
+# without sudo).
+StateDirectory=resource-meter
+StateDirectoryMode=0755
+ReadWritePaths=/var/lib/resource-meter
+
+# Read-only everywhere else; cgroups and kernel settings cannot be written.
+ProtectSystem=strict
+ProtectHome=read-only
+PrivateTmp=yes
+ProtectControlGroups=yes
+ProtectKernelTunables=yes
+ProtectKernelModules=yes
+ProtectKernelLogs=yes
+ProtectClock=yes
+ProtectHostname=yes
+NoNewPrivileges=yes
+RestrictSUIDSGID=yes
+RestrictRealtime=yes
+RestrictNamespaces=yes
+LockPersonality=yes
+MemoryDenyWriteExecute=yes
+SystemCallArchitectures=native
+
+# Only what reading needs: CAP_SYS_PTRACE for /proc/<pid>/io of container processes
+# (ptrace read access), CAP_DAC_READ_SEARCH for dbt's run_results.json under /home/vantt
+# (mode 0750).
+CapabilityBoundingSet=CAP_SYS_PTRACE CAP_DAC_READ_SEARCH
+
+# Network: only loopback, for the read-only Dagster GraphQL on 127.0.0.1:3000.
+# (No PrivateNetwork: it would hide the host's loopback.)
+RestrictAddressFamilies=AF_INET AF_INET6 AF_UNIX
+IPAddressDeny=any
+IPAddressAllow=localhost
+
+[Install]
+WantedBy=multi-user.target

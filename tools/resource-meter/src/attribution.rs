@@ -373,11 +373,13 @@ pub fn step_lines(run_id: Option<&str>, info: Option<&RunInfo>, procs: &[Proc]) 
     lines
 }
 
-/// One row per model-like node of a `dbt build`.
+/// One row per model-like node of a `dbt build` whose `execute` took at least
+/// [`dbt::MIN_WRITTEN_SECONDS`].
 pub fn model_lines(run_id: &str, results: &dbt::RunResults, samples: &[Sample]) -> Vec<Line> {
     results
         .nodes
         .iter()
+        .filter(|n| n.execute.is_some_and(|(s, e)| e - s >= dbt::MIN_WRITTEN_SECONDS))
         .map(|n| {
             let usage = n.execute.and_then(|(s, e)| dbt::model_usage(samples, s, e));
             let text = Row::new()
@@ -602,7 +604,10 @@ mod tests {
                 {"status":"success","timing":[{"name":"execute","started_at":"2026-10-17T00:00:10Z","completed_at":"2026-10-17T00:00:13Z"}],
                  "execution_time":3.2,"adapter_response":{"rows_affected":7},"unique_id":"model.p.m1","compiled_code":"select 1"},
                 {"status":"success","timing":[{"name":"execute","started_at":"2026-10-17T00:00:14Z","completed_at":"2026-10-17T00:00:14.300Z"}],
-                 "execution_time":0.3,"adapter_response":{},"unique_id":"model.p.m2"}],
+                 "execution_time":0.3,"adapter_response":{},"unique_id":"model.p.m2"},
+                {"status":"success","timing":[{"name":"execute","started_at":"2026-10-17T00:00:15Z","completed_at":"2026-10-17T00:00:15.050Z"}],
+                 "execution_time":0.06,"adapter_response":{},"unique_id":"model.p.too_short"},
+                {"status":"skipped","timing":[],"execution_time":0,"adapter_response":{},"unique_id":"model.p.skipped"}],
               "args":{"invocation_command":"dbt build --select x"}}"#,
         );
         let mut a = Attributor::new(Settings {

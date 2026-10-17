@@ -35,6 +35,7 @@ This documentation follows a **progressive disclosure** model. Start with Level 
 | [Troubleshooting](./operations/troubleshooting.md) | Common issues and recovery procedures | 30 min |
 | [Backup and Recovery](./operations/backup-and-recovery.md) | Backup data scope, off-site copy, restore, drills, rebuild from zero (in progress) | 20 min |
 | [Refactor Safety Harness](./operations/refactor-safety-harness.md) | Shadow gate proving a refactor changes no data, relation or orchestration wiring | 30 min |
+| [Resource Meter](./operations/resource-meter.md) | Host meter of RAM/CPU/disk per container, Dagster step and dbt model: install, read reports | 10 min |
 
 ### Level 4: Contribute
 
@@ -119,6 +120,7 @@ For a new datasource that is needed by a metric but not yet implemented in dbt, 
 | [Deployment](./operations/deployment.md) | Setup, install, deploy all components |
 | [Operations](./operations/operations.md) | Daily ops, monitoring, health checks |
 | [Refactor Safety Harness](./operations/refactor-safety-harness.md) | What the shadow gate checks, how, and its limits |
+| [Resource Meter](./operations/resource-meter.md) | Install/uninstall the resource meter, read `report`/`compare`/`status` |
 | [Troubleshooting](./operations/troubleshooting.md) | Diagnostics, recovery procedures |
 | [Migration](./operations/migration.md) | Metabase DB migration |
 

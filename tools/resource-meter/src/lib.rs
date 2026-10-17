@@ -9,6 +9,8 @@ pub mod dagster;
 pub mod dbt;
 pub mod http;
 pub mod procfs;
+pub mod reader;
+pub mod report;
 pub mod tracker;
 pub mod tsv;
 
