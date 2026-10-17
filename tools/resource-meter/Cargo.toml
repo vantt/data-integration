@@ -1,0 +1,18 @@
+[package]
+name = "resource-meter"
+version = "0.1.0"
+edition = "2021"
+description = "Read-only host meter for container, process, Dagster step and dbt model resource use"
+publish = false
+
+[dependencies]
+# Pure-Rust deflate backend: no C toolchain or zlib needed for a static binary.
+flate2 = { version = "1", default-features = false, features = ["rust_backend"] }
+serde_json = "1"
+
+[profile.release]
+opt-level = "s"
+lto = true
+codegen-units = 1
+panic = "abort"
+strip = true

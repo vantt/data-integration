@@ -1,0 +1,3 @@
+# Link glibc statically so the binary runs on the host with nothing else installed.
+[build]
+rustflags = ["-C", "target-feature=+crt-static"]
