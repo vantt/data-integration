@@ -74,7 +74,8 @@ Theo runbook: dừng `data_platform`, commit seed đang sống, `git revert` d�
 |---|---|---|---|---|---|---|---|
 | 15/10 (từ 15:20, chưa tính) | tay `93ad3580` SUCCESS 55/55, 0 đỏ mới | 0 | 0 | 6030/6030 · 6395/6395 | 5,3 phút | 6,66 GiB | — |
 | 16/10 (cả ngày, chốt 17/10) | lịch `3af400cf` 03:01 SUCCESS 59/59, 0 đỏ mới | 0 (615 lần chạy) | 0 | 6033/6033 · 6398/6398 | 5,3 phút | memory.peak 8,01 GiB (từ 15/10 18:52, gồm page cache; oom_kill 0) | 1 |
-| 17/10 (kiểm 09:4x, ngày chưa hết) | lịch `5ee65cf2` 03:01 SUCCESS 59/59, 567 check, 0 đỏ mới (so với tập đỏ đã biết: 3 check sheets) | 0 (245 lần chạy) | 0 | 6033/6033 · 6398/6398 | 5,4 phút | memory.peak 8,01 GiB (không đổi); lấy mẫu 02:52–03:40: anon đỉnh **3,53 GiB**, current đỉnh 8,00 GiB (file cache 4,72 GiB), oom_kill 0 | 2 |
+| 17/10 (cả ngày, chốt 18/10) | lịch `5ee65cf2` 03:01 SUCCESS 59/59, 567 check, 0 đỏ mới (so với tập đỏ đã biết: 3 check sheets) | 0 (615 lần chạy) | 0 | 6034/6034 · 6399/6399 | 5,4 phút | memory.peak 8,01 GiB (không đổi); lấy mẫu 02:52–03:40: anon đỉnh **3,53 GiB**, current đỉnh 8,00 GiB (file cache 4,72 GiB), oom_kill 0 | 2 |
+| 18/10 (kiểm 09:4x, ngày chưa hết) | lịch `d0b09efb` 03:01 SUCCESS 59/59, 567 check, 0 đỏ mới (3 check sheets đã biết) | 0 (240 lần chạy) | 0 | 6034/6034 · 6399/6399 | **13,9 phút** (vượt ngưỡng 10 phút, nguyên nhân ngoài, xem ghi chú 18/10) | bỏ đo; oom_kill 0 | 3 |
 
 ## Deploy lần 1 (15/10/2026 15:19)
 
@@ -114,3 +115,5 @@ RAM đỉnh 6,66 GiB (+2 %). `lbl_customer_type`, `lbl_customer_type__group_blob
 
 **Ghi chú đo (17/10):** Dagster purge run sau khoảng 1 ngày nên run tham chiếu `93ad3580` không còn để so; từ 17/10 so tập check đỏ của nightly với tập đỏ đã biết (3 check `sheets_*` `not_empty_when_expected`). RAM: `memory.peak` của cgroup gồm page cache và chạm trần 8 GiB của container (kernel thu hồi cache, `oom_kill` = 0); RAM tiến trình (anon) đỉnh trong khung nightly đo bằng lấy mẫu 30 s. Số nền 6,54 GiB là `memory.peak` nên không so trực tiếp được với anon. Cách đo chính thức chờ user chốt.
 
+
+**Ghi chú 18/10 (nightly 13,9 phút):** chậm do hai bước không liên quan bộ máy phân loại. (1) `sapo__ingest_sapo_v2_orders_batch_asset` mất 9 phút 23 giây (các đêm trước cả nightly chỉ 5,3–5,4 phút): Sapo tự sửa hàng loạt đơn cũ đúng lúc 03:02–03:11 (`modified_on` của 2.606 đơn rơi vào khung đó; đơn tạo từ 2023 đến 10/2026, trạng thái completed/finalized/cancelled), nên lần đồng bộ tăng dần kéo về 2.615 đơn (đêm trước 22 đơn, đêm 16/10 8 đơn). So 400 đơn với bản đã chụp trước đó: chỉ `modified_on` đổi ở cả 400, `customer_data` đổi ở 113, `fulfillments` ở 53. Không code nào trong repo ghi đơn lên Sapo (chỉ webhook consumer gửi ack). `resource-meter` cho thấy container gần như rảnh trong 9 phút đó (CPU khoảng 14%, không áp lực bộ nhớ hay IO), tức là chờ API Sapo. (2) `approach_script_autogen` mất 3 phút vì cả 10 lần gọi codex đều lỗi `rc=1`. Phần dbt (`sapo_dbt_assets`) 33 giây, bình thường. Đêm vẫn đạt theo quy tắc đếm (parity 0 khác biệt); điều kiện dừng 4 xét ở bước 6 sau 7 đêm, đêm này là ngoại lệ có nguyên nhân bên ngoài.

@@ -26,3 +26,23 @@ User duyệt và tự cài sau khi `main` fast-forward lên `84b83cdf` (18/10 00
    giây có 20 ms thay vì 2 ms mỗi 100 ms, đủ cho một lần quét nên hết throttle.
 2. Sửa `status` báo throttle theo `throttled_usec` / thời gian chạy của unit, đúng cách tính của
    tiêu chí 1, thay cho tỉ lệ chu kỳ.
+
+## Đêm 1: nightly 18/10 03:01 (kiểm 09:5x, chỉ đọc)
+
+- `status`: running, RSS 4 MB, unit peak 13 MB, MemoryMax 0 lần, OOM 0, CPU 0,055% một nhân.
+  Throttle theo thời gian từ 00:32 (khoảng 9,4 giờ): `throttled_usec` 295 s, tức 0,87%, dưới ngưỡng
+  1%; `status` vẫn báo 15,65% (tỉ lệ chu kỳ, như đã ghi ở trên).
+- Dữ liệu ngày: 46.899 dòng container, 4.415 dòng process, 3.038 dòng step, 5.750 dòng model, 8 MB
+  chưa nén.
+- `read_bytes`: 932/4.415 dòng process khác 0.
+- `report --job pipeline_batch_nightly_job` (nightly `d0b09efb`, 13,9 phút):
+  - Bước dài nhất: `sapo__ingest_sapo_v2_orders_batch_asset` 604 s (RSS 535 MB, 14 CPU-s, tức là chờ
+    API: phía Sapo sửa hàng loạt 2.606 đơn đúng lúc nightly chạy, xem ghi chú 18/10 trong
+    `plans/261014-2225-taxonomy-engine/phase-06-prod-parallel-run.md`); `approach_script_autogen`
+    182 s (codex lỗi cả 10 lần).
+  - RSS cao nhất: `sapo_dbt_assets` 2,04 GB (36 s); model nặng nhất `src_sapo_v2_orders` 2,1 s,
+    1,70 GB.
+  - Container `data_platform` trong ngày: anon đỉnh 5,92 GB, kể cả cache 8,00 GB, chạm `memory.max`
+    31.473 lần, OOM kill 0, PSI bộ nhớ tối đa 16,5. Lúc khởi động bước (03:02) CPU bị throttle
+    mạnh (trần 4 nhân), sau đó container gần như rảnh trong lúc chờ Sapo (CPU khoảng 14%).
+- Chưa có `compare` vì đây là ngày đầu có số đo.
