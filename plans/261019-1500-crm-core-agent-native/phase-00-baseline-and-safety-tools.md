@@ -34,7 +34,7 @@
 5. **Công cụ parity export `scripts/checks/crm_export_parity.py`:** chạy các `export_query` trong `CRM_WRITEBACK_TABLES` (`orchestration/packs/crm/crm_writeback_assets.py`) bằng DuckDB trên hai bản sao DB, in số dòng và hash nội dung từng bảng, so khác biệt. Không ghi parquet.
 6. **Công cụ `crm/ops/migration_down.py`:** `--data-dir`, `--version <tên file up>`, `--confirm-backup <đường dẫn backup đã verify>`. Chạy file `.down.sql` tương ứng trong một SAVEPOINT (tái dùng `_split_statements`), xoá dòng `schema_migrations`, từ chối nếu có migration áp sau nó mà chưa down (trừ `--force`), từ chối nếu không có file down.
 7. Ghi kết quả đo vào `plans/261019-1500-crm-core-agent-native/reports/phase-00-baseline.md` (chỉ số đếm) và cập nhật các mục "[chưa kiểm]" của design nếu khác giả định.
-8. Trình user các câu hỏi mở Q1–Q10 của plan kèm số đo; ghi câu trả lời vào `plan.md` mục "Đã chốt".
+8. Trình user các câu hỏi còn mở của plan (Q5, Q7, Q9–Q12) kèm số đo; ghi câu trả lời vào `plan.md` mục "Đã chốt". Đo thêm cho phase 1: số khách có tag sức khoẻ, số khách đó có/không có người phụ trách (`owner_user_id`).
 
 ## File
 

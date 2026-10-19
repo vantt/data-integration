@@ -23,12 +23,12 @@ Nguồn nội bộ đã đọc (chỉ đọc, không mở `crm.db`): `crm/AGENTS
 | H1 | Ba bảng identity chồng nhau: `crm_party_identity` trộn kênh liên hệ (phone, email, zalo_uid, psid) với khoá hệ khác (sapo_customer, customer_code); `crm_party_external_id` không ai ghi; `crm_identity_link` thực ra là nhật ký giải quyết quét tem Hug | `crm/migrations/0002_party_identity_golden_record.up.sql:27-38` (UNIQUE `(identity_type, identity_value)`), `0009_party_external_id.up.sql:11`, `0022_hug_identity_link.up.sql`, `crm/src/application/tag_acl_sync_service.py:9-12` (ghi rằng reconcile trên `crm_party_external_id` bỏ qua 100% dòng) | Tách thành ContactPoint + PartyIdentifier; Hug giữ bảng module riêng |
 | H2 | `crm_party_identity` được 19 file ngoài test tham chiếu, gồm cả export sang kho | Kết quả `grep -rln crm_party_identity` (liệt kê ở mục 7.2); `orchestration/packs/crm/crm_writeback_assets.py:44-60` join `identity_type = 'sapo_customer'` cho mọi bảng export | Không đổi tên bảng một lần; đi theo expand/contract, giữ view tương thích |
 | H3 | Consent hiện là `consent_enum` ở cấp party (NULL/allowed/denied), không bằng chứng | `0026_consent_contact_enum.up.sql`; đọc ở `crm/src/adapters/outbound/sqlite/campaign_repository.py:203` (`fetch_consent_map`) | Thay bằng sổ cái consent; giữ cột cũ trong lúc chuyển |
-| H4 | "Không liên hệ" thực tế được suy ra từ hoạt động **gần nhất** có `outcome_reason='do_not_contact'`, không nằm trong consent | `crm/src/adapters/outbound/sqlite/activity_repository.py:71-78,200-201`; `crm/src/application/worklist_query_service.py:54-65` | Nếu có hoạt động mới hơn thì lệnh cấm tự mất. Sổ cái consent sẽ đổi ngữ nghĩa này (lệnh rút lại có hiệu lực tới khi khách đồng ý lại). Đây là **thay đổi hành vi**, cần user duyệt (câu hỏi mở Q6) |
+| H4 | "Không liên hệ" thực tế được suy ra từ hoạt động **gần nhất** có `outcome_reason='do_not_contact'`, không nằm trong consent | `crm/src/adapters/outbound/sqlite/activity_repository.py:71-78,200-201`; `crm/src/application/worklist_query_service.py:54-65` | Nếu có hoạt động mới hơn thì lệnh cấm tự mất. Sổ cái consent sẽ đổi ngữ nghĩa này (lệnh rút lại có hiệu lực tới khi khách đồng ý lại). Đây là **thay đổi hành vi**; user đã chốt 19/10 (Q6): lệnh rút lại có hiệu lực tới khi khách đồng ý lại, bật sau khi user xem số khách bị ảnh hưởng (§6.3) |
 | H5 | Đã có khoảng 40 route `/api/*` (không phải 5): segment, campaign, dedup/merge, activity, task, tag, note, profile, custom field, 360, insight, approach script, conversation | `crm/src/adapters/inbound/http/*_handler.py` (ví dụ `segment_handler.py:55-134`, `campaign_handler.py:56-164`, `customer360_handler.py:30,117-224`, `dedup_handler.py:21-98`, `task_handler.py:44-99`) | REST không phải làm lại từ đầu; cần **chuẩn hoá** (v1, schema, lỗi, idempotency, actor) và trỏ về cùng service |
 | H6 | Lệnh ghi `/api/*` chỉ kiểm một token chung `CRM_API_TOKEN`, không biết ai gọi; token rỗng thì bỏ qua kiểm | `crm/src/adapters/inbound/http/auth_dependency.py:26-50` | Cần principal theo từng người/agent, token băm, phạm vi quyền |
 | H7 | `AuthorizationService` chỉ so assignee; role (sales/care/manager/admin) chỉ mang tính thông tin, chỉ có `require_admin` | `crm/src/application/authorization_service.py:1-31`; `crm/src/domain/entities/app_user.py:13-17`; `auth_dependency.py:53-71` | Một policy duy nhất (role → quyền) cho UI, REST, CLI, MCP; v1 mã hoá đúng hành vi hiện tại cho người dùng |
 | H8 | CSRF guard đang log-only và miễn trừ mọi đường `/api/*`, trong khi 4 route `/api/*` được trình duyệt gọi bằng cookie | `crm/src/adapters/inbound/http/csrf_guard.py:38,53`; `crm/src/adapters/inbound/web/screens/customer360/screen_customer_360_activity.py:534,644,707`; `script_nav_handler.py:67-69`; báo cáo triage mục 2 | Bật chặn và bỏ miễn trừ cho request có Origin, trước khi mở thêm API cho agent |
-| H9 | Tag sức khoẻ: `health_concern` (8 tag, 0 lần gắn) và `health_domain` (8 tag, 2 lần gắn); không có lớp chặn; export ra kho mang `category` | `0042_seed_health_concern_tags.up.sql`; `crm_writeback_assets.py:150-157`; báo cáo triage mục 3 | Đưa "loại dữ liệu" vào lõi; chặn gắn mới, giới hạn người xem, lọc export (user đã đồng ý) |
+| H9 | Tag sức khoẻ: `health_concern` (8 tag, 0 lần gắn) và `health_domain` (8 tag, 2 lần gắn); không có lớp chặn; export ra kho mang `category` | `0042_seed_health_concern_tags.up.sql`; `crm_writeback_assets.py:150-157`; báo cáo triage mục 3 | Đưa "loại dữ liệu" vào lõi; phương án C + B đã chốt 19/10 (§6.2): tag "quan tâm nhóm sản phẩm" làm mặc định, tag sức khoẻ chỉ gắn khi có đồng ý riêng, giới hạn người xem, audit, lọc khỏi export và agent |
 | H10 | CRM đọc kho theo **hai kênh**: `cache.db` (reverse-ETL, 11 bảng `wh_*`) và đọc thẳng `serving/olap.duckdb` lúc request (6 repo: đơn của khách, timeline, chỉ số dim, RFM danh sách, data quality, chi tiết đơn) | `crm/sync/reverse_etl_warehouse_to_crm.py:176-232`; `crm/sync/duckdb_reader.py` (`main_marts.dim_customers`, `mart_customer_action_queue`, `mart_customer_sku_action_queue`, `mart_customer_tier`, `dim_action_scenario_registry`, `dim_products`, `mart_product_health`, `mart_deadstock_target_queue`, `fact_orders`); `crm/src/composition.py:254-302` | Hợp đồng có hai mặt: bảng cache (dùng để lọc, join) và view serving công khai (dùng để xem chi tiết) |
 | H11 | Ba bảng cache không ai đọc ngoài bộ sync: `wh_product`, `wh_product_insight`; `wh_order_cogs_summary` có DDL nhưng không được nạp | `grep` chỉ thấy ở `crm/sync/*` và tài liệu; `reverse_etl_warehouse_to_crm.py` không có bước cho `wh_order_cogs_summary` | Bỏ khỏi hợp đồng v1 (xác nhận lại ở phase 0) |
 | H12 | `wh_contactable` không phải bảng: đó là tên biến trong `crm/src/hug/customer_push.py:141` (đọc `wh_customer_tier.is_contactable`) | `customer_push.py:138-152` | Hợp đồng chỉ cần cột `is_contactable_source` trong tóm tắt thương mại |
@@ -170,7 +170,7 @@ Quy tắc phân loại: **cái gì dùng để liên lạc được thì là Con
 
 | Bảng | Thay đổi |
 |---|---|
-| `crm_tag_category` (mới, registry) | `category_code`, `label_vi`, `data_class` (`basic`/`sensitive`), `sensitive_kind` (`health`, …), `is_restricted` (không cho gắn mới), `read_permission` |
+| `crm_tag_category` (mới, registry) | `category_code`, `label_vi`, `data_class` (`basic`/`sensitive`), `sensitive_kind` (`health`, …), `requires_consent_purpose` (NULL hoặc mã mục đích consent bắt buộc trước khi gắn, ví dụ `sensitive_profile`), `audit_reads` (0/1) |
 | `crm_tag`, `crm_party_tag`, `crm_ext_tag*` | Giữ; `crm_tag.category` trỏ (giá trị) tới `crm_tag_category` |
 | `crm_custom_field_def` | Thêm `data_class`; `entity_type` mở rộng thành `party`, `party_role:<role_type>`, `engagement:<engagement_type>`, `interaction` |
 | `crm_segment`, `crm_segment_member` | Giữ |
@@ -215,7 +215,7 @@ Module bật theo cấu hình tenant (biến môi trường `CRM_MODULES`, mặc
 
 | Mảng | Party và vai trò | Quan hệ | Engagement | Hợp đồng kho | Consent và dữ liệu nhạy cảm | Tín hiệu và việc |
 |---|---|---|---|---|---|---|
-| **Bán lẻ B2C** (Fine Japan, làm ở v1) | Một party `person`, vai trò `customer`; contact point phone (`real` hoặc `masked`), zalo; identifier `sapo_v2/customer_id`, `shopee/buyer_id` | `gift_recipient_of`, `buys_for` (kho đề xuất, người xác nhận) | `retail_order` (warehouse) qua `wh_transaction` | `wh_customer_summary` (RFM, tier, CLV, ngày mua kế), `wh_signal` (REORDER_NUDGE, WIN_BACK, theo SKU), `wh_retail_deadstock_target` | `service_care`, `marketing` theo kênh; tag sức khoẻ là `sensitive/health`, bị hạn chế | Worklist từ `wh_signal`; task `contact`; kết quả cuộc gọi là Interaction |
+| **Bán lẻ B2C** (Fine Japan, làm ở v1) | Một party `person`, vai trò `customer`; contact point phone (`real` hoặc `masked`), zalo; identifier `sapo_v2/customer_id`, `shopee/buyer_id` | `gift_recipient_of`, `buys_for` (kho đề xuất, người xác nhận) | `retail_order` (warehouse) qua `wh_transaction` | `wh_customer_summary` (RFM, tier, CLV, ngày mua kế), `wh_signal` (REORDER_NUDGE, WIN_BACK, theo SKU), `wh_retail_deadstock_target` | `service_care`, `marketing` theo kênh; mặc định gắn tag `product_interest` (basic); tag sức khoẻ thật là `sensitive/health`, chỉ gắn khi có đồng ý `sensitive_profile` (§6.2) | Worklist từ `wh_signal`; task `contact`; kết quả cuộc gọi là Interaction |
 | **Bán sỉ B2B** (v1 chỉ làm "khách sỉ ẩn") | Party `org` "Công ty X" vai trò `wholesale_customer`; party `person` vai trò `contact`; số tổng đài ở party tổ chức | `contact_of` (người → công ty, `title`="Kế toán"); `reseller_of` (đại lý) | `b2b_contract` (crm): bảng chi tiết `crm_b2b_contract` (hạn mức, kỳ thanh toán, bảng giá); `wholesale_order` (warehouse) | `wh_customer_summary.receivable_balance_vnd` (công nợ do kho tính); khi làm đủ: `wh_b2b_receivable_aging` | Consent theo người liên hệ, không theo công ty | Tín hiệu "hợp đồng sắp hết hạn", "công nợ quá hạn" (kho tính) |
 | **Dịch vụ có lịch hẹn** (spa, phòng khám; chưa làm) | Party `person` vai trò `client` (hoặc `patient`); người làm dịch vụ là `crm_app_user` hoặc party vai trò `practitioner` | `household_member_of`, `guardian_of` (module thêm) | `appointment` (crm hoặc hệ đặt lịch): `crm_appt_appointment` (dịch vụ, địa điểm, tài nguyên, giờ bắt đầu/kết thúc, `no_show`); `engagement_party`: `attendee`, `practitioner` | `wh_transaction` loại `service_visit`, `prepaid_package_sale` | Phòng khám: hồ sơ sức khoẻ là `sensitive/health`, bắt buộc consent `sensitive_profile` có bằng chứng trước khi ghi | "Đến hạn tái khám/liệu trình" → task nhắc lịch |
 | **Thành viên/thuê bao** (chưa làm) | Party `person` vai trò `member` | `household_member_of` (thẻ gia đình), engagement_party `beneficiary` | `membership` (crm hoặc hệ thanh toán): `crm_mbr_membership` (gói, kỳ, `renews_at`, tự gia hạn, trạng thái `trial`/`active`/`past_due`/`cancelled`/`expired`, lý do huỷ) | `wh_transaction` loại `subscription_charge`, `refund`; `wh_customer_summary` thêm MRR qua `extra_json` hoặc bảng module `wh_mbr_member_summary` | `marketing` tách khỏi `service_care` (thông báo gia hạn là chăm sóc) | "Sắp gia hạn", "thanh toán lỗi", "nguy cơ rời" |
@@ -360,7 +360,7 @@ người duyệt (UI "Hàng chờ duyệt" hoặc crmctl) ──approve──►
 | Thao tác hàng loạt (gắn tag, tạo task, chuyển chủ khách, > 1 party) | Chỉ đề xuất, `dry_run` mặc định | Trực tiếp có xem trước; > 200 party phải qua đề xuất |
 | Tạo quan hệ, xác nhận khách sỉ | Chỉ đề xuất | Trực tiếp |
 | Gửi tin cho khách | Không có | Ngoài phạm vi v1 |
-| Duyệt đề xuất | Không bao giờ | Manager, admin (đề xuất; câu hỏi mở) |
+| Duyệt đề xuất | Không bao giờ | Manager, admin (**đã chốt 19/10**); đề xuất hết hạn sau 7 ngày |
 
 ### 5.6 Phân quyền
 
@@ -368,13 +368,13 @@ Một bảng quyền trong code (`crm/src/domain/policy.py`), dùng bởi mọi 
 
 | Vai trò chuẩn | Giá trị hiện có | Quyền v1 |
 |---|---|---|
-| owner | `admin` | Tất cả, kể cả `data.sensitive.read`, quản trị credential, duyệt |
-| manager | `manager` | Mọi nghiệp vụ; duyệt đề xuất; không xem dữ liệu nhạy cảm (đề xuất, câu hỏi mở) |
-| staff | `sales`, `care` | Như hôm nay (đọc mọi khách, ghi tương tác/task/ghi chú/tag không nhạy cảm, merge qua màn dedup nếu hôm nay được) |
+| owner | `admin` | Tất cả, kể cả xem dữ liệu nhạy cảm của mọi khách, quản trị credential, duyệt |
+| manager | `manager` | Mọi nghiệp vụ; duyệt đề xuất; xem dữ liệu nhạy cảm của mọi khách (đã chốt 19/10) |
+| staff | `sales`, `care` | Như hôm nay (đọc mọi khách, ghi tương tác/task/ghi chú/tag, merge qua màn dedup nếu hôm nay được); gắn tag sức khoẻ khi khách đã có đồng ý riêng; **xem** dữ liệu nhạy cảm chỉ với khách mình phụ trách (§6.2) |
 | viewer | (mới) | Chỉ đọc, không PII |
 | agent | (mới, `principal_type='agent'`) | Giao của scope và quyền người được uỷ quyền; không bao giờ có `data.sensitive.read`, `proposal.approve`, `party.merge.execute`, `export.bulk` |
 
-**Nguyên tắc tương thích:** v1 mã hoá **đúng hành vi hiện tại** cho người dùng (không che SĐT, không giới hạn theo chủ khách). Chỉ có hai thắt chặt, cả hai user đã đồng ý: dữ liệu sức khoẻ và quyền của agent. Che SĐT với staff cho khách không thuộc mình (research §5) là thay đổi hành vi, để user quyết sau (câu hỏi mở).
+**Nguyên tắc tương thích:** v1 mã hoá **đúng hành vi hiện tại** cho người dùng (không che SĐT, không giới hạn theo chủ khách). Chỉ có hai thắt chặt, cả hai user đã đồng ý: dữ liệu sức khoẻ (theo phương án C + B ở §6.2, không phá quy trình gắn của sales/CS) và quyền của agent. Che SĐT với staff cho khách không thuộc mình (research §5) là thay đổi hành vi, để user quyết sau (câu hỏi mở).
 
 ### 5.7 REST `/api/v1`
 
@@ -404,7 +404,7 @@ Một bảng quyền trong code (`crm/src/domain/policy.py`), dùng bởi mọi 
 | 12 | `create_task(…, idempotency_key)` | ghi | idempotent | Người được giao mặc định là `on_behalf_of` |
 | 13 | `update_task(task_id, status/due/assignee, idempotency_key)` | ghi | idempotent | Kiểm chủ task (`AuthorizationService.is_owner`) |
 | 14 | `add_note(party_id, body, note_type, idempotency_key)` | ghi | idempotent | Không cho loại ghi chú nhạy cảm |
-| 15 | `set_party_tags(party_id, add[], remove[], idempotency_key)` | ghi | idempotent | Tag thuộc loại hạn chế bị từ chối |
+| 15 | `set_party_tags(party_id, add[], remove[], idempotency_key)` | ghi | idempotent | Tag `data_class='sensitive'` luôn bị từ chối với agent (kể cả khi khách đã đồng ý); tag "quan tâm nhóm sản phẩm" được phép |
 | 16 | `update_action_state(action_id, claim/snooze/dismiss, until?, idempotency_key)` | ghi | idempotent | Dùng đúng R15 và dismiss TTL |
 | 17 | `propose_identity_link(party_id, kind, value, evidence)` | đề xuất | — | Tạo proposal; không đổi dữ liệu |
 | 18 | `propose_merge(survivor_id, merged_id, reason, evidence)` | đề xuất | — | Kèm preview merge |
@@ -425,7 +425,7 @@ Research `research-261014-2333-adhoc-query-ceo-mcp.md` chọn MCP tự viết tr
 | Audit | Cùng trường lõi (`ts`, principal, on_behalf_of, tool, args đã che, kết quả, `request_id`) |
 | Phản hồi | Phong bì `{data, data_as_of, applied_defaults, warnings, request_id}`; câu trả lời tiếng Việt luôn nêu "dữ liệu tới" |
 | Chỉ tiêu | CRM không định nghĩa chỉ tiêu riêng; con số trong `get_party_360` lấy nguyên từ `wh_customer_summary` và mang nhãn của kho (ví dụ `margin_level`, phase 0 xác minh `lifetime_contribution_margin` là bậc CM nào) |
-| Khác biệt | Analytics chỉ trả số tổng hợp; CRM trả dữ liệu từng khách nên **có dữ liệu cá nhân đi tới nhà cung cấp mô hình**. Mặc định v1: SĐT luôn che, tên theo cấu hình `CRM_AGENT_PII_MODE` (`masked` mặc định, `full` sau khi có ý kiến pháp chế, câu hỏi mở Q2) |
+| Khác biệt | Analytics chỉ trả số tổng hợp; CRM trả dữ liệu từng khách nên **có dữ liệu cá nhân đi tới nhà cung cấp mô hình**. **Đã chốt 19/10 (Q2):** SĐT và tên luôn che khi tới agent (tên chỉ còn chữ cái đầu + mã khách). Cấu hình `CRM_AGENT_PII_MODE` chỉ có giá trị `masked` ở v1; mở thêm là quyết định mới của user |
 
 Quy ước chung được ghi thành ADR-020 (phase 2) để server phân tích dùng lại. Không chia sẻ code giữa hai server vì `crm/` phải tự chứa (`crm/AGENTS.md` mục Boundary rule).
 
@@ -437,33 +437,64 @@ Quy ước chung được ghi thành ADR-020 (phase 2) để server phân tích 
 
 - Hai lớp theo Nghị định 356/2025: `basic` và `sensitive`; lớp `sensitive` có `sensitive_kind` (`health`, `biometric`, `financial_account`, `location_precise`, … tenant thêm).
 - Gắn ở **định nghĩa**: `crm_tag_category.data_class`, `crm_custom_field_def.data_class`, loại ghi chú (`note_type` có `data_class` mặc định), `crm_activity_log.data_class` (người ghi chọn khi nội dung chứa thông tin sức khoẻ).
-- Chính sách trong `policy.py`:
-  - Đọc: cần `data.sensitive.read` (v1: chỉ `admin`); agent không bao giờ có.
-  - Ghi: loại `is_restricted=1` bị chặn hoàn toàn (bước an toàn của user); khi mở lại sau ý kiến luật sư, ghi chỉ được nếu party có consent `sensitive_profile` đang `granted`.
-  - Export: lọc ở query export và ở `crm_party_map` không có cột nhạy cảm.
-  - Audit: mọi lần đọc dữ liệu nhạy cảm.
-- Fine Japan: `health_concern` và `health_domain` là `sensitive/health`, `is_restricted=1` (phase 1). Lớp chặn ở DB là trigger SQLite (đặc thù dialect, ghi rõ ở mục 8.2) cộng kiểm ở service để trả 400/403 thay vì 500.
+- Chính sách chung trong `policy.py` (một hàm `can_view_sensitive(principal, party)` và một hàm `can_write_sensitive(principal, party, category)` cho mọi kênh):
+  - **Xem:** `admin` và `manager` xem với mọi khách; `sales`/`care` chỉ xem với khách mình **phụ trách** (`owner_user_id` của khách; từ phase 8 là `owner_user_id` của vai trò `customer`); `viewer` không xem; **agent không bao giờ xem**.
+  - **Ghi:** loại có `requires_consent_purpose` chỉ ghi được khi khách đã có đồng ý riêng cho mục đích đó (§6.2). Agent không bao giờ ghi.
+  - **Audit:** mọi lần gắn, gỡ và **mọi lần hiển thị** dữ liệu nhạy cảm cho một người dùng (C360, API, danh sách tag) đều có một dòng audit.
+  - **Không đi ra ngoài:** loại khỏi export về kho, mọi báo cáo dựng từ export, mọi phản hồi REST v1/MCP/CLI cho agent, và khỏi `diff_json` của audit (chỉ ghi `tag_id`, không ghi nhãn).
 
-### 6.2 Sổ cái consent
+### 6.2 Tag sức khoẻ: phương án C + B (đã chốt 19/10/2026)
+
+Sales/CS là người thường ghi nhận nhu cầu sức khoẻ của khách khi tư vấn, nên quy trình gắn tag không được bị phá. Hai lớp:
+
+**C. Mặc định: tag "quan tâm nhóm sản phẩm" (không phải dữ liệu sức khoẻ).**
+
+- Loại tag mới `product_interest` (`data_class='basic'`), ví dụ "Quan tâm nhóm hỗ trợ giấc ngủ" thay cho "Mất ngủ", "Quan tâm nhóm tim mạch" thay cho "Huyết áp cao". Nó ghi **nhu cầu mua của khách**, không ghi tình trạng cơ thể.
+- Danh mục nhóm sản phẩm là **cấu hình tenant** (tag do admin tạo trong `/settings/tags` thuộc loại `product_interest`; migration chỉ tạo loại, không seed tên). Ai đặt tên và danh sách cụ thể: câu hỏi mở Q11 của plan.
+- Trên picker M03, S14 inline và hàng gợi ý S14, `product_interest` là lựa chọn hiển thị đầu tiên cho mọi người. Không cần đồng ý riêng, được export và dùng cho segment, worklist, agent như tag thường.
+
+**B. Tag sức khoẻ thật (`health_concern`, `health_domain`) giữ lại, có điều kiện.**
+
+| Khía cạnh | Quy tắc |
+|---|---|
+| Gắn | `sales`/`care`/`manager`/`admin` gắn được **chỉ khi** khách đã có đồng ý riêng cho mục đích `sensitive_profile` (có bằng chứng). Chưa có thì picker không hiện loại sức khoẻ cho khách đó, chỉ hiện nút "Ghi nhận khách đồng ý cho lưu thông tin sức khoẻ" (chọn cách thu thập, bằng chứng) và gợi ý dùng `product_interest`. Lớp chặn cuối ở DB: trigger từ chối insert `crm_party_tag` thuộc loại có `requires_consent_purpose` khi khách chưa có đồng ý |
+| Xem | Người phụ trách khách, `manager`, `admin` (§6.1). Người khác không thấy tag, không thấy số lượng. Khách chưa có người phụ trách: câu hỏi mở Q12 (đề xuất cho người đã ghi nhận đồng ý riêng cũng được xem) |
+| Audit | Mọi lần gắn, gỡ, xem; mọi lần ghi nhận hoặc rút đồng ý riêng |
+| Ra ngoài | Không export về kho (`crm_tag` và `crm_party_tag` lọc `data_class='sensitive'`), không vào báo cáo (`health_concern_tags_new` trong `mart_staff_performance_weekly` sẽ luôn bằng 0), không bao giờ tới agent/MCP/REST v1 của agent |
+| Dữ liệu cũ | Không xoá (hiện có 2 lần gắn `health_domain`). Khách chưa có đồng ý thì tag **ẩn theo quyền** với mọi người trừ `admin`, `manager` và người phụ trách; không bị xoá, không bị gỡ |
+| Rút đồng ý | Khi khách rút đồng ý `sensitive_profile`, tag sức khoẻ không bị xoá tự động nhưng bị ẩn với mọi người trừ `admin` và cấm gắn thêm; xoá theo yêu cầu của khách là thao tác của `admin` có audit |
+
+**Thứ tự triển khai (vì sổ cái consent nằm ở phase 7):**
+
+| Phase | Nơi lưu "đồng ý riêng" | Ghi chú |
+|---|---|---|
+| 1 (tạm) | Bảng `crm_sensitive_consent_flag` (`party_id` PK, `purpose_code='sensitive_profile'`, `status` `granted`/`withdrawn`, `method`, `evidence_type`, `evidence_ref`, `captured_by`, `captured_at`, `note`); lịch sử thay đổi nằm trong `crm_sensitive_access_log` (chỉ thêm), cùng với nhật ký gắn/gỡ/xem | Audit chung chưa có ở phase 1, nên `crm_sensitive_access_log` là nhật ký tạm |
+| 2 | Không đổi nơi lưu cờ; `crm_sensitive_access_log` được chép sang `crm_audit_event` và từ đó mọi sự kiện ghi vào audit chung; bảng log tạm ngừng ghi, giữ lại chỉ đọc | |
+| 7 | Mỗi cờ thành một `crm_consent_event` (`purpose_code='sensitive_profile'`, giữ `method`, bằng chứng, người ghi, thời điểm); `can_write_sensitive` và trigger đọc `crm_consent_current`; giao diện ghi nhận đồng ý ghi vào sổ cái. Cờ tạm ghi song song tới phase 11 rồi thành view chỉ đọc | |
+
+### 6.3 Sổ cái consent
 
 | Bảng | Cột | Ghi chú |
 |---|---|---|
-| `crm_consent_purpose` (registry, tenant cấu hình) | **purpose_code**, **label_vi**, description, legal_basis (`consent`/`contract`/`legal_obligation`), is_sensitive, requires_evidence, default_when_unknown (`allow`/`deny`) | Lõi: `service_care`, `marketing`, `sensitive_profile`, `third_party_sharing` |
-| `crm_consent_event` (chỉ thêm) | **consent_event_id**, **party_id**, contact_point_id (NULL = mọi kênh của party), **channel** (`phone_call`/`sms`/`zalo`/`email`/`messenger`/`any`), **purpose_code**, **decision** (`granted`/`withdrawn`/`denied`), **effective_at**, expires_at, **method** (`verbal_call`/`web_form`/`qr_scan`/`zalo_follow`/`paper_form`/`in_store`/`import_legacy`/`outcome_do_not_contact`), **evidence_type** (`interaction`/`file`/`url`/`hug_token`/`none_legacy`), evidence_ref, notice_version (phiên bản thông báo xử lý dữ liệu cá nhân), **captured_by**, **recorded_at**, source_system, supersedes_event_id, note | Trigger chặn UPDATE/DELETE (SQLite); repository chỉ có `append` |
+| `crm_consent_purpose` (registry, tenant cấu hình) | **purpose_code**, **label_vi**, description, legal_basis (`consent`/`contract`/`legal_obligation`), is_sensitive, requires_evidence, default_when_unknown (`allow`/`deny`) | Lõi: `service_care`, `marketing`, `sensitive_profile` (`is_sensitive=1`, `requires_evidence=1`, `default_when_unknown='deny'`), `third_party_sharing` |
+| `crm_consent_event` (chỉ thêm) | **consent_event_id**, **party_id**, contact_point_id (NULL = mọi kênh của party), **channel** (`phone_call`/`sms`/`zalo`/`email`/`messenger`/`any`), **purpose_code**, **decision** (`granted`/`withdrawn`/`denied`), **effective_at**, expires_at, **method** (`verbal_call`/`web_form`/`qr_scan`/`zalo_follow`/`paper_form`/`in_store`/`import_legacy`/`import_interim_flag`/`outcome_do_not_contact`), **evidence_type** (`interaction`/`file`/`url`/`hug_token`/`none_legacy`), evidence_ref, notice_version (phiên bản thông báo xử lý dữ liệu cá nhân), **captured_by**, **recorded_at**, source_system, supersedes_event_id, note | Trigger chặn UPDATE/DELETE (SQLite); repository chỉ có `append` |
 | `crm_consent_current` (VIEW) | Dòng mới nhất theo (`party_id`, `contact_point_id`, `channel`, `purpose_code`) dùng `ROW_NUMBER()` | Window function chạy được trên SQLite ≥ 3.25 và Postgres |
 
-Hàm quyết định duy nhất `ConsentPolicy.can_contact(party_id, channel, purpose) -> Decision(allow|deny|unknown, reason, event_id)`: lấy dòng cụ thể nhất (contact point + kênh), rồi party + kênh, rồi party + `any`; không có thì dùng `default_when_unknown` của mục đích. Worklist, segment, campaign và tool agent đều gọi hàm này.
+Hàm quyết định duy nhất `ConsentPolicy.can_contact(party_id, channel, purpose) -> Decision(allow|deny|unknown, reason, event_id)`: lấy dòng cụ thể nhất (contact point + kênh), rồi party + kênh, rồi party + `any`; không có thì dùng `default_when_unknown` của mục đích. Worklist, segment, campaign, tool agent và kiểm gắn tag sức khoẻ đều gọi hàm này.
 
 **Ánh xạ dữ liệu cũ (phase 7):**
 
 | Hiện trạng | Thành sự kiện | Ghi chú |
 |---|---|---|
 | `consent_enum='denied'` | `withdrawn`, `channel='any'`, mọi mục đích, `method='import_legacy'`, `evidence_type='none_legacy'` | Giữ đúng hiệu ứng chặn |
-| `consent_enum='allowed'` | `granted`, `service_care`, `channel='any'`, `import_legacy`, `none_legacy` | Không suy ra `marketing` |
+| `consent_enum='allowed'` | `granted`, `service_care`, `channel='any'`, `import_legacy`, `none_legacy` | Không suy ra `marketing`, không suy ra `sensitive_profile` |
 | `consent_enum` NULL | Không tạo sự kiện | `unknown` |
-| Hoạt động có `outcome_reason='do_not_contact'` | `withdrawn`, `channel` theo hoạt động, mọi mục đích, `method='outcome_do_not_contact'`, `evidence_type='interaction'`, `evidence_ref=activity_id` | **Ngữ nghĩa thay đổi** (H4): Q6 |
+| `crm_sensitive_consent_flag` (phase 1) | `granted`/`withdrawn`, `sensitive_profile`, `channel='any'`, `method='import_interim_flag'` + method gốc trong `note`, bằng chứng và người ghi giữ nguyên | Không mất bằng chứng đã thu |
+| Hoạt động có `outcome_reason='do_not_contact'` | `withdrawn`, `channel` theo hoạt động, mọi mục đích trừ `sensitive_profile`, `method='outcome_do_not_contact'`, `evidence_type='interaction'`, `evidence_ref=activity_id` | Ngữ nghĩa mới (H4), đã chốt Q6 |
 
-Để "CRM chạy như cũ", phase 7 đặt `default_when_unknown='allow'` cho `service_care` và `marketing` của Fine Japan (đúng hành vi hôm nay: chỉ chặn khi bị từ chối) và giữ bộ lọc `do_not_contact` cũ song song cho tới khi user chọn ngữ nghĩa ở Q6. Đặt mặc định chặt hơn là quyết định pháp lý của user.
+**Ngữ nghĩa "không liên hệ" (đã chốt 19/10, Q6):** lệnh rút lại có hiệu lực **tới khi khách đồng ý lại** (một sự kiện `granted` mới có bằng chứng), không còn mất đi khi có hoạt động mới hơn. Trước khi bật (cờ `CRM_DNC_SOURCE=ledger`), phase 7 đưa user xem **số khách bị ảnh hưởng** (số party hiện đang được gọi lại nhưng sẽ bị chặn, và ngược lại nếu có), user duyệt rồi mới bật.
+
+Mặc định khi chưa có consent: phase 7 đặt `default_when_unknown='allow'` cho `service_care` và `marketing` của Fine Japan (đúng hành vi hôm nay). Chặn tiếp thị khi chưa có consent vẫn là câu hỏi mở (Q7), đổi được bằng cấu hình.
 
 ---
 
@@ -570,7 +601,7 @@ Một kiểm tra tự động (phase 11): script `crm/ops/check_sql_portability.
 | Dùng CRM nguồn mở (Twenty) hoặc CRM VN | Research §8.1: lệch domain (B2B), mất worklist từ kho, lock-in |
 | CHECK cho các cột loại | SQLite phải dựng lại bảng mỗi khi module thêm loại (như `0023`, `0046` đã phải làm) |
 | Consent là cờ trên contact point | Không có lịch sử, không có bằng chứng; không đạt Nghị định 356 |
-| Chuyển ngay sang Postgres | Một tenant, ~10 người dùng, SQLite WAL đủ; chuyển CSDL cùng lúc tái cấu trúc làm tăng rủi ro; giữ trung lập là đủ (câu hỏi mở Q1) |
+| Chuyển ngay sang Postgres | Một tenant, ~10 người dùng, SQLite WAL đủ; chuyển CSDL cùng lúc tái cấu trúc làm tăng rủi ro; giữ trung lập là đủ (**đã chốt 19/10, Q1**: giữ SQLite cho Fine Japan, code trung lập Postgres) |
 | SQLAlchemy/ORM để khả chuyển | Thay toàn bộ tầng adapter, không cần cho một CSDL; port + SQL tập con chung đạt mục tiêu với ít thay đổi hơn |
 | Che SĐT với staff ngay trong plan này | Thay đổi hành vi người dùng chưa được yêu cầu; để user quyết |
 

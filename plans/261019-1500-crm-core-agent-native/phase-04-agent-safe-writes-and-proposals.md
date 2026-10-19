@@ -1,6 +1,6 @@
 # Phase 4: agent ghi an toàn và mô hình đề xuất → người duyệt
 
-**Effort:** 5d · **Phụ thuộc:** phase 3; câu trả lời Q4 (ai duyệt) · **Đụng prod:** có (CRM) · **Cần user duyệt giờ:** có · **Migration:** 0055–0059
+**Effort:** 5d · **Phụ thuộc:** phase 3; Q4 đã chốt 19/10 (manager và admin duyệt, hết hạn 7 ngày) · **Đụng prod:** có (CRM) · **Cần user duyệt giờ:** có · **Migration:** 0055–0059
 
 ## Bối cảnh
 
@@ -51,7 +51,7 @@
 | Unit | Preview thay đổi giữa lúc đề xuất và lúc duyệt → `preview_changed` |
 | Unit | Đề xuất hàng loạt: chạy thử trả đúng số party, mẫu ≤ 20, không ghi; vượt 2.000 → từ chối |
 | Unit | Consent qua đề xuất thiếu bằng chứng → từ chối |
-| Unit | Tag nhạy cảm qua `set_party_tags` → từ chối (phase 1) |
+| Unit | Tag nhạy cảm qua `set_party_tags` → từ chối kể cả khi khách đã đồng ý riêng; tag `product_interest` → được; đề xuất hàng loạt gắn tag nhạy cảm → từ chối ngay khi tạo |
 | Tích hợp | Mọi test màn hình web hiện có xanh (fragment HTMX, mã trả về); mỗi lệnh ghi web có đúng một audit `channel='web'` |
 | Tích hợp | Bộ kịch bản agent thêm 10 câu ghi/đề xuất |
 

@@ -1,6 +1,6 @@
 # Phase 3: agent đọc qua REST v1, CLI và MCP
 
-**Effort:** 4.5d · **Phụ thuộc:** phase 2; câu trả lời Q2 (PII cho agent) và Q8 (kênh mạng) · **Đụng prod:** có (CRM, build lại image) · **Cần user duyệt giờ:** có · **Migration:** không
+**Effort:** 4.5d · **Phụ thuộc:** phase 2; Q2 và Q8 đã chốt 19/10 (che SĐT và tên; LAN + Tailscale qua Caddy) · **Đụng prod:** có (CRM, build lại image) · **Cần user duyệt giờ:** có · **Migration:** không
 
 ## Bối cảnh
 
@@ -20,21 +20,21 @@
    - `SegmentQuery.members(segment_id, limit, cursor)`; `CampaignQuery.results(campaign_id)` (dùng ROI hiện có; lift ở phase 10);
    - `WhoAmIQuery` (principal, `on_behalf_of`, quyền hiệu lực, module bật, `data_as_of` từ `wh_sync_run`).
 2. **Chính sách hiển thị PII** (`crm/src/domain/policy.py`): `present_party(dto, ctx)`:
-   - Agent: SĐT luôn che dạng `09x****123`; tên theo `CRM_AGENT_PII_MODE` (`masked`: chữ cái đầu mỗi từ + mã khách; `full`: đủ tên); địa chỉ chỉ tỉnh/thành; ngày sinh chỉ năm.
+   - Agent: SĐT luôn che dạng `09x****123`; tên luôn che (chữ cái đầu mỗi từ + mã khách; đã chốt Q2, `CRM_AGENT_PII_MODE` chỉ nhận `masked` ở v1); địa chỉ chỉ tỉnh/thành; ngày sinh chỉ năm.
    - Người dùng: như hiện nay.
-   - Trường `data_class='sensitive'`: chỉ khi có `data.sensitive.read` (agent không bao giờ có).
+   - Trường và tag `data_class='sensitive'` (kể cả tag sức khoẻ của khách đã đồng ý riêng): người dùng theo `can_view_sensitive`; **agent không bao giờ nhận**, không nhận cả số lượng hay trạng thái đồng ý `sensitive_profile`. Tag `product_interest` là tag thường, agent nhận được.
 3. **REST `/api/v1`** (`crm/src/adapters/inbound/api_v1/`): `GET /api/v1/whoami`, `/parties?q=`, `/parties/{id}`, `/parties/{id}/timeline`, `/worklist`, `/parties/{id}/approach-script`, `/tasks`, `/segments/{id}/members`, `/campaigns/{id}/results`. Phong bì `{data, data_as_of, warnings, request_id}`; lỗi theo design §5.7; phân trang cursor; mọi lời gọi của agent ghi audit qua `CommandBus.read`. Route cũ không đổi.
 4. **MCP** (`crm/src/adapters/inbound/mcp/`): server `fg-crm`, transport streamable HTTP mount ở `/mcp`; xác thực Bearer bằng cùng dependency phase 2; chỉ credential có scope `mcp` vào được. 9 tool đọc: `whoami`, `search_parties`, `get_party_360`, `list_party_timeline`, `list_worklist`, `get_approach_script`, `list_tasks`, `list_segment_members`, `get_campaign_results` (design §5.9 số 1–9). Schema input/output sinh từ DTO Pydantic (một định nghĩa). Annotation `readOnlyHint=true`. Server `instructions` tiếng Việt: múi giờ Asia/Ho_Chi_Minh, CRM không tính số mà lấy từ kho, luôn nêu "dữ liệu tới", không suy diễn nhân quả, không đề nghị gửi tin cho khách.
 5. **CLI** `crm/ops/crmctl.py`: nhóm lệnh đọc tương ứng (design §5.8), gọi `/api/v1`, `--json`; đọc `CRM_URL`, `CRM_TOKEN` từ môi trường.
 6. **Image:** thêm MCP SDK đã ghim (phiên bản phase 0 xác nhận); ghim digest `python:3.12-slim` trong `Dockerfile.crm` bằng digest đang chạy (lấy từ `docker image inspect` của image hiện tại) để không kéo base mới; kiểm `sqlite3.sqlite_version` trong image mới bằng phiên bản cũ.
-7. **Kênh mạng** theo Q8: nếu chọn LAN + Tailscale, thêm route Caddy chỉ cho `/mcp` và `/api/v1` tới `crm:8090` (theo mẫu report site Evidence), không qua Cloudflare Tunnel; CSRF không ảnh hưởng vì client không gửi Origin. Tài liệu kết nối Claude Desktop (`mcp-remote`) đặt ở `crm/docs/agent-access.md`.
+7. **Kênh mạng** (đã chốt Q8: LAN + Tailscale qua Caddy): thêm route Caddy chỉ cho `/mcp` và `/api/v1` tới `crm:8090` (theo mẫu report site Evidence), không qua Cloudflare Tunnel; CSRF không ảnh hưởng vì client không gửi Origin. Tài liệu kết nối Claude Desktop (`mcp-remote`) đặt ở `crm/docs/agent-access.md`.
 8. **Credential đầu tiên:** `agent:claude_desktop_ceo` (bound user = CEO, scope `mcp,read`), và một credential `agent:claude_desktop_<người thực thi>` để thử.
-9. **Bộ kịch bản kiểm 30 câu** tiếng Việt (ví dụ "Hôm nay tôi nên gọi ai?", "Khách này mua gì gần nhất?", "Chiến dịch X ra sao?") lưu ở `crm/src/tests/agent_scenarios/` dưới dạng chuỗi lời gọi tool mong đợi trên fixture giả; test tự động chạy tool qua MCP client trong process và quét phản hồi: không SĐT đầy đủ, không trường nhạy cảm, có `data_as_of`.
+9. **Bộ kịch bản kiểm 30 câu** tiếng Việt (ví dụ "Hôm nay tôi nên gọi ai?", "Khách này mua gì gần nhất?", "Chiến dịch X ra sao?") lưu ở `crm/src/tests/agent_scenarios/` dưới dạng chuỗi lời gọi tool mong đợi trên fixture giả; test tự động chạy tool qua MCP client trong process và quét phản hồi: không SĐT đầy đủ, không tên đầy đủ, không tag hay trường nhạy cảm (fixture có khách đã đồng ý riêng và có tag sức khoẻ để chứng minh vẫn bị lọc), có `data_as_of`.
 
 ## File
 
 - Tạo: `crm/src/application/queries/*.py`, `crm/src/adapters/inbound/api_v1/*.py`, `crm/src/adapters/inbound/mcp/*.py`, `crm/ops/crmctl.py`, `crm/docs/agent-access.md`, test (`test_api_v1_read.py`, `test_mcp_read_tools.py`, `test_pii_presentation.py`, `agent_scenarios/`).
-- Sửa: `crm/src/domain/policy.py`, `crm/src/composition.py` (đăng ký router và mount MCP), `crm/src/requirements.txt`, `Dockerfile.crm`, cấu hình Caddy (nếu Q8 chọn LAN), `crm/AGENTS.md` (nơi đặt query service, quy tắc adapter mỏng), `crm/README.md`.
+- Sửa: `crm/src/domain/policy.py`, `crm/src/composition.py` (đăng ký router và mount MCP), `crm/src/requirements.txt`, `Dockerfile.crm`, cấu hình Caddy, `crm/AGENTS.md` (nơi đặt query service, quy tắc adapter mỏng), `crm/README.md`.
 
 ## Các bước
 
@@ -73,7 +73,7 @@ Có: build lại image, tạo lại container, có thể thêm route Caddy. Cầ
 | Rủi ro | K × T | Giảm thiểu |
 |---|---|---|
 | MCP SDK kéo theo phiên bản starlette/pydantic xung đột với FastAPI đang ghim | Trung bình × Trung bình | Phase 0 đã thử; nếu xung đột thì nâng FastAPI trong phase riêng trước, không gộp |
-| Dữ liệu cá nhân khách tới nhà cung cấp mô hình | Chắc chắn khi dùng × Cao | Mặc định `masked`; chỉ đổi sau Q2 |
+| Dữ liệu cá nhân khách tới nhà cung cấp mô hình | Chắc chắn khi dùng × Cao | SĐT và tên luôn che (Q2 đã chốt); không có đường mở trong v1 |
 | Agent đọc quá nhiều (quét toàn bộ khách) | Thấp × Trung bình | Giới hạn `limit`, rate limit 60 lời gọi/phút/credential, audit |
 | Mở `/mcp` ra ngoài ý muốn | Thấp × Cao | Chỉ qua LAN/Tailscale; Cloudflare Tunnel không route `/mcp` |
 

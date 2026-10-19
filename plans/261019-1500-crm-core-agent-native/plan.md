@@ -3,7 +3,7 @@ title: "Lõi CRM chuẩn ngành, agent-native, chuyển từng bước"
 description: "Đưa CRM Fine Japan thành lõi CRM chuẩn ngành (Party, vai trò, quan hệ, contact point, consent có bằng chứng, engagement, module cắm thêm) dùng được cho agent qua REST, CLI, MCP; làm theo 12 phase, sau mỗi phase CRM vẫn chạy như cũ."
 status: pending
 priority: P1
-effort: 45d
+effort: 46d
 branch: feat/crm-core-agent-native
 tags: [crm, agent, mcp, api, data-model, consent, pdpl, cache-contract, migration]
 blockedBy: []
@@ -33,7 +33,7 @@ Plan này thay phần còn lại của các plan cũ mà báo cáo triage 19/10 
 2. **Sau mỗi phase CRM chạy như cũ.** Mỗi phase phải qua ba lớp kiểm: (a) `pytest crm/src/tests crm/sync/tests` xanh; (b) `crm/ops/parity_snapshot.py` trên bản sao DB khôi phục từ backup mới nhất, trước và sau khi áp code của phase, chỉ khác ở các mục phase đó khai báo trước; (c) kiểm sau deploy (mục "Kiểm sau deploy chung" bên dưới).
 3. **Không big bang.** Thay đổi dữ liệu theo khuôn expand → backfill → ghi song song → chuyển đọc sau cờ → contract (design §8.1). Mọi migration mới có file `.down.sql` thử được bằng `crm/ops/migration_down.py`.
 4. **Backup trước mỗi migration dữ liệu** theo `crm/docs/backup-restore-runbook.md` mục 1–2 (tạo, rồi `restore_verify_crm.py --backup <ts>` phải PASS), sao bản backup đó ra thư mục an toàn để vòng xoay `--keep 7` không xoá.
-5. **Không đổi hành vi người dùng ngoài phạm vi đã duyệt.** Chỉ có các thay đổi user đã đồng ý: chặn và giới hạn tag sức khoẻ, bật chặn CSRF, quyền của agent. Mọi thay đổi hành vi khác (ví dụ ngữ nghĩa "không liên hệ", che SĐT) phải chờ câu trả lời câu hỏi mở.
+5. **Không đổi hành vi người dùng ngoài phạm vi đã duyệt.** Chỉ có các thay đổi user đã chốt: tag sức khoẻ theo phương án C + B (design §6.2: thêm loại "quan tâm nhóm sản phẩm" làm mặc định; tag sức khoẻ chỉ gắn khi khách có đồng ý riêng, chỉ người phụ trách/manager/admin xem, có audit, không ra export/báo cáo/agent; không xoá dữ liệu cũ), bật chặn CSRF, quyền của agent, ngữ nghĩa "không liên hệ" theo sổ cái (chỉ bật sau khi user xem số khách bị ảnh hưởng). Mọi thay đổi hành vi khác (ví dụ che SĐT với nhân viên) phải chờ user.
 6. **Không ghi plan ID, số phase hay mã finding** vào comment code, tên migration, tên test, commit message. Commit theo conventional commit, không nhắc AI.
 7. **Không đọc `.env*`, không đưa dữ liệu khách** (tên, SĐT, địa chỉ) vào plan, report, test fixture hay log. Parity snapshot chỉ in số đếm và hash.
 8. **Deploy prod** theo `docs/operations/deployment.md` (phần data_platform: "Refactor deploys (shadow-verified)", dòng 668–748) và quy trình CRM bên dưới, **tránh 02:30–04:00**, giờ do user duyệt. Theo bộ nhớ dự án: người thực thi tự deploy sau khi user duyệt giờ, và commit + push từng phần ngay sau khi gate của phần đó đạt.
@@ -57,19 +57,19 @@ Code và migration CRM được bind-mount (`docker-compose.yml:285-296`); migra
 | # | Phase | File | Effort | Phụ thuộc | Đụng prod | Cần user duyệt giờ | Giá trị cho user |
 |---|---|---|---|---|---|---|---|
 | 0 | Đo hiện trạng, công cụ parity và migration down, chốt câu hỏi | [phase-00](phase-00-baseline-and-safety-tools.md) | 1d | — | Chỉ đọc (backup có sẵn) | Không | Có thước đo "CRM như cũ" cho mọi phase sau |
-| 1 | Tag sức khoẻ an toàn + phân loại dữ liệu ở tag + bật chặn CSRF | [phase-01](phase-01-sensitive-tags-and-csrf.md) | 2d | 0 | Có (CRM + data_platform export) | **Có** | Giảm rủi ro pháp lý ngay; đóng lỗ CSRF |
+| 1 | Tag sức khoẻ theo C + B (bản tạm: cờ đồng ý riêng, nhật ký, giới hạn xem, lọc export, loại "quan tâm nhóm sản phẩm") + bật chặn CSRF | [phase-01](phase-01-sensitive-tags-and-csrf.md) | 2.5d | 0 | Có (CRM + data_platform export) | **Có** | Giảm rủi ro pháp lý ngay mà không phá quy trình gắn tag của sales/CS; đóng lỗ CSRF |
 | 2 | Principal, credential, policy quyền, CommandBus, audit, idempotency | [phase-02](phase-02-principal-policy-audit.md) | 3.5d | 1 | Có (CRM) | **Có** | Biết ai làm gì trên CRM; nền cho agent |
 | 3 | Agent đọc: REST v1, CLI, MCP (đọc) | [phase-03](phase-03-agent-read-api-cli-mcp.md) | 4.5d | 2 | Có (CRM, build lại image) | **Có** | CEO và nhân viên hỏi CRM qua Claude Desktop, bot Lark |
 | 4 | Agent ghi an toàn + đề xuất → duyệt | [phase-04](phase-04-agent-safe-writes-and-proposals.md) | 5d | 3 | Có (CRM) | **Có** | Agent ghi kết quả gọi, task, ghi chú; việc nguy hiểm có người duyệt |
 | 5 | Hợp đồng cache chuẩn từ kho (v1) | [phase-05](phase-05-warehouse-cache-contract.md) | 5d | 0 (nửa kho); 4 (nửa CRM đọc) | Có (data_platform + CRM) | **Có** | CRM không còn gắn chặt với mart riêng của Fine Japan |
 | 6 | Tách identity: ContactPoint + PartyIdentifier, merge mở rộng | [phase-06](phase-06-contact-point-and-identifier.md) | 6d | 5 | Có (CRM, migration dữ liệu) | **Có** | Hết ba bảng identity chồng nhau; nền cho consent theo kênh |
-| 7 | Sổ cái consent + phân loại dữ liệu cho ghi chú, trường tuỳ biến | [phase-07](phase-07-consent-ledger-and-data-class.md) | 3.5d | 6 | Có (CRM + export) | **Có** | Chứng minh được consent theo Luật 91/2025 |
+| 7 | Sổ cái consent (chuyển cờ đồng ý riêng của phase 1 sang) + phân loại dữ liệu cho ghi chú, trường tuỳ biến + bật "không liên hệ" theo sổ cái sau khi user duyệt | [phase-07](phase-07-consent-ledger-and-data-class.md) | 4d | 6 | Có (CRM + export) | **Có** | Chứng minh được consent theo Luật 91/2025 |
 | 8 | Vai trò, quan hệ, Person/Organization, khách sỉ ẩn | [phase-08](phase-08-party-role-relationship-b2b-lite.md) | 4d | 6 (và 4 cho đề xuất) | Có (CRM + export) | **Có** | Xác nhận khách sỉ, người nhận quà; loại khỏi tệp bán lẻ |
 | 9 | Engagement + cơ chế module + module bán lẻ | [phase-09](phase-09-engagement-and-modules.md) | 3.5d | 8 | Có (CRM) | **Có** | Khung để thêm hợp đồng, lịch hẹn, gói mà không sửa lõi |
 | 10 | Campaign hợp nhất (gộp Hug), holdout, quy công | [phase-10](phase-10-campaign-holdout-and-hug-merge.md) | 4d | 4, 5 | Có (CRM + export) | **Có** | Đo được doanh thu tăng thêm thật nhờ CRM |
 | 11 | Hợp đồng export CRM → kho v1, dọn bảng cũ, kiểm khả chuyển Postgres, tài liệu | [phase-11](phase-11-export-contract-and-cleanup.md) | 3d | 5–10 (mỗi mục ≥ 7 ngày ổn định) | Có (CRM + data_platform) | **Có** | Schema gọn, một nguồn sự thật, sẵn sàng tenant thứ hai |
 
-Tổng: 45 ngày công (khoảng 9 tuần một người làm), chưa tính thời gian chờ quan sát 7 ngày giữa các bước contract.
+Tổng: 46 ngày công (khoảng 9–10 tuần một người làm), chưa tính thời gian chờ quan sát 7 ngày giữa các bước contract.
 
 ## Phụ thuộc
 
@@ -87,7 +87,7 @@ Nửa kho của phase 5 (model `crm_contract__*`, bộ sync ghi song song bảng
 | Phase | File sở hữu chính |
 |---|---|
 | 0 | `crm/ops/parity_snapshot.py`, `crm/ops/migration_down.py`, test của chúng (mới) |
-| 1 | migration 0047–0049, `application/tag_service.py`, `tag_governance_service.py`, `health_domain_collect.py`, `adapters/outbound/sqlite/tag_note_repository.py`, `profile_repository.py` (lọc tag), các screen tag/C360 liệt kê ở phase, `adapters/inbound/http/csrf_guard.py`, `docker-compose.yml` (một dòng), `orchestration/packs/crm/crm_writeback_assets.py` (lọc) |
+| 1 | migration 0047–0049, `application/sensitive_consent_service.py` (mới), `application/tag_service.py`, `tag_governance_service.py`, `health_domain_collect.py`, `adapters/outbound/sqlite/tag_note_repository.py`, `profile_repository.py` (lọc tag), các screen tag/C360 liệt kê ở phase, `adapters/inbound/http/csrf_guard.py`, `docker-compose.yml` (một dòng), `orchestration/packs/crm/crm_writeback_assets.py` (lọc) |
 | 2 | migration 0050–0054, `domain/policy.py`, `application/command_bus.py`, `application/authorization_service.py`, `adapters/inbound/http/auth_dependency.py`, `cf_access_middleware.py`, `composition.py` (đoạn wiring bus), ADR-020 |
 | 3 | `adapters/inbound/api_v1/**`, `adapters/inbound/mcp/**`, `application/queries/**`, `crm/ops/crmctl.py`, `crm/src/requirements.txt`, `Dockerfile.crm`, `composition.py` (đăng ký router) |
 | 4 | migration 0055–0059, `application/commands/**`, `application/proposal_service.py`, screen "Hàng chờ duyệt" (mới), các handler web gọi service ghi (chuyển sang bus) |
@@ -104,10 +104,10 @@ Nửa kho của phase 5 (model `crm_contract__*`, bộ sync ghi song song bảng
 ## Tiêu chí chấp nhận (đo được)
 
 1. **CRM như cũ sau mỗi phase:** parity snapshot (trước/sau, cùng bản sao DB) chỉ khác ở mục phase khai báo; 11 export `crm_*_export` cho cùng số dòng và cùng hash nội dung trên bản sao, trừ các lọc dữ liệu nhạy cảm đã khai báo; test hiện có (69 file trong `crm/src/tests`, 2 file trong `crm/sync/tests`) xanh, không test nào bị xoá hay nới để qua.
-2. **Agent đọc (sau phase 3):** 9 tool đọc chạy được từ Claude Desktop qua `mcp-remote`; 100% lời gọi có dòng `crm_audit_event`; 0 trường thuộc loại `sensitive` trong mọi phản hồi agent (test tự động quét phản hồi của bộ 30 câu kịch bản); SĐT luôn bị che trong phản hồi agent.
+2. **Agent đọc (sau phase 3):** 9 tool đọc chạy được từ Claude Desktop qua `mcp-remote`; 100% lời gọi có dòng `crm_audit_event`; 0 trường hoặc tag thuộc loại `sensitive` trong mọi phản hồi agent, kể cả với khách đã đồng ý riêng (test tự động quét phản hồi của bộ 30 câu kịch bản); SĐT và tên luôn bị che trong phản hồi agent.
 3. **Agent ghi (sau phase 4):** gửi lại cùng `idempotency_key` 3 lần chỉ tạo 1 bản ghi; lệnh nguy hiểm từ agent luôn tạo `crm_proposal` và 0 thay đổi dữ liệu cho tới khi người duyệt; người không có quyền duyệt bị từ chối 403; test chứng minh agent không gọi được tool gửi tin (không tồn tại).
 4. **Audit:** mọi lệnh ghi qua UI, REST cũ, REST v1, CLI, MCP, sync đều sinh đúng một `crm_audit_event` có `principal_id`, `channel`, `request_id` (test cho từng kênh).
-5. **Pháp lý (sau phase 1 và 7):** không gắn mới được tag thuộc loại hạn chế qua mọi đường ghi (test từng route trả 400/403, trigger chặn insert trực tiếp); người không có `data.sensitive.read` không thấy tag sức khoẻ ở C360, API 360, danh sách tag; parquet export và `stg_crm__party_tag` không còn dòng thuộc loại hạn chế; mỗi `crm_consent_event` mới có `method`, `evidence_type`, `captured_by` khác NULL.
+5. **Pháp lý (sau phase 1 và 7):** tag sức khoẻ không gắn được cho khách chưa có đồng ý riêng qua mọi đường ghi (test từng route trả 403, trigger chặn insert trực tiếp) và gắn được khi đã có (quy trình sales/CS còn nguyên); chỉ người phụ trách, manager, admin thấy tag sức khoẻ ở C360, API 360, danh sách tag; 100% lần gắn, gỡ, xem tag sức khoẻ và ghi nhận đồng ý riêng có dòng nhật ký/audit; 2 lần gắn hiện có còn nguyên trong DB; parquet export, `stg_crm__party_tag`, báo cáo và phản hồi agent không có dòng thuộc loại nhạy cảm; loại `product_interest` có trên picker của mọi khách; mỗi `crm_consent_event` mới có `method`, `evidence_type`, `captured_by` khác NULL.
 6. **Identity (sau phase 6):** mỗi dòng `crm_party_identity` có đúng một dòng tương ứng (cùng id) ở `crm_contact_point` hoặc `crm_party_identifier`; tìm khách theo SĐT và theo mã Sapo cho cùng kết quả trước/sau trên 100% khoá của bản sao; merge rồi undo trên bản sao trả về trạng thái giống hệt (hash các bảng liên quan).
 7. **Hợp đồng cache (sau phase 5):** với mỗi bảng `wh_*` cũ, phép so theo khoá với bảng hợp đồng mới cho 0 khác biệt ở các cột được ánh xạ; `wh_contract_meta` có phiên bản và `data_as_of` cho từng hợp đồng.
 8. **Engagement và module (sau phase 9):** bật/tắt module `b2b_lite` bằng cấu hình không cần sửa code lõi; test dựng module giả `appointment` (chỉ trong test) đăng ký loại engagement, bảng chi tiết và chạy được tạo, đọc, gắn Interaction qua API chung.
@@ -121,26 +121,32 @@ Nửa kho của phase 5 (model `crm_contract__*`, bộ sync ghi song song bảng
 | Migration dữ liệu làm container không khởi động (hard-fail) giữa giờ làm | Thấp × Cao | Chạy migration trên bản sao trước; deploy ngoài giờ làm do user duyệt; backup đã verify; down đã thử |
 | Tách identity làm vỡ export dbt (`stg_crm__*` công khai) hoặc Hug | Trung bình × Cao | Ghi song song; giữ `crm_party_identity` là bảng thật tới phase 11 rồi mới thành view cùng cột; parity export |
 | Agent ghi sai hàng loạt | Trung bình × Cao | Lệnh hàng loạt chỉ là đề xuất, chạy thử mặc định, giới hạn số party, audit, thu hồi credential tức thì |
-| Dữ liệu cá nhân khách đi tới nhà cung cấp mô hình qua MCP | Chắc chắn (nếu bật) × Cao (pháp lý) | Mặc định che SĐT và tên (`CRM_AGENT_PII_MODE=masked`); bật `full` chỉ sau ý kiến pháp chế (Q2) |
+| Dữ liệu cá nhân khách đi tới nhà cung cấp mô hình qua MCP | Chắc chắn (nếu bật) × Cao (pháp lý) | Đã chốt Q2: SĐT và tên luôn che khi tới agent; v1 không có đường mở |
 | Build lại image kéo base mới làm đổi phiên bản sqlite/python | Trung bình × Trung bình | Ghim digest base image; kiểm `sqlite3.sqlite_version` trong image mới trước khi deploy |
 | Ghi song song hai nơi lệch nhau âm thầm | Trung bình × Trung bình | Parity chạy hằng ngày trong thời gian ghi song song (job nhẹ trong process, chỉ log số khác biệt); chuyển đọc chỉ khi 0 khác biệt 3 ngày liền |
 | Hợp đồng cache mới từ dbt đổi số so với mart cũ | Thấp × Trung bình | Model hợp đồng chỉ chọn cột, không tính lại; gate S `--allow-new`; so theo khoá trước khi chuyển đọc |
-| Đổi ngữ nghĩa "không liên hệ" (H4) làm thay đổi danh sách gọi | Trung bình × Trung bình | Không đổi cho tới khi user trả lời Q6; giữ bộ lọc cũ song song |
+| Đổi ngữ nghĩa "không liên hệ" (H4, đã chốt Q6) làm thay đổi danh sách gọi | Chắc chắn × Trung bình | Deploy với bộ lọc cũ; báo cáo số khách bị ảnh hưởng; chỉ bật sau khi user duyệt số; rollback bằng một cờ |
+| Cờ đồng ý riêng bị ghi cho có, không có đồng ý thật | Trung bình × Cao (pháp lý) | Bắt buộc cách thu thập và bằng chứng; nhật ký người ghi; manager xem được |
 | Phạm vi lớn kéo dài, dễ bỏ dở giữa chừng | Trung bình × Trung bình | Mỗi phase tự có giá trị và deploy độc lập; trạng thái dở dang luôn là trạng thái hợp lệ (bảng mới tồn tại, đọc vẫn ở bảng cũ) |
 
 ## Rollback
 
 Mỗi phase có rollback riêng trong file phase. Nguyên tắc chung: code rollback bằng `git revert` phạm vi đã deploy; migration chỉ-thêm rollback bằng file down (hoặc để lại bảng rỗng vô hại, ghi rõ trong phase); migration dữ liệu không cần rollback dữ liệu vì bảng cũ vẫn là nguồn đọc cho tới khi chuyển cờ; chuyển đọc rollback bằng đặt lại cờ `old`. Chỉ phase 11 (contract) là bước khó đảo, nên chỉ làm sau 7 ngày ổn định và sau backup đã verify.
 
-## Câu hỏi mở cho user (kèm đề xuất)
+## Đã chốt (user, 19/10/2026 ~15:35–15:40)
 
-1. **Q1. CSDL:** giữ SQLite cho Fine Japan và chỉ viết trung lập để chuyển Postgres sau (điều phối đang giả định, user chưa chốt)? **Đề xuất:** giữ SQLite; chuyển Postgres khi có tenant cần nhiều người ghi đồng thời (> 30 người dùng) hoặc cần truy cập từ nhiều máy chủ. Plan đã ghi các điểm phải giữ trung lập (design §8.2).
-2. **Q2. Agent có được thấy tên khách và SĐT đầy đủ không?** Khác MCP phân tích (chỉ số tổng hợp), MCP CRM đưa dữ liệu từng khách tới nhà cung cấp mô hình, có thể là chuyển dữ liệu cá nhân ra nước ngoài theo Luật 91/2025. **Đề xuất:** v1 che SĐT luôn; tên che (chỉ chữ cái đầu + mã khách) cho tới khi có ý kiến pháp chế; có công tắc tenant để mở tên sau.
-3. **Q3. Tag sức khoẻ:** chặn cả `health_domain` (có 2 lần gắn) chứ không chỉ `health_concern`? Ai được xem? **Đề xuất:** chặn cả hai; chỉ `admin` được xem; manager không xem.
-4. **Q4. Ai duyệt đề xuất của agent** (merge, consent, hàng loạt, khách sỉ)? **Đề xuất:** manager và admin; đề xuất hết hạn sau 7 ngày.
-5. **Q5. Giữ audit bao lâu?** **Đề xuất:** 24 tháng, dọn tự động.
-6. **Q6. Ngữ nghĩa "không liên hệ":** hôm nay chỉ hoạt động **gần nhất** có lý do "không liên hệ" mới chặn, nên một lần ghi hoạt động sau đó làm mất lệnh chặn (design H4). Sổ cái consent làm lệnh rút lại có hiệu lực tới khi khách đồng ý lại. Đổi sang ngữ nghĩa sổ cái không? **Đề xuất:** đổi (đúng luật và đúng ý khách), nhưng chỉ sau khi phase 7 báo trước danh sách khách bị ảnh hưởng (số đếm) cho user duyệt.
-7. **Q7. Mặc định khi chưa có consent:** hôm nay chưa có thông tin là được gọi cả chăm sóc lẫn tiếp thị. Giữ vậy hay chặn tiếp thị khi chưa có consent? **Đề xuất:** giữ cho chăm sóc; tiếp thị chờ ý kiến pháp chế (phase 7 để là cấu hình).
-8. **Q8. Kênh mạng cho MCP và CLI:** CRM hiện ra ngoài qua Cloudflare Tunnel có CF Access cho người. Client dùng token (Claude Desktop, bot Lark) đi qua đâu? **Đề xuất:** LAN + Tailscale qua Caddy như report site Evidence, không mở công khai; bot Lark gọi trong mạng docker.
-9. **Q9. Holdout:** tỉ lệ bao nhiêu là chấp nhận được, và có đưa go-live A2 (mã HUG50, in tem) vào phase 10 không? **Đề xuất:** 20% (như `wh_deadstock_target.is_holdout`); phase 10 chỉ làm phần kỹ thuật, go-live là việc vận hành riêng.
-10. **Q10. Thắt quyền cho người** (staff thấy SĐT che với khách không thuộc mình, research §5): có muốn làm không? **Đề xuất:** chưa làm trong plan này; policy đã sẵn chỗ để bật bằng cấu hình sau.
+- **Q1. CSDL:** giữ SQLite cho Fine Japan; schema, migration, repository viết trung lập để chuyển Postgres sau (design §8.2).
+- **Q2. PII tới agent:** SĐT và tên khách **luôn che** khi đưa tới agent (tên còn chữ cái đầu + mã khách).
+- **Q3. Tag sức khoẻ: phương án C + B** (thay cho "chặn gắn, chỉ admin xem"; design §6.2): loại "quan tâm nhóm sản phẩm" (dữ liệu thường) là mặc định cho sales/CS; tag sức khoẻ thật (`health_concern`, `health_domain`) giữ lại, gắn được khi khách đã có đồng ý riêng `sensitive_profile` có bằng chứng; người xem là người phụ trách khách, manager, admin; mọi lần gắn/xem có audit; không ra export, báo cáo, agent/MCP; không xoá 2 lần gắn hiện có, chỉ ẩn theo quyền. Phase 1 làm bản tạm (cờ đồng ý riêng), phase 7 chuyển sang sổ cái consent.
+- **Q4. Người duyệt đề xuất của agent:** manager và admin; đề xuất hết hạn sau 7 ngày.
+- **Q6. "Không liên hệ":** lệnh rút lại có hiệu lực tới khi khách đồng ý lại; phase 7 cho user xem số khách bị ảnh hưởng trước khi bật.
+- **Q8. Kênh mạng cho MCP và CLI:** LAN + Tailscale qua Caddy, không mở công khai.
+
+## Câu hỏi còn mở (kèm đề xuất)
+
+1. **Q5. Giữ audit bao lâu?** **Đề xuất:** 24 tháng, dọn tự động.
+2. **Q7. Mặc định khi chưa có consent:** hôm nay chưa có thông tin là được gọi cả chăm sóc lẫn tiếp thị. Giữ vậy hay chặn tiếp thị khi chưa có consent? **Đề xuất:** giữ cho chăm sóc; tiếp thị chờ ý kiến pháp chế (phase 7 để là cấu hình).
+3. **Q9. Holdout:** tỉ lệ bao nhiêu là chấp nhận được, và có đưa go-live A2 (mã HUG50, in tem) vào phase 10 không? **Đề xuất:** 20% (như `wh_deadstock_target.is_holdout`); phase 10 chỉ làm phần kỹ thuật, go-live là việc vận hành riêng.
+4. **Q10. Thắt quyền cho người** (staff thấy SĐT che với khách không thuộc mình, research §5): có muốn làm không? **Đề xuất:** chưa làm trong plan này; policy đã sẵn chỗ để bật bằng cấu hình sau.
+5. **Q11. Danh mục "quan tâm nhóm sản phẩm":** ai đặt tên và duyệt danh sách (ví dụ "Quan tâm nhóm hỗ trợ giấc ngủ"), và có cần sẵn danh mục trước khi deploy phase 1 không? **Đề xuất:** quản lý bán hàng đặt tên theo nhóm sản phẩm thật đang bán (khoảng 8–12 nhóm, tương ứng 16 tag sức khoẻ hiện có), admin tạo trong `/settings/tags` trước deploy phase 1; tên chỉ nói về sản phẩm, không nói về bệnh.
+6. **Q12. Khách chưa có người phụ trách:** theo quy tắc đã chốt, sales gắn tag sức khoẻ cho khách chưa có người phụ trách sẽ không xem lại được tag đó (chỉ manager/admin xem). Có cho người đã ghi nhận đồng ý riêng của khách cũng được xem không? **Đề xuất:** có, giới hạn ở người đã ghi nhận đồng ý đó; mọi lần xem vẫn có audit.

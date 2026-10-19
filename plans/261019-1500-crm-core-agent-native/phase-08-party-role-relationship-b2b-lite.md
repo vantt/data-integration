@@ -15,7 +15,7 @@
 2. **Migration `0076_party_role`:** `crm_party_role` (design §3.3); backfill: mỗi party chưa merge có một vai trò `customer` `active`, chép `owner_user_id`, `lifecycle_stage`, `acquisition_source` từ `crm_customer_profile`.
 3. **Migration `0077_person_organization`:** `crm_person`, `crm_organization`; backfill `crm_person` cho party `person` (chép `birthday`→`birth_date`, `gender`); `crm_organization` cho party `org` (nếu có).
 4. **Migration `0078_party_relationship`:** `crm_party_relationship` (design §3.3).
-5. **Ghi song song:** `ProfileService` cập nhật `owner_user_id`/`lifecycle_stage`/`acquisition_source` thì cập nhật cả vai trò `customer`; `birthday`/`gender` thì cả `crm_person`. Đọc vẫn từ hồ sơ cũ cho tới cờ `CRM_READ_PARTY_ROLE=new` (parity 0 khác biệt 3 ngày).
+5. **Ghi song song:** `ProfileService` cập nhật `owner_user_id`/`lifecycle_stage`/`acquisition_source` thì cập nhật cả vai trò `customer`; `birthday`/`gender` thì cả `crm_person`. Đọc vẫn từ hồ sơ cũ cho tới cờ `CRM_READ_PARTY_ROLE=new` (parity 0 khác biệt 3 ngày). "Người phụ trách khách" trong `can_view_sensitive` (design §6.1) đọc theo cùng cờ, nên tập người được xem tag sức khoẻ không đổi khi chuyển.
 6. **Service:** `PartyRoleService` (gán, kết thúc vai trò), `PartyRelationshipService` (đề xuất, xác nhận, kết thúc; chặn tự quan hệ; kiểm loại party hai đầu theo registry).
 7. **Khách sỉ ẩn (B2B tối thiểu):**
    - C360 hiện badge "Nghi khách sỉ" khi `wh_customer_summary.customer_type` hoặc `suspected_wholesale` báo vậy, kèm lý do từ kho (chỉ hiển thị, không tự đổi gì).
