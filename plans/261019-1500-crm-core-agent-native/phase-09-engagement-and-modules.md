@@ -20,9 +20,9 @@
 4. **Migration `0082_engagement_ref`:** cột `engagement_ref` ở `crm_activity_log`, `crm_task`, `crm_note`; backfill `crm_activity_log.engagement_ref = 'wh:' || transaction_id` khi `related_order_code` tra được trong `wh_transaction.source_ref` (tra trong migration không được vì không có khoá ngoại qua `cache.db`: làm bằng job backfill trong process lúc khởi động, idempotent, giới hạn số dòng mỗi lần). Giữ `related_order_code`.
 5. **`EngagementService`:** tạo/cập nhật engagement `crm` theo trạng thái hợp lệ của loại (từ `statuses_json`); `list_for_party(party_id)` trả **hợp** của `crm_engagement` và `wh_transaction` (read model, design §3.5); kiểm `engagement_ref` hợp lệ khi gắn vào tương tác, task, ghi chú.
 6. **Giao diện:** khi ghi tương tác hoặc tạo task từ khung đơn hàng ở C360, gắn `engagement_ref` (thay cho chỉ `related_order_code`). Không đổi bố cục màn hình.
-7. **API/MCP:** `GET /api/v1/parties/{id}/engagements`; `list_party_timeline` trả engagement; `log_interaction` và `create_task` nhận `engagement_ref` tuỳ chọn.
+7. **API/SDK:** `GET /api/v1/parties/{id}/engagements` (hàm SDK `crm.parties.engagements`); `crm.parties.timeline` trả engagement; `crm.interactions.log` và `crm.tasks.create` nhận `engagement_ref` tuỳ chọn. Sinh lại SDK code mode và chỉ mục `search_api`; hàm của module chỉ hiện trong `search_api` khi module bật.
 8. **Module giả trong test** `appointment` (chỉ trong `crm/src/tests/fixtures/modules/`): khai báo loại `appointment`, vai trò `client`, bảng chi tiết `crm_appt_appointment` (tạo trong test), chứng minh tạo, đọc, đổi trạng thái, gắn tương tác qua API chung mà **không sửa file nào của lõi**.
-9. Tài liệu: `crm/docs/modules.md` (mới): cách viết một module (manifest, migration, bảng cache, quyền, tool), ví dụ bốn mảng (trỏ design §3.6); `crm/AGENTS.md` mục module.
+9. Tài liệu: `crm/docs/modules.md` (mới): cách viết một module (manifest, migration, bảng cache, quyền, route REST v1 sinh ra hàm SDK), ví dụ bốn mảng (trỏ design §3.6); `crm/AGENTS.md` mục module.
 
 ## File
 
@@ -44,7 +44,7 @@
 | Unit | Nạp module: thiếu phụ thuộc → lỗi rõ lúc khởi động; tắt `b2b_lite` → loại của nó `is_enabled=0`, dữ liệu cũ còn |
 | Unit | Engagement: trạng thái không hợp lệ bị từ chối; `list_for_party` trả cả đơn từ cache và engagement của CRM, sắp theo thời gian |
 | Unit | Backfill `engagement_ref` idempotent; dòng không tra được giữ NULL |
-| Tích hợp | Module giả `appointment` chạy trọn vòng qua REST v1 và MCP |
+| Tích hợp | Module giả `appointment` chạy trọn vòng qua REST v1 và qua `execute` của code mode (hàm SDK sinh từ route của module) |
 
 ## Kiểm "CRM như cũ"
 

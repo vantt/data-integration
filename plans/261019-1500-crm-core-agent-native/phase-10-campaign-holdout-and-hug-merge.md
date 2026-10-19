@@ -26,7 +26,7 @@
    - Báo cáo: tỉ lệ chuyển đổi và doanh thu/target mỗi arm, **lift** = treatment − holdout, kèm số mẫu và cảnh báo khi mẫu < 100 mỗi arm.
    - Số theo quy tắc R11 cũ vẫn hiện cạnh số mới, gắn nhãn "cách tính cũ", cho tới khi user chọn bỏ (thay đổi số báo cáo là thay đổi có khai báo).
 6. **Hug:** màn hình admin Hug và `campaign_push.py` đọc/ghi qua `crm_campaign` + `crm_hug_campaign_rule`; voucher issuer kiểm `arm` (holdout không nhận voucher). Không làm go-live A2 (mã HUG50 trên Sapo, in tem, nội dung landing): việc vận hành riêng (Q9).
-7. **Agent:** `get_campaign_results` trả lift; `propose_bulk_operation` hỗ trợ "tạo target campaign từ segment" (chạy thử trả số mỗi arm).
+7. **Agent:** `crm.campaigns.results` trả lift; `crm.proposals.bulkOperation` hỗ trợ "tạo target campaign từ segment" (chạy thử trả số mỗi arm).
 8. **Export:** `crm_campaign_target` thêm `arm`, `first_success_contact_at` (thêm cột, tương thích); `stg_crm__campaign_target` thêm cột.
 9. Tài liệu: schema reference; `crm/AGENTS.md` mục Hug (bảng `crm.db` đổi tên); `orchestration/packs/crm/README.md`.
 

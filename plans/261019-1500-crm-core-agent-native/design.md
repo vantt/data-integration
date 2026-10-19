@@ -10,7 +10,7 @@ Nguồn nội bộ đã đọc (chỉ đọc, không mở `crm.db`): `crm/AGENTS
 
 1. **Lõi CRM = 9 nhóm entity dùng chung cho mọi mảng kinh doanh**: Party (cá nhân/tổ chức) với PartyRole và PartyRelationship; ContactPoint; PartyIdentifier (khoá của khách ở hệ khác) cùng merge có undo; ConsentEvent (sổ cái consent có bằng chứng) và phân loại dữ liệu nhạy cảm; Interaction, Note, Task; Engagement (khung chung cho đơn hàng, hợp đồng, lịch hẹn, gói thành viên); Tag, Segment, Campaign, CustomField; User/Principal, phân quyền, AuditEvent, Proposal. Mỗi mảng (bán lẻ, bán sỉ, lịch hẹn, thành viên) là một **module** khai báo thêm loại vai trò, loại quan hệ, loại engagement, loại tín hiệu và bảng chi tiết riêng, không sửa lõi.
 2. **CRM không tính lại số.** Kho dữ liệu xuất bản bốn hợp đồng chuẩn vào `cache.db` (nguồn khách, tóm tắt thương mại, giao dịch có loại, tín hiệu) cộng bảng riêng của module; CRM chỉ đọc. Chiều ngược lại, CRM xuất bản các sự thật do người nhập (tương tác, task, tag không nhạy cảm, consent hiện hành, vai trò đã xác nhận, ánh xạ party) qua `crm_export`.
-3. **Agent-native** nghĩa là mọi lệnh đi qua một tầng ứng dụng duy nhất (`CommandBus` + query service) với ngữ cảnh lệnh bắt buộc (actor, on_behalf_of, kênh, request_id, idempotency key); ba adapter mỏng REST `/api/v1` (OpenAPI), CLI và MCP gọi cùng tầng đó. Lệnh ghi luôn có audit. Thao tác nguy hiểm đi qua `crm_proposal` và chỉ người duyệt mới thực thi. Agent không gửi tin cho khách ở v1.
+3. **Agent-native** nghĩa là mọi lệnh đi qua một tầng ứng dụng duy nhất (`CommandBus` + query service) với ngữ cảnh lệnh bắt buộc (actor, on_behalf_of, kênh, request_id, idempotency key); ba adapter mỏng REST `/api/v1` (OpenAPI), CLI và MCP gọi cùng tầng đó. MCP chạy theo **code mode**: chỉ hai tool `search_api` và `execute`; code của agent chạy trong sandbox Deno và chỉ gọi được REST `/api/v1` nội bộ (§5.9). Lệnh ghi luôn có audit. Thao tác nguy hiểm đi qua `crm_proposal` và chỉ người duyệt mới thực thi. Agent không gửi tin cho khách ở v1.
 4. **Làm theo kiểu expand → chuyển đọc → contract**, mỗi bước deploy độc lập: thêm bảng mới và ghi song song, so khớp bằng công cụ parity, chuyển đọc, rồi mới dọn bảng cũ (giữ view tương thích cho người đọc cũ như export dbt). Không có bước nào đổi hành vi người dùng mà chưa được user duyệt.
 5. **Thứ tự**: an toàn pháp lý và CSRF trước, rồi nền agent (danh tính, quyền, audit), rồi agent đọc, rồi agent ghi an toàn, rồi mới tới hợp đồng kho và tái cấu trúc dữ liệu sâu (identity, consent, vai trò, engagement, campaign).
 
@@ -66,7 +66,7 @@ Nguồn nội bộ đã đọc (chỉ đọc, không mở `crm.db`): `crm/AGENTS
 | Mục | Quy ước | Ghi chú khả chuyển Postgres |
 |---|---|---|
 | Tên bảng | Lõi: `crm_<entity>`; module: `crm_<module>_<entity>` (ví dụ `crm_b2b_contract`, `crm_appt_appointment`); registry: `crm_<thing>_type`; cache hợp đồng: `wh_<entity>`; cache riêng module: `wh_<module>_<entity>` | Postgres: `crm` và `wh` thành hai schema, bỏ tiền tố được nhưng không bắt buộc |
-| Khoá chính | `TEXT` UUID do ứng dụng sinh (UUIDv7 cho bảng mới để sắp theo thời gian); không dùng `INTEGER AUTOINCREMENT` ở bảng mới | Postgres: `uuid` hoặc `text` |
+| Định danh (đã chốt 19/10: **UUIDv7**) | Mọi id mới do ứng dụng sinh bằng **một helper duy nhất** `crm/src/domain/ids.py::new_id()` (UUIDv7 theo RFC 9562, tự viết khoảng 20 dòng vì `uuid.uuid7()` chỉ có từ Python 3.14 còn image là 3.12; không thêm thư viện). Lưu `TEXT` dạng chuẩn 36 ký tự chữ thường, cùng định dạng với uuid4 hiện có. Áp cho PK, `request_id`, `execution_id`, `idempotency_key` do hệ thống sinh, `proposal_id`, `audit_id`, `run_id` của sync. Cấm `uuid.uuid4()` mới (test quét mã nguồn). Không dùng `INTEGER AUTOINCREMENT` ở bảng mới. Chi tiết: §3.1.1 | Postgres: cột kiểu `uuid`; id vẫn sinh ở ứng dụng (không dùng `uuidv7()` của PG18) để một code chạy được trên cả hai |
 | Thời gian | `TEXT` ISO-8601 UTC có `Z`; ứng dụng đặt giá trị (`shared/timestamps.py`), DDL chỉ có default làm lưới an toàn; không thêm trigger `*_touch` mới | Postgres: `timestamptz`; trigger touch là đặc thù SQLite |
 | Tiền | `INTEGER` đơn vị nhỏ nhất (`amount_minor`) + `currency` (mặc định `VND`) ở bảng mới; bảng cũ giữ `*_vnd` | Không phụ thuộc dialect |
 | Boolean | `INTEGER` 0/1, repository chuyển sang `bool` | Postgres: `boolean` |
@@ -75,6 +75,19 @@ Nguồn nội bộ đã đọc (chỉ đọc, không mở `crm.db`): `crm/AGENTS
 | Ràng buộc duy nhất có điều kiện | Partial unique index (`WHERE ...`) | Cả hai đều hỗ trợ |
 | Xoá | Xoá mềm (`deleted_at`) cho dữ liệu người nhập; bảng sổ cái (consent, audit) chỉ thêm | — |
 | Tham chiếu sang `cache.db` | Giá trị, không khoá ngoại (R3); mọi truy cập qua `CacheRepository`/`ContractReader` với tiền tố schema là một hằng số | Postgres: schema `wh` cùng database, vẫn không khoá ngoại |
+
+#### 3.1.1 UUIDv7: phạm vi và những gì giữ nguyên
+
+| Loại id | Quyết định | Lý do |
+|---|---|---|
+| Id uuid4 đã có (party, identity, activity, note, task, tag tạo tay, …) | **Giữ nguyên, không viết lại** | Là khoá tham chiếu giữa bảng, nằm trong export về kho (`stg_crm__*`), URL, ánh xạ Hug; viết lại không có lợi mà rủi ro cao |
+| Dòng mới của bảng cũ | UUIDv7 ngay khi helper vào (phase 2; 19 file đang gọi `uuid.uuid4()` trong `crm/src`, `crm/sync`, `crm/ops`, đã đếm 19/10) | Bảng sẽ có cả uuid4 và UUIDv7; cùng kiểu `TEXT` 36 ký tự nên không ai phải đổi. **Không sắp theo id** khi cần thứ tự thời gian, luôn dùng `created_at`/`occurred_at` |
+| Bảng mới của lõi | UUIDv7 | Sắp theo thời gian tự nhiên, index B-tree chèn cuối, tốt cho Postgres |
+| Id suy ra từ dữ liệu (tất định) | **Giữ cơ chế**: `action_id` = md5(`customer_key`, loại, ngày bắt đầu) của tín hiệu kho (`crm/sync/sqlite_upsert.py:193-217,256-287`), `customer_key` (khoá thay thế MD5 của kho), id seed cố định trong migration (`tag-00000000-000N`, `tag-health-00NN`) | Tính tất định là có chủ đích: action state và dismissal dựa vào `action_id` ổn định theo đợt; seed phải cùng id ở mọi bản cài. Seed mới cũng dùng id cố định đọc được, không dùng UUIDv7 |
+| `INTEGER AUTOINCREMENT` hiện có | Chỉ `crm_hug_campaign_history.id` (`0024`). **Giữ** | Bảng lịch sử chỉ thêm, không ai tham chiếu id; đổi phải dựng lại bảng mà không có lợi. Phase 10 không đổi nó |
+| Token bí mật (credential, Hug token) | **Không** dùng UUIDv7 | UUIDv7 có 48 bit thời gian, ít ngẫu nhiên hơn; token dùng `secrets.token_urlsafe(32)` |
+
+UUIDv7 để lộ thời điểm tạo (độ chính xác mili giây) trong id. Id của CRM xuất hiện ở URL giao diện, export về kho và phản hồi cho agent. Thời điểm tạo khách, task, ghi chú không phải dữ liệu nhạy cảm và hầu hết đã hiển thị qua `created_at`, nên **chấp nhận**; ràng buộc kèm theo: không dùng id làm bí mật hay làm bằng chứng quyền truy cập, và không đưa id của dữ liệu nhạy cảm (tag sức khoẻ) ra ngoài (đã bị lọc theo §6).
 
 ### 3.2 Sơ đồ
 
@@ -193,7 +206,7 @@ Mỗi module là một package `crm/src/modules/<module_id>/` có `manifest.py` 
 | `permissions` | `retail.deadstock.read` | Bảng quyền trong code |
 | `cache_tables` | `wh_retail_deadstock_target` | Hợp đồng cache |
 | `detail_tables` + migration | (không có ở v1) | Chuỗi migration chung, tên file `00NN_<module>_...` |
-| `mcp_tools` thêm | (không có ở v1) | Adapter MCP |
+| Hàm SDK thêm (sinh từ route REST v1 của module) | (không có ở v1) | SDK code mode và chỉ mục `search_api` |
 
 Module bật theo cấu hình tenant (biến môi trường `CRM_MODULES`, mặc định Fine Japan: `retail,b2b_lite`), đúng tinh thần ADR-017 (logic là pack/module, cấu hình là tenant). Lõi luôn bật. Lúc khởi động, app đồng bộ manifest của module đang bật vào bảng registry bằng upsert (idempotent). Module tắt thì loại của nó vẫn còn trong registry với `is_enabled=0`, dữ liệu cũ không mất.
 
@@ -292,7 +305,9 @@ Tên và cột của 11 export hiện có không đổi; source dbt `crm_export`
  REST /api/v1 (OpenAPI) ►│  CommandBus  /  QueryService  │──► Policy (quyền, che PII, dữ liệu nhạy cảm)
  REST /api/* cũ ────────►│  (crm/src/application/)       │──► Idempotency store
  CLI crmctl (qua REST) ─►│  CommandContext bắt buộc      │──► AuditEvent
- MCP /mcp (cùng process)►│                               │──► Proposal (lệnh nguy hiểm)
+ MCP /mcp: search_api,  │
+   execute → sandbox Deno│
+   → REST /api/v1 nội bộ►│                               │──► Proposal (lệnh nguy hiểm)
                          └──────────────┬────────────────┘
                                         ▼
                          domain services hiện có (TaskService, ActivityService, ...)
@@ -300,7 +315,7 @@ Tên và cột của 11 export hiện có không đổi; source dbt `crm_export`
                          ports → adapters SQLite (crm.db, cache.db) / DuckDB (serving)
 ```
 
-- **MCP chạy trong cùng process FastAPI** (mount ở `/mcp`, transport streamable HTTP), gọi thẳng CommandBus. Lý do: SQLite chỉ có một writer và app hiện dùng một connection duy nhất (`crm/src/adapters/outbound/sqlite/connection.py:1-8`); một process MCP riêng sẽ là writer thứ hai.
+- **MCP server chạy trong cùng process FastAPI** (mount ở `/mcp`, transport streamable HTTP). Lý do: SQLite chỉ có một writer và app hiện dùng một connection duy nhất (`crm/src/adapters/outbound/sqlite/connection.py:1-8`); một process MCP riêng mở DB sẽ là writer thứ hai. Code của agent chạy trong subprocess sandbox **không mở DB**, chỉ gọi REST `/api/v1` qua loopback, nên process CRM vẫn là writer duy nhất (§5.9).
 - **CLI là client REST mỏng** (`crm/ops/crmctl.py`, đúng quy tắc đặt CLI ở `crm/ops/` của `crm/AGENTS.md`), vì CLI chạy được từ máy khác và không được mở `crm.db`.
 - **Adapter không chứa logic.** Mọi kiểm quyền, kiểm idempotency, ghi audit nằm trong CommandBus; test của bus là test cho cả ba adapter.
 
@@ -325,7 +340,7 @@ class CommandContext:
 
 ### 5.3 Idempotency
 
-- REST: header `Idempotency-Key`; MCP: tham số `idempotency_key` **bắt buộc** với tool ghi và tool đề xuất; CLI tự sinh nếu không truyền.
+- REST: header `Idempotency-Key`, **bắt buộc** với lệnh ghi và đề xuất của agent; SDK trong code mode tự điền khoá tất định nếu code không truyền (§5.9.1); CLI tự sinh nếu không truyền.
 - `crm_idempotency_record`: PK (`principal_id`, `idempotency_key`), `command`, `request_hash`, `status` (`in_progress`/`completed`/`failed`), `response_json`, `created_at`, `expires_at` (24 giờ).
 - Cùng khoá, cùng nội dung: trả lại kết quả cũ. Cùng khoá, khác nội dung: lỗi 409 `idempotency_conflict`. Ghi bản ghi idempotency trong **cùng transaction** với lệnh.
 - Các khoá tự nhiên đã có vẫn giữ (R8: task theo `source_ref`; action state theo `action_id`).
@@ -335,7 +350,7 @@ class CommandContext:
 `crm_audit_event` (chỉ thêm): `audit_id` (UUIDv7), `occurred_at`, `request_id`, `channel`, `principal_id`, `principal_type`, `on_behalf_of`, `command` (ví dụ `interaction.log`, `party.merge`, `proposal.approve`, `read.party_360`), `entity_type`, `entity_id`, `party_id`, `outcome` (`ok`/`denied`/`error`/`proposed`), `idempotency_key`, `proposal_id`, `diff_json` (trước/sau, đã che trường nhạy cảm), `reason`.
 
 - Ghi cho **mọi lệnh ghi** từ mọi kênh, kể cả UI.
-- Ghi cho **lệnh đọc của agent** (mọi tool MCP) và cho đọc đặc biệt của người (xem dữ liệu nhạy cảm, xem SĐT đầy đủ khi sau này có che, xuất hàng loạt). Đọc thường của người qua UI không ghi (khối lượng lớn, không cần).
+- Ghi cho **lệnh đọc của agent** (mọi lời gọi REST từ sandbox, gắn `execution_id`; cộng một dòng `mcp.execute` cho mỗi lần chạy code) và cho đọc đặc biệt của người (xem dữ liệu nhạy cảm, xem SĐT đầy đủ khi sau này có che, xuất hàng loạt). Đọc thường của người qua UI không ghi (khối lượng lớn, không cần).
 - Có cột `party_id` để trả lời "ai đã xem, sửa gì về khách này" khi khách yêu cầu theo Luật 91/2025.
 - Lưu giữ: mặc định 24 tháng **[đề xuất, câu hỏi mở]**; dọn bằng job theo `occurred_at`.
 
@@ -346,7 +361,7 @@ class CommandContext:
 Luồng:
 
 ```text
-agent ──propose_*──► CommandBus: kiểm quyền "được đề xuất", chạy thử (dry-run), ghi crm_proposal(pending) + audit(proposed)
+agent ──crm.proposals.*() trong execute──► REST ──► CommandBus: kiểm quyền "được đề xuất", chạy thử (dry-run), ghi crm_proposal(pending) + audit(proposed)
 người duyệt (UI "Hàng chờ duyệt" hoặc crmctl) ──approve──► CommandBus chạy lệnh thật với actor = người duyệt,
      ghi audit(ok, proposal_id), proposal → applied (hoặc failed + lý do); trước khi chạy kiểm lại điều kiện
      (dữ liệu có thể đã đổi từ lúc đề xuất: nếu preview khác thì yêu cầu duyệt lại)
@@ -384,50 +399,113 @@ Một bảng quyền trong code (`crm/src/domain/policy.py`), dùng bởi mọi 
 
 ### 5.8 CLI
 
-`python -m crm.ops.crmctl <nhóm> <lệnh> [--json]`, đọc `CRM_URL` và `CRM_TOKEN` từ môi trường. Nhóm lệnh trùng tên tool MCP: `parties search|get`, `worklist list`, `tasks list|create|update`, `interactions log`, `notes add`, `tags set`, `proposals list|show|approve|reject` (chỉ token của người). Mã thoát khác 0 khi lỗi; `--json` in đúng body REST.
+`python -m crm.ops.crmctl <nhóm> <lệnh> [--json]`, đọc `CRM_URL` và `CRM_TOKEN` từ môi trường. Nhóm lệnh trùng tên nhóm hàm SDK (§5.9.3): `parties search|get`, `worklist list`, `tasks list|create|update`, `interactions log`, `notes add`, `tags set`, `proposals list|show|approve|reject` (chỉ token của người). Mã thoát khác 0 khi lỗi; `--json` in đúng body REST.
 
-### 5.9 Danh sách tool MCP (server `fg-crm`)
+### 5.9 MCP theo code mode (server `fg-crm`)
 
-| # | Tool | Loại | Annotation | Guardrail |
-|---|---|---|---|---|
-| 1 | `whoami` | đọc | readOnly | Principal, người được uỷ quyền, quyền hiệu lực, module bật, `data_as_of` của cache |
-| 2 | `search_parties(q, filters, limit≤50)` | đọc | readOnly | SĐT che, tên theo chính sách PII (mục 5.10) |
-| 3 | `get_party_360(party_id)` | đọc | readOnly | Kèm `data_as_of`; bỏ trường nhạy cảm; tóm tắt thương mại từ cache (CRM không tính) |
-| 4 | `list_party_timeline(party_id, kinds, limit)` | đọc | readOnly | Tương tác, ghi chú, task, giao dịch; không trả ghi chú `sensitive` |
-| 5 | `list_worklist(assignee?, date?, limit≤100)` | đọc | readOnly | "Hôm nay gọi ai, vì sao, đáng bao nhiêu" |
-| 6 | `get_approach_script(party_id)` | đọc | readOnly | `recommended=false` thì trả cảnh báo (R14) |
-| 7 | `list_tasks(filters)` | đọc | readOnly | |
-| 8 | `list_segment_members(segment_id, limit≤200)` | đọc | readOnly | Che PII |
-| 9 | `get_campaign_results(campaign_id)` | đọc | readOnly | Lift so với holdout khi có (phase 10) |
-| 10 | `get_proposal(proposal_id)` | đọc | readOnly | Chỉ đề xuất của chính principal hoặc người uỷ quyền |
-| 11 | `log_interaction(party_id, channel, outcome, reason, body, followup_at?, idempotency_key)` | ghi | idempotent | Đi qua đúng executor side-effects hiện có (`activity_side_effects.py`) |
-| 12 | `create_task(…, idempotency_key)` | ghi | idempotent | Người được giao mặc định là `on_behalf_of` |
-| 13 | `update_task(task_id, status/due/assignee, idempotency_key)` | ghi | idempotent | Kiểm chủ task (`AuthorizationService.is_owner`) |
-| 14 | `add_note(party_id, body, note_type, idempotency_key)` | ghi | idempotent | Không cho loại ghi chú nhạy cảm |
-| 15 | `set_party_tags(party_id, add[], remove[], idempotency_key)` | ghi | idempotent | Tag `data_class='sensitive'` luôn bị từ chối với agent (kể cả khi khách đã đồng ý); tag "quan tâm nhóm sản phẩm" được phép |
-| 16 | `update_action_state(action_id, claim/snooze/dismiss, until?, idempotency_key)` | ghi | idempotent | Dùng đúng R15 và dismiss TTL |
-| 17 | `propose_identity_link(party_id, kind, value, evidence)` | đề xuất | — | Tạo proposal; không đổi dữ liệu |
-| 18 | `propose_merge(survivor_id, merged_id, reason, evidence)` | đề xuất | — | Kèm preview merge |
-| 19 | `propose_consent_change(party_id, channel, purpose, decision, method, evidence)` | đề xuất | — | Thiếu bằng chứng thì từ chối |
-| 20 | `propose_party_relationship(from, to, type, evidence)` | đề xuất | — | Gồm xác nhận khách sỉ (vai trò `wholesale_customer`) |
-| 21 | `propose_bulk_operation(op, selector, params)` | đề xuất | — | Luôn chạy thử, trả số party và mẫu ≤ 20; giới hạn 2.000 party |
+**Quyết định (user 19/10/2026 16:13): MCP chạy theo "code mode" cho nhẹ.** Thay vì lộ khoảng 21 tool riêng (mỗi tool một schema nạp sẵn vào context, mỗi kết quả trung gian đi qua model), server chỉ lộ **hai tool**; agent tìm đúng hàm cần dùng, viết một đoạn TypeScript gọi SDK có kiểu, và chỉ kết quả cuối quay về model. Đây là mẫu Cloudflare gọi là Code Mode và Anthropic mô tả trong "Code execution with MCP" (nguồn ở §10).
 
-Không có tool: duyệt đề xuất, thực thi merge/unmerge, xoá, export, gửi tin, xem dữ liệu nhạy cảm, xem SĐT đầy đủ. Annotation chỉ là gợi ý cho client; quyền luôn kiểm ở server.
+| Tool | Input | Output | Annotation |
+|---|---|---|---|
+| `search_api` | `query` (tiếng Việt hoặc Anh, có/không dấu), `limit` ≤ 5 | Các đoạn khai báo TypeScript (chữ ký hàm, kiểu input/output, JSDoc tiếng Việt: làm gì, quyền cần, lưu ý), tối đa khoảng 2.000 token; **chỉ các hàm principal được phép gọi** | `readOnlyHint=true` |
+| `execute` | `code` (TypeScript, một hàm `async (crm) => { ... return kếtQuả }`), `idempotency_scope` tuỳ chọn | `{result, calls: [{fn, status, request_id}], data_as_of, warnings, execution_id}`; `result` tối đa 32 KB JSON | Không readOnly (có thể ghi qua SDK) |
+
+Không thêm tool thứ ba: trạng thái proposal đọc bằng `crm.proposals.get()` trong `execute`. Server `instructions` (tiếng Việt, khoảng 300 token): múi giờ Asia/Ho_Chi_Minh; CRM không tính số mà lấy từ kho, luôn nêu "dữ liệu tới"; SĐT và tên khách luôn bị che; luôn gọi `search_api` trước khi viết code; thao tác nguy hiểm chỉ tạo đề xuất; không gửi tin cho khách.
+
+#### 5.9.1 Luồng và ranh giới cưỡng chế
+
+```text
+model ──search_api("worklist hôm nay")──► chỉ mục khai báo SDK (lọc theo quyền) ──► đoạn .d.ts
+model ──execute(code)──► MCP handler (process CRM):
+     1. tạo execution_id, token con ngắn hạn (scope = scope credential agent, hết hạn 60 giây, gắn execution_id)
+     2. chạy sandbox Deno (deny-by-default) với SDK + code
+          sandbox ──HTTP 127.0.0.1:8090 /api/v1/...  (Bearer token con, header X-CRM-Execution-Id)──►
+          REST v1 ─► CommandBus / QueryService: quyền, che PII, lọc dữ liệu nhạy cảm, idempotency,
+                     proposal, rate limit, audit (mỗi lời gọi một dòng, có execution_id)
+     3. nhận kết quả cuối, cắt theo giới hạn, thu hồi token con
+     4. ghi audit `mcp.execute`: hash SHA-256 của code, độ dài, danh sách lệnh đã gọi (tra theo execution_id),
+        thời gian, kích thước kết quả, outcome
+model ◄── result (chỉ kết quả cuối)
+```
+
+**Không có gì lách được qua code:** sandbox không có quyền gì ngoài HTTP tới `127.0.0.1:<cổng CRM>`; SDK chỉ là client mỏng của REST `/api/v1`; mọi kiểm tra (quyền, che SĐT/tên, loại dữ liệu nhạy cảm, idempotency, đề xuất → duyệt, audit) nằm ở CommandBus và query service phía server, giống hệt khi gọi REST trực tiếp. Code của agent chỉ thấy đúng những dữ liệu REST trả cho principal đó, nên code mode **không mở rộng** phạm vi dữ liệu mà agent được thấy; nó chỉ quyết định phần nào quay về model. Lệnh ghi qua code mode đi qua **cùng lệnh và cùng proposal** như REST (ví dụ `crm.parties.proposeMerge()` gọi `POST /api/v1/proposals`, không có đường merge trực tiếp).
+
+**Giới hạn chống lạm dụng qua vòng lặp** (cưỡng chế ở server theo `execution_id` và credential, không tin sandbox):
+
+| Giới hạn | Mặc định | Vượt thì |
+|---|---|---|
+| Lời gọi API mỗi lần `execute` | 200 | Lỗi `execution_call_limit`, các lệnh đã chạy vẫn có audit |
+| Lệnh ghi mỗi lần `execute` | 20 | Lỗi `use_bulk_proposal`: việc hàng loạt phải dùng `crm.proposals.bulkOperation()` |
+| Lệnh ghi mỗi phút mỗi credential | 30 | 429 |
+| Đề xuất mỗi giờ mỗi credential | 20 | 429 |
+| `execute` đồng thời toàn server | 2 | Hàng đợi tối đa 4, quá thì `busy` |
+
+**Idempotency trong code:** mọi hàm ghi của SDK nhận `idempotencyKey`; nếu code không truyền, SDK dùng khoá mặc định `hash(idempotency_scope hoặc hash code, thứ tự lời gọi, hash tham số)`, nên chạy lại cùng đoạn code (model thử lại) không tạo bản ghi trùng.
+
+**Lỗi không làm lộ dữ liệu:** lỗi trả về model chỉ gồm loại lỗi, thông điệp và mã lỗi đã chuẩn hoá của REST (vốn không chứa PII), dòng lỗi trong code của agent; không trả stack của server, không trả body request. `console.log` bị cắt ở 4 KB và đi qua cùng bộ che PII (SĐT, chuỗi giống số điện thoại, email) trước khi trả về, như lớp phòng thủ thứ hai.
+
+#### 5.9.2 Sandbox: phương án và đề xuất
+
+| Tiêu chí | (a) Deno subprocess, deny-by-default | (b) Python subprocess hạn chế hoặc container riêng | (c) V8 isolate nhúng trong Python (ví dụ `mini-racer`) |
+|---|---|---|---|
+| Cô lập | Quyền ở mức runtime: không có `--allow-*` nào ngoài `--allow-net=127.0.0.1:<cổng>`; không fs, env, subprocess, FFI; cộng giới hạn OS (`prlimit` CPU, RAM) và timeout kill | CPython không có sandbox trong process; muốn an toàn phải dùng seccomp/nsjail hoặc container riêng | Cô lập tốt (không có mạng, fs), API gọi qua hàm host bơm vào |
+| RAM mỗi lần chạy | Khoảng vài chục MB, process sống vài giây (**phải đo ở phase 0**) | Subprocess nhẹ nhưng không an toàn; container riêng tốn thêm RAM thường trực và phức tạp vận hành | Vài MB, trong process CRM |
+| Ảnh hưởng image | Thêm binary Deno (cỡ 100 MB đĩa) vào image `crm`; build lại một lần | Không thêm runtime nếu subprocess; thêm service nếu container | Thêm wheel có V8; phải chuyển TS sang JS |
+| Model viết tốt | TypeScript: Cloudflare chọn TS vì model viết TS có kiểu rất tốt; kiểu sinh từ OpenAPI giúp model tự sửa | Python cũng tốt, nhưng không có kiểu tĩnh đi kèm SDK một cách tự nhiên | Như (a) nhưng chỉ JS, mất kiểu |
+| Rủi ro riêng | Gọi HTTP ngược về chính process CRM: handler `execute` phải async, không giữ transaction; uvicorn phục vụ song song | Lỗ hổng thoát sandbox là rủi ro cao nhất | Thư viện ít người bảo trì; đồng bộ hoá async khó; lỗi V8 nằm chung process với writer SQLite |
+| Kết luận | **Đề xuất** | Loại (trừ khi Deno không chạy được trong image) | Phương án dự phòng nếu RAM của Deno quá lớn |
+
+**Đề xuất: (a) Deno.** Lý do: cô lập theo quyền runtime mặc định từ chối, nhẹ, không thêm service thường trực (quan trọng với máy chủ đang chật RAM), TypeScript có kiểu sinh từ OpenAPI là thứ model dùng tốt nhất cho code mode. Chạy trong container `crm` (cùng mạng loopback), giới hạn: timeout 10 giây, `--v8-flags=--max-old-space-size=64`, `prlimit` CPU 10 giây và bộ nhớ ảo, tối đa 2 lần chạy đồng thời, thư mục làm việc tạm rỗng chỉ đọc. Token con không đặt trong biến môi trường mà truyền vào hàm khởi tạo SDK qua stdin.
+
+**SDK:** sinh từ OpenAPI `/api/v1` thành một file TypeScript **không phụ thuộc gói ngoài** (kiểu + client `fetch` mỏng), commit vào `crm/src/adapters/inbound/mcp/sdk/`; test so file đã commit với bản sinh lại từ OpenAPI hiện tại (lệch là fail). Chỉ mục `search_api` sinh từ cùng file. Sandbox không tải gói nào lúc chạy (không mạng ngoài).
+
+**Phase 0 phải kiểm:** image `crm` hiện chưa có Deno (cần build lại, phase 3 vốn đã build lại để thêm MCP SDK); giới hạn RAM của container `crm` trong `docker-compose.yml` và RAM trống thực tế của máy; RAM đỉnh và thời gian khởi động của một lần `execute` mẫu (cold start) dưới giới hạn đề xuất; `--allow-net` của phiên bản Deno ghim chặn được mọi host khác, kể cả theo redirect; 5 tác vụ mẫu do model viết TS trên SDK nháp chạy đúng.
+
+#### 5.9.3 Danh mục hàm SDK (giữ ngữ nghĩa 21 thao tác cũ)
+
+| # | Hàm SDK | REST v1 | Loại | Guardrail (cưỡng chế ở server) | Phase |
+|---|---|---|---|---|---|
+| 1 | `crm.whoami()` | `GET /whoami` | đọc | Principal, người uỷ quyền, quyền hiệu lực, module bật, `data_as_of` | 3 |
+| 2 | `crm.parties.search({q, filters, limit≤50, cursor})` | `GET /parties` | đọc | SĐT và tên che | 3 |
+| 3 | `crm.parties.get360(partyId)` | `GET /parties/{id}` | đọc | Không có trường/tag nhạy cảm; tóm tắt thương mại từ cache | 3 |
+| 4 | `crm.parties.timeline(partyId, {kinds, limit, cursor})` | `GET /parties/{id}/timeline` | đọc | Không trả ghi chú/tương tác nhạy cảm | 3 |
+| 5 | `crm.worklist.list({assignee?, date?, limit≤100})` | `GET /worklist` | đọc | "Hôm nay gọi ai, vì sao, đáng bao nhiêu" | 3 |
+| 6 | `crm.approachScripts.get(partyId)` | `GET /parties/{id}/approach-script` | đọc | `recommended=false` kèm cảnh báo (R14) | 3 |
+| 7 | `crm.tasks.list(filters)` | `GET /tasks` | đọc | | 3 |
+| 8 | `crm.segments.members(segmentId, {limit≤200, cursor})` | `GET /segments/{id}/members` | đọc | Che PII | 3 |
+| 9 | `crm.campaigns.results(campaignId)` | `GET /campaigns/{id}/results` | đọc | Lift so với holdout khi có (phase 10) | 3 |
+| 10 | `crm.proposals.get(id)`, `crm.proposals.listMine()` | `GET /proposals/...` | đọc | Chỉ đề xuất của chính principal hoặc người uỷ quyền | 4 |
+| 11 | `crm.interactions.log({...}, {idempotencyKey?})` | `POST /parties/{id}/interactions` | ghi | Đi qua executor side-effects hiện có | 4 |
+| 12 | `crm.tasks.create({...}, {idempotencyKey?})` | `POST /tasks` | ghi | Người được giao mặc định là `on_behalf_of` | 4 |
+| 13 | `crm.tasks.update(taskId, {...}, {idempotencyKey?})` | `PATCH /tasks/{id}` | ghi | Kiểm chủ task | 4 |
+| 14 | `crm.notes.add({...}, {idempotencyKey?})` | `POST /parties/{id}/notes` | ghi | Không cho ghi chú nhạy cảm | 4 |
+| 15 | `crm.parties.setTags(partyId, {add, remove}, {idempotencyKey?})` | `PUT /parties/{id}/tags` | ghi | Tag nhạy cảm luôn bị từ chối với agent; `product_interest` được | 4 |
+| 16 | `crm.actions.updateState(actionId, {state, until?}, {idempotencyKey?})` | `POST /actions/{id}/state` | ghi | R15, dismiss TTL | 4 |
+| 17 | `crm.proposals.identityLink({...})` | `POST /proposals` | đề xuất | Không đổi dữ liệu tới khi duyệt | 4 |
+| 18 | `crm.proposals.merge({...})` | `POST /proposals` | đề xuất | Kèm preview | 4 |
+| 19 | `crm.proposals.consentChange({...})` | `POST /proposals` | đề xuất | Thiếu bằng chứng thì từ chối | 4 |
+| 20 | `crm.proposals.partyRelationship({...})` | `POST /proposals` | đề xuất | Gồm xác nhận khách sỉ | 8 |
+| 21 | `crm.proposals.bulkOperation({op, selector, params})` | `POST /proposals` | đề xuất | Luôn chạy thử, mẫu ≤ 20, tối đa 2.000 party | 4 |
+| + | `crm.parties.engagements(partyId)` | `GET /parties/{id}/engagements` | đọc | | 9 |
+
+Không có hàm: duyệt đề xuất, thực thi merge/unmerge, xoá, export, gửi tin, xem dữ liệu nhạy cảm, xem SĐT/tên đầy đủ. `search_api` không trả khai báo hàm mà principal không có quyền, nên agent không "nhìn thấy" hàm bị cấm; nếu code vẫn gọi đường REST đó thì server trả 403.
 
 ### 5.10 Chung nền với MCP phân tích cho CEO
 
-Research `research-261014-2333-adhoc-query-ceo-mcp.md` chọn MCP tự viết trên registry chỉ tiêu, Claude Desktop và bot Lark, "lợi nhuận" mặc định CM2. Hai server tách nhau (OLAP chỉ đọc, OLTP có ghi) nhưng dùng chung:
+Research `research-261014-2333-adhoc-query-ceo-mcp.md` chọn MCP tự viết trên registry chỉ tiêu, Claude Desktop và bot Lark, "lợi nhuận" mặc định CM2. **Đề xuất MCP phân tích dùng cùng code mode**: hai tool `search_api` và `execute`, SDK đọc gồm `analytics.listMetrics()`, `describeMetric()`, `getDimensionValues()`, `queryMetrics()`, `searchVerifiedAnswers()`, `getFreshness()` gọi API nội bộ của chính server phân tích; compiler vẫn chèn bộ lọc bắt buộc và kiểm `cost_sensitive` phía server, sandbox không có quyền đọc DuckDB. Lợi ích lớn nhất là các câu so sánh nhiều kỳ, nhiều kênh: dữ liệu trung gian ở lại sandbox. **"Lợi nhuận" mặc định CM2** giữ nguyên: là giá trị mặc định trong registry (`ai.ambiguity`) và trong `queryMetrics`, câu trả lời luôn nêu bậc CM.
 
 | Điểm chung | Quy ước |
 |---|---|
-| Transport và client | Streamable HTTP; Claude Desktop qua `mcp-remote` trong LAN/Tailscale; bot Lark gọi Claude API với cả hai server |
+| Kiểu MCP | Code mode: `search_api` + `execute`; SDK TypeScript sinh từ OpenAPI của từng server |
+| Sandbox | Cùng runtime Deno, cùng giới hạn và cùng quy tắc mạng (chỉ loopback tới server của mình) |
+| Transport và client | Streamable HTTP; Claude Desktop qua `mcp-remote` trong LAN/Tailscale (đã chốt Q8); bot Lark gọi Claude API với cả hai server |
 | Danh tính | Token theo người → vai trò; bot Lark uỷ quyền theo `lark_user_id` |
-| Audit | Cùng trường lõi (`ts`, principal, on_behalf_of, tool, args đã che, kết quả, `request_id`) |
+| Audit | Cùng trường lõi (`ts`, principal, on_behalf_of, `execution_id`, hash code, danh sách lệnh, kết quả, `request_id`) |
 | Phản hồi | Phong bì `{data, data_as_of, applied_defaults, warnings, request_id}`; câu trả lời tiếng Việt luôn nêu "dữ liệu tới" |
-| Chỉ tiêu | CRM không định nghĩa chỉ tiêu riêng; con số trong `get_party_360` lấy nguyên từ `wh_customer_summary` và mang nhãn của kho (ví dụ `margin_level`, phase 0 xác minh `lifetime_contribution_margin` là bậc CM nào) |
-| Khác biệt | Analytics chỉ trả số tổng hợp; CRM trả dữ liệu từng khách nên **có dữ liệu cá nhân đi tới nhà cung cấp mô hình**. **Đã chốt 19/10 (Q2):** SĐT và tên luôn che khi tới agent (tên chỉ còn chữ cái đầu + mã khách). Cấu hình `CRM_AGENT_PII_MODE` chỉ có giá trị `masked` ở v1; mở thêm là quyết định mới của user |
+| Chỉ tiêu | CRM không định nghĩa chỉ tiêu riêng; con số trong `get360` lấy nguyên từ `wh_customer_summary` và mang nhãn của kho (`margin_level`; phase 0 xác minh `lifetime_contribution_margin` là bậc CM nào) |
+| Khác biệt | Analytics chỉ trả số tổng hợp; CRM trả dữ liệu từng khách nên **đã chốt 19/10 (Q2):** SĐT và tên luôn che khi tới agent (tên chỉ còn chữ cái đầu + mã khách). `CRM_AGENT_PII_MODE` chỉ có giá trị `masked` ở v1 |
 
-Quy ước chung được ghi thành ADR-020 (phase 2) để server phân tích dùng lại. Không chia sẻ code giữa hai server vì `crm/` phải tự chứa (`crm/AGENTS.md` mục Boundary rule).
+Quy ước chung được ghi thành ADR-020 (phase 2, cập nhật ở phase 3) để server phân tích dùng lại. Bộ chạy sandbox viết trong `crm/` trước vì `crm/` phải tự chứa (`crm/AGENTS.md` mục Boundary rule); khi làm MCP phân tích thì quyết định tách thành gói dùng chung hay chép (câu hỏi mở Q13).
 
 ---
 
@@ -438,7 +516,7 @@ Quy ước chung được ghi thành ADR-020 (phase 2) để server phân tích 
 - Hai lớp theo Nghị định 356/2025: `basic` và `sensitive`; lớp `sensitive` có `sensitive_kind` (`health`, `biometric`, `financial_account`, `location_precise`, … tenant thêm).
 - Gắn ở **định nghĩa**: `crm_tag_category.data_class`, `crm_custom_field_def.data_class`, loại ghi chú (`note_type` có `data_class` mặc định), `crm_activity_log.data_class` (người ghi chọn khi nội dung chứa thông tin sức khoẻ).
 - Chính sách chung trong `policy.py` (một hàm `can_view_sensitive(principal, party)` và một hàm `can_write_sensitive(principal, party, category)` cho mọi kênh):
-  - **Xem:** `admin` và `manager` xem với mọi khách; `sales`/`care` chỉ xem với khách mình **phụ trách** (`owner_user_id` của khách; từ phase 8 là `owner_user_id` của vai trò `customer`); `viewer` không xem; **agent không bao giờ xem**.
+  - **Xem:** `admin` và `manager` xem với mọi khách; `sales`/`care` chỉ xem với khách mình **phụ trách** (`owner_user_id` của khách; từ phase 8 là `owner_user_id` của vai trò `customer`), hoặc, khi khách chưa có người phụ trách, nếu chính họ đã ghi nhận đồng ý riêng đang hiệu lực (Q12); `viewer` không xem; **agent không bao giờ xem**.
   - **Ghi:** loại có `requires_consent_purpose` chỉ ghi được khi khách đã có đồng ý riêng cho mục đích đó (§6.2). Agent không bao giờ ghi.
   - **Audit:** mọi lần gắn, gỡ và **mọi lần hiển thị** dữ liệu nhạy cảm cho một người dùng (C360, API, danh sách tag) đều có một dòng audit.
   - **Không đi ra ngoài:** loại khỏi export về kho, mọi báo cáo dựng từ export, mọi phản hồi REST v1/MCP/CLI cho agent, và khỏi `diff_json` của audit (chỉ ghi `tag_id`, không ghi nhãn).
@@ -450,7 +528,12 @@ Sales/CS là người thường ghi nhận nhu cầu sức khoẻ của khách k
 **C. Mặc định: tag "quan tâm nhóm sản phẩm" (không phải dữ liệu sức khoẻ).**
 
 - Loại tag mới `product_interest` (`data_class='basic'`), ví dụ "Quan tâm nhóm hỗ trợ giấc ngủ" thay cho "Mất ngủ", "Quan tâm nhóm tim mạch" thay cho "Huyết áp cao". Nó ghi **nhu cầu mua của khách**, không ghi tình trạng cơ thể.
-- Danh mục nhóm sản phẩm là **cấu hình tenant** (tag do admin tạo trong `/settings/tags` thuộc loại `product_interest`; migration chỉ tạo loại, không seed tên). Ai đặt tên và danh sách cụ thể: câu hỏi mở Q11 của plan.
+- **Danh mục do sales/CS tự đặt ngay trong CRM** (đã chốt 19/10, Q11), không phải cấu hình do dev sửa. Migration chỉ tạo loại, không seed tên; deploy với danh mục rỗng là được.
+  - Tạo: nút "+ Thêm nhóm sản phẩm" ngay trong picker M03/S14 và trang quản lý nhỏ "Nhóm sản phẩm khách quan tâm" (sales, care, manager, admin đều vào được). Lệnh `product_interest.create(label)`.
+  - Sửa tên, lưu trữ: người tạo hoặc manager/admin (`product_interest.rename`, `product_interest.archive`); gắn trên khách giữ nguyên khi đổi tên (cùng `tag_id`).
+  - Chống trùng: so tên đã chuẩn hoá (chữ thường, bỏ dấu, gộp khoảng trắng, bỏ tiền tố "quan tâm nhóm") với mọi tag `product_interest` kể cả đã lưu trữ; trùng thì gợi ý dùng tag sẵn có. Ràng buộc ở DB: partial unique index trên `crm_tag(name)` WHERE `category='product_interest'` (`name` là slug của tên chuẩn hoá).
+  - Giữ ranh giới với dữ liệu sức khoẻ: tên hiển thị theo mẫu "Quan tâm nhóm …"; tên khớp (sau chuẩn hoá) với nhãn của tag sức khoẻ hoặc danh sách từ chỉ bệnh/triệu chứng do tenant cấu hình thì bị từ chối kèm gợi ý đặt theo nhóm sản phẩm. Manager xem được danh sách và người tạo.
+  - Audit: mọi lần tạo, đổi tên, lưu trữ (phase 1 ghi vào nhật ký tạm `crm_interim_audit_log`, phase 2 chuyển sang audit chung).
 - Trên picker M03, S14 inline và hàng gợi ý S14, `product_interest` là lựa chọn hiển thị đầu tiên cho mọi người. Không cần đồng ý riêng, được export và dùng cho segment, worklist, agent như tag thường.
 
 **B. Tag sức khoẻ thật (`health_concern`, `health_domain`) giữ lại, có điều kiện.**
@@ -458,7 +541,7 @@ Sales/CS là người thường ghi nhận nhu cầu sức khoẻ của khách k
 | Khía cạnh | Quy tắc |
 |---|---|
 | Gắn | `sales`/`care`/`manager`/`admin` gắn được **chỉ khi** khách đã có đồng ý riêng cho mục đích `sensitive_profile` (có bằng chứng). Chưa có thì picker không hiện loại sức khoẻ cho khách đó, chỉ hiện nút "Ghi nhận khách đồng ý cho lưu thông tin sức khoẻ" (chọn cách thu thập, bằng chứng) và gợi ý dùng `product_interest`. Lớp chặn cuối ở DB: trigger từ chối insert `crm_party_tag` thuộc loại có `requires_consent_purpose` khi khách chưa có đồng ý |
-| Xem | Người phụ trách khách, `manager`, `admin` (§6.1). Người khác không thấy tag, không thấy số lượng. Khách chưa có người phụ trách: câu hỏi mở Q12 (đề xuất cho người đã ghi nhận đồng ý riêng cũng được xem) |
+| Xem | Người phụ trách khách, `manager`, `admin` (§6.1). Người khác không thấy tag, không thấy số lượng. Khách **chưa có người phụ trách**: người đã ghi nhận đồng ý riêng đang hiệu lực của khách đó cũng được xem (đã chốt 19/10, Q12), có audit |
 | Audit | Mọi lần gắn, gỡ, xem; mọi lần ghi nhận hoặc rút đồng ý riêng |
 | Ra ngoài | Không export về kho (`crm_tag` và `crm_party_tag` lọc `data_class='sensitive'`), không vào báo cáo (`health_concern_tags_new` trong `mart_staff_performance_weekly` sẽ luôn bằng 0), không bao giờ tới agent/MCP/REST v1 của agent |
 | Dữ liệu cũ | Không xoá (hiện có 2 lần gắn `health_domain`). Khách chưa có đồng ý thì tag **ẩn theo quyền** với mọi người trừ `admin`, `manager` và người phụ trách; không bị xoá, không bị gỡ |
@@ -468,8 +551,8 @@ Sales/CS là người thường ghi nhận nhu cầu sức khoẻ của khách k
 
 | Phase | Nơi lưu "đồng ý riêng" | Ghi chú |
 |---|---|---|
-| 1 (tạm) | Bảng `crm_sensitive_consent_flag` (`party_id` PK, `purpose_code='sensitive_profile'`, `status` `granted`/`withdrawn`, `method`, `evidence_type`, `evidence_ref`, `captured_by`, `captured_at`, `note`); lịch sử thay đổi nằm trong `crm_sensitive_access_log` (chỉ thêm), cùng với nhật ký gắn/gỡ/xem | Audit chung chưa có ở phase 1, nên `crm_sensitive_access_log` là nhật ký tạm |
-| 2 | Không đổi nơi lưu cờ; `crm_sensitive_access_log` được chép sang `crm_audit_event` và từ đó mọi sự kiện ghi vào audit chung; bảng log tạm ngừng ghi, giữ lại chỉ đọc | |
+| 1 (tạm) | Bảng `crm_sensitive_consent_flag` (`party_id` PK, `purpose_code='sensitive_profile'`, `status` `granted`/`withdrawn`, `method`, `evidence_type`, `evidence_ref`, `captured_by`, `captured_at`, `note`); lịch sử thay đổi nằm trong `crm_interim_audit_log` (chỉ thêm), cùng với nhật ký gắn/gỡ/xem | Audit chung chưa có ở phase 1, nên `crm_interim_audit_log` là nhật ký tạm (cho cả tag sức khoẻ và danh mục nhóm sản phẩm) |
+| 2 | Không đổi nơi lưu cờ; `crm_interim_audit_log` được chép sang `crm_audit_event` và từ đó mọi sự kiện ghi vào audit chung; bảng log tạm ngừng ghi, giữ lại chỉ đọc | |
 | 7 | Mỗi cờ thành một `crm_consent_event` (`purpose_code='sensitive_profile'`, giữ `method`, bằng chứng, người ghi, thời điểm); `can_write_sensitive` và trigger đọc `crm_consent_current`; giao diện ghi nhận đồng ý ghi vào sổ cái. Cờ tạm ghi song song tới phase 11 rồi thành view chỉ đọc | |
 
 ### 6.3 Sổ cái consent
@@ -573,6 +656,7 @@ Backup trước mọi migration dữ liệu: `docker exec crm python -m crm.ops.
 | Điểm | Giữ trung lập bằng cách | Chỗ còn đặc thù SQLite (chấp nhận, ghi danh sách) |
 |---|---|---|
 | Port | `domain/ports/*` không có kiểu sqlite; service chỉ nhận Protocol | — |
+| Định danh | UUIDv7 sinh ở ứng dụng (`domain/ids.py`), lưu `TEXT` 36 ký tự ở SQLite, cột `uuid` ở Postgres (chuyển bằng cast khi di chuyển dữ liệu; id uuid4 cũ hợp lệ với kiểu `uuid`) | Id seed cố định dạng `tag-...` không phải UUID: khi chuyển Postgres, các cột chứa chúng giữ kiểu `text` hoặc đổi seed sang UUID cố định trong bộ migration Postgres (quyết định lúc chuyển) |
 | SQL | Chỉ ở `adapters/outbound/sqlite/`; câu mới dùng tập con chung (CTE, window, `ON CONFLICT`, partial index) | Placeholder `?`; Postgres adapter viết lại SQL, không hứa chạy nguyên văn |
 | Transaction | Unit of work rõ ràng (`CRMDatabase.transaction()`), không dựa vào autocommit ngầm | — |
 | Kiểu dữ liệu | Mục 3.1 | — |
@@ -597,7 +681,10 @@ Một kiểm tra tự động (phase 11): script `crm/ops/check_sql_portability.
 | EAV toàn phần (mọi thuộc tính là dòng) | Truy vấn và kiểm kiểu khó; JSON `custom` + định nghĩa trường đã đủ |
 | `tenant_id` trên mọi bảng | Sản phẩm cài theo doanh nghiệp; thêm phức tạp và rủi ro rò dữ liệu mà không cần |
 | MCP là process riêng ghi thẳng `crm.db` | Writer thứ hai trên SQLite; bỏ qua policy trong process chính |
-| MCP gọi qua REST nội bộ | Thêm một bước mạng và serialize mà không có lợi khi đã cùng process; CLI thì dùng REST vì chạy từ xa |
+| Khoảng 21 tool MCP riêng | Mỗi tool nạp schema vào context từ đầu, mọi kết quả trung gian đi qua model; tốn token và chậm khi danh mục lớn dần theo module. Thay bằng code mode (user chốt 19/10 16:13) |
+| Sandbox gọi thẳng service Python trong process (không qua REST) | Phải mở cầu nối riêng vào process, dễ lọt một đường bỏ qua policy; đi qua REST v1 thì sandbox chỉ có đúng quyền của một client bên ngoài |
+| Sandbox Python (subprocess hoặc container riêng) | CPython không có sandbox trong process; container riêng tốn RAM thường trực trên máy chật RAM (§5.9.2) |
+| V8 isolate nhúng trong process CRM | Lỗi V8 nằm chung process với writer SQLite; mất kiểu TypeScript; giữ làm dự phòng (§5.9.2) |
 | Dùng CRM nguồn mở (Twenty) hoặc CRM VN | Research §8.1: lệch domain (B2B), mất worklist từ kho, lock-in |
 | CHECK cho các cột loại | SQLite phải dựng lại bảng mỗi khi module thêm loại (như `0023`, `0046` đã phải làm) |
 | Consent là cờ trên contact point | Không có lịch sử, không có bằng chứng; không đạt Nghị định 356 |
@@ -614,5 +701,8 @@ Một kiểm tra tự động (phase 11): script `crm/ops/check_sql_portability.
 - Salesforce Data Cloud: Contact Point Phone DMO, Contact Point Consent DMO, Party Identification (nguồn [S12] của research 14/10); Person Accounts: https://help.salesforce.com/s/articleView?id=sf.account_person.htm
 - Microsoft Common Data Model, Account, Contact, Connection (Dataverse): https://learn.microsoft.com/power-apps/developer/data-platform/reference/entities/connection
 - schema.org: https://schema.org/Person, https://schema.org/Organization, https://schema.org/ContactPoint, https://schema.org/Order, https://schema.org/Reservation, https://schema.org/ProgramMembership
+- Cloudflare, "Code Mode: the better way to use MCP" (2025): https://blog.cloudflare.com/code-mode/ ; "Code Mode: give agents an entire API in 1,000 tokens" (20/02/2026, server chỉ lộ `search()` và `execute()`): https://blog.cloudflare.com/code-mode-mcp/
+- Anthropic Engineering, "Code execution with MCP: Building more efficient agents" (04/11/2025): https://www.anthropic.com/engineering/code-execution-with-mcp (số liệu giảm token cụ thể của bài chưa đối chiếu nguyên văn)
+- Deno, Security and permissions (deny-by-default, `--allow-net=<host:port>`): https://docs.deno.com/runtime/fundamentals/security/
 - Model Context Protocol spec 2025-06-18, Tools (annotation là gợi ý không tin cậy, server phải kiểm quyền): nguồn [S16] của research 14/10.
 - Pháp lý (Luật 91/2025/QH15, Nghị định 356/2025): chỉ qua phân tích thứ cấp ([S15], [S20] của research 14/10); chưa đọc nguyên văn.

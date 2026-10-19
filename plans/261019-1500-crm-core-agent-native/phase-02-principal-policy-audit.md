@@ -1,6 +1,6 @@
 # Phase 2: principal, credential, policy quyền, CommandBus, audit, idempotency
 
-**Effort:** 3.5d · **Phụ thuộc:** phase 1 · **Đụng prod:** có (CRM) · **Cần user duyệt giờ:** có · **Migration:** 0050–0054
+**Effort:** 4d · **Phụ thuộc:** phase 1 · **Đụng prod:** có (CRM) · **Cần user duyệt giờ:** có · **Migration:** 0050–0054
 
 ## Bối cảnh
 
@@ -25,13 +25,14 @@
 8. **Nối các lệnh ghi hiện có vào bus** (chỉ phần API và admin trong phase này; web UI ở phase 4): mọi route `/api/*` có POST/PUT/PATCH/DELETE (segment, campaign, dedup merge/undo, activity, task, profile, custom field, tag, note, conversation patch) và `/admin/refresh`, `/admin/backup`, `/admin/approach-scripts/load`. Hành vi và mã trả về không đổi.
 9. **Job sync trong process** (`sync_parties`, `sync_party_tags`, reverse-ETL chỉ ghi `cache.db` nên không cần) chạy với ctx `system:sync`; audit gộp **một dòng mỗi lần chạy** (số party tạo/cập nhật), không một dòng mỗi party.
 10. **Quản trị credential:** `crm/ops/credential_admin.py` (`create --principal <tên> --type agent --bound-user <user_id|none> --scopes <danh sách> --expires-days 90`, `list`, `revoke <id>`), chạy bằng `docker exec crm python -m crm.ops.credential_admin ...`; token in ra một lần; lệnh tự ghi audit với principal `system:ops`.
-10b. **Chuyển nhật ký tạm của phase 1:** migration `0054_sensitive_access_log_to_audit` chép mọi dòng `crm_sensitive_access_log` sang `crm_audit_event` (`command` tương ứng `tag.attach_sensitive`, `tag.view_sensitive`, `sensitive_consent.grant`, …, giữ thời điểm, người, party), sau đó code ghi các sự kiện này vào audit chung qua bus; bảng tạm giữ lại chỉ đọc (trigger chặn ghi). Down: xoá các dòng audit đã chép (theo `command` và `occurred_at` ≤ thời điểm migration), code cũ ghi lại bảng tạm.
+10a. **UUIDv7 (đã chốt 19/10, design §3.1.1):** `crm/src/domain/ids.py::new_id()` sinh UUIDv7 theo RFC 9562 (48 bit mili giây Unix, version 7, variant, 74 bit ngẫu nhiên từ `secrets`; tăng đơn điệu trong cùng mili giây bằng bộ đếm trong process), trả chuỗi 36 ký tự chữ thường. Thay **mọi** lời gọi `uuid.uuid4()` sinh id trong `crm/src`, `crm/sync`, `crm/ops` (19 file, đếm 19/10: `activity_service.py`, `task_service.py`, `app_user_service.py`, `tag_service.py`, `campaign_service.py`, `custom_field_service.py`, `segment_service.py`, `conversation_service.py`, `note_service.py`, `party_service.py`, `activity_side_effects.py`, `hug/identity_resolver_io.py`, `adapters/outbound/sqlite/dedup_repository.py`, `screens/management/screen_mgmt_settings.py`, `screens/modals/screen_modal_contact.py`, `screens/modals/screen_modals.py`, `screens/hug/screen_hug_review_data.py`, `crm/sync/reverse_etl_warehouse_to_crm.py`, `crm/ops/backfill_claim_tasks.py`). Không viết lại id cũ; giữ id tất định (`action_id` md5, seed `tag-...`). Test: định dạng và version/variant đúng; 100.000 id sinh liên tiếp duy nhất và tăng dần; id sinh trong cùng mili giây vẫn tăng; test quét mã nguồn: không còn `uuid4(` ngoài `ids.py` và test. `request_id`, `audit_id`, `idempotency_key` do hệ thống sinh, `credential_id` dùng `new_id()`; token bí mật dùng `secrets.token_urlsafe(32)`.
+10b. **Chuyển nhật ký tạm của phase 1:** migration `0054_interim_audit_log_to_audit` chép mọi dòng `crm_interim_audit_log` sang `crm_audit_event` (`command` tương ứng `tag.attach_sensitive`, `tag.view_sensitive`, `sensitive_consent.grant`, …, giữ thời điểm, người, party), sau đó code ghi các sự kiện này vào audit chung qua bus; bảng tạm giữ lại chỉ đọc (trigger chặn ghi). Down: xoá các dòng audit đã chép (theo `command` và `occurred_at` ≤ thời điểm migration), code cũ ghi lại bảng tạm.
 11. **Dọn:** idempotency hết hạn và audit quá thời hạn (Q5, mặc định 24 tháng) dọn ở cuối mỗi `/admin/refresh` thành công, giới hạn số dòng mỗi lần.
 12. **ADR-020** `docs/decisions/020-crm-core-and-agent-interface.md`: quyết định CommandBus là cửa duy nhất, ba adapter mỏng, principal/credential, audit, đề xuất → duyệt, quy ước chung với MCP phân tích (design §5.10), lõi dữ liệu và hợp đồng (tóm tắt, trỏ tới schema reference). Cập nhật `docs/decisions/README.md`.
 
 ## File
 
-- Tạo: migration `0050_app_user_principal_type`, `0051_api_credential`, `0052_audit_event`, `0053_idempotency_record`, `0054_sensitive_access_log_to_audit` (mỗi cái có up/down); `crm/src/domain/policy.py`, `crm/src/domain/entities/command_context.py`, `crm/src/domain/ports/audit_repository.py`, `idempotency_repository.py`, `credential_repository.py`; `crm/src/application/command_bus.py`; `crm/src/adapters/outbound/sqlite/audit_repository.py`, `idempotency_repository.py`, `credential_repository.py`; `crm/ops/credential_admin.py`; test tương ứng; ADR-020.
+- Tạo: migration `0050_app_user_principal_type`, `0051_api_credential`, `0052_audit_event`, `0053_idempotency_record`, `0054_interim_audit_log_to_audit` (mỗi cái có up/down); `crm/src/domain/policy.py`, `crm/src/domain/entities/command_context.py`, `crm/src/domain/ports/audit_repository.py`, `idempotency_repository.py`, `credential_repository.py`; `crm/src/application/command_bus.py`; `crm/src/adapters/outbound/sqlite/audit_repository.py`, `idempotency_repository.py`, `credential_repository.py`; `crm/ops/credential_admin.py`; test tương ứng; ADR-020.
 - Sửa: `crm/src/application/authorization_service.py`, `crm/src/adapters/inbound/http/auth_dependency.py`, `cf_access_middleware.py` (gắn ctx), các `*_handler.py` có lệnh ghi (danh sách phase 0), `admin_handler.py`, `crm/src/sync_parties.py`, `sync_party_tags.py`, `crm/src/composition.py` (wiring bus, một instance), `crm/AGENTS.md` (quy tắc: lệnh ghi mới phải đi qua bus).
 
 ## Các bước
@@ -55,6 +56,8 @@
 | Tích hợp | `/admin/refresh` vẫn 202 với `X-Refresh-Token`; audit 1 dòng mỗi lần sync |
 
 ## Kiểm "CRM như cũ"
+
+- Id mới có dạng UUIDv7 (cùng độ dài, cùng kiểu `TEXT`); parity snapshot so theo nội dung, không theo giá trị id mới sinh. Không chỗ nào sắp theo id (kiểm bằng `grep ORDER BY .*_id` trong adapter; nếu có chỗ dựa vào thứ tự id thì đổi sang `created_at` trong cùng phase).
 
 - `parity_snapshot diff`: chỉ khác số dòng bảng mới (`crm_audit_event`, `crm_idempotency_record`, `crm_api_credential`) và 4 dòng principal hệ thống trong `crm_app_user`. Phải khai báo: `crm_app_user` export (`crm_writeback_assets.py:113`) sẽ có thêm 4 dòng; nếu không muốn đổi export thì lọc `principal_type='human'` trong query export (đề xuất: lọc, để `dim_staff` không thay đổi).
 - `crm_export_parity.py`: 11 bảng giống hệt (sau khi lọc principal).

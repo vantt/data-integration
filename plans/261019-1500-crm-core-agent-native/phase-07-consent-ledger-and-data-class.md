@@ -20,7 +20,7 @@
 6. **`ConsentService`** (`append`, `current(party_id)`, `history(party_id)`) và **`ConsentPolicy.can_contact(party_id, channel, purpose)`** (design §6.3).
 7. **Chuyển cờ tạm sang sổ cái (tag sức khoẻ, design §6.2):**
    - Trong migration `0074_data_class_and_sensitive_trigger`: thay trigger của `0049_sensitive_tag_guard` bằng trigger kiểm `crm_consent_current` (`purpose_code='sensitive_profile'`, `decision='granted'`, chưa hết hạn). Down: dựng lại trigger kiểm cờ.
-   - `can_write_sensitive` và `can_view_sensitive` (đã ở `policy.py` từ phase 2) đọc trạng thái đồng ý từ `ConsentPolicy`; quy tắc người xem giữ nguyên (người phụ trách, manager, admin; khách đã rút: chỉ admin).
+   - `can_write_sensitive` và `can_view_sensitive` (đã ở `policy.py` từ phase 2) đọc trạng thái đồng ý từ `ConsentPolicy`; quy tắc người xem giữ nguyên (người phụ trách, manager, admin; khách chưa có người phụ trách: người ghi nhận đồng ý đang hiệu lực, nay đọc `captured_by` của sự kiện `granted` hiện hành (Q12); khách đã rút: chỉ admin).
    - `SensitiveConsentService` thành lớp mỏng gọi `ConsentService.append` với `purpose='sensitive_profile'`; modal "Ghi nhận khách đồng ý cho lưu thông tin sức khoẻ" ghi vào sổ cái (giao diện không đổi).
    - Ghi song song vào `crm_sensitive_consent_flag` tới phase 11 (để rollback được); parity cờ ↔ sổ cái trong `parity_snapshot`. Ghi consent bắt buộc `method`, `evidence_type`, `captured_by`; `evidence_type='none_legacy'` chỉ cho migration.
 8. **Người tiêu thụ, giữ hành vi cho tới khi user duyệt bật:**
@@ -28,7 +28,7 @@
    - Campaign (`fetch_consent_map`) đọc `ConsentPolicy` với `purpose='marketing'`; do backfill phản chiếu `consent_enum`, kết quả bằng hôm nay (kiểm bằng parity).
    - Worklist giữ bộ lọc `do_not_contact` cũ khi deploy. User **đã chốt** ngữ nghĩa sổ cái (Q6): sau deploy, chạy `crm/ops/dnc_impact_report.py` (mới, chỉ in số đếm: số party đang được gọi lại dù từng có lý do "không liên hệ" và sẽ bị chặn; số party ngược lại nếu có; phân theo nhân viên phụ trách), gửi user. **User duyệt số đó rồi mới bật** cờ `CRM_DNC_SOURCE=ledger` (worklist đọc `ConsentPolicy` với `service_care`), giờ user duyệt.
    - Kết quả cuộc gọi có lý do `do_not_contact` từ nay cũng ghi một sự kiện consent `withdrawn` (method `outcome_do_not_contact`, bằng chứng là `activity_id`).
-9. **Agent:** executor của `propose_consent_change` (phase 4) chuyển sang `ConsentService.append`; `get_party_360` trả consent hiện hành (không trả bằng chứng chi tiết).
+9. **Agent:** executor của đề xuất `consent_change` (hàm SDK `crm.proposals.consentChange`, phase 4) chuyển sang `ConsentService.append`; `crm.parties.get360` trả consent hiện hành (không trả bằng chứng chi tiết).
 10. **Phân loại:** cùng quy tắc với tag sức khoẻ (design §6.1–6.2): ghi chú, tương tác, trường tuỳ biến `sensitive` chỉ hiện với người phụ trách, manager, admin (`can_view_sensitive`), không bao giờ với agent; có audit gắn và xem; form ghi chú/tương tác có lựa chọn "chứa thông tin sức khoẻ" (đặt `data_class='sensitive'`), chỉ chọn được khi khách đã có đồng ý `sensitive_profile` (chưa có thì hiện nút ghi nhận đồng ý như ở picker tag). Loại ghi chú `health` theo cùng điều kiện.
 11. **Export** (`crm_writeback_assets.py`): thêm `crm_consent_current` (design §4.4); lọc `crm_note`, `crm_activity_log`, `crm_customer_profile.custom` (trường `sensitive`) khỏi export. Model staging `stg_crm__consent_current` trong pack `crm` dbt (mới, public).
 12. Tài liệu: schema reference; `crm/docs/ui-spec` cho modal liên hệ; `orchestration/packs/crm/README.md` (export mới).

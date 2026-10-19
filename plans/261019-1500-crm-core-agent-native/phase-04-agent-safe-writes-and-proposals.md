@@ -1,6 +1,6 @@
 # Phase 4: agent ghi an toàn và mô hình đề xuất → người duyệt
 
-**Effort:** 5d · **Phụ thuộc:** phase 3; Q4 đã chốt 19/10 (manager và admin duyệt, hết hạn 7 ngày) · **Đụng prod:** có (CRM) · **Cần user duyệt giờ:** có · **Migration:** 0055–0059
+**Effort:** 5.5d · **Phụ thuộc:** phase 3; Q4 đã chốt 19/10 (manager và admin duyệt, hết hạn 7 ngày) · **Đụng prod:** có (CRM) · **Cần user duyệt giờ:** có · **Migration:** 0055–0059
 
 ## Bối cảnh
 
@@ -20,7 +20,7 @@
    - `proposal.approve` / `proposal.reject` / `proposal.cancel` (người đề xuất huỷ); hết hạn sau 7 ngày (đánh dấu ở cuối `/admin/refresh`). Duyệt kiểm lại preview: nếu khác preview lúc đề xuất thì trả `preview_changed` và yêu cầu duyệt lại.
 4. **Quy tắc theo kênh** (design §5.5 bảng): agent chỉ được `proposal.create` cho merge, identity, consent, hàng loạt; người có quyền làm trực tiếp như hôm nay; thao tác hàng loạt > 200 party từ người cũng phải qua đề xuất (người dùng hiện không có thao tác hàng loạt nào trên UI ngoài bulk-resolve outcome; xác nhận ở phase 0, nếu có thì giữ nguyên hành vi).
 5. **REST v1 ghi:** `POST /api/v1/parties/{id}/interactions`, `POST/PATCH /api/v1/tasks`, `POST /api/v1/parties/{id}/notes`, `PUT /api/v1/parties/{id}/tags`, `POST /api/v1/actions/{action_id}/state`, `POST /api/v1/proposals`, `GET /api/v1/proposals`, `GET /api/v1/proposals/{id}`, `POST /api/v1/proposals/{id}/approve|reject|cancel`. Header `Idempotency-Key` bắt buộc với POST/PUT/PATCH của agent.
-6. **MCP:** thêm tool 10–19 và 21 của design §5.9 (`get_proposal`, 6 tool ghi, `propose_identity_link`, `propose_merge`, `propose_consent_change`, `propose_bulk_operation`); tool 20 (`propose_party_relationship`) thêm ở phase 8. Tham số `idempotency_key` bắt buộc. Không có tool duyệt.
+6. **MCP code mode:** sinh lại SDK và chỉ mục `search_api` để có hàm số 10–19 và 21 của design §5.9.3 (`crm.proposals.get/listMine`, 6 hàm ghi, `crm.proposals.identityLink/merge/consentChange/bulkOperation`); số 20 (`partyRelationship`) thêm ở phase 8. **Không thêm tool MCP mới**: hàm ghi chạy qua `execute` và đi qua đúng route REST v1 ghi, đúng lệnh CommandBus, đúng proposal như khi gọi REST trực tiếp. Hàm ghi nhận `idempotencyKey`; nếu code không truyền, SDK điền khoá tất định (hash `idempotency_scope` hoặc hash code, thứ tự lời gọi, hash tham số). Server cưỡng chế tối đa 20 lệnh ghi mỗi `execution_id` (vượt → `use_bulk_proposal`). Không có hàm duyệt; `search_api` không trả khai báo hàm principal không có quyền.
 7. **CLI:** lệnh ghi và `proposals list|show|approve|reject` (chỉ credential `principal_type='human'` có quyền `proposal.approve` mới duyệt được; credential người dùng tạo bằng `credential_admin` với `--type human`).
 8. **Màn hình "Hàng chờ duyệt"** (surface ID mới theo `crm/docs/ui-spec/00-overview.md`): danh sách đề xuất `pending`, xem lý do, bằng chứng, preview diff, nút duyệt/từ chối có ghi chú; badge số đề xuất chờ trên menu cho manager/admin.
 9. **Web UI ghi qua bus:** mọi handler web có lệnh ghi (danh sách phase 0) lấy ctx từ `request.state.ctx` và gọi qua `CommandBus.run`, để người dùng web cũng có audit. Không đổi giao diện, mã trả về, fragment HTMX.
@@ -28,14 +28,14 @@
 
 ## File
 
-- Tạo: migration `0055_proposal.{up,down}.sql`; `crm/src/application/commands/*.py`, `crm/src/application/proposal_service.py`, `crm/src/domain/entities/proposal.py`, `crm/src/domain/ports/proposal_repository.py`, `crm/src/adapters/outbound/sqlite/proposal_repository.py`; route v1 ghi; tool MCP ghi; screen review queue + template; test.
+- Tạo: migration `0055_proposal.{up,down}.sql`; `crm/src/application/commands/*.py`, `crm/src/application/proposal_service.py`, `crm/src/domain/entities/proposal.py`, `crm/src/domain/ports/proposal_repository.py`, `crm/src/adapters/outbound/sqlite/proposal_repository.py`; route v1 ghi; hàm SDK ghi (sinh lại `crm_sdk.ts` và chỉ mục `search_api`); screen review queue + template; test.
 - Sửa: các handler web có lệnh ghi (khoảng 30 route; danh sách đủ từ phase 0), `crm/ops/crmctl.py`, `crm/src/composition.py`, `crm/docs/ui-spec/00-overview.md` (đăng ký surface mới), `crm/docs/agent-access.md`.
 
 ## Các bước
 
 1. Worktree `feat/crm-agent-writes-proposals`.
 2. Migration + repository + `ProposalService` + test vòng đời.
-3. Lệnh ghi an toàn + REST v1 + MCP + test idempotency.
+3. Lệnh ghi an toàn + REST v1 + sinh lại SDK code mode + giới hạn ghi theo `execution_id` + test idempotency.
 4. Bốn loại đề xuất, preview và apply + test.
 5. Chuyển handler web sang bus theo từng nhóm màn hình; sau mỗi nhóm chạy test màn hình tương ứng.
 6. Screen review queue.
@@ -47,13 +47,14 @@
 | Mức | Nội dung |
 |---|---|
 | Unit | Gửi cùng `idempotency_key` 3 lần → 1 activity, 1 task; cùng key khác body → 409 |
-| Unit | Agent gọi merge trực tiếp (qua REST v1 ghi) → 403; `propose_merge` → proposal `pending`, 0 thay đổi bảng party/identity; duyệt bởi manager → merge xảy ra, audit có `proposal_id` và actor là manager |
+| Unit | Agent gọi merge trực tiếp (qua REST v1 ghi) → 403; `crm.proposals.merge()` trong `execute` (hoặc `POST /api/v1/proposals`) → proposal `pending`, 0 thay đổi bảng party/identity; duyệt bởi manager → merge xảy ra, audit có `proposal_id` và actor là manager |
 | Unit | Preview thay đổi giữa lúc đề xuất và lúc duyệt → `preview_changed` |
 | Unit | Đề xuất hàng loạt: chạy thử trả đúng số party, mẫu ≤ 20, không ghi; vượt 2.000 → từ chối |
 | Unit | Consent qua đề xuất thiếu bằng chứng → từ chối |
-| Unit | Tag nhạy cảm qua `set_party_tags` → từ chối kể cả khi khách đã đồng ý riêng; tag `product_interest` → được; đề xuất hàng loạt gắn tag nhạy cảm → từ chối ngay khi tạo |
+| Unit | Tag nhạy cảm qua `crm.parties.setTags` → từ chối kể cả khi khách đã đồng ý riêng; tag `product_interest` → được; đề xuất hàng loạt gắn tag nhạy cảm → từ chối ngay khi tạo |
 | Tích hợp | Mọi test màn hình web hiện có xanh (fragment HTMX, mã trả về); mỗi lệnh ghi web có đúng một audit `channel='web'` |
-| Tích hợp | Bộ kịch bản agent thêm 10 câu ghi/đề xuất |
+| Tích hợp | Bộ kịch bản agent thêm 10 câu ghi/đề xuất chạy qua `execute` |
+| Unit (code mode) | Code gọi `crm.interactions.log` 21 lần trong một lần chạy → 20 bản ghi rồi lỗi `use_bulk_proposal`; chạy lại cùng đoạn code → 0 bản ghi mới (khoá tất định); code gọi thẳng `fetch` tới route merge thực thi (nếu có) → 403 như REST; mọi lệnh ghi trong sandbox có audit kèm `execution_id` và `mcp.execute` liệt kê chúng |
 
 ## Kiểm "CRM như cũ"
 
@@ -71,6 +72,7 @@ Có (migration, khởi động lại CRM, thêm màn hình mới cho manager/adm
 |---|---|---|
 | Chuyển 30 handler web sang bus làm vỡ một màn hình | Trung bình × Trung bình | Chuyển theo nhóm, test màn hình hiện có; chuỗi thao tác giả lập so trạng thái |
 | Agent tạo nhiều đề xuất rác | Trung bình × Thấp | Rate limit; hết hạn 7 ngày; người đề xuất huỷ được |
+| Agent dùng vòng lặp trong code để làm việc hàng loạt, né đề xuất | Trung bình × Cao | Giới hạn 20 lệnh ghi mỗi lần chạy và 30 lệnh ghi/phút mỗi credential ở server; việc lớn hơn chỉ qua `bulkOperation` |
 | Người duyệt bấm duyệt không đọc | Trung bình × Trung bình | Preview diff rõ, bằng chứng hiển thị bắt buộc; merge vẫn undo được |
 
 ## Rollback
