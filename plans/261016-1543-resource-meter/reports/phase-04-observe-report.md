@@ -46,3 +46,19 @@ User duyệt và tự cài sau khi `main` fast-forward lên `84b83cdf` (18/10 00
     31.473 lần, OOM kill 0, PSI bộ nhớ tối đa 16,5. Lúc khởi động bước (03:02) CPU bị throttle
     mạnh (trần 4 nhân), sau đó container gần như rảnh trong lúc chờ Sapo (CPU khoảng 14%).
 - Chưa có `compare` vì đây là ngày đầu có số đo.
+
+## Đêm 2: nightly 19/10 03:00 (kiểm 09:5x, chỉ đọc)
+
+- `status`: running, RSS 4 MB, unit peak 27 MB (dưới `MemoryMax` 32 MB), MemoryMax 0 lần, OOM 0,
+  CPU 0,054% một nhân. Từ lúc cài (18/10 00:32, khoảng 33 giờ): CPU 65 s (0,055%), `throttled_usec`
+  1.031 s, tức 0,86% thời gian, dưới ngưỡng 1%.
+- `read_bytes`: 1.098/4.775 dòng process khác 0.
+- `report --job pipeline_batch_nightly_job` (nightly `7928f479`, 5,2 phút): RSS cao nhất
+  `sapo_dbt_assets` 1,65 GB (52,9 s tính cả khởi động tiến trình; Dagster ghi 32,8 s thực thi);
+  dài nhất `approach_script_autogen` 179 s (codex vẫn chưa đăng nhập); model dài nhất
+  `fact_fulfillments` 0,9 s.
+- `compare --base 2026-10-18`: 25 bước nặng hơn quá 10%, đều là bước check asset và `sapo_dbt_assets`
+  chậm hơn 30–780% về thời gian, RSS gần như không đổi. Đêm 18/10 các bước check của
+  `orders_batch` chạy muộn và một mình (sau 9 phút chờ Sapo); đêm nay chúng khởi động cùng lúc nên
+  tranh CPU lúc khởi động (trần 4 nhân). Tổng nightly 5,2 phút, bằng số nền. Hai model chỉ có ở đêm
+  nay (`dim_sku_alias`, `int_sapo_inventories`) là do đêm trước chạy dưới 0,1 s nên không ghi.

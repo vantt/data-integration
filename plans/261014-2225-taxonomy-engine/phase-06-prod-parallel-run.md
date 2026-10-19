@@ -75,7 +75,8 @@ Theo runbook: dừng `data_platform`, commit seed đang sống, `git revert` d�
 | 15/10 (từ 15:20, chưa tính) | tay `93ad3580` SUCCESS 55/55, 0 đỏ mới | 0 | 0 | 6030/6030 · 6395/6395 | 5,3 phút | 6,66 GiB | — |
 | 16/10 (cả ngày, chốt 17/10) | lịch `3af400cf` 03:01 SUCCESS 59/59, 0 đỏ mới | 0 (615 lần chạy) | 0 | 6033/6033 · 6398/6398 | 5,3 phút | memory.peak 8,01 GiB (từ 15/10 18:52, gồm page cache; oom_kill 0) | 1 |
 | 17/10 (cả ngày, chốt 18/10) | lịch `5ee65cf2` 03:01 SUCCESS 59/59, 567 check, 0 đỏ mới (so với tập đỏ đã biết: 3 check sheets) | 0 (615 lần chạy) | 0 | 6034/6034 · 6399/6399 | 5,4 phút | memory.peak 8,01 GiB (không đổi); lấy mẫu 02:52–03:40: anon đỉnh **3,53 GiB**, current đỉnh 8,00 GiB (file cache 4,72 GiB), oom_kill 0 | 2 |
-| 18/10 (kiểm 09:4x, ngày chưa hết) | lịch `d0b09efb` 03:01 SUCCESS 59/59, 567 check, 0 đỏ mới (3 check sheets đã biết) | 0 (240 lần chạy) | 0 | 6034/6034 · 6399/6399 | **13,9 phút** (vượt ngưỡng 10 phút, nguyên nhân ngoài, xem ghi chú 18/10) | bỏ đo; oom_kill 0 | 3 |
+| 18/10 (cả ngày, chốt 19/10) | lịch `d0b09efb` 03:01 SUCCESS 59/59, 567 check, 0 đỏ mới (3 check sheets đã biết) | 0 (610 lần chạy) | 0 | 6034/6034 · 6399/6399 | **13,9 phút** (vượt ngưỡng 10 phút, nguyên nhân ngoài, xem ghi chú 18/10) | bỏ đo; oom_kill 0 | 3 |
+| 19/10 (kiểm 09:4x, ngày chưa hết) | lịch `7928f479` 03:00 SUCCESS 59/59, 567 check; ngoài 3 check sheets đã biết có thêm `orders_batch` `row_count_within_trend` WARN (5 đơn so với trung vị 7 ngày 21, đêm Chủ nhật; check theo thời điểm) | 0 (245 lần chạy) | 0 | 6034/6034 · 6399/6399 | 5,2 phút | bỏ đo; oom_kill 0 | 4 |
 
 ## Deploy lần 1 (15/10/2026 15:19)
 
