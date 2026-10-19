@@ -103,3 +103,5 @@ Mỗi deploy rollback theo runbook (`git revert` phạm vi đã deploy, `deploym
 - Q4: giờ chốt ngày **06:00**.
 - Q5: deploy **phase 1 tách riêng, sớm nhất có thể** (mỗi đêm chưa chụp là mất dữ liệu); cần user duyệt giờ.
 - Q6: **có** — lập plan riêng, ưu tiên, chuyển `fact_inventory_snapshot` / `mart_inventory_health` / dashboard tồn kho sang dữ liệu chụp mới (đổi số từ cũ sang đúng; qua gate S, user duyệt danh sách đổi).
+
+**Nới gate (user, 18/10/2026 ~00:20):** chấp nhận commit `dfa3a0f3`: `dagster_inventory diff --allow-new` coi là thêm mới (INFO) khi một asset cũ chưa đại diện node dbt nào bắt đầu đại diện một node dbt mới hoàn toàn, mọi thuộc tính khác giữ nguyên. Các thay đổi khác của asset cũ vẫn fail.
