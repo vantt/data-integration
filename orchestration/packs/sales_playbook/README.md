@@ -19,7 +19,8 @@ Chạy trong `pipeline_batch_nightly_job` / `pipeline_batch_fullrefresh_job` (`N
 | Biến | Nguồn | Ghi chú |
 |---|---|---|
 | `APPROACH_SCRIPT_LOAD_URL` | Tenant setting (env cùng tên, nếu không có thì `orchestration/tenants/<tenant>/config.py`) | Không có mặc định; thiếu thì asset lỗi `TenantConfigError` |
-| `APPROACH_SCRIPT_AUTOGEN_PROVIDER` (`codex`), `APPROACH_SCRIPT_AUTOGEN_REASONING_EFFORT` (`low`), `APPROACH_SCRIPT_AUTOGEN_LIMIT` (10), `APPROACH_SCRIPT_AUTOGEN_TIMEOUT_SEC` (1800), `CRM_DB_PATH` | Env, có mặc định | |
+| `APPROACH_SCRIPT_AUTOGEN_ENABLED` | Tenant setting như trên (`true`/`false`; Fine Japan: `false`) | Tắt thì `approach_script_autogen` trả về `disabled` ngay, không gọi model; các model action queue của pack (CRM đọc) vẫn chạy. Không tắt bằng `APPROACH_SCRIPT_AUTOGEN_LIMIT=0`: 0 nghĩa là không giới hạn |
+| `APPROACH_SCRIPT_AUTOGEN_PROVIDER` (`codex`), `APPROACH_SCRIPT_AUTOGEN_REASONING_EFFORT` (`low`), `APPROACH_SCRIPT_AUTOGEN_LIMIT` (10), `APPROACH_SCRIPT_AUTOGEN_TIMEOUT_SEC` (1800), `CRM_DB_PATH` | Env, có mặc định | Lỗi codex ghi 500 ký tự cuối của stderr (lỗi thật nằm sau banner) |
 
 ## Phần còn là của Fine Japan
 

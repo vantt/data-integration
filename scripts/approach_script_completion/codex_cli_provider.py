@@ -9,6 +9,8 @@ from .errors import ApproachScriptCompletionError
 # `-` cuối = đọc prompt từ stdin (codex exec hỗ trợ). --skip-git-repo-check:
 # generator chạy từ repo nhưng không cần codex đụng git.
 DEFAULT_CODEX_CMD = "codex exec --skip-git-repo-check -"
+# Số ký tự CUỐI của stderr đưa vào lỗi khi codex fail.
+STDERR_TAIL_CHARS = 500
 
 
 class CodexCliCompletionProvider:
@@ -62,7 +64,8 @@ class CodexCliCompletionProvider:
         stdout = proc.stdout.decode("utf-8", errors="replace")
         if proc.returncode != 0:
             stderr = proc.stderr.decode("utf-8", errors="replace")
+            # Lỗi thật nằm cuối: codex in banner (phiên bản, model, session) trước.
             raise ApproachScriptCompletionError(
-                f"codex rc={proc.returncode}: {stderr.strip()[:200]}"
+                f"codex rc={proc.returncode}: {stderr.strip()[-STDERR_TAIL_CHARS:]}"
             )
         return stdout

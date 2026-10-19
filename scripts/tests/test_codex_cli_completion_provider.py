@@ -44,3 +44,14 @@ def test_complete_raises_on_missing_binary():
 def test_model_label_is_first_token_of_codex_cmd():
     provider = CodexCliCompletionProvider(codex_cmd="codex exec --skip-git-repo-check -")
     assert provider.model_label == "codex"
+
+
+def test_error_keeps_the_end_of_stderr():
+    """codex prints a banner first; the real error is at the end and must survive truncation."""
+    script = "import sys; sys.stderr.write('banner ' * 200 + 'Not logged in'); sys.exit(1)"
+    provider = CodexCliCompletionProvider(codex_cmd=f"{_PY} -c {shlex.quote(script)}")
+    with pytest.raises(ApproachScriptCompletionError) as exc:
+        provider.complete("prompt", timeout=10)
+    message = str(exc.value)
+    assert message.endswith("Not logged in")
+    assert len(message) < 600

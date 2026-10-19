@@ -35,6 +35,14 @@ LIMIT = os.environ.get("APPROACH_SCRIPT_AUTOGEN_LIMIT", "10")
 TIMEOUT_SEC = int(os.environ.get("APPROACH_SCRIPT_AUTOGEN_TIMEOUT_SEC", "1800"))
 CRM_DB_PATH = os.environ.get("CRM_DB_PATH", "/app/var/crm_data/crm.db")
 
+# Bật/tắt cả bước sinh (APPROACH_SCRIPT_AUTOGEN_ENABLED) là cấu hình tenant. Tắt thì asset
+# trả về "disabled" ngay, không gọi provider. Không dùng LIMIT=0 để tắt: 0 nghĩa là không giới hạn.
+ENABLED_VALUES = ("1", "true", "yes", "on")
+
+
+def autogen_enabled() -> bool:
+    return setting("APPROACH_SCRIPT_AUTOGEN_ENABLED").strip().lower() in ENABLED_VALUES
+
 
 def _run_fire_and_forget(context: AssetExecutionContext, cmd: list[str], timeout: int) -> tuple[int | None, list[str]]:
     """Popen + stream stdout (KHÔNG dùng capture_output=True — tránh pipe-buffer
@@ -69,6 +77,9 @@ def _run_fire_and_forget(context: AssetExecutionContext, cmd: list[str], timeout
     ),
 )
 def approach_script_autogen(context: AssetExecutionContext) -> Output:
+    if not autogen_enabled():
+        context.log.info("approach_script_autogen: tắt theo cấu hình tenant (APPROACH_SCRIPT_AUTOGEN_ENABLED)")
+        return Output(value="disabled", metadata={"status": "disabled"})
     cmd = [
         sys.executable, SCRIPT_PATH,
         "--cohort-from-queue",

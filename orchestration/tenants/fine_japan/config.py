@@ -19,3 +19,8 @@ CRM_DRILL_URL = "http://crm_drill_runner:9000/run-drill"
 # Where the sales_playbook pack loads generated approach scripts
 # (orchestration/packs/sales_playbook/approach_script_generation.py).
 APPROACH_SCRIPT_LOAD_URL = "http://crm:8090/admin/approach-scripts/load"
+
+# Whether the nightly approach_script_autogen asset calls the completion provider at all
+# ("true"/"false"). Off for Fine Japan: the asset returns "disabled" without running the
+# generator. The rest of the sales_playbook pack (the action queues the CRM reads) is unaffected.
+APPROACH_SCRIPT_AUTOGEN_ENABLED = "false"
