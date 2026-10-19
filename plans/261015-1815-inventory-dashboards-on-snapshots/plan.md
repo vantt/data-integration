@@ -161,7 +161,7 @@ Xem [definition-decisions.md](definition-decisions.md): QĐ-TK-01 đến QĐ-TK-
 
 ## Câu hỏi mở cho user
 
-1. Có đồng ý **N = 7 đêm chụp liên tiếp** là điều kiện deploy không, hay muốn deploy sớm hơn (ví dụ 3 đêm) và chấp nhận card xu hướng ít điểm trong tuần đầu?
+1. **Đã chốt 19/10/2026: giữ N = 7 đêm.** ~~Có đồng ý **N = 7 đêm chụp liên tiếp** là điều kiện deploy không, hay muốn deploy sớm hơn (ví dụ 3 đêm) và chấp nhận card xu hướng ít điểm trong tuần đầu?~~
 2. Chọn giờ deploy nào (ngoài 02:30–04:00), và có muốn gộp với đợt deploy của report-productization phase 12 không?
 3. ~~Cảnh báo đối soát chỉ hiện ở Dagster (asset check warn) và trên card nguồn dữ liệu là đủ, hay cần thêm một dòng vào digest buổi sáng trên Lark (QĐ-TK-07)?~~ Đã chốt theo QĐ-TK-07 (a) + (x).
 4. ~~Plan lịch sử giá/tồn có thể thêm `bin_location` và `wait_to_pack` vào `fact_inventory_position_daily` ngay ở phase 2 của nó không? Nếu không, plan này sẽ tự thêm (chỉ thêm cột).~~ Đã có: commit `15054360` (`feat/price-inventory-history`) thêm `bin_location` và `wait_to_pack` vào `fact_inventory_position_daily`; raw chụp cả hai trường từ 15/10 18:52 (c8 xác nhận 15/10/2026).

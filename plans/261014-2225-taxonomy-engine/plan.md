@@ -206,6 +206,8 @@ Plan `261014-2225-pack-mechanism` phase 08 làm trước plan này và đã ch�
 
 **Đổi cách đo, điều kiện dừng 4 (user, 18/10/2026 ~00:20):** bỏ RAM khỏi điều kiện chuyển cột. Phần RAM bộ máy thêm vào đã đo một lần sau deploy (+2%, 6,66 so với 6,54 GiB trên container vừa khởi động); `memory.peak` cộng dồn và tính page cache nên không so được giữa các đêm (nightly 17/10: anon đỉnh 3,53 GiB, `memory.peak` 8,01 GiB). Giữ điều kiện thời gian nightly (10% hoặc 10 phút). Thay RAM bằng kiểm an toàn mỗi đêm: `memory.events` `oom_kill` = 0. Bỏ lịch lấy mẫu RAM 02:52; số RAM sau này lấy từ `resource-meter`.
 
+**Điều kiện thời gian (user, 19/10/2026):** xét theo thời gian **bước dbt** của nightly (nơi bộ máy chạy, lấy từ `resource-meter`/Dagster), không theo tổng nightly, vì tổng nightly phụ thuộc API Sapo (đêm 18/10: 13,9 phút do Sapo sửa 2.606 đơn cũ; dbt 33 giây, bình thường).
+
 ## Nhật ký thực thi (controller)
 
 - **15/10/2026 15:19:** deploy lần 1 (phase 1–5 + chuẩn bị phase 6), user duyệt 15:12. `main` = `d31d51f2`; `data_platform` tạo lại với `DBT_EXCLUDE_RESOURCE_TYPES=unit_test`; biến `taxonomy_engine_customer_type = false` (mart chạy SQL cũ, không đổi số). Gate S so với prod: golden 83/83 kể cả full refresh; 3 khác biệt đã chấp nhận (checksum 3 mart, nội dung `lbl_customer_type`, 3 job file-drop không còn chọn `lbl_customer_type`). Sau deploy: nightly tay `93ad3580` 55/55, 562 check, 0 đỏ mới; parity 15/10 cả 2 domain đạt, 0 diff, 0 `UNMAPPED`.
