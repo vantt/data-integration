@@ -590,7 +590,9 @@ mod tests {
             .any(|l| l.starts_with("1792195300\t043102d9bd91\t043102d9bd91")));
         assert!(lines[3].split('\t').nth(1) == Some("self"));
 
-        let processes = read_out(&t, "processes", day);
+        // Process rows go to the day of their last sample (the fixed `now`), not the day the
+        // collector started (the real clock).
+        let processes = read_out(&t, "processes", local_day(now + 1.0, c.cfg.utc_offset_hours));
         let rows: Vec<Vec<&str>> = processes.lines().skip(1).map(|l| l.split('\t').collect()).collect();
         assert_eq!(processes.lines().next(), Some(PROCESSES_HEADER));
         assert_eq!(rows.len(), 2, "{processes}");

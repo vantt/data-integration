@@ -21,6 +21,9 @@ TimeoutStopSec=10
 MemoryMax=32M
 MemorySwapMax=0
 CPUQuota=2%
+# Same 2% average, accounted per second (20 ms) instead of per 100 ms (2 ms): one scan takes more
+# than 2 ms, so with the default period nearly every scan was throttled.
+CPUQuotaPeriodSec=1s
 Nice=19
 IOSchedulingClass=idle
 

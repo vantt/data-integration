@@ -5,6 +5,7 @@ use std::fs;
 use std::path::{Path, PathBuf};
 
 use crate::cgroup;
+use crate::procfs::{ProcFs, CLK_TCK};
 use crate::clock::{day_stamp, local_day, parse_day_stamp};
 use crate::reader::{load, num, scan, Table};
 
@@ -698,6 +699,18 @@ fn meter_pids(proc_root: &Path) -> Vec<u32> {
     pids
 }
 
+/// Seconds since the oldest running meter process started (the unit's main process).
+fn meter_running_seconds(proc_root: &Path, pids: &[u32], now: f64) -> Option<f64> {
+    let procfs = ProcFs::new(proc_root);
+    let btime = procfs.btime()? as f64;
+    let start = pids
+        .iter()
+        .filter_map(|&pid| procfs.stat(pid))
+        .map(|s| btime + s.start_ticks as f64 / CLK_TCK as f64)
+        .reduce(f64::min)?;
+    Some(now - start)
+}
+
 /// Returns the text and whether the meter is running (a recent `self` row).
 pub fn status(o: &StatusOptions) -> Result<(String, bool), String> {
     let today = local_day(o.now, o.utc_offset_hours);
@@ -742,8 +755,17 @@ pub fn status(o: &StatusOptions) -> Result<(String, bool), String> {
                 .lines()
                 .find_map(|l| l.strip_prefix(k).and_then(|v| v.trim().parse::<f64>().ok()))
         };
-        let throttled = match (field("nr_throttled "), field("nr_periods ")) {
-            (Some(t), Some(p)) if p > 0.0 => format!("{:.2}% of periods", t / p * 100.0),
+        // Share of wall time the unit was throttled since the meter started: the acceptance
+        // criterion. nr_throttled / nr_periods overstates it, because only periods in which the
+        // meter had work are counted, and one scan longer than the per-period quota is throttled.
+        let running_s = meter_running_seconds(&o.proc_root, &pids, o.now);
+        let throttled = match (field("throttled_usec "), running_s) {
+            (Some(t), Some(r)) if r > 0.0 => format!(
+                "{:.2}% of time ({:.0} s of {:.0} s since start)",
+                t / 1e6 / r * 100.0,
+                t / 1e6,
+                r
+            ),
             _ => "-".into(),
         };
         out += &format!(
@@ -977,9 +999,15 @@ mod tests {
         t.file(&format!("cg/system.slice/{UNIT_NAME}/memory.peak"), "4194304\n");
         t.file(
             &format!("cg/system.slice/{UNIT_NAME}/cpu.stat"),
-            "usage_usec 1\nnr_periods 200\nnr_throttled 1\n",
+            "usage_usec 1\nnr_periods 200\nnr_throttled 1\nthrottled_usec 900000\n",
         );
         t.file("proc/4242/comm", "resource-meter\n");
+        // Started 100 s before T + 180: btime T, start ticks 80 s.
+        t.file("proc/stat", &format!("cpu 1 2 3\nbtime {}\n", T as u64));
+        t.file(
+            "proc/4242/stat",
+            "4242 (resource-meter) S 1 4242 4242 0 -1 0 0 0 0 0 1 1 0 0 39 19 1 0 8000 0 0",
+        );
         t.file("proc/4243/comm", "bash\n");
         let o = StatusOptions {
             dir: t.path().into(),
@@ -991,7 +1019,7 @@ mod tests {
         let (text, running) = status(&o).unwrap();
         assert!(running, "{text}");
         assert!(text.contains("resource-meter processes: 4242"));
-        assert!(text.contains("MemoryMax reached 0 time(s)") && text.contains("0.50% of periods"));
+        assert!(text.contains("MemoryMax reached 0 time(s)") && text.contains("0.90% of time (1 s of 100 s since start)"));
         assert!(text.contains("today: 7 container rows, 0 process rows, 3 step rows, 3 model rows"));
         assert!(text.contains("days 2026-10-16 .. 2026-10-17"));
 

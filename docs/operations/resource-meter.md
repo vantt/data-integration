@@ -31,7 +31,7 @@ sudo ./install.sh --uninstall --purge      # xoá cả dữ liệu
 
 Unit `resource-meter.service` chạy bằng root. Giới hạn và quyền:
 
-- Tài nguyên: `MemoryMax=32M`, `CPUQuota=2%`, `Nice=19`, `IOSchedulingClass=idle`.
+- Tài nguyên: `MemoryMax=32M`, `CPUQuota=2%` với `CPUQuotaPeriodSec=1s` (20 ms mỗi giây, đủ cho một lần quét), `Nice=19`, `IOSchedulingClass=idle`.
 - Hệ thống file chỉ đọc, trừ `/var/lib/resource-meter`. Cgroup cũng chỉ đọc.
 - Chỉ giữ hai capability: `CAP_SYS_PTRACE` và `CAP_DAC_READ_SEARCH`.
 - Mạng chỉ loopback.

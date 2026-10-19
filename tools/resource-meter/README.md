@@ -42,7 +42,8 @@ resource-meter compare --base 2026-10-18 --job pipeline_batch_nightly_job --thre
   appear on only one of the two days.
 - **`status`** exits 0 when the meter wrote its `self` row in the last 150 s, and exits 3
   otherwise. It also prints the unit's memory peak, how often `MemoryMax` was reached,
-  OOM kills, and the share of CPU periods throttled, all read from the unit's cgroup.
+  OOM kills, and the share of wall time it was CPU-throttled since it started (`throttled_usec`
+  divided by the age of the meter process), all read from the unit's cgroup.
 
 ## Build
 
@@ -233,7 +234,7 @@ refresh, also get memory and CPU.
 The unit [`resource-meter.service`](resource-meter.service) runs `resource-meter run` as
 root, with these limits:
 
-- resources: `MemoryMax=32M`, `CPUQuota=2%`, `Nice=19`, `IOSchedulingClass=idle`;
+- resources: `MemoryMax=32M`, `CPUQuota=2%` with `CPUQuotaPeriodSec=1s` (20 ms per second, so one scan is not throttled), `Nice=19`, `IOSchedulingClass=idle`;
 - read-only filesystem except `/var/lib/resource-meter`;
 - cgroups read-only;
 - only `CAP_SYS_PTRACE` (to read `/proc/<pid>/io`) and `CAP_DAC_READ_SEARCH` (to read
