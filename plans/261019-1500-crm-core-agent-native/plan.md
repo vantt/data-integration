@@ -159,6 +159,8 @@ Mỗi phase có rollback riêng trong file phase. Nguyên tắc chung: code roll
 2. **Q7. Mặc định khi chưa có consent:** hôm nay chưa có thông tin là được gọi cả chăm sóc lẫn tiếp thị. Giữ vậy hay chặn tiếp thị khi chưa có consent? **Đề xuất:** giữ cho chăm sóc; tiếp thị chờ ý kiến pháp chế (phase 7 để là cấu hình).
 3. **Q9. Holdout:** tỉ lệ bao nhiêu là chấp nhận được, và có đưa go-live A2 (mã HUG50, in tem) vào phase 10 không? **Đề xuất:** 20% (như `wh_deadstock_target.is_holdout`); phase 10 chỉ làm phần kỹ thuật, go-live là việc vận hành riêng.
 4. **Q10. Thắt quyền cho người** (staff thấy SĐT che với khách không thuộc mình, research §5): có muốn làm không? **Đề xuất:** chưa làm trong plan này; policy đã sẵn chỗ để bật bằng cấu hình sau.
-5. **Q15. Ngưỡng tỷ lệ code đúng lần đầu:** đề xuất ≥ 80% lần đầu và ≥ 95% sau một lần thử lại trên 25 tác vụ CRM. Nếu Monty dưới ngưỡng mà `quickjs-rs` (JS) vượt rõ ở cổng quyết định của plan host, có chấp nhận đổi sang agent viết JS không? **Đề xuất:** có, CRM không phải đổi gì.
+5. **Q15. Ngưỡng tỷ lệ code đúng lần đầu:** đề xuất ≥ 80% lần đầu và ≥ 95% sau một lần thử lại trên 25 tác vụ CRM. Nếu Monty dưới ngưỡng mà `quickjs-rs` (JS) vượt rõ ở cổng quyết định của plan host, có chấp nhận đổi sang agent viết JS không? **Đề xuất:** có, CRM không phải đổi gì. **User chốt 20/10/2026: chấp nhận** (agent chỉ viết code gọi hàm, lọc, đếm; JS hay Python đều được vì mọi cưỡng chế nằm ở CRM).
+
+**Đang bàn (user 20/10/2026):** user tạm đồng ý bỏ repo riêng, đặt phần keo code mode thành module dùng chung trong repo; nhưng cần bàn thêm cách đóng gói vì sau này kho dữ liệu, report và CRM có thể thành các gói riêng. Chưa sửa plan host cho tới khi chốt.
 
 Câu hỏi về tên repo, nơi lưu repo, RAM của sidecar thuộc plan host.

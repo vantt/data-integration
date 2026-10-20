@@ -41,6 +41,12 @@ Thư mục module cho dbt, CDM đóng rò, taxonomy gom về một module (SQL g
 | Tách stack dev/prod (prod chạy từ image, không bind-mount code) | 260705 phase 5; khi xong, deploy không còn "sửa file là sửa prod" |
 | Bake `dbt_packages` và DuckDB extensions vào image | Bỏ phụ thuộc mạng lúc start |
 
+**Bố cục thư mục (user 20/10/2026, chưa chốt; quyết trong thiết kế Đợt 2):**
+- Phải bàn lại cùng cách đóng gói **theo bộ chức năng** (user nói rõ 20/10: kho dữ liệu, report, CRM, mỗi bộ là một gói): vẽ ranh giới các bộ trước, rồi mới chọn bố cục. User nghiêng về hướng (b). Hai hướng: (a) theo loại: `packages/` (thư viện), `apps/` (app độc lập) cộng nhóm riêng cho pipeline (`ingestion`, `transformation`, `orchestration`), nội dung report (`evidence`, `rill`, `analytics`) và cấu hình khách (`tenants`); (b) theo gói sản phẩm: `products/<gói>/` chứa app và cấu hình của gói, cộng thư mục thư viện dùng chung.
+- Lý do chưa chốt `apps/`: repo không chỉ có app (pipeline, nội dung report, cấu hình khách không phải app); gói sản phẩm và app là hai trục khác nhau; dời thư mục tốn và rủi ro (compose, Dockerfile, bind mount prod, script, dbt) trong khi Dockerfile theo thành phần và image có phiên bản làm được mà không cần dời.
+- Tạm thời: thư viện dùng chung đầu tiên đặt ở `packages/agent-codemode/` (tự đứng được, `pyproject.toml` và phiên bản riêng, luật chặn import ngược). Vị trí này có thể đổi theo quyết định Đợt 2; chỉ luật ranh giới và đường cài đặt trong image phụ thuộc đường dẫn. Khi có từ hai `pyproject.toml` trở lên: quản lý bằng uv workspace với một file khoá chung để các image không lệch phiên bản.
+- App mới (nếu có) tạm đặt ở thư mục gốc như hiện nay. Không dời app hiện có trước khi Đợt 2 quyết.
+
 ## Đợt 3 — dbt chín muồi
 
 | Việc | Vì sao | Phụ thuộc |
