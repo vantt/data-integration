@@ -49,3 +49,11 @@ warehouse.
 
 - Nightly xanh; `approach_script_autogen` trả về `disabled`.
 - `fact_variant_price_daily` và `fact_inventory_position_daily` có thêm đúng một `as_of_date` (19/10).
+
+## Kết quả nightly 20/10 (kiểm 09:5x, chỉ đọc): đạt
+
+- Nightly `c633a631` 03:00: SUCCESS 60/60 step, 615 check, chỉ 3 check sheets đỏ đã biết; 2,4 phút.
+- `approach_script_autogen`: log "tắt theo cấu hình tenant", xong trong 45 ms (trước đây 3 phút).
+- `fact_variant_price_daily` có thêm đúng `as_of_date` 19/10: 9.769 dòng, 1.460 cặp có giá (bằng số
+  đo 15/10). `fact_inventory_position_daily` thêm 19/10: 2.052 dòng (bằng số đo 15/10).
+- `fact_variant_price_changes`: 9.844 khoảng, 9.769 khoảng hiện hành.

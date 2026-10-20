@@ -62,3 +62,15 @@ User duyệt và tự cài sau khi `main` fast-forward lên `84b83cdf` (18/10 00
   `orders_batch` chạy muộn và một mình (sau 9 phút chờ Sapo); đêm nay chúng khởi động cùng lúc nên
   tranh CPU lúc khởi động (trần 4 nhân). Tổng nightly 5,2 phút, bằng số nền. Hai model chỉ có ở đêm
   nay (`dim_sku_alias`, `int_sapo_inventories`) là do đêm trước chạy dưới 0,1 s nên không ghi.
+
+## Đêm 3: nightly 20/10 03:00 (kiểm 09:5x, chỉ đọc)
+
+- Unit chưa được cài lại bản `aa3a5cfb`: `status` vẫn báo theo chu kỳ (15,12%), unit peak 30 MB
+  (dưới 32 MB), MemoryMax 0 lần, OOM 0, CPU 0,055% một nhân. `read_bytes`: 910/4.802 dòng process
+  khác 0.
+- `report --job pipeline_batch_nightly_job` (nightly `c633a631`, 2,4 phút, lần đầu có lịch sử
+  giá/tồn và `approach_script_autogen` tắt): RSS cao nhất `sapo_dbt_assets` 1,72 GB (50,5 s tính
+  cả khởi động; Dagster 36,5 s); model mới nặng nhất `fact_variant_price_changes` 1,1 s, 1,27 GB.
+- `compare --base 2026-10-19`: 16 bước nặng hơn quá 10%, đều là bước check và bước file-drop chậm
+  hơn khi khởi động cùng lúc (RSS không đổi); `approach_script_autogen` không còn tốn 3 phút. Mới:
+  3 model lịch sử và check `capture_coverage` của snapshot sản phẩm.
