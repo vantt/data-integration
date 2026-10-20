@@ -1,12 +1,12 @@
 # Phase 0: đo hiện trạng, công cụ parity và migration down, chốt câu hỏi
 
-**Effort:** 1.25d · **Phụ thuộc:** — · **Đụng prod:** chỉ đọc (dùng bản backup có sẵn, khôi phục vào scratch) · **Cần user duyệt giờ:** không · **Migration:** không
+**Effort:** 1d · **Phụ thuộc:** — · **Đụng prod:** chỉ đọc (dùng bản backup có sẵn, khôi phục vào scratch) · **Cần user duyệt giờ:** không · **Migration:** không
 
 ## Bối cảnh
 
 - Mọi phase sau phải chứng minh "CRM chạy như cũ". Hiện chưa có công cụ nào so hành vi trước/sau trên dữ liệu thật; test chỉ dùng fixture.
 - Runner migration không chạy file down (`crm/src/adapters/outbound/sqlite/migrations.py:30-150`); 26/73 file migration là `.down.sql`, nhiều migration cũ không có down. Muốn "migration có down" dùng được thì cần một công cụ.
-- Một số giả định của thiết kế chưa kiểm được khi lập plan (không mở `crm.db`): phân bố `identity_type`, số dòng `crm_party_external_id`, phân bố `consent_enum`, phiên bản sqlite trong image, cách model dbt mới của pack lên serving, bậc CM của `lifetime_contribution_margin`, tương thích MCP SDK.
+- Một số giả định của thiết kế chưa kiểm được khi lập plan (không mở `crm.db`): phân bố `identity_type`, số dòng `crm_party_external_id`, phân bố `consent_enum`, phiên bản sqlite trong image, cách model dbt mới của pack lên serving, bậc CM của `lifetime_contribution_margin`.
 
 ## Yêu cầu
 
@@ -21,8 +21,7 @@
    - `crm_app_user`: số người theo `role`.
 3. **Kiểm kỹ thuật:**
    - Phiên bản `sqlite3.sqlite_version` trong image `crm` hiện tại (chạy `docker run --rm --entrypoint python <image crm> -c ...`, không exec vào container đang chạy); cần ≥ 3.35.
-   - **Code mode (design §5.9.2):** image `crm` hiện có Deno chưa (kỳ vọng: chưa); tải bản Deno ghim vào scratch, đo trong một container giới hạn RAM như `crm`: RAM đỉnh và thời gian của một lần `execute` mẫu (khởi động + 20 lời gọi HTTP loopback tới một server giả), khi chạy 2 lần song song; kiểm `--allow-net=127.0.0.1:<cổng>` chặn host khác, cổng khác và redirect ra ngoài; đọc giới hạn RAM của service `crm` trong `docker-compose.yml` và RAM trống thực tế của máy (`free -m`, `docker stats --no-stream`, chỉ đọc); cho model viết TS 5 tác vụ mẫu trên SDK nháp và ghi tỉ lệ chạy đúng lần đầu. Nếu RAM vượt ngân sách, ghi đề xuất chuyển sang phương án V8 isolate.
-   - Cài thử MCP Python SDK (bản mới nhất ổn định) cùng `fastapi==0.115.6`, `pydantic==2.10.6`, `uvicorn==0.34.0` trong venv scratch (`pip install --dry-run` rồi cài thật trong scratch); ghi phiên bản ghim được và xung đột nếu có.
+   - Code mode: không đo sandbox ở phase này (bài kiểm Monty, RAM worker, cgroup, bubblewrap nằm ở phase 0 của plan `261020-1310-agent-codemode-host`). Chỉ đọc RAM trống thực tế của máy và giới hạn RAM hiện có của các service trong `docker-compose.yml` (`free -m`, `docker stats --no-stream`, chỉ đọc) để chuyển cho plan host đặt `mem_limit` của sidecar `crm_codemode`.
    - Đường đi của một model dbt mới trong `transformation/models/packs/crm/` tới `serving/olap.duckdb` (đọc `bootstrap_serving_views.py`, `refresh_rolling.py`, cấu hình materialization). Kết luận: model hợp đồng là view dbt dùng được không, hay phải dùng phương án SQL trong `crm/sync/contract/` (phase 5).
    - Bậc lợi nhuận của `dim_customers.lifetime_contribution_margin` (CM1/CM2/CM3) theo định nghĩa trong dbt và `docs/analytics-handbook/semantic/metrics.md`.
    - Phân loại 19 file tham chiếu `crm_party_identity` (design §7.2): đọc, ghi, chỉ comment.
@@ -35,7 +34,7 @@
 5. **Công cụ parity export `scripts/checks/crm_export_parity.py`:** chạy các `export_query` trong `CRM_WRITEBACK_TABLES` (`orchestration/packs/crm/crm_writeback_assets.py`) bằng DuckDB trên hai bản sao DB, in số dòng và hash nội dung từng bảng, so khác biệt. Không ghi parquet.
 6. **Công cụ `crm/ops/migration_down.py`:** `--data-dir`, `--version <tên file up>`, `--confirm-backup <đường dẫn backup đã verify>`. Chạy file `.down.sql` tương ứng trong một SAVEPOINT (tái dùng `_split_statements`), xoá dòng `schema_migrations`, từ chối nếu có migration áp sau nó mà chưa down (trừ `--force`), từ chối nếu không có file down.
 7. Ghi kết quả đo vào `plans/261019-1500-crm-core-agent-native/reports/phase-00-baseline.md` (chỉ số đếm) và cập nhật các mục "[chưa kiểm]" của design nếu khác giả định.
-8. Trình user các câu hỏi còn mở của plan (Q5, Q7, Q9, Q10, Q13, Q14) kèm số đo; ghi câu trả lời vào `plan.md` mục "Đã chốt". Đo thêm cho phase 1: số khách có tag sức khoẻ, số khách đó có/không có người phụ trách (`owner_user_id`).
+8. Trình user các câu hỏi còn mở của plan (Q5, Q7, Q9, Q10, Q15) kèm số đo; ghi câu trả lời vào `plan.md` mục "Đã chốt". Đo thêm cho phase 1: số khách có tag sức khoẻ, số khách đó có/không có người phụ trách (`owner_user_id`).
 
 ## File
 

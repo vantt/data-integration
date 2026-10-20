@@ -19,11 +19,11 @@
 6. **Service:** `PartyRoleService` (gán, kết thúc vai trò), `PartyRelationshipService` (đề xuất, xác nhận, kết thúc; chặn tự quan hệ; kiểm loại party hai đầu theo registry).
 7. **Khách sỉ ẩn (B2B tối thiểu):**
    - C360 hiện badge "Nghi khách sỉ" khi `wh_customer_summary.customer_type` hoặc `suspected_wholesale` báo vậy, kèm lý do từ kho (chỉ hiển thị, không tự đổi gì).
-   - Lệnh `party.confirm_wholesale`: thêm vai trò `wholesale_customer`; tuỳ chọn tạo party `org` mới (tên công ty, mã số thuế) và quan hệ `contact_of` từ người hiện tại tới tổ chức. Người có quyền làm trực tiếp; agent dùng hàm SDK `crm.proposals.partyRelationship()` trong code mode (thêm ở phase này, design §5.9.3 số 20; sinh lại SDK và chỉ mục `search_api` từ OpenAPI).
+   - Lệnh `party.confirm_wholesale`: thêm vai trò `wholesale_customer`; tuỳ chọn tạo party `org` mới (tên công ty, mã số thuế) và quan hệ `contact_of` từ người hiện tại tới tổ chức. Người có quyền làm trực tiếp; agent dùng hàm code mode `proposals_party_relationship()` (thêm ở phase này, design §5.9.4 số 20: đánh dấu `x-agent-function` trên route; host tự sinh lại stub khi khởi động lại).
    - Worklist và campaign loại party có vai trò `wholesale_customer` đang hiệu lực khỏi tín hiệu bán lẻ (cấu hình theo loại tín hiệu, mặc định loại tất cả tín hiệu của `mart_customer_action_queue` và `mart_customer_sku_action_queue`). Lúc deploy chưa có vai trò nào như vậy nên danh sách không đổi.
 8. **Người nhận quà, mua hộ:** tạo quan hệ thủ công hoặc qua đề xuất của agent; quan hệ `gift_recipient_of` **không** tự đưa người nhận vào segment/campaign (người nhận phải có consent của chính họ).
 9. **Export:** `crm_party_role` (design §4.4) để kho loại khách sỉ đã xác nhận khỏi tệp bán lẻ; model staging `stg_crm__party_role` (public). Kho dùng nó thế nào là việc của plan kho, không làm ở đây.
-10. **API/SDK:** `GET /api/v1/parties/{id}` (`crm.parties.get360`) trả vai trò và quan hệ; REST v1 `GET /api/v1/parties/{id}/relationships`, `POST /api/v1/parties/{id}/roles` (người), đề xuất qua `/api/v1/proposals`.
+10. **API/hàm agent:** `GET /api/v1/parties/{id}` (`parties_get_360`) trả vai trò và quan hệ; REST v1 `GET /api/v1/parties/{id}/relationships`, `POST /api/v1/parties/{id}/roles` (người), đề xuất qua `/api/v1/proposals`.
 11. Tài liệu: schema reference; ui-spec cho badge và form xác nhận khách sỉ.
 
 ## File

@@ -11,7 +11,7 @@
 
 ## Yêu cầu
 
-1. **Migration `0050_app_user_principal_type`:** `crm_app_user.principal_type TEXT NOT NULL DEFAULT 'human'`. Seed principal hệ thống: `system:sync` (sync trong process), `system:legacy_api` (người gọi `CRM_API_TOKEN`), `system:dagster` (người gọi `CRM_REFRESH_TOKEN`), `system:dev` (chế độ dev không có CF Access). Down: xoá các dòng seed; cột giữ lại (SQLite không drop cột an toàn với bản cũ; ghi rõ trong down là cột vô hại).
+1. **Migration `0050_app_user_principal_type`:** `crm_app_user.principal_type TEXT NOT NULL DEFAULT 'human'` và `agent_kind TEXT` (NULL với người; `assistant` hoặc `chat` với agent, design §5.9.3). Preset scope `assistant` và `chat_agent` trong `policy.py` (chat agent: chỉ party gắn với phiên, giới hạn ghi thấp hơn, không đề xuất hàng loạt, không merge); chưa tạo credential `chat` nào. Seed principal hệ thống: `system:sync` (sync trong process), `system:legacy_api` (người gọi `CRM_API_TOKEN`), `system:dagster` (người gọi `CRM_REFRESH_TOKEN`), `system:dev` (chế độ dev không có CF Access). Down: xoá các dòng seed; cột giữ lại (SQLite không drop cột an toàn với bản cũ; ghi rõ trong down là cột vô hại).
 2. **Migration `0051_api_credential`:** bảng `crm_api_credential` theo design §5.2. Index `token_hash` unique.
 3. **Migration `0052_audit_event`:** bảng `crm_audit_event` theo design §5.4; index (`party_id`, `occurred_at`), (`principal_id`, `occurred_at`), (`request_id`); trigger chặn UPDATE/DELETE trừ job dọn theo thời hạn (dọn bằng một lệnh có cờ phiên `crm_audit_retention`, hoặc tắt trigger trong transaction dọn; chọn cách đơn giản nhất khi làm và ghi lại).
 4. **Migration `0053_idempotency_record`:** bảng `crm_idempotency_record` theo design §5.3.

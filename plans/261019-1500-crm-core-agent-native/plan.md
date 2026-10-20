@@ -3,10 +3,10 @@ title: "Lõi CRM chuẩn ngành, agent-native, chuyển từng bước"
 description: "Đưa CRM Fine Japan thành lõi CRM chuẩn ngành (Party, vai trò, quan hệ, contact point, consent có bằng chứng, engagement, module cắm thêm) dùng được cho agent qua REST, CLI, MCP; làm theo 12 phase, sau mỗi phase CRM vẫn chạy như cũ."
 status: pending
 priority: P1
-effort: 50d
+effort: 48d
 branch: feat/crm-core-agent-native
 tags: [crm, agent, mcp, api, data-model, consent, pdpl, cache-contract, migration]
-blockedBy: []
+blockedBy: [261020-1310-agent-codemode-host]  # chỉ chặn phase 3 trở đi phần MCP; phase 0–2 làm ngay
 blocks: []
 created: 2026-10-19
 ---
@@ -56,11 +56,11 @@ Code và migration CRM được bind-mount (`docker-compose.yml:285-296`); migra
 
 | # | Phase | File | Effort | Phụ thuộc | Đụng prod | Cần user duyệt giờ | Giá trị cho user |
 |---|---|---|---|---|---|---|---|
-| 0 | Đo hiện trạng, công cụ parity và migration down, đo Deno/RAM cho code mode, chốt câu hỏi | [phase-00](phase-00-baseline-and-safety-tools.md) | 1.25d | — | Chỉ đọc (backup có sẵn) | Không | Có thước đo "CRM như cũ" cho mọi phase sau |
+| 0 | Đo hiện trạng, công cụ parity và migration down, chốt câu hỏi (bài kiểm sandbox thuộc plan host) | [phase-00](phase-00-baseline-and-safety-tools.md) | 1d | — | Chỉ đọc (backup có sẵn) | Không | Có thước đo "CRM như cũ" cho mọi phase sau |
 | 1 | Tag sức khoẻ theo C + B (bản tạm: cờ đồng ý riêng, nhật ký, giới hạn xem, lọc export, loại "quan tâm nhóm sản phẩm") + bật chặn CSRF | [phase-01](phase-01-sensitive-tags-and-csrf.md) | 3d | 0 | Có (CRM + data_platform export) | **Có** | Giảm rủi ro pháp lý ngay mà không phá quy trình gắn tag của sales/CS; đóng lỗ CSRF |
 | 2 | Principal, credential, policy quyền, CommandBus, audit, idempotency, helper UUIDv7 | [phase-02](phase-02-principal-policy-audit.md) | 4d | 1 | Có (CRM) | **Có** | Biết ai làm gì trên CRM; nền cho agent |
-| 3 | Agent đọc: REST v1, CLI, MCP code mode (`search_api` + `execute`, sandbox Deno, SDK sinh từ OpenAPI) | [phase-03](phase-03-agent-read-api-cli-mcp.md) | 6.5d | 2 | Có (CRM, build lại image) | **Có** | CEO và nhân viên hỏi CRM qua Claude Desktop, bot Lark |
-| 4 | Agent ghi an toàn + đề xuất → duyệt (hàm ghi trong SDK code mode, giới hạn ghi theo lần chạy) | [phase-04](phase-04-agent-safe-writes-and-proposals.md) | 5.5d | 3 | Có (CRM) | **Có** | Agent ghi kết quả gọi, task, ghi chú; việc nguy hiểm có người duyệt |
+| 3 | Agent đọc: REST v1 có `x-agent-function`, CLI, MCP code mode qua code-mode host dùng chung (sidecar `crm_codemode`, Monty, agent viết Python) | [phase-03](phase-03-agent-read-api-cli-mcp.md) | 5d | 2; plan `261020-1310-agent-codemode-host` đã phát hành bản đầu | Có (restart CRM, thêm sidecar, không build lại image `crm`) | **Có** | CEO và nhân viên hỏi CRM qua Claude Desktop, bot Lark |
+| 4 | Agent ghi an toàn + đề xuất → duyệt (route ghi có `x-agent-function`, giới hạn ghi theo lần chạy) | [phase-04](phase-04-agent-safe-writes-and-proposals.md) | 5.5d | 3 | Có (CRM) | **Có** | Agent ghi kết quả gọi, task, ghi chú; việc nguy hiểm có người duyệt |
 | 5 | Hợp đồng cache chuẩn từ kho (v1) | [phase-05](phase-05-warehouse-cache-contract.md) | 5d | 0 (nửa kho); 4 (nửa CRM đọc) | Có (data_platform + CRM) | **Có** | CRM không còn gắn chặt với mart riêng của Fine Japan |
 | 6 | Tách identity: ContactPoint + PartyIdentifier, merge mở rộng | [phase-06](phase-06-contact-point-and-identifier.md) | 6d | 5 | Có (CRM, migration dữ liệu) | **Có** | Hết ba bảng identity chồng nhau; nền cho consent theo kênh |
 | 7 | Sổ cái consent (chuyển cờ đồng ý riêng của phase 1 sang) + phân loại dữ liệu cho ghi chú, trường tuỳ biến + bật "không liên hệ" theo sổ cái sau khi user duyệt | [phase-07](phase-07-consent-ledger-and-data-class.md) | 4d | 6 | Có (CRM + export) | **Có** | Chứng minh được consent theo Luật 91/2025 |
@@ -69,15 +69,16 @@ Code và migration CRM được bind-mount (`docker-compose.yml:285-296`); migra
 | 10 | Campaign hợp nhất (gộp Hug), holdout, quy công | [phase-10](phase-10-campaign-holdout-and-hug-merge.md) | 4d | 4, 5 | Có (CRM + export) | **Có** | Đo được doanh thu tăng thêm thật nhờ CRM |
 | 11 | Hợp đồng export CRM → kho v1, dọn bảng cũ, kiểm khả chuyển Postgres, tài liệu | [phase-11](phase-11-export-contract-and-cleanup.md) | 3d | 5–10 (mỗi mục ≥ 7 ngày ổn định) | Có (CRM + data_platform) | **Có** | Schema gọn, một nguồn sự thật, sẵn sàng tenant thứ hai |
 
-Tổng: 50 ngày công (khoảng 10 tuần một người làm), chưa tính thời gian chờ quan sát 7 ngày giữa các bước contract.
+Tổng: 48 ngày công (khoảng 9–10 tuần một người làm), cộng plan host `261020-1310-agent-codemode-host` (12d) làm song song với phase 0–2, chưa tính thời gian chờ quan sát 7 ngày giữa các bước contract.
 
 ## Phụ thuộc
 
 ```text
-0 ─► 1 ─► 2 ─► 3 ─► 4 ─┬─► 5(nửa CRM) ─► 6 ─┬─► 7 ─────────┐
-│                      │                    └─► 8 ─► 9 ────┼─► 11
-└─► 5(nửa kho: model dbt, sync ghi song song) ─┘            │
-                       └──────────► 10 (cần 4 và 5) ────────┘
+plan host 261020-1310 (làm song song với phase 0–2) ─┐
+0 ─► 1 ─► 2 ─────────────────────────────────────────┴─► 3 ─► 4 ─► 5(nửa CRM) ─► 6 ─┬─► 7 ──────────┐
+│                                                               │                   └─► 8 ─► 9 ─────┼─► 11
+└─► 5(nửa kho: model dbt, sync ghi song song) ──────────────────┘                                   │
+                                                  4 và 5 ─► 10 ─────────────────────────────────────┘
 ```
 
 Nửa kho của phase 5 (model `crm_contract__*`, bộ sync ghi song song bảng mới) không đụng file của phase 1–4 nên làm song song được sau phase 0. Phase 10 có thể làm song song với 6–9 vì sở hữu file riêng (`campaign_*`, `hug/*`) và dải migration riêng. Một người làm thì đi tuần tự theo số phase.
@@ -89,7 +90,7 @@ Nửa kho của phase 5 (model `crm_contract__*`, bộ sync ghi song song bảng
 | 0 | `crm/ops/parity_snapshot.py`, `crm/ops/migration_down.py`, test của chúng (mới) |
 | 1 | migration 0047–0049, `application/sensitive_consent_service.py`, `application/product_interest_service.py` (mới), `application/tag_service.py`, `tag_governance_service.py`, `health_domain_collect.py`, `adapters/outbound/sqlite/tag_note_repository.py`, `profile_repository.py` (lọc tag), các screen tag/C360 liệt kê ở phase, `adapters/inbound/http/csrf_guard.py`, `docker-compose.yml` (một dòng), `orchestration/packs/crm/crm_writeback_assets.py` (lọc) |
 | 2 | migration 0050–0054, `domain/ids.py` (mới) và 19 file đang gọi `uuid.uuid4()` (design §3.1.1), `domain/policy.py`, `application/command_bus.py`, `application/authorization_service.py`, `adapters/inbound/http/auth_dependency.py`, `cf_access_middleware.py`, `composition.py` (đoạn wiring bus), ADR-020 |
-| 3 | `adapters/inbound/api_v1/**`, `adapters/inbound/mcp/**`, `application/queries/**`, `crm/ops/crmctl.py`, `crm/src/requirements.txt`, `Dockerfile.crm`, `composition.py` (đăng ký router) |
+| 3 | `adapters/inbound/api_v1/**`, `application/queries/**`, `crm/ops/crmctl.py`, `composition.py` (đăng ký router), `Dockerfile.crm_codemode` (mới), `docker-compose.yml` (service `crm_codemode`), cấu hình Caddy |
 | 4 | migration 0055–0059, `application/commands/**`, `application/proposal_service.py`, screen "Hàng chờ duyệt" (mới), các handler web gọi service ghi (chuyển sang bus) |
 | 5 | `transformation/models/packs/crm/contract/**`, `crm/sync/**`, `adapters/outbound/sqlite/cache_repository.py`, `domain/ports/cache_repository.py`, `scripts/checks/public_models.yaml` |
 | 6 | migration 0060–0069, `domain/ports/identity_repository.py` (mới), `adapters/outbound/sqlite/party_repository*.py`, `dedup_repository*.py`, `application/merge_service.py`, `party_seed_service.py`, `sync_parties.py`, `hug/identity_resolver*.py`, các file trong design §7.2 |
@@ -104,7 +105,7 @@ Nửa kho của phase 5 (model `crm_contract__*`, bộ sync ghi song song bảng
 ## Tiêu chí chấp nhận (đo được)
 
 1. **CRM như cũ sau mỗi phase:** parity snapshot (trước/sau, cùng bản sao DB) chỉ khác ở mục phase khai báo; 11 export `crm_*_export` cho cùng số dòng và cùng hash nội dung trên bản sao, trừ các lọc dữ liệu nhạy cảm đã khai báo; test hiện có (69 file trong `crm/src/tests`, 2 file trong `crm/sync/tests`) xanh, không test nào bị xoá hay nới để qua.
-2. **Agent đọc (sau phase 3, code mode):** server MCP lộ đúng 2 tool (`search_api`, `execute`); định nghĩa tool + `instructions` ≤ 1.500 token, nhỏ hơn ≥ 80% so với ước lượng 21 tool riêng sinh từ cùng OpenAPI; với 10 câu kịch bản, tổng byte trả về model ≤ 20% tổng byte REST mà sandbox nhận; 9 hàm SDK đọc chạy được từ Claude Desktop qua `mcp-remote`; 100% lần `execute` có audit `mcp.execute` (hash code, danh sách lệnh) và 100% lời gọi REST trong sandbox có audit kèm `execution_id`; test cô lập chứng minh sandbox không đọc được file, env, không gọi được host hay cổng nào khác ngoài CRM; 0 trường hoặc tag `sensitive` trong mọi kết quả trả về agent, kể cả với khách đã đồng ý riêng (bộ 30 câu kịch bản); SĐT và tên luôn bị che; RAM đỉnh của một lần `execute` dưới ngân sách phase 0 đặt.
+2. **Agent đọc (sau phase 3, code mode):** server MCP lộ đúng 2 tool (`search_api`, `execute`); định nghĩa tool + `instructions` ≤ 1.500 token, nhỏ hơn ≥ 80% so với ước lượng 21 tool riêng sinh từ cùng OpenAPI; với 10 tác vụ, tổng byte trả về model ≤ 20% tổng byte REST mà host nhận; **tỷ lệ code Python (tập con Monty) do model đang dùng viết chạy đúng ngay lần đầu ≥ 80% trên bộ 25 tác vụ CRM, và ≥ 95% đúng sau tối đa 1 lần thử lại**; 9 hàm đọc chạy được từ Claude Desktop qua `mcp-remote`; 100% lần `execute` có audit `mcp.execute` (hash code, danh sách lệnh) và 100% lời gọi REST từ host có audit kèm `execution_id`; host chỉ đăng ký các hàm từ route có `x-agent-function`; 0 trường hoặc tag `sensitive` trong mọi kết quả trả về agent, kể cả với khách đã đồng ý riêng; SĐT và tên luôn bị che; dừng `crm_codemode` không ảnh hưởng CRM.
 3. **Agent ghi (sau phase 4):** gửi lại cùng `idempotency_key` 3 lần (hoặc chạy lại cùng đoạn code trong `execute`) chỉ tạo 1 bản ghi; lệnh ghi qua code mode đi qua đúng route REST v1, đúng lệnh CommandBus và proposal như REST (test so audit); lệnh nguy hiểm từ agent luôn tạo `crm_proposal` và 0 thay đổi dữ liệu cho tới khi manager/admin duyệt; người không có quyền duyệt bị từ chối 403; quá 20 lệnh ghi trong một lần `execute` bị chặn ở server; agent không có hàm gửi tin (không tồn tại).
 4. **Audit:** mọi lệnh ghi qua UI, REST cũ, REST v1, CLI, MCP, sync đều sinh đúng một `crm_audit_event` có `principal_id`, `channel`, `request_id` (test cho từng kênh).
 5. **Pháp lý (sau phase 1 và 7):** tag sức khoẻ không gắn được cho khách chưa có đồng ý riêng qua mọi đường ghi (test từng route trả 403, trigger chặn insert trực tiếp) và gắn được khi đã có (quy trình sales/CS còn nguyên); chỉ người phụ trách, manager, admin thấy tag sức khoẻ ở C360, API 360, danh sách tag; 100% lần gắn, gỡ, xem tag sức khoẻ và ghi nhận đồng ý riêng có dòng nhật ký/audit; 2 lần gắn hiện có còn nguyên trong DB; parquet export, `stg_crm__party_tag`, báo cáo và phản hồi agent không có dòng thuộc loại nhạy cảm; loại `product_interest` có trên picker của mọi khách; mỗi `crm_consent_event` mới có `method`, `evidence_type`, `captured_by` khác NULL.
@@ -121,11 +122,13 @@ Nửa kho của phase 5 (model `crm_contract__*`, bộ sync ghi song song bảng
 | Migration dữ liệu làm container không khởi động (hard-fail) giữa giờ làm | Thấp × Cao | Chạy migration trên bản sao trước; deploy ngoài giờ làm do user duyệt; backup đã verify; down đã thử |
 | Tách identity làm vỡ export dbt (`stg_crm__*` công khai) hoặc Hug | Trung bình × Cao | Ghi song song; giữ `crm_party_identity` là bảng thật tới phase 11 rồi mới thành view cùng cột; parity export |
 | Agent ghi sai hàng loạt | Trung bình × Cao | Lệnh hàng loạt chỉ là đề xuất, chạy thử mặc định, giới hạn số party, audit, thu hồi credential tức thì; code mode giới hạn 20 lệnh ghi mỗi lần chạy ở server |
-| Code độc hoặc vòng lặp trong `execute` (kể cả do prompt injection từ dữ liệu khách) | Trung bình × Trung bình | Sandbox Deno không quyền nào ngoài loopback tới CRM; timeout 10 giây, giới hạn RAM/CPU, kết quả 32 KB; giới hạn lời gọi theo `execution_id` ở server; mọi policy ở server nên code không thấy gì hơn REST cho principal đó |
-| Lộ dữ liệu qua lỗi hoặc log trong code mode | Thấp × Trung bình | Lỗi REST không chứa PII; che PII ở đầu ra sandbox; không trả stack server |
+| Code độc hoặc vòng lặp trong `execute` (kể cả do prompt injection từ dữ liệu khách) | Trung bình × Trung bình | Monty không có file, mạng, env; host giới hạn thời gian tổng và từng hàm, số lời gọi, kết quả 32 KB; RAM chặn bằng `mem_limit` của sidecar (cgroup) vì `max_memory` của Monty không chặn RSS; CRM đếm lời gọi theo `execution_id`; mọi policy ở CRM nên code không thấy gì hơn REST cho principal đó |
+| Prompt injection qua chat agent sau này (nội dung tin nhắn, ghi chú) | Trung bình × Cao | Principal `chat` riêng, phạm vi hẹp theo phiên, giới hạn ghi thấp, không gửi tin, việc có hậu quả qua đề xuất; nâng runner sang micro-VM qua interface `Runner` khi có người ngoài (design §5.9.3) |
+| Phụ thuộc repo host và Monty còn mới (v1 từ 25/09/2026, phát hành dày) | Trung bình × Trung bình | Ghim tag và digest; nâng phiên bản có kiểm; runner dự phòng `quickjs-rs` sau cùng interface; CRM không phụ thuộc chi tiết runner |
+| Lộ dữ liệu qua lỗi hoặc log trong code mode | Thấp × Trung bình | Lỗi REST không chứa PII; che PII ở đầu ra host; không trả stack server |
 | UUIDv7 để lộ thời điểm tạo trong id (URL, export, kết quả agent) | Chắc chắn × Thấp | Chấp nhận (thời điểm tạo không nhạy cảm, phần lớn đã hiện qua `created_at`); không dùng id làm bí mật; id dữ liệu nhạy cảm không ra ngoài (design §3.1.1) |
 | Dữ liệu cá nhân khách đi tới nhà cung cấp mô hình qua MCP | Chắc chắn (nếu bật) × Cao (pháp lý) | Đã chốt Q2: SĐT và tên luôn che khi tới agent; v1 không có đường mở |
-| Build lại image kéo base mới làm đổi phiên bản sqlite/python | Trung bình × Trung bình | Ghim digest base image; kiểm `sqlite3.sqlite_version` trong image mới trước khi deploy |
+| Build lại image kéo base mới làm đổi phiên bản sqlite/python (nếu sau này phải build lại `crm`) | Thấp × Trung bình | Kế hoạch hiện tại không build lại `crm`; khi cần thì ghim digest base image và kiểm `sqlite3.sqlite_version` trước khi deploy |
 | Ghi song song hai nơi lệch nhau âm thầm | Trung bình × Trung bình | Parity chạy hằng ngày trong thời gian ghi song song (job nhẹ trong process, chỉ log số khác biệt); chuyển đọc chỉ khi 0 khác biệt 3 ngày liền |
 | Hợp đồng cache mới từ dbt đổi số so với mart cũ | Thấp × Trung bình | Model hợp đồng chỉ chọn cột, không tính lại; gate S `--allow-new`; so theo khoá trước khi chuyển đọc |
 | Đổi ngữ nghĩa "không liên hệ" (H4, đã chốt Q6) làm thay đổi danh sách gọi | Chắc chắn × Trung bình | Deploy với bộ lọc cũ; báo cáo số khách bị ảnh hưởng; chỉ bật sau khi user duyệt số; rollback bằng một cờ |
@@ -146,7 +149,8 @@ Mỗi phase có rollback riêng trong file phase. Nguyên tắc chung: code roll
 - **Q8. Kênh mạng cho MCP và CLI:** LAN + Tailscale qua Caddy, không mở công khai.
 - **Q11. Danh mục "quan tâm nhóm sản phẩm":** sales/CS tự đặt tên ngay trong CRM (không phải cấu hình do dev sửa): tạo trong picker và trang quản lý nhỏ, có audit, chống trùng tên, chặn tên mang nghĩa bệnh; deploy phase 1 với danh mục rỗng.
 - **Q12. Khách chưa có người phụ trách:** người đã ghi nhận đồng ý riêng đang hiệu lực của khách đó được xem tag sức khoẻ, có audit.
-- **MCP code mode (16:13):** server MCP chỉ lộ `search_api` và `execute`; code TypeScript chạy trong sandbox, chỉ gọi REST `/api/v1` nội bộ bằng token con của principal agent; mọi policy, che PII, dữ liệu nhạy cảm, audit, idempotency, đề xuất → duyệt cưỡng chế ở server (design §5.9). Runtime đề xuất: Deno subprocess deny-by-default, chốt sau số đo phase 0.
+- **MCP code mode (19/10 16:13; cập nhật 20/10 ~13:10):** server MCP chỉ lộ `search_api` và `execute`. Sandbox dùng **Pydantic Monty** (agent viết Python tập con), không dùng Deno, không tự viết sandbox; dự phòng `quickjs-rs` sau cùng interface. Lớp **code-mode host là repo git riêng** dùng chung (MCP CRM, MCP phân tích, dự án khác), lập plan [`261020-1310-agent-codemode-host`](../261020-1310-agent-codemode-host/plan.md); CRM chạy nó ở sidecar `crm_codemode`, chỉ khai báo danh mục hàm (route REST v1 có `x-agent-function`); mọi policy, che PII, dữ liệu nhạy cảm, audit, idempotency, đề xuất → duyệt ở CommandBus của CRM (design §5.9).
+- **Chat agent (20/10):** chưa có người ngoài; thiết kế sẵn principal `chat` phạm vi hẹp, nhấn mạnh rủi ro prompt injection, giữ đường nâng cấp sang micro-VM qua interface `Runner` (design §5.9.3).
 - **UUIDv7 cho định danh:** helper duy nhất `domain/ids.py` (tự viết theo RFC 9562 vì Python 3.12 chưa có `uuid.uuid7()`), cấm `uuid4` mới; không viết lại id cũ; giữ id tất định (`action_id`, seed); Postgres dùng kiểu `uuid`, id vẫn sinh ở ứng dụng; chấp nhận việc id lộ thời điểm tạo (design §3.1.1). Làm ở phase 2.
 
 ## Câu hỏi còn mở (kèm đề xuất)
@@ -155,5 +159,6 @@ Mỗi phase có rollback riêng trong file phase. Nguyên tắc chung: code roll
 2. **Q7. Mặc định khi chưa có consent:** hôm nay chưa có thông tin là được gọi cả chăm sóc lẫn tiếp thị. Giữ vậy hay chặn tiếp thị khi chưa có consent? **Đề xuất:** giữ cho chăm sóc; tiếp thị chờ ý kiến pháp chế (phase 7 để là cấu hình).
 3. **Q9. Holdout:** tỉ lệ bao nhiêu là chấp nhận được, và có đưa go-live A2 (mã HUG50, in tem) vào phase 10 không? **Đề xuất:** 20% (như `wh_deadstock_target.is_holdout`); phase 10 chỉ làm phần kỹ thuật, go-live là việc vận hành riêng.
 4. **Q10. Thắt quyền cho người** (staff thấy SĐT che với khách không thuộc mình, research §5): có muốn làm không? **Đề xuất:** chưa làm trong plan này; policy đã sẵn chỗ để bật bằng cấu hình sau.
-5. **Q13. Bộ chạy sandbox và SDK code mode có dùng chung với MCP phân tích cho CEO không?** `crm/` phải tự chứa nên bản đầu nằm trong `crm/`. **Đề xuất:** MCP phân tích dùng cùng code mode và cùng runtime (design §5.10); khi làm MCP phân tích thì tách bộ chạy sandbox thành gói dùng chung nhỏ có test riêng, thay vì chép.
-6. **Q14. Ngân sách RAM cho code mode:** máy chủ đang chật RAM. **Đề xuất:** tối đa 2 lần `execute` đồng thời, mỗi lần ≤ 128 MB; nếu số đo phase 0 vượt thì chuyển sang V8 isolate (design §5.9.2) trước khi deploy phase 3.
+5. **Q15. Ngưỡng tỷ lệ code đúng lần đầu:** đề xuất ≥ 80% lần đầu và ≥ 95% sau một lần thử lại trên 25 tác vụ CRM. Nếu Monty dưới ngưỡng mà `quickjs-rs` (JS) vượt rõ ở cổng quyết định của plan host, có chấp nhận đổi sang agent viết JS không? **Đề xuất:** có, CRM không phải đổi gì.
+
+Câu hỏi về tên repo, nơi lưu repo, RAM của sidecar thuộc plan host.
