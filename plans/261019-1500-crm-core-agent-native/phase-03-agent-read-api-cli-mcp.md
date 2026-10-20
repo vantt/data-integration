@@ -1,14 +1,14 @@
-# Phase 3: agent đọc qua REST v1, CLI và MCP code mode (code-mode host dùng chung + Monty)
+# Phase 3: agent đọc qua REST v1, CLI và MCP code mode (MCP server của CRM trên thư viện `agent_codemode` + Monty)
 
-**Effort:** 5d · **Phụ thuộc:** phase 2; **plan [`261020-1310-agent-codemode-host`](../261020-1310-agent-codemode-host/plan.md) đã phát hành bản đầu (qua cổng quyết định phase 0 của plan đó, có tag phiên bản và image)**; Q2, Q8 đã chốt (che SĐT và tên; LAN + Tailscale qua Caddy); code mode đã chốt 19/10 16:13; Monty + host repo riêng đã chốt 20/10 ~13:10 · **Đụng prod:** có (CRM restart, thêm service `crm_codemode`, route Caddy) · **Cần user duyệt giờ:** có · **Migration:** không
+**Effort:** 5d · **Phụ thuộc:** phase 2; **thư viện `agent_codemode` (plan [`261020-1310-agent-codemode-host`](../261020-1310-agent-codemode-host/plan.md)) đã xong phase 5, bản `0.1.0` (qua cổng runner phase 0 của plan đó)**; Q2, Q8 đã chốt (che SĐT và tên; LAN + Tailscale qua Caddy); code mode đã chốt 19/10 16:13; Monty + host repo riêng đã chốt 20/10 ~13:10 · **Đụng prod:** có (CRM restart, thêm service `crm_codemode`, route Caddy) · **Cần user duyệt giờ:** có · **Migration:** không
 
 ## Bối cảnh
 
 - Đã có khoảng 40 route `/api/*` nhưng không có hợp đồng ổn định (không version, lỗi không thống nhất, nhiều route trả HTML cho HTMX như `screen_customer_360_activity.py:644,707`). FastAPI đã sinh OpenAPI ở `/api/docs` (`crm/src/composition.py:208`).
-- **MCP theo code mode** (design §5.9): server chỉ lộ `search_api` và `execute`. Server là **code-mode host** dùng chung (repo riêng, Python, runner Pydantic Monty, agent viết Python tập con), chạy ở container sidecar `crm_codemode`. Mỗi hàm agent gọi là một route REST `/api/v1` có đánh dấu `x-agent-function`; CRM chỉ **khai báo**, mọi policy ở CommandBus/query service.
+- **MCP theo code mode** (design §5.9): server chỉ lộ `search_api` và `execute`. **MCP server của CRM** (thuộc bộ CRM, mã nhỏ trong `crm/codemode_server/`) dựng trên thư viện dùng chung `agent_codemode` (thư viện Python độc lập trong repo, tạm đặt `packages/agent-codemode/`, runner Pydantic Monty, agent viết Python tập con), chạy ở container sidecar `crm_codemode`. Mỗi hàm agent gọi là một route REST `/api/v1` có đánh dấu `x-agent-function`; CRM chỉ **khai báo**, mọi policy ở CommandBus/query service. Trong phase này "host" nghĩa là server code mode chạy ở sidecar.
 - Vì host ở sidecar và gọi REST, **image `crm` không phải build lại** ở phase này (không thêm MCP SDK hay runtime nào vào CRM).
 - Phase này chỉ có hàm đọc (số 1–9 ở design §5.9.4); hàm ghi và đề xuất ở phase 4.
-- Research CEO MCP đã chốt: Claude Desktop và bot Lark; dữ liệu hằng đêm đủ; "lợi nhuận" mặc định CM2. MCP phân tích dùng cùng code-mode host (design §5.10).
+- Research CEO MCP đã chốt: Claude Desktop và bot Lark; dữ liệu hằng đêm đủ; "lợi nhuận" mặc định CM2. MCP phân tích (bộ report hoặc kho) dùng cùng thư viện với server riêng (design §5.10).
 
 ## Yêu cầu
 
@@ -30,20 +30,20 @@
    - `POST /api/v1/agent-executions/{id}/finish` (token con): nhận outcome, thời gian, kích thước kết quả; thu hồi token con; ghi audit `mcp.execute` với danh sách lệnh tra theo `execution_id`. Token con hết hạn mà chưa `finish` thì CRM tự đóng với outcome `abandoned`.
    - Middleware REST v1 đếm lời gọi và lệnh ghi theo `execution_id` (200 lời gọi; giới hạn ghi ở phase 4); token con không có quyền nhiều hơn credential cha; token con không gọi được `agent-executions` để tạo lần chạy mới.
 6. **Service `crm_codemode`** trong `docker-compose.yml`:
-   - Image dựng bằng `Dockerfile.crm_codemode` (ở gốc repo, như các Dockerfile khác): cài code-mode host **theo tag git đã ghim kèm hash** (hoặc kéo image do repo host phát hành theo digest); không có code CRM trong image.
+   - Image dựng bằng `Dockerfile.crm_codemode` (ở gốc repo, như các Dockerfile khác, theo mẫu `Dockerfile.example` của thư viện): base `python:3.12-slim` ghim digest; `pip install --require-hashes -r <thư mục thư viện>/requirements.lock` rồi `pip install --no-deps <thư mục thư viện>` (cùng commit với CRM, đúng kiểu pip theo thành phần như `Dockerfile.crm:10-11`); `COPY` mã `crm/codemode_server/`; **không** chép mã app CRM (`crm/src`) vào image. Đường dẫn thư viện và thư mục server là hai dòng duy nhất phải sửa nếu Đợt 2 đổi bố cục.
    - Cấu hình bằng biến môi trường: URL OpenAPI và API của CRM (`http://crm:8090/api/v1`), giới hạn (design §5.9.2 bảng giới hạn), cổng MCP; `mem_limit` theo số đo của plan host (đề xuất 384 MiB), `pids_limit`, `read_only: true`, `tmpfs` nhỏ, `cap_drop: [ALL]`, không mount volume dữ liệu nào, cùng mạng docker với `crm`.
    - Credential agent đi kèm từng request MCP (Bearer), host chuyển tiếp cho CRM; host không giữ secret nào của CRM.
    - Healthcheck: host đọc được OpenAPI và `x-agent-catalog-version` nằm trong dải hỗ trợ.
 7. **Kênh mạng (đã chốt Q8):** route Caddy LAN + Tailscale `/mcp` tới `crm_codemode`, `/api/v1` tới `crm:8090` (theo mẫu report site Evidence), không qua Cloudflare Tunnel; CSRF không ảnh hưởng vì client không gửi Origin. Tài liệu kết nối Claude Desktop (`mcp-remote`) ở `crm/docs/agent-access.md`.
 8. **CLI** `crm/ops/crmctl.py`: nhóm lệnh đọc tương ứng (design §5.8), gọi `/api/v1`, `--json`; đọc `CRM_URL`, `CRM_TOKEN` từ môi trường.
 9. **Credential đầu tiên:** `agent:claude_desktop_ceo` (`agent_kind='assistant'`, bound user = CEO, scope `mcp,read`), và `agent:claude_desktop_<người thực thi>` để thử.
-10. **Bộ 25 tác vụ CRM** tiếng Việt (ví dụ "Hôm nay tôi nên gọi ai?", "5 khách đáng giá nhất trong worklist chưa liên hệ 30 ngày, kèm sản phẩm gần nhất", "Chiến dịch X ra sao?") lưu ở `crm/src/tests/agent_scenarios/`: mỗi tác vụ có câu hỏi, đoạn code Python mẫu (tập con Monty) và kết quả mong đợi trên fixture giả. Hai cách dùng: (a) test tự động chạy code mẫu qua host (image đã ghim) trên CRM fixture, quét kết quả: không SĐT, không tên đầy đủ, không tag/trường nhạy cảm (fixture có khách đã đồng ý riêng và có tag sức khoẻ), có `data_as_of`; (b) đo **tỷ lệ code chạy đúng lần đầu** khi model đang dùng tự viết code từ câu hỏi (chạy bằng harness của plan host, ghi số lần thử lại).
+10. **Bộ 25 tác vụ CRM** tiếng Việt (ví dụ "Hôm nay tôi nên gọi ai?", "5 khách đáng giá nhất trong worklist chưa liên hệ 30 ngày, kèm sản phẩm gần nhất", "Chiến dịch X ra sao?") lưu ở `crm/src/tests/agent_scenarios/`: mỗi tác vụ có câu hỏi, đoạn code Python mẫu (tập con Monty) và kết quả mong đợi trên fixture giả. Hai cách dùng: (a) test tự động chạy code mẫu qua MCP server của CRM (sidecar dựng từ thư viện cùng commit) trên CRM fixture, quét kết quả: không SĐT, không tên đầy đủ, không tag/trường nhạy cảm (fixture có khách đã đồng ý riêng và có tag sức khoẻ), có `data_as_of`; (b) đo **tỷ lệ code chạy đúng lần đầu** khi model đang dùng tự viết code từ câu hỏi (chạy bằng harness của plan thư viện, ghi số lần thử lại).
 11. **Đo token** (tiêu chí chấp nhận của plan): (a) định nghĩa tool + `instructions` của server so với ước lượng 21 tool riêng (sinh tạm JSON schema của 21 thao tác từ OpenAPI chỉ để đếm); (b) với 10 tác vụ, tổng byte REST mà host nhận so với byte kết quả trả về model. Ghi số vào `crm/docs/agent-access.md`.
-12. ADR-020 cập nhật: code mode, host dùng chung + Monty, sidecar gọi REST, ranh giới cưỡng chế, cách ghim phiên bản.
+12. ADR-020 cập nhật: code mode, thư viện dùng chung `agent_codemode` + Monty, MCP server của CRM ở sidecar gọi REST, ranh giới cưỡng chế, cách cài và ghim phiên bản.
 
 ## File
 
-- Tạo: `crm/src/application/queries/*.py`, `crm/src/adapters/inbound/api_v1/*.py` (gồm `agent_executions.py`), `crm/ops/crmctl.py`, `crm/docs/agent-access.md`, `Dockerfile.crm_codemode`, test (`test_api_v1_read.py`, `test_agent_function_catalog.py`, `test_agent_executions.py`, `test_pii_presentation.py`, `agent_scenarios/`).
+- Tạo: `crm/src/application/queries/*.py`, `crm/src/adapters/inbound/api_v1/*.py` (gồm `agent_executions.py`), `crm/ops/crmctl.py`, `crm/docs/agent-access.md`, `crm/codemode_server/{__init__,server}.py`, `crm/codemode_server/instructions_vi.md`, `Dockerfile.crm_codemode`, test (`test_codemode_server_imports.py`, `test_api_v1_read.py`, `test_agent_function_catalog.py`, `test_agent_executions.py`, `test_pii_presentation.py`, `agent_scenarios/`).
 - Sửa: `crm/src/domain/policy.py`, `crm/src/composition.py` (đăng ký router), `docker-compose.yml` (service `crm_codemode`), cấu hình Caddy, `crm/AGENTS.md` (nơi đặt query service; route agent phải có `x-agent-function`; đổi chữ ký route agent là đổi hợp đồng, tăng `x-agent-catalog-version` khi phá tương thích), `crm/README.md`, ADR-020.
 
 ## Các bước
@@ -53,7 +53,7 @@
 3. Chính sách PII + test.
 4. REST v1 + `x-agent-function` + OpenAPI; CLI.
 5. Vòng đời lần chạy (`agent-executions`, token con, đếm lời gọi) + test.
-6. `Dockerfile.crm_codemode` ghim phiên bản host; service compose; chạy host với CRM trên bản sao trong scratch.
+6. MCP server của CRM `crm/codemode_server/server.py` (dùng `agent_codemode.build_mcp_app` với URL REST, `instructions` tiếng Việt, giới hạn, preset của CRM; chỉ import API công khai của thư viện, không import `crm.src`, có test quét import); `Dockerfile.crm_codemode`; service compose; chạy sidecar với CRM trên bản sao trong scratch.
 7. Bộ 25 tác vụ: chạy code mẫu (a); đo tỷ lệ đúng lần đầu (b); đo token.
 8. Thử thật trên bản sao: Claude Desktop của người thực thi nối qua `mcp-remote`, 10 tác vụ.
 9. Deploy giờ user duyệt: merge, `docker restart crm` (code bind-mount, không build lại `crm`), `docker compose up -d crm_codemode` (build image sidecar trước), route Caddy.
@@ -71,7 +71,7 @@
 | Tích hợp | Host không gọi được gì ngoài CRM: hàm host duy nhất là route có `x-agent-function` (kiểm danh sách hàm host đăng ký bằng `/whoami` và stub) |
 | Thủ công | Claude Desktop trả lời được 10 tác vụ, mỗi câu có "dữ liệu tới" |
 
-Bài kiểm sandbox (vòng lặp, ăn RAM, đệ quy, thoát file/mạng, kết quả khổng lồ) thuộc plan host; phase này chỉ chạy lại bộ kiểm "khói" của host trên image đã ghim.
+Bài kiểm sandbox (vòng lặp, ăn RAM, đệ quy, thoát file/mạng, kết quả khổng lồ) thuộc plan thư viện; phase này chỉ chạy lại bộ kiểm "khói" của thư viện trên image ghim.
 
 ## Kiểm "CRM như cũ"
 
@@ -87,7 +87,7 @@ Có: restart CRM, thêm service `crm_codemode`, route Caddy. Cần user duyệt 
 
 | Rủi ro | K × T | Giảm thiểu |
 |---|---|---|
-| Plan host trễ hoặc Monty trượt cổng quyết định | Trung bình × Trung bình | REST v1, `x-agent-function`, vòng đời lần chạy làm trước được; host dùng runner dự phòng `quickjs-rs` sau cùng interface (agent viết JS thay Python, CRM không đổi) |
+| Plan thư viện trễ hoặc Monty trượt cổng quyết định | Trung bình × Trung bình | REST v1, `x-agent-function`, vòng đời lần chạy làm trước được; thư viện dùng runner dự phòng `quickjs-rs` sau cùng interface (agent viết JS thay Python, CRM không đổi) |
 | Code độc hoặc vòng lặp (kể cả do prompt injection trong dữ liệu khách) | Trung bình × Trung bình | Sandbox Monty không có file/mạng; giới hạn ở host và đếm theo `execution_id` ở CRM; sidecar có `mem_limit`; mọi policy ở CRM |
 | Host bị chiếm quyền | Thấp × Trung bình | Host chỉ có token agent của từng request (quyền hẹp), không mount dữ liệu, `cap_drop ALL`, `read_only`; CRM không tin host (giới hạn cưỡng chế lại) |
 | Lộ dữ liệu qua lỗi hoặc log | Thấp × Trung bình | Thông điệp lỗi REST không chứa PII; host che PII ở đầu ra; cắt kích thước |

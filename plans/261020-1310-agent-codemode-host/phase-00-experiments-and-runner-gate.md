@@ -8,7 +8,7 @@ Research 19/10 chọn Monty nhưng mọi số đo là số tự công bố của
 
 ## Yêu cầu
 
-1. **Prototype tối thiểu** trong thư mục thử (chưa phải repo chính): hai runner sau cùng chữ ký `run(code, functions, limits)`:
+1. **Prototype tối thiểu** trong scratch (chưa phải thư viện `packages/agent-codemode/`): hai runner sau cùng chữ ký `run(code, functions, limits)`:
    - `MontyRunner` dùng `pydantic_monty` (`AsyncMonty`, pool worker, `max_memory`, `max_feed_duration_secs`, `request_timeout`, `max_suspensions`, `max_recursion_depth`).
    - `QuickJsRunner` dùng `quickjs-rs` (`memory_limit`, timeout mỗi eval), chạy trong subprocess riêng để cô lập crash.
    - Backend giả: 9 hàm đọc và 6 hàm ghi theo danh mục CRM (design CRM §5.9.4), dữ liệu giả, độ trễ giả 5–30 ms.
@@ -38,14 +38,14 @@ Research 19/10 chọn Monty nhưng mọi số đo là số tự công bố của
 
 Quy tắc:
 - Monty đạt mọi ngưỡng → chọn Monty (mặc định đã chốt).
-- Monty trượt **chỉ** ở tỷ lệ đúng lần đầu, quickjs-rs vượt Monty ≥ 10 điểm và đạt ngưỡng → đề xuất user đổi sang quickjs-rs (agent viết JS); CRM không phải đổi gì.
+- Monty trượt **chỉ** ở tỷ lệ đúng lần đầu, quickjs-rs vượt Monty ≥ 10 điểm và đạt ngưỡng → chuyển sang quickjs-rs (agent viết JS; user đã chấp nhận JS nếu cần, 20/10); CRM không phải đổi gì.
 - Monty trượt RAM/cô lập mà quickjs-rs đạt → đề xuất quickjs-rs.
 - Cả hai trượt tiêu chí cô lập → dừng, báo user, xem lại (ví dụ hyperlight-sandbox có KVM).
 - bubblewrap: không phải tiêu chí cổng; chỉ quyết định có thêm lớp OS hay không.
 
 ## File
 
-- Tạo (ngoài repo này, trong thư mục thử nghiệm của repo host tương lai hoặc scratch): prototype hai runner, backend giả, bộ kiểm phá, harness 25 tác vụ.
+- Tạo (trong scratch, không commit): prototype hai runner, backend giả, bộ kiểm phá, harness 25 tác vụ. Phần đáng giữ (bộ kiểm phá, harness) chuyển vào `packages/agent-codemode/tests/` ở phase 1.
 - Tạo (trong repo này): `plans/261020-1310-agent-codemode-host/reports/phase-00-experiments.md`.
 
 ## Các bước
@@ -59,7 +59,7 @@ Quy tắc:
 
 ## Test
 
-Chính phase này là bài kiểm; mọi bài kiểm phá được giữ lại để chuyển thành test CI ở phase 1.
+Chính phase này là bài kiểm; mọi bài kiểm phá được giữ lại để chuyển thành test của thư viện ở phase 1 (chạy trong `scripts/checks/run-all.sh`).
 
 ## Rủi ro
 

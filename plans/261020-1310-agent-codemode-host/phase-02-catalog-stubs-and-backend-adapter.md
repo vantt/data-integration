@@ -8,7 +8,7 @@ Backend (CRM, MCP phân tích) chỉ **khai báo** hàm cho agent bằng đánh 
 
 ## Yêu cầu
 
-1. **Hợp đồng backend v1** (viết thành tài liệu `docs/backend-contract.md` của repo):
+1. **Hợp đồng backend v1** (viết thành tài liệu `packages/agent-codemode/docs/backend-contract.md`):
    - `info.x-agent-catalog-version`: số nguyên; host khai báo dải hỗ trợ.
    - Mỗi operation dành cho agent có `x-agent-function: {name, group, kind: read|write|propose, idempotent: bool, timeout_s?: int}` và `description` (tiếng Việt được) làm docstring.
    - Tuỳ chọn lifecycle: `info.x-agent-executions: {start: "<path>", finish: "<path>"}`. Nếu có, host gọi `start` (bằng token agent, gửi hash SHA-256 và độ dài code) để nhận `execution_id` và token con, dùng token con cho mọi lời gọi hàm, rồi gọi `finish` (outcome, thời gian, kích thước kết quả). Nếu không có, host dùng token agent trực tiếp và tự sinh `execution_id`.
@@ -23,7 +23,7 @@ Backend (CRM, MCP phân tích) chỉ **khai báo** hàm cho agent bằng đánh 
 
 ## File
 
-Trong repo mới: `agent_codemode/catalog/{openapi,spec,stubs,search}.py`, `agent_codemode/backend/{http,lifecycle,idempotency}.py`, `docs/backend-contract.md`, `examples/fake_backend/`, `tests/catalog/`, `tests/backend/`.
+Trong `packages/agent-codemode/`: `src/agent_codemode/catalog/{openapi,spec,stubs,search}.py`, `src/agent_codemode/backend/{http,lifecycle,idempotency}.py`, `docs/backend-contract.md`, `examples/fake_backend/`, `tests/catalog/`, `tests/backend/` (đường dẫn tương đối trong `packages/agent-codemode/`).
 
 ## Các bước
 
@@ -52,4 +52,4 @@ Trong repo mới: `agent_codemode/catalog/{openapi,spec,stubs,search}.py`, `agen
 
 ## Rollback
 
-Repo mới, chưa phát hành.
+Thư viện chưa ai dùng; `git revert`.

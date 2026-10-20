@@ -1,14 +1,14 @@
-# Phase 1: khung repo, interface Runner, MontyRunner, pool, giới hạn
+# Phase 1: khung thư viện, interface Runner, MontyRunner, pool, giới hạn
 
 **Effort:** 3d · **Phụ thuộc:** phase 0 (cổng đã duyệt) · **Đụng prod:** không · **Cần user duyệt:** không
 
 ## Bối cảnh
 
-Phase 0 chọn runner và cho số RAM. Phase này dựng lõi của repo: ranh giới `Runner` và các giới hạn mà host cưỡng chế. Nếu cổng chọn `quickjs-rs`, thay `MontyRunner` bằng `QuickJsRunner` trong phase này, mọi phần khác giữ nguyên.
+Phase 0 chọn runner và cho số RAM. Phase này dựng lõi của thư viện: ranh giới `Runner` và các giới hạn mà host cưỡng chế. Nếu cổng chọn `quickjs-rs`, thay `MontyRunner` bằng `QuickJsRunner` trong phase này, mọi phần khác giữ nguyên.
 
 ## Yêu cầu
 
-1. **Khung repo** (`agent-codemode`, tên theo Q1): `pyproject.toml` (uv), gói `agent_codemode/`, `tests/`, `README.md`, `CHANGELOG.md`, `LICENSE`; lint và type-check (ruff, mypy hoặc pyright) trong CI.
+1. **Khung thư viện** `packages/agent-codemode/` (đầu tiên trong thư mục `packages/` dành cho thư viện dùng chung): `pyproject.toml` (tên phân phối `agent-codemode`, gói `agent_codemode`, `version = "0.1.0"`), `src/agent_codemode/`, `tests/`, `README.md`, `CHANGELOG.md`, `requirements.lock` (có hash). Chỉ phụ thuộc thư viện chuẩn, `pydantic-monty`/`pydantic-monty-runtime`, MCP Python SDK, `httpx`. `agent_codemode/__init__.py` khai báo `__all__` là **API công khai** duy nhất cho code bên ngoài.
 2. **Interface** `agent_codemode.runner`:
    ```python
    class Runner(Protocol):
@@ -27,17 +27,17 @@ Phase 0 chọn runner và cho số RAM. Phase này dựng lõi của repo: ranh 
 5. **Hàng đợi đồng thời:** semaphore theo `max_processes`, hàng đợi có trần; quá trần thì `busy`.
 6. **Vòng đời worker:** pool tự thay worker chết; health check của runner (`await runner.check()`).
 7. **Runner dự phòng** `QuickJsRunner`: chỉ khung và test hợp đồng (chạy `run` cơ bản), đánh dấu thử nghiệm; bật đầy đủ chỉ khi cổng phase 0 chọn.
-8. **Bộ kiểm phá** của phase 0 thành test CI (`tests/attack/`), chạy với runner đang bật.
+8. **Bộ kiểm phá** của phase 0 thành test của thư viện (`packages/agent-codemode/tests/attack/`), chạy với runner đang bật.
 
 ## File
 
-Trong repo mới: `agent_codemode/runner/{__init__,base,monty,quickjs}.py`, `agent_codemode/limits.py`, `agent_codemode/redact.py`, `tests/runner/`, `tests/attack/`.
+Trong `packages/agent-codemode/`: `pyproject.toml`, `src/agent_codemode/{__init__,limits,redact}.py`, `src/agent_codemode/runner/{__init__,base,monty,quickjs}.py`, `tests/runner/`, `tests/attack/`, `README.md` (khung), `CHANGELOG.md`.
 
 ## Các bước
 
-1. Tạo repo (Q1, Q2), khung, CI tối thiểu.
+1. Worktree `feat/agent-codemode-library` từ `main`; tạo khung thư viện.
 2. Interface + `MontyRunner` + giới hạn.
-3. Chuyển bộ kiểm phá thành test; chạy trong container có `mem_limit` (CI dùng job container hoặc `docker run` trong job).
+3. Chuyển bộ kiểm phá thành test; chạy trong container có `mem_limit` (`docker run --memory` từ bước chạy test, phase 4).
 4. Đo lại RAM và 1.000 lần chạy trên code thật, so với phase 0.
 
 ## Test
@@ -53,8 +53,8 @@ Trong repo mới: `agent_codemode/runner/{__init__,base,monty,quickjs}.py`, `age
 | Rủi ro | K × T | Giảm thiểu |
 |---|---|---|
 | API Monty đổi giữa các bản | Trung bình × Trung bình | Ghim `pydantic-monty` và `pydantic-monty-runtime`; test hợp đồng bắt lỗi khi nâng |
-| CI không có cgroup giống prod | Trung bình × Thấp | Chạy job tấn công trong container có `--memory` |
+| Môi trường test không có cgroup giống prod | Trung bình × Thấp | Chạy bộ tấn công trong container có `--memory` |
 
 ## Rollback
 
-Repo mới, chưa phát hành; không ảnh hưởng ai.
+Thư viện mới, chưa ai dùng; `git revert` không ảnh hưởng gì.

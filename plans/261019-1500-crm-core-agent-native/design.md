@@ -10,7 +10,7 @@ Nguồn nội bộ đã đọc (chỉ đọc, không mở `crm.db`): `crm/AGENTS
 
 1. **Lõi CRM = 9 nhóm entity dùng chung cho mọi mảng kinh doanh**: Party (cá nhân/tổ chức) với PartyRole và PartyRelationship; ContactPoint; PartyIdentifier (khoá của khách ở hệ khác) cùng merge có undo; ConsentEvent (sổ cái consent có bằng chứng) và phân loại dữ liệu nhạy cảm; Interaction, Note, Task; Engagement (khung chung cho đơn hàng, hợp đồng, lịch hẹn, gói thành viên); Tag, Segment, Campaign, CustomField; User/Principal, phân quyền, AuditEvent, Proposal. Mỗi mảng (bán lẻ, bán sỉ, lịch hẹn, thành viên) là một **module** khai báo thêm loại vai trò, loại quan hệ, loại engagement, loại tín hiệu và bảng chi tiết riêng, không sửa lõi.
 2. **CRM không tính lại số.** Kho dữ liệu xuất bản bốn hợp đồng chuẩn vào `cache.db` (nguồn khách, tóm tắt thương mại, giao dịch có loại, tín hiệu) cộng bảng riêng của module; CRM chỉ đọc. Chiều ngược lại, CRM xuất bản các sự thật do người nhập (tương tác, task, tag không nhạy cảm, consent hiện hành, vai trò đã xác nhận, ánh xạ party) qua `crm_export`.
-3. **Agent-native** nghĩa là mọi lệnh đi qua một tầng ứng dụng duy nhất (`CommandBus` + query service) với ngữ cảnh lệnh bắt buộc (actor, on_behalf_of, kênh, request_id, idempotency key); ba adapter mỏng REST `/api/v1` (OpenAPI), CLI và MCP gọi cùng tầng đó. MCP chạy theo **code mode**: chỉ hai tool `search_api` và `execute`, do một code-mode host dùng chung (repo riêng, sandbox Pydantic Monty, agent viết Python) chạy ở container sidecar; mỗi hàm agent gọi là một route REST `/api/v1` của CRM (§5.9). Lệnh ghi luôn có audit. Thao tác nguy hiểm đi qua `crm_proposal` và chỉ người duyệt mới thực thi. Agent không gửi tin cho khách ở v1.
+3. **Agent-native** nghĩa là mọi lệnh đi qua một tầng ứng dụng duy nhất (`CommandBus` + query service) với ngữ cảnh lệnh bắt buộc (actor, on_behalf_of, kênh, request_id, idempotency key); ba adapter mỏng REST `/api/v1` (OpenAPI), CLI và MCP gọi cùng tầng đó. MCP chạy theo **code mode**: chỉ hai tool `search_api` và `execute`, do MCP server riêng của CRM dựng trên thư viện code mode dùng chung (`agent_codemode`, thư viện độc lập trong repo, sandbox Pydantic Monty, agent viết Python) chạy ở container sidecar; mỗi hàm agent gọi là một route REST `/api/v1` của CRM (§5.9). Lệnh ghi luôn có audit. Thao tác nguy hiểm đi qua `crm_proposal` và chỉ người duyệt mới thực thi. Agent không gửi tin cho khách ở v1.
 4. **Làm theo kiểu expand → chuyển đọc → contract**, mỗi bước deploy độc lập: thêm bảng mới và ghi song song, so khớp bằng công cụ parity, chuyển đọc, rồi mới dọn bảng cũ (giữ view tương thích cho người đọc cũ như export dbt). Không có bước nào đổi hành vi người dùng mà chưa được user duyệt.
 5. **Thứ tự**: an toàn pháp lý và CSRF trước, rồi nền agent (danh tính, quyền, audit), rồi agent đọc, rồi agent ghi an toàn, rồi mới tới hợp đồng kho và tái cấu trúc dữ liệu sâu (identity, consent, vai trò, engagement, campaign).
 
@@ -305,7 +305,7 @@ Tên và cột của 11 export hiện có không đổi; source dbt `crm_export`
  REST /api/v1 (OpenAPI) ►│  CommandBus  /  QueryService  │──► Policy (quyền, che PII, dữ liệu nhạy cảm)
  REST /api/* cũ ────────►│  (crm/src/application/)       │──► Idempotency store
  CLI crmctl (qua REST) ─►│  CommandContext bắt buộc      │──► AuditEvent
- Code-mode host (sidecar crm_codemode, repo riêng):     │
+ MCP server CRM (sidecar crm_codemode, thư viện agent_codemode):│
    search_api, execute → worker Monty → REST /api/v1 ──►│──► Proposal (lệnh nguy hiểm)
                          └──────────────┬────────────────┘
                                         ▼
@@ -314,7 +314,7 @@ Tên và cột của 11 export hiện có không đổi; source dbt `crm_export`
                          ports → adapters SQLite (crm.db, cache.db) / DuckDB (serving)
 ```
 
-- **MCP server là code-mode host chạy ở container sidecar `crm_codemode`** (transport streamable HTTP), không mở DB; mọi hàm agent gọi là một route REST `/api/v1` của CRM. Process CRM vẫn là writer SQLite duy nhất (app dùng một connection, `crm/src/adapters/outbound/sqlite/connection.py:1-8`), và worker sandbox nằm dưới `mem_limit` riêng nên không thể làm CRM bị OOM (§5.9.1).
+- **MCP server của CRM (dựng trên thư viện `agent_codemode`) chạy ở container sidecar `crm_codemode`** (transport streamable HTTP), không mở DB; mọi hàm agent gọi là một route REST `/api/v1` của CRM. Process CRM vẫn là writer SQLite duy nhất (app dùng một connection, `crm/src/adapters/outbound/sqlite/connection.py:1-8`), và worker sandbox nằm dưới `mem_limit` riêng nên không thể làm CRM bị OOM (§5.9.1).
 - **CLI là client REST mỏng** (`crm/ops/crmctl.py`, đúng quy tắc đặt CLI ở `crm/ops/` của `crm/AGENTS.md`), vì CLI chạy được từ máy khác và không được mở `crm.db`.
 - **Adapter không chứa logic.** Mọi kiểm quyền, kiểm idempotency, ghi audit nằm trong CommandBus; test của bus là test cho cả ba adapter.
 
@@ -403,7 +403,7 @@ Một bảng quyền trong code (`crm/src/domain/policy.py`), dùng bởi mọi 
 
 ### 5.9 MCP theo code mode (server `fg-crm`)
 
-**Quyết định của user:** MCP chạy theo "code mode" cho nhẹ (19/10/2026 16:13). Sandbox dùng **Pydantic Monty** (`pydantic-monty` 1.2.0, MIT), agent viết **Python** (tập con Monty); không dùng Deno, không tự viết sandbox Rust/QuickJS; dự phòng `quickjs-rs` sau cùng interface (20/10/2026 ~13:10). Lớp "code-mode host" là **repo git riêng** dùng chung cho MCP CRM, MCP phân tích và dự án khác, lập plan riêng ở [`plans/261020-1310-agent-codemode-host/`](../261020-1310-agent-codemode-host/plan.md). Căn cứ: `plans/reports/research-261019-1905-agent-code-sandbox-options.md`.
+**Quyết định của user:** MCP chạy theo "code mode" cho nhẹ (19/10/2026 16:13). Sandbox dùng **Pydantic Monty** (`pydantic-monty` 1.2.0, MIT), agent viết **Python** (tập con Monty); không dùng Deno, không tự viết sandbox Rust/QuickJS; dự phòng `quickjs-rs` sau cùng interface, user chấp nhận agent viết JS nếu cổng thí nghiệm chọn (20/10/2026 ~13:10). Phần dùng chung là **thư viện Python độc lập nằm trong repo này** (gói `agent_codemode`, phiên bản riêng từ `0.1.0`, tạm đặt `packages/agent-codemode/`, vị trí có thể đổi theo thiết kế Đợt 2; 20/10/2026 16:07), không phải repo riêng; plan riêng ở [`plans/261020-1310-agent-codemode-host/`](../261020-1310-agent-codemode-host/plan.md). Thư viện dùng chung cho nhiều bộ chức năng nên nằm ngoài mọi bộ; **MCP server của CRM thuộc bộ CRM**, MCP phân tích thuộc bộ report (hoặc kho, chờ Đợt 2). Căn cứ: `plans/reports/research-261019-1905-agent-code-sandbox-options.md`.
 
 Thay vì lộ khoảng 21 tool riêng (mỗi tool nạp schema vào context, mỗi kết quả trung gian đi qua model), server chỉ lộ **hai tool**: agent tìm đúng hàm, viết một đoạn Python gọi các hàm CRM có kiểu, và chỉ kết quả cuối quay về model. Đây là mẫu Cloudflare gọi là Code Mode và Anthropic mô tả trong "Code execution with MCP" (nguồn ở §10).
 
@@ -414,11 +414,12 @@ Thay vì lộ khoảng 21 tool riêng (mỗi tool nạp schema vào context, m�
 
 Không có tool thứ ba: trạng thái đề xuất đọc bằng hàm `proposals_get()` trong `execute`. Server `instructions` (tiếng Việt, khoảng 300 token): múi giờ Asia/Ho_Chi_Minh; CRM không tính số mà lấy từ kho, luôn nêu "dữ liệu tới"; SĐT và tên khách luôn bị che; gọi `search_api` trước khi viết code; viết Python tập con (không kế thừa class, không generator); thao tác nguy hiểm chỉ tạo đề xuất; không gửi tin cho khách.
 
-#### 5.9.1 Phân vai: host dùng chung và CRM
+#### 5.9.1 Phân vai: thư viện dùng chung, MCP server của CRM, CRM
 
 | Phần | Ở đâu | Làm gì |
 |---|---|---|
-| Code-mode host (repo riêng, ghim phiên bản) | Container sidecar `crm_codemode` dựng từ một phiên bản cố định của host | MCP `search_api`/`execute`; interface `Runner` (Monty mặc định); pool worker Monty; sinh stub từ danh mục hàm; giới hạn (timeout tổng, timeout từng hàm host, số lời gọi, kích thước kết quả, cắt và che log); audit hook; RAM trần bằng cgroup của container |
+| Thư viện `agent_codemode` (dùng chung, không biết gì về CRM) | Cài vào image của sidecar `crm_codemode` từ thư mục thư viện cùng commit (`requirements.lock` có hash) | Khối dựng MCP `search_api`/`execute`; interface `Runner` (Monty mặc định); pool worker; sinh hàm host và stub từ OpenAPI có `x-agent-function`; giới hạn (timeout tổng, timeout từng hàm host, số lời gọi, kích thước kết quả, cắt và che log); audit hook; preset `assistant`/`chat` |
+| MCP server của CRM (bộ CRM) | Mã nhỏ trong thư mục CRM (`crm/codemode_server/`), chạy trong sidecar `crm_codemode` có `mem_limit`; chỉ import API công khai của thư viện, không import mã app CRM | Dựng server bằng thư viện với URL REST của CRM, `instructions` tiếng Việt của CRM, giới hạn và preset của CRM |
 | Danh mục hàm CRM | Trong CRM: chính các route REST `/api/v1` có đánh dấu `x-agent-function` trong OpenAPI (tên hàm, nhóm, docstring tiếng Việt, loại đọc/ghi/đề xuất) | Host đọc `/api/v1/openapi.json` lúc khởi động, sinh hàm host và stub. Mỗi hàm host chỉ là một lời gọi HTTP tới đúng route đó, nên CRM chỉ khai báo, không có code riêng cho agent |
 | Mọi policy | CRM: CommandBus và query service | Quyền, che SĐT/tên, lọc dữ liệu nhạy cảm, idempotency, đề xuất → duyệt, rate limit, giới hạn theo lần chạy, audit từng lời gọi |
 
@@ -502,16 +503,16 @@ Tên hàm là tên phẳng có tiền tố nhóm (hình dạng cuối cùng, ví
 
 Không có hàm: duyệt đề xuất, thực thi merge/unmerge, xoá, export, gửi tin, xem dữ liệu nhạy cảm, xem SĐT/tên đầy đủ. `search_api` không trả stub hàm principal không có quyền; nếu code vẫn gọi được đường đó (không thể, vì hàm không được đăng ký) thì CRM vẫn trả 403.
 
-**Phiên bản:** CRM ghim host bằng tag git và digest image (`Dockerfile.crm_codemode` cài host theo tag kèm hash). OpenAPI của CRM mang `x-agent-catalog-version`; host từ chối khởi động nếu phiên bản danh mục ngoài dải nó hỗ trợ.
+**Phiên bản:** hiện tại sidecar cài thư viện từ cùng commit với CRM (`Dockerfile.crm_codemode`: `pip install --require-hashes -r <thư viện>/requirements.lock` rồi cài thư mục thư viện), đúng kiểu pip theo thành phần đang dùng (`Dockerfile.crm:10-11`); sau khi tách image theo bộ (Đợt 2) thì ghim `agent-codemode==x.y.z`. OpenAPI của CRM mang `x-agent-catalog-version`; server từ chối khởi động nếu phiên bản danh mục ngoài dải thư viện hỗ trợ.
 
 ### 5.10 Chung nền với MCP phân tích cho CEO
 
-Research `research-261014-2333-adhoc-query-ceo-mcp.md` chọn MCP tự viết trên registry chỉ tiêu, Claude Desktop và bot Lark, "lợi nhuận" mặc định CM2. **MCP phân tích dùng cùng code-mode host** (repo riêng): hai tool `search_api` và `execute`, danh mục hàm đọc là `metrics_list()`, `metrics_describe()`, `dimension_values()`, `metrics_query()`, `verified_answers_search()`, `freshness_get()` do API nội bộ của server phân tích khai báo; compiler vẫn chèn bộ lọc bắt buộc và kiểm `cost_sensitive` phía server; sandbox không đọc DuckDB. Tính toán nặng kiểu pandas không làm trong sandbox (Monty không hợp), mà ở DuckDB phía server. **"Lợi nhuận" mặc định CM2** giữ nguyên: là mặc định trong registry (`ai.ambiguity`) và trong `metrics_query`, câu trả lời luôn nêu bậc CM.
+Research `research-261014-2333-adhoc-query-ceo-mcp.md` chọn MCP tự viết trên registry chỉ tiêu, Claude Desktop và bot Lark, "lợi nhuận" mặc định CM2. **MCP phân tích dùng cùng thư viện `agent_codemode`** (server riêng của bộ report hoặc kho, chờ Đợt 2): hai tool `search_api` và `execute`, danh mục hàm đọc là `metrics_list()`, `metrics_describe()`, `dimension_values()`, `metrics_query()`, `verified_answers_search()`, `freshness_get()` do API nội bộ của server phân tích khai báo; compiler vẫn chèn bộ lọc bắt buộc và kiểm `cost_sensitive` phía server; sandbox không đọc DuckDB. Tính toán nặng kiểu pandas không làm trong sandbox (Monty không hợp), mà ở DuckDB phía server. **"Lợi nhuận" mặc định CM2** giữ nguyên: là mặc định trong registry (`ai.ambiguity`) và trong `metrics_query`, câu trả lời luôn nêu bậc CM.
 
 | Điểm chung | Quy ước |
 |---|---|
-| Kiểu MCP | Code mode qua cùng code-mode host; agent viết Python (tập con Monty); stub sinh từ OpenAPI có `x-agent-function` |
-| Sandbox | Runner Monty, cùng giới hạn; mỗi server một container host riêng có `mem_limit` |
+| Kiểu MCP | Code mode, mỗi bộ một server riêng dựng trên cùng thư viện `agent_codemode`; agent viết Python (tập con Monty); stub sinh từ OpenAPI có `x-agent-function` |
+| Sandbox | Runner Monty, cùng giới hạn; mỗi server một container riêng có `mem_limit` |
 | Transport và client | Streamable HTTP; Claude Desktop qua `mcp-remote` trong LAN/Tailscale (đã chốt Q8); bot Lark gọi Claude API với cả hai server |
 | Danh tính | Token theo người → vai trò; bot Lark uỷ quyền theo `lark_user_id`; chat agent là principal riêng (§5.9.3) |
 | Audit | Cùng trường lõi (`ts`, principal, on_behalf_of, `execution_id`, hash code, danh sách lệnh, kết quả, `request_id`) |
@@ -696,6 +697,7 @@ Một kiểm tra tự động (phase 11): script `crm/ops/check_sql_portability.
 | `tenant_id` trên mọi bảng | Sản phẩm cài theo doanh nghiệp; thêm phức tạp và rủi ro rò dữ liệu mà không cần |
 | MCP là process riêng ghi thẳng `crm.db` | Writer thứ hai trên SQLite; bỏ qua policy trong process chính |
 | Khoảng 21 tool MCP riêng | Mỗi tool nạp schema vào context từ đầu, mọi kết quả trung gian đi qua model; tốn token và chậm khi danh mục lớn dần theo module. Thay bằng code mode (user chốt 19/10 16:13) |
+| Repo git riêng cho code-mode host (registry, CI, image riêng) | User chốt 20/10 16:07: thư viện độc lập trong repo này là đủ; tách ra repo riêng sau, không viết lại, khi có dự án ngoài repo cần dùng |
 | Nhúng code-mode host vào process CRM (hàm host gọi thẳng service) | `max_memory` của Monty không chặn RSS; worker vượt RAM có thể làm container `crm` (writer SQLite duy nhất) bị OOM; mở thêm một đường vào process ngoài REST dễ lọt policy. Sidecar có `mem_limit` và gọi REST v1 an toàn hơn (§5.9.1) |
 | Sandbox Deno (TypeScript) | Thay bằng Monty theo quyết định 20/10: host Python gốc, hàm host async, đủ giới hạn, type-check bằng stub, đã qua chương trình săn lỗi công khai; không phải thêm runtime ~100 MB vào image CRM |
 | Tự viết sandbox Rust + QuickJS + bubblewrap | Phải tự gánh CVE của QuickJS-ng (ít nhất 5 CVE năm 2026), pool, giao thức, đóng gói; Monty đã làm và đã bị tấn công thử (research 19/10) |
