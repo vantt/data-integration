@@ -74,3 +74,16 @@ User duyệt và tự cài sau khi `main` fast-forward lên `84b83cdf` (18/10 00
 - `compare --base 2026-10-19`: 16 bước nặng hơn quá 10%, đều là bước check và bước file-drop chậm
   hơn khi khởi động cùng lúc (RSS không đổi); `approach_script_autogen` không còn tốn 3 phút. Mới:
   3 model lịch sử và check `capture_coverage` của snapshot sản phẩm.
+
+## Đêm 4: nightly 21/10 03:00 (kiểm 09:4x, chỉ đọc)
+
+- Unit vẫn là bản cũ (chưa cài lại `aa3a5cfb`). RSS 4 MB, CPU 0,054% một nhân, MemoryMax 0 lần,
+  OOM 0. **Unit peak 32 MB, bằng `MemoryMax`** (13 → 27 → 30 → 32 MB qua 4 ngày) trong khi RSS chỉ
+  4 MB: phần tăng là page cache của các file TSV đang ghi, tính vào cgroup. Chưa có sự kiện `max`;
+  khi chạm, kernel thu hồi cache trước, không giết tiến trình (anon nhỏ). Theo dõi `max` trong
+  `memory.events`; nếu tăng đều thì cân nhắc nâng `MemoryMax` hoặc dùng `MemoryHigh`.
+- `read_bytes`: 927/4.756 dòng process khác 0.
+- `report` (nightly `77e59cce`, 2,4 phút): `sapo_dbt_assets` 1,72 GB, 54,2 s tính cả khởi động
+  (Dagster 37,0 s); model nặng nhất `fact_variant_price_changes` 1,2 s, 1,26 GB.
+- `compare --base 2026-10-20`: 20 bước nặng hơn quá 10% về thời gian, toàn bước check ngắn (vài
+  giây, dao động khởi động), RSS không đổi; không bước hay model nào nặng hơn đáng kể.
