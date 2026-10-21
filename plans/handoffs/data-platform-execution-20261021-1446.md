@@ -1,8 +1,11 @@
 # Handoff: session thực thi data platform — 21/10/2026 14:46
 
 Trả lời user bằng tiếng Việt. Session này là **session thực thi** (code, gate, commit, deploy; là
-session duy nhất được dừng/khởi động `data_platform`). Session điều phối là **fg-dataware-house-47**:
-quyết định của user thường đến qua -47 (cross-session message). Mọi kết quả phải nhắn lại cho -47.
+session duy nhất được dừng/khởi động `data_platform`). Session điều phối cũ **fg-dataware-house-47** đã
+đóng (21/10 ~15:10; handoff của nó: `plans/handoffs/data-platform-coordination-20261021-1450.md`).
+Session điều phối mới sẽ nhắn tên của nó; cho tới lúc đó giữ các báo cáo (gồm parity đêm 7 sáng 22/10)
+và gửi cho nó khi nó liên hệ. Quyết định của user thường đến qua session điều phối (cross-session
+message).
 
 ## Đọc trước khi làm
 
@@ -87,7 +90,7 @@ quyết định của user thường đến qua -47 (cross-session message). M�
      - `resource-meter status`;
      - `resource-meter report --job pipeline_batch_nightly_job`;
      - `resource-meter compare --base <hôm qua>`.
-  6. Commit + push, nhắn -47, báo user.
+  6. Commit + push, báo user; gửi tóm tắt cho session điều phối mới (giữ lại nếu nó chưa liên hệ).
 - **Nếu đêm 7 đạt:** báo user xin giờ chạy **phase 7** (bật `taxonomy_engine_customer_type`, dùng
   phương án (a): khách không có tenant mặc định thành CONSUMER, `int_customer_benchmarks` lọc theo
   `customer_type_std`). Chưa chạy khi user chưa duyệt giờ. Đọc `plans/261014-2225-taxonomy-engine/phase-07-cutover.md` trước khi
