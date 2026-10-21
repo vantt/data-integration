@@ -90,7 +90,7 @@ quyết định của user thường đến qua -47 (cross-session message). M�
   6. Commit + push, nhắn -47, báo user.
 - **Nếu đêm 7 đạt:** báo user xin giờ chạy **phase 7** (bật `taxonomy_engine_customer_type`, dùng
   phương án (a): khách không có tenant mặc định thành CONSUMER, `int_customer_benchmarks` lọc theo
-  `customer_type_std`). Chưa chạy khi user chưa duyệt giờ. Đọc `phase-07` trong cùng plan trước khi
+  `customer_type_std`). Chưa chạy khi user chưa duyệt giờ. Đọc `plans/261014-2225-taxonomy-engine/phase-07-cutover.md` trước khi
   làm.
 - **Nếu có khác biệt** hoặc `ruleset_version` đổi: đếm lại từ 0, điều tra bằng
   `monitor_taxonomy_parity`, báo user ngay.
