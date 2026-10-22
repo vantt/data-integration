@@ -78,7 +78,8 @@ Theo runbook: dừng `data_platform`, commit seed đang sống, `git revert` d�
 | 18/10 (cả ngày, chốt 19/10) | lịch `d0b09efb` 03:01 SUCCESS 59/59, 567 check, 0 đỏ mới (3 check sheets đã biết) | 0 (610 lần chạy) | 0 | 6034/6034 · 6399/6399 | **13,9 phút** (vượt ngưỡng 10 phút, nguyên nhân ngoài, xem ghi chú 18/10) | bỏ đo; oom_kill 0 | 3 |
 | 19/10 (cả ngày, chốt 20/10) | lịch `7928f479` 03:00 SUCCESS 59/59, 567 check; ngoài 3 check sheets đã biết có thêm `orders_batch` `row_count_within_trend` WARN (5 đơn so với trung vị 7 ngày 21, đêm Chủ nhật; check theo thời điểm) | 0 (612 lần chạy) | 0 | 6034/6034 · 6399/6399 | 5,2 phút | bỏ đo; oom_kill 0 | 4 |
 | 20/10 (cả ngày, chốt 21/10) | lịch `c633a631` 03:00 SUCCESS 60/60, 615 check (thêm check của bảng lịch sử giá/tồn, đều xanh), 0 đỏ mới (3 check sheets đã biết) | 0 (614 lần chạy) | 0 | 6036/6036 · 6401/6401 | bước dbt 36,5 s (19/10: 32,8 s; 18/10: 33,2 s; tăng vì 3 model lịch sử giá/tồn mới); tổng 2,4 phút (`approach_script_autogen` đã tắt) | bỏ đo; oom_kill 0 | 5 |
-| 21/10 (kiểm 09:4x, ngày chưa hết) | lịch `77e59cce` 03:00 SUCCESS 60/60, 615 check, 0 đỏ mới (3 check sheets đã biết) | 0 (245 lần chạy) | 0 | 6036/6036 · 6401/6401 | bước dbt 37,0 s (20/10: 36,5 s); tổng 2,4 phút | bỏ đo; oom_kill 0 | 6 |
+| 21/10 (cả ngày, chốt 22/10) | lịch `77e59cce` 03:00 SUCCESS 60/60, 615 check, 0 đỏ mới (3 check sheets đã biết) | 0 (610 lần chạy) | 0 | 6037/6037 · 6402/6402 | bước dbt 37,0 s (20/10: 36,5 s); tổng 2,4 phút | bỏ đo; oom_kill 0 | 6 |
+| 22/10 (kiểm 09:4x, ngày chưa hết) | lịch `403b8054` 03:00 SUCCESS 60/60, 615 check, 0 đỏ mới (3 check sheets đã biết) | 0 (247 lần chạy) | 0 | 6037/6037 · 6402/6402 | bước dbt 37,4 s (21/10: 37,0 s); tổng 2,4 phút | bỏ đo; oom_kill 0 | 7 (chờ chốt cả ngày) |
 
 ## Deploy lần 1 (15/10/2026 15:19)
 

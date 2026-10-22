@@ -87,3 +87,18 @@ User duyệt và tự cài sau khi `main` fast-forward lên `84b83cdf` (18/10 00
   (Dagster 37,0 s); model nặng nhất `fact_variant_price_changes` 1,2 s, 1,26 GB.
 - `compare --base 2026-10-20`: 20 bước nặng hơn quá 10% về thời gian, toàn bước check ngắn (vài
   giây, dao động khởi động), RSS không đổi; không bước hay model nào nặng hơn đáng kể.
+
+## Đêm 5: nightly 22/10 03:00 (kiểm 09:4x, chỉ đọc)
+
+- Unit vẫn là bản cũ (chưa cài lại `aa3a5cfb`): RSS 4 MB, CPU 0,053% một nhân, unit peak 32 MB,
+  MemoryMax 0 lần, OOM 0, `status` báo CPU throttled 14,31% số chu kỳ. Dữ liệu 20 file, 20 MB,
+  từ 18/10 đến 22/10.
+- `report --job pipeline_batch_nightly_job` (nightly `403b8054`, 2,4 phút): `sapo_dbt_assets`
+  1,73 GB, 50,6 s tính cả khởi động (Dagster 37,4 s). `data_platform`: RAM anon đỉnh 5,79 GB,
+  cache cộng vào 8,00 GB, OOM kill 0; bộ đếm chạm `memory.max` 17.994 lần trong ngày là page
+  cache bị thu hồi, `oom_kill` trong `memory.events` của cgroup vẫn 0.
+- `compare --base 2026-10-21`: 18 bước nặng hơn quá 10%, chủ yếu bước check ngắn (dao động khởi
+  động, vài giây) và `health_kpi_closure_job` (327 → 901 MB, bước 4 giây); `sapo_dbt_assets` và
+  model nặng nhất không đổi đáng kể. `compare` liệt kê 30 mục chỉ có ngày 22/10 và 11 mục chỉ có
+  ngày 21/10 (nhiều model dbt như `dim_order_status`, `fact_targets`); chưa xác minh nguyên nhân,
+  chưa có dấu hiệu đổi code.
